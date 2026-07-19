@@ -2,6 +2,7 @@ import MenuIcon from '@mui/icons-material/Menu';
 import SportsFootballIcon from '@mui/icons-material/SportsFootball';
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
+import { useNotifications } from '../../notifications/NotificationsContext';
 import { NAV_ITEMS, NavDrawer } from './NavDrawer';
 import './Navbar.scss';
 
@@ -10,6 +11,7 @@ const BOTTOM = NAV_ITEMS.slice(0, 4);
 
 export function Navbar() {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const { unreadCount } = useNotifications();
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     `navbar__link${isActive ? ' navbar__link--active' : ''}`;
@@ -25,7 +27,12 @@ export function Navbar() {
         <nav className="navbar__links">
           {NAV_ITEMS.map(({ to, label, Icon, end }) => (
             <NavLink key={to} to={to} end={end} className={linkClass}>
-              <Icon fontSize="small" />
+              <span className="navbar__link-icon">
+                <Icon fontSize="small" />
+                {to === '/notifications' && unreadCount > 0 && (
+                  <span className="navbar__badge navbar__badge--dot">{unreadCount}</span>
+                )}
+              </span>
               {label}
             </NavLink>
           ))}
@@ -53,7 +60,10 @@ export function Navbar() {
           onClick={() => setDrawerOpen(true)}
           aria-label="Open menu"
         >
-          <MenuIcon fontSize="small" />
+          <span className="navbar__link-icon">
+            <MenuIcon fontSize="small" />
+            {unreadCount > 0 && <span className="navbar__badge navbar__badge--dot" />}
+          </span>
           <span>Menu</span>
         </button>
       </nav>

@@ -85,6 +85,63 @@
   }
 }
 
+.room__friends {
+  &-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: $space;
+    margin-bottom: $space * 1.5;
+
+    h2 {
+      font-size: 1rem;
+    }
+  }
+
+  &-link,
+  &-inline {
+    color: $accent;
+    font-size: 0.85rem;
+    font-weight: 600;
+
+    &:hover {
+      color: $text;
+    }
+  }
+
+  &-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: $space;
+  }
+}
+
+.room__friend {
+  display: flex;
+  align-items: center;
+  gap: $space * 1.5;
+  background: $bg-raised;
+  border: 1px solid $border;
+  border-radius: $radius-sm;
+  padding: $space $space * 1.5;
+
+  &-name {
+    flex: 1;
+    min-width: 0;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &-btn {
+    padding: $space * 0.5 $space * 1.25;
+    font-size: 0.85rem;
+    flex-shrink: 0;
+  }
+}
+
 .team-list {
   list-style: none;
   display: flex;

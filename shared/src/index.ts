@@ -4,3 +4,4 @@ export * from './avatar.js';
 export * from './scoring.js';
 export * from './lobby.js';
 export * from './draft.js';
+export * from './social.js';

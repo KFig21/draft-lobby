@@ -1,4 +1,11 @@
-import type { Avatar, LobbySettings, LobbyStatus, LobbyRole } from '@draft-lobby/shared';
+import type {
+  Avatar,
+  FriendshipStatus,
+  LobbySettings,
+  LobbyStatus,
+  LobbyRole,
+  NotificationType,
+} from '@draft-lobby/shared';
 
 /** DB row shapes as returned by Supabase (snake_case columns). */
 
@@ -39,6 +46,35 @@ export interface PickRow {
   is_keeper: boolean;
   is_auto_pick: boolean;
   picked_at: string;
+}
+
+/** Minimal profile shape as embedded in social queries. */
+export interface ProfileMini {
+  id: string;
+  username: string;
+  avatar: Avatar | null;
+}
+
+export interface FriendshipRow {
+  id: string;
+  requester_id: string;
+  addressee_id: string;
+  status: FriendshipStatus;
+  created_at: string;
+  requester?: ProfileMini | null;
+  addressee?: ProfileMini | null;
+}
+
+export interface NotificationRow {
+  id: string;
+  user_id: string;
+  actor_id: string | null;
+  type: NotificationType;
+  lobby_id: string | null;
+  lobby_name: string | null;
+  read: boolean;
+  created_at: string;
+  actor?: ProfileMini | null;
 }
 
 export interface PlayerRow {

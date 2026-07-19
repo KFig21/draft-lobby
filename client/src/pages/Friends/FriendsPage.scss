@@ -1,0 +1,87 @@
+@use 'variables' as *;
+
+.friends {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: $space * 3;
+  display: flex;
+  flex-direction: column;
+  gap: $space * 3;
+
+  &__header {
+    display: flex;
+    flex-direction: column;
+    gap: $space;
+
+    h1 {
+      font-size: 1.6rem;
+    }
+  }
+
+  &__section {
+    h2 {
+      font-size: 1rem;
+      margin-bottom: $space * 1.5;
+    }
+  }
+
+  &__search {
+    display: flex;
+    gap: $space;
+    margin-bottom: $space * 1.5;
+
+    input {
+      flex: 1;
+      min-width: 0;
+      padding: $space * 1.5;
+      border: 1px solid $border;
+      border-radius: $radius-sm;
+      background: $bg;
+      color: $text;
+      font-size: 1rem;
+    }
+  }
+
+  &__list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: $space;
+  }
+
+  &__row {
+    display: flex;
+    align-items: center;
+    gap: $space * 1.5;
+    background: $bg-raised;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    padding: $space $space * 1.5;
+  }
+
+  &__name {
+    flex: 1;
+    min-width: 0;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__btn {
+    padding: $space * 0.6 $space * 1.25;
+    font-size: 0.85rem;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  &__error {
+    color: $danger;
+    font-size: 0.9rem;
+    margin-bottom: $space;
+  }
+
+  &__empty {
+    padding: $space;
+  }
+}

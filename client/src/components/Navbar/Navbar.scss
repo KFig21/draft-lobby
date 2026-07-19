@@ -190,6 +190,38 @@
   }
 }
 
+// ── Unread badge (shared by top bar, bottom bar, drawer) ────────────
+.navbar__link-icon {
+  position: relative;
+  display: inline-flex;
+}
+
+.navbar__badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  margin-left: $space * 0.5;
+  border-radius: 999px;
+  background: $danger;
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1;
+
+  // Positioned over an icon (top/bottom bars) rather than inline.
+  &--dot {
+    position: absolute;
+    top: -5px;
+    left: 100%;
+    margin-left: -8px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+  }
+}
+
 @keyframes navbar-drawer-in {
   from {
     transform: translateX(100%);

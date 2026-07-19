@@ -8,13 +8,16 @@ import {
 } from 'react-router-dom';
 import { AuthProvider, useAuth } from './auth/AuthContext';
 import { MainLayout } from './components/Navbar/MainLayout';
+import { NotificationsProvider } from './notifications/NotificationsContext';
 import { AuthPage } from './pages/Auth/AuthPage';
 import { DraftBoardPage } from './pages/DraftBoard/DraftBoardPage';
+import { FriendsPage } from './pages/Friends/FriendsPage';
 import { HomePage } from './pages/Home/HomePage';
 import { JoinLobbyPage } from './pages/JoinLobby/JoinLobbyPage';
 import { LeagueWizardPage } from './pages/LeagueWizard/LeagueWizardPage';
 import { LobbyRoomPage } from './pages/LobbyRoom/LobbyRoomPage';
 import { LobbyWizardPage } from './pages/LobbyWizard/LobbyWizardPage';
+import { NotificationsPage } from './pages/Notifications/NotificationsPage';
 import { ProfilePage } from './pages/Profile/ProfilePage';
 import { ScoringFormatCreatorPage } from './pages/ScoringFormatCreator/ScoringFormatCreatorPage';
 import { SettingsPage } from './pages/Settings/SettingsPage';
@@ -47,9 +50,10 @@ function PublicOnly({ children }: { children: React.ReactNode }) {
 export default function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <ScrollToTop />
-        <Routes>
+      <NotificationsProvider>
+        <BrowserRouter>
+          <ScrollToTop />
+          <Routes>
           <Route
             path="/"
             element={
@@ -76,6 +80,8 @@ export default function App() {
           >
             <Route path="/home" element={<HomePage />} />
             <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/friends" element={<FriendsPage />} />
+            <Route path="/notifications" element={<NotificationsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/settings/leagues/new" element={<LeagueWizardPage />} />
             <Route path="/settings/leagues/:id/edit" element={<LeagueWizardPage />} />
@@ -95,9 +101,10 @@ export default function App() {
               </Protected>
             }
           />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </BrowserRouter>
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </NotificationsProvider>
     </AuthProvider>
   );
 }

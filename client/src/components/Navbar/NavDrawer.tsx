@@ -4,11 +4,14 @@ import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
 import ListAltOutlinedIcon from '@mui/icons-material/ListAltOutlined';
 import LoginIcon from '@mui/icons-material/Login';
 import LogoutIcon from '@mui/icons-material/Logout';
+import NotificationsNoneOutlinedIcon from '@mui/icons-material/NotificationsNoneOutlined';
+import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import SportsFootballIcon from '@mui/icons-material/SportsFootball';
 import type { SvgIconComponent } from '@mui/icons-material';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
+import { useNotifications } from '../../notifications/NotificationsContext';
 
 export interface NavItem {
   to: string;
@@ -22,6 +25,8 @@ export const NAV_ITEMS: NavItem[] = [
   { to: '/lobby/new', label: 'Create', Icon: AddCircleOutlineIcon },
   { to: '/lobby/join', label: 'Join', Icon: LoginIcon },
   { to: '/profile', label: 'My drafts', Icon: ListAltOutlinedIcon },
+  { to: '/friends', label: 'Friends', Icon: PeopleAltOutlinedIcon },
+  { to: '/notifications', label: 'Notifications', Icon: NotificationsNoneOutlinedIcon },
   { to: '/settings', label: 'Settings', Icon: SettingsOutlinedIcon },
 ];
 
@@ -35,6 +40,7 @@ interface NavDrawerProps {
 /** Slide-in menu used by the mobile bottom bar and the draft board. */
 export function NavDrawer({ open, onClose, extraItems }: NavDrawerProps) {
   const { signOut } = useAuth();
+  const { unreadCount } = useNotifications();
   if (!open) return null;
 
   return (
@@ -90,6 +96,9 @@ export function NavDrawer({ open, onClose, extraItems }: NavDrawerProps) {
           >
             <Icon fontSize="small" />
             {label}
+            {to === '/notifications' && unreadCount > 0 && (
+              <span className="navbar__badge">{unreadCount}</span>
+            )}
           </NavLink>
         ))}
         <button

@@ -1,6 +1,7 @@
 import { Router, type Response } from 'express';
 import {
   draftPositionForOverall,
+  inviteToLobbySchema,
   makePickSchema,
   renameTeamSchema,
   roundsForSettings,
@@ -304,6 +305,151 @@ draftRouter.post('/:id/rollback', async (req: AuthedRequest, res: Response) => {
     return;
   }
   res.json({ ok: true, rolledBackOverall: lastPick.overall });
+});
+
+/** POST /api/lobbies/:id/invite — invite a user to this lobby (members only). */
+draftRouter.post('/:id/invite', async (req: AuthedRequest, res: Response) => {
+  const lobbyId = req.params.id;
+  const me = req.user!.id;
+
+  const parsed = inviteToLobbySchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.flatten() });
+    return;
+  }
+  const invitee = parsed.data.userId;
+
+  const role = await getRole(lobbyId, me);
+  if (!role) {
+    res.status(403).json({ error: 'Only members can invite to this lobby' });
+    return;
+  }
+
+  const { data: lobby } = await supabaseAdmin
+    .from('lobbies')
+    .select('id, name, status')
+    .eq('id', lobbyId)
+    .single();
+  if (!lobby) {
+    res.status(404).json({ error: 'Lobby not found' });
+    return;
+  }
+
+  const alreadyMember = await getRole(lobbyId, invitee);
+  if (alreadyMember) {
+    res.status(409).json({ error: 'That user is already in the lobby' });
+    return;
+  }
+
+  // Upsert the invite (re-inviting refreshes a stale/declined one to PENDING).
+  const { error: inviteError } = await supabaseAdmin
+    .from('lobby_invites')
+    .upsert(
+      { lobby_id: lobbyId, inviter_id: me, invitee_id: invitee, status: 'PENDING' },
+      { onConflict: 'lobby_id,invitee_id' },
+    );
+  if (inviteError) {
+    res.status(500).json({ error: inviteError.message });
+    return;
+  }
+  await supabaseAdmin.from('notifications').insert({
+    user_id: invitee,
+    actor_id: me,
+    type: 'LOBBY_INVITE',
+    lobby_id: lobbyId,
+    lobby_name: lobby.name,
+  });
+  res.json({ ok: true });
+});
+
+/** POST /api/lobbies/:id/accept-invite — join a lobby you were invited to (no password). */
+draftRouter.post('/:id/accept-invite', async (req: AuthedRequest, res: Response) => {
+  const lobbyId = req.params.id;
+  const me = req.user!.id;
+
+  const { data: invite } = await supabaseAdmin
+    .from('lobby_invites')
+    .select('id, status')
+    .eq('lobby_id', lobbyId)
+    .eq('invitee_id', me)
+    .maybeSingle();
+  if (!invite) {
+    res.status(404).json({ error: 'No invite found for this lobby' });
+    return;
+  }
+
+  // Idempotent if they already joined.
+  const existingRole = await getRole(lobbyId, me);
+  if (existingRole) {
+    await supabaseAdmin
+      .from('lobby_invites')
+      .update({ status: 'ACCEPTED' })
+      .eq('id', invite.id);
+    res.json({ ok: true, joined: true, alreadyMember: true });
+    return;
+  }
+
+  const { data: lobby } = await supabaseAdmin
+    .from('lobbies')
+    .select('settings, status')
+    .eq('id', lobbyId)
+    .single();
+  if (!lobby) {
+    res.status(404).json({ error: 'Lobby not found' });
+    return;
+  }
+  if (lobby.status !== 'SETUP' && lobby.status !== 'SCHEDULED') {
+    res.status(409).json({ error: 'This draft has already started' });
+    return;
+  }
+
+  const { count } = await supabaseAdmin
+    .from('teams')
+    .select('*', { count: 'exact', head: true })
+    .eq('lobby_id', lobbyId);
+  const teamCount = (lobby.settings as { teamCount: number }).teamCount;
+  if ((count ?? 0) >= teamCount) {
+    res.status(409).json({ error: 'Lobby is full' });
+    return;
+  }
+
+  const { error: memberError } = await supabaseAdmin.from('lobby_members').insert({
+    lobby_id: lobbyId,
+    user_id: me,
+    role: 'MEMBER',
+  });
+  if (memberError) {
+    res.status(500).json({ error: memberError.message });
+    return;
+  }
+  const draftPosition = (count ?? 0) + 1;
+  const { error: teamError } = await supabaseAdmin.from('teams').insert({
+    lobby_id: lobbyId,
+    owner_id: me,
+    name: `Team ${draftPosition}`,
+    draft_position: draftPosition,
+  });
+  if (teamError) {
+    res.status(500).json({ error: teamError.message });
+    return;
+  }
+  await supabaseAdmin
+    .from('lobby_invites')
+    .update({ status: 'ACCEPTED' })
+    .eq('id', invite.id);
+  res.json({ ok: true, joined: true });
+});
+
+/** POST /api/lobbies/:id/decline-invite — decline a lobby invite. */
+draftRouter.post('/:id/decline-invite', async (req: AuthedRequest, res: Response) => {
+  const lobbyId = req.params.id;
+  const me = req.user!.id;
+  await supabaseAdmin
+    .from('lobby_invites')
+    .update({ status: 'DECLINED' })
+    .eq('lobby_id', lobbyId)
+    .eq('invitee_id', me);
+  res.json({ ok: true });
 });
 
 /** POST /api/lobbies/:id/archive — hide/unhide this draft from the caller's own lists. */

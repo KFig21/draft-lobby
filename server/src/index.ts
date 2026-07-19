@@ -4,6 +4,7 @@ import { env } from './env.js';
 import { authRouter } from './routes/auth.js';
 import { lobbiesRouter } from './routes/lobbies.js';
 import { draftRouter } from './routes/draft.js';
+import { socialRouter } from './routes/social.js';
 
 const app = express();
 
@@ -17,6 +18,7 @@ app.get('/api/health', (_req, res) => {
 app.use('/api/auth', authRouter);
 app.use('/api/lobbies', lobbiesRouter);
 app.use('/api/lobbies', draftRouter);
+app.use('/api/friends', socialRouter);
 
 app.listen(env.PORT, () => {
   console.log(`⚡ draft-lobby server listening on http://localhost:${env.PORT}`);

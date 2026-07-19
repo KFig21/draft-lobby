@@ -7,12 +7,14 @@ import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import { clockSummary } from '../../lib/format';
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Avatar } from '../../components/Avatar/Avatar';
 import { useAuth } from '../../auth/AuthContext';
 import { useLobby } from '../../hooks/useLobby';
 import { api } from '../../lib/api';
+import { supabase } from '../../supabase';
+import type { FriendshipRow, ProfileMini } from '../../lib/types';
 import './LobbyRoomPage.scss';
 
 export function LobbyRoomPage() {
@@ -26,6 +28,9 @@ export function LobbyRoomPage() {
   const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [savingName, setSavingName] = useState(false);
+  const [friends, setFriends] = useState<ProfileMini[]>([]);
+  const [invitedIds, setInvitedIds] = useState<Set<string>>(new Set());
+  const [inviteBusy, setInviteBusy] = useState<string | null>(null);
 
   const userId = session?.user.id;
   const isCommish = useMemo(() => {
@@ -35,6 +40,41 @@ export function LobbyRoomPage() {
       (m) => m.user_id === userId && m.role === 'SUB_COMMISSIONER',
     );
   }, [userId, lobby, members]);
+
+  // Accepted friends + who's already been invited, for the invite section.
+  const loadInvitables = useCallback(() => {
+    if (!userId) return;
+    void supabase
+      .from('friendships')
+      .select(
+        'status, requester_id, addressee_id, requester:requester_id ( id, username, avatar ), addressee:addressee_id ( id, username, avatar )',
+      )
+      .eq('status', 'ACCEPTED')
+      .then(({ data }) => {
+        const rows = (data ?? []) as unknown as FriendshipRow[];
+        const list = rows
+          .map((f) => (f.requester_id === userId ? f.addressee : f.requester))
+          .filter((p): p is ProfileMini => !!p);
+        setFriends(list);
+      });
+    void supabase
+      .from('lobby_invites')
+      .select('invitee_id, status')
+      .eq('lobby_id', id)
+      .then(({ data }) => {
+        const s = new Set<string>();
+        for (const inv of data ?? []) {
+          if ((inv as { status: string }).status === 'PENDING') {
+            s.add((inv as { invitee_id: string }).invitee_id);
+          }
+        }
+        setInvitedIds(s);
+      });
+  }, [userId, id]);
+
+  useEffect(() => {
+    loadInvitables();
+  }, [loadInvitables]);
 
   const avatarFor = (ownerId: string | null): AvatarData => {
     if (!ownerId) return { bgColor: '#2e3347', shape: 'circle', emoji: '➕' };
@@ -95,7 +135,21 @@ export function LobbyRoomPage() {
     }
   }
 
+  async function invite(friendId: string) {
+    setInviteBusy(friendId);
+    setActionError(null);
+    try {
+      await api(`/lobbies/${id}/invite`, { method: 'POST', body: { userId: friendId } });
+      setInvitedIds((prev) => new Set(prev).add(friendId));
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Failed to invite');
+    } finally {
+      setInviteBusy(null);
+    }
+  }
+
   const draftLive = lobby.status === 'DRAFTING' || lobby.status === 'COMPLETE';
+  const memberIds = new Set(members.map((m) => m.user_id));
 
   return (
     <main className="room">
@@ -204,6 +258,51 @@ export function LobbyRoomPage() {
           ))}
         </ol>
       </section>
+
+      {!draftLive && (
+        <section className="room__friends">
+          <div className="room__friends-head">
+            <h2>Invite friends</h2>
+            <Link className="room__friends-link" to="/friends">
+              Manage friends →
+            </Link>
+          </div>
+          {friends.length === 0 ? (
+            <p className="muted">
+              Add friends to invite them with one tap.{' '}
+              <Link to="/friends" className="room__friends-inline">
+                Find friends →
+              </Link>
+            </p>
+          ) : (
+            <ul className="room__friends-list">
+              {friends.map((f) => {
+                const isMember = memberIds.has(f.id);
+                const invited = invitedIds.has(f.id);
+                return (
+                  <li key={f.id} className="room__friend">
+                    <Avatar avatar={f.avatar ?? avatarFor(f.id)} size={32} />
+                    <span className="room__friend-name">{f.username}</span>
+                    {isMember ? (
+                      <span className="muted">In lobby</span>
+                    ) : invited ? (
+                      <span className="muted">Invited</span>
+                    ) : (
+                      <button
+                        className="button room__friend-btn"
+                        disabled={inviteBusy === f.id}
+                        onClick={() => invite(f.id)}
+                      >
+                        {inviteBusy === f.id ? 'Inviting…' : 'Invite'}
+                      </button>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+      )}
 
       {actionError && <p className="room__error">{actionError}</p>}
 

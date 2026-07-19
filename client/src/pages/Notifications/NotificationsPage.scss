@@ -1,0 +1,75 @@
+@use 'variables' as *;
+
+.notifs {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: $space * 3;
+  display: flex;
+  flex-direction: column;
+  gap: $space * 3;
+
+  &__header {
+    display: flex;
+    flex-direction: column;
+    gap: $space;
+
+    h1 {
+      font-size: 1.6rem;
+    }
+  }
+
+  &__list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: $space;
+  }
+
+  &__row {
+    display: flex;
+    align-items: center;
+    gap: $space * 1.5;
+    background: $bg-raised;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    padding: $space * 1.5;
+
+    &--unread {
+      border-color: $primary;
+      background: rgba($primary, 0.08);
+    }
+  }
+
+  &__body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &__text {
+    font-size: 0.95rem;
+    line-height: 1.3;
+  }
+
+  &__time {
+    color: $text-muted;
+    font-size: 0.75rem;
+  }
+
+  &__actions {
+    display: flex;
+    gap: $space * 0.5;
+    flex-shrink: 0;
+  }
+
+  &__btn {
+    padding: $space * 0.6 $space * 1.1;
+    font-size: 0.8rem;
+  }
+
+  &__resolved {
+    flex-shrink: 0;
+  }
+}
