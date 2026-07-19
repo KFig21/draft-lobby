@@ -89,9 +89,14 @@
 
   &__submit-row {
     position: sticky;
-    bottom: $space * 2;
+    // Clear the fixed mobile bottom nav; smaller offset on desktop.
+    bottom: calc(64px + env(safe-area-inset-bottom, 0));
     display: flex;
     gap: $space;
+
+    @include md {
+      bottom: $space * 2;
+    }
 
     .button {
       flex: 1;

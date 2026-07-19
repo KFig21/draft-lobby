@@ -2,36 +2,30 @@ import {
   DEFAULT_LOBBY_SETTINGS,
   SCORING_PRESETS,
   createLobbySchema,
-  matchPreset,
-  roundsForSettings,
+  rosterSize,
   type LobbySettings,
-  type ScoringRules,
 } from '@draft-lobby/shared';
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import {
+  LeagueSettingsFields,
+  normalizeTiers,
+} from '../../components/LeagueSettingsFields/LeagueSettingsFields';
+import { Modal } from '../../components/Modal/Modal';
 import { api } from '../../lib/api';
-import { clockSummary } from '../../lib/format';
 import { supabase } from '../../supabase';
+import { LeagueWizardPage, type SavedLeague } from '../LeagueWizard/LeagueWizardPage';
 import './LobbyWizardPage.scss';
 
-interface LeagueRow {
-  id: string;
-  name: string;
-  settings: LobbySettings;
-  builtIn?: boolean;
-}
-interface ScoringFormatRow {
-  id: string;
-  name: string;
-  rules: ScoringRules;
-}
-
 // Common configs so a lobby can be spun up without saving a league first.
-function baseLeague(name: string, teamCount: number, preset: keyof typeof SCORING_PRESETS): LeagueRow {
+function baseLeague(
+  name: string,
+  teamCount: number,
+  preset: keyof typeof SCORING_PRESETS,
+): SavedLeague {
   return {
     id: `builtin:${teamCount}-${preset}`,
     name,
-    builtIn: true,
     settings: {
       ...DEFAULT_LOBBY_SETTINGS,
       name,
@@ -40,25 +34,22 @@ function baseLeague(name: string, teamCount: number, preset: keyof typeof SCORIN
     },
   };
 }
-const BUILT_IN_LEAGUES: LeagueRow[] = [
+const BUILT_IN_LEAGUES: SavedLeague[] = [
   baseLeague('10-team PPR', 10, 'PPR'),
   baseLeague('12-team PPR', 12, 'PPR'),
   baseLeague('12-team Half-PPR', 12, 'HALF_PPR'),
   baseLeague('12-team Standard', 12, 'STANDARD'),
 ];
 
-// 'league' = inherit the chosen league's scoring; otherwise override it.
-const USE_LEAGUE_SCORING = 'league';
-
 export function LobbyWizardPage() {
   const navigate = useNavigate();
-  const [savedLeagues, setSavedLeagues] = useState<LeagueRow[]>([]);
-  const [scoringFormats, setScoringFormats] = useState<ScoringFormatRow[]>([]);
+  const [savedLeagues, setSavedLeagues] = useState<SavedLeague[]>([]);
   const [leagueId, setLeagueId] = useState<string>(BUILT_IN_LEAGUES[0].id);
-  const [scoringChoice, setScoringChoice] = useState<string>(USE_LEAGUE_SCORING);
+  const [settings, setSettings] = useState<LobbySettings>(BUILT_IN_LEAGUES[0].settings);
   const [lobbyName, setLobbyName] = useState('');
   const [password, setPassword] = useState('');
   const [scheduledStart, setScheduledStart] = useState('');
+  const [showLeagueModal, setShowLeagueModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -67,49 +58,36 @@ export function LobbyWizardPage() {
       .from('league_templates')
       .select('id, name, settings')
       .order('created_at')
-      .then(({ data }) => data && setSavedLeagues(data as LeagueRow[]));
-    void supabase
-      .from('scoring_formats')
-      .select('id, name, rules')
-      .order('created_at')
-      .then(({ data }) => data && setScoringFormats(data as ScoringFormatRow[]));
+      .then(({ data }) => data && setSavedLeagues(data as SavedLeague[]));
   }, []);
 
-  const league =
-    [...savedLeagues, ...BUILT_IN_LEAGUES].find((l) => l.id === leagueId) ??
-    BUILT_IN_LEAGUES[0];
+  // Seed the editable form from the chosen starting point.
+  function selectLeague(id: string) {
+    setLeagueId(id);
+    const league =
+      [...savedLeagues, ...BUILT_IN_LEAGUES].find((l) => l.id === id) ?? BUILT_IN_LEAGUES[0];
+    setSettings(league.settings);
+  }
 
-  // Effective scoring: the league's own rules, unless overridden here.
-  const effectiveScoring = useMemo<ScoringRules>(() => {
-    if (scoringChoice === USE_LEAGUE_SCORING) return league.settings.scoring;
-    const [kind, key] = scoringChoice.split(':');
-    if (kind === 'preset' && key in SCORING_PRESETS) {
-      return SCORING_PRESETS[key as keyof typeof SCORING_PRESETS].rules;
-    }
-    if (kind === 'format') {
-      return scoringFormats.find((f) => f.id === key)?.rules ?? league.settings.scoring;
-    }
-    return league.settings.scoring;
-  }, [scoringChoice, league, scoringFormats]);
-
-  const s = league.settings;
-  const scoringLabel = (() => {
-    const preset = matchPreset(effectiveScoring);
-    if (preset) return SCORING_PRESETS[preset].label;
-    const json = JSON.stringify(effectiveScoring);
-    return scoringFormats.find((f) => JSON.stringify(f.rules) === json)?.name ?? 'Custom';
-  })();
+  function onLeagueCreated(league: SavedLeague) {
+    setSavedLeagues((prev) => [...prev.filter((l) => l.id !== league.id), league]);
+    setLeagueId(league.id);
+    setSettings(league.settings);
+    setShowLeagueModal(false);
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
-    const settings: LobbySettings = {
-      ...league.settings,
-      scoring: effectiveScoring,
-      name: lobbyName.trim() || league.settings.name,
+    const rounds = rosterSize(settings.rosterComposition);
+    const finalSettings: LobbySettings = {
+      ...settings,
+      name: lobbyName.trim() || settings.name || 'Draft lobby',
       scheduledStart: scheduledStart ? new Date(scheduledStart).toISOString() : null,
+      rosterComposition: settings.rosterComposition.filter((r) => r.count > 0),
+      pickTiers: normalizeTiers(settings.pickTiers, rounds),
     };
-    const parsed = createLobbySchema.safeParse({ settings, password });
+    const parsed = createLobbySchema.safeParse({ settings: finalSettings, password });
     if (!parsed.success) {
       setError(parsed.error.issues[0]?.message ?? 'Please check your settings');
       return;
@@ -140,14 +118,20 @@ export function LobbyWizardPage() {
       <form className="wizard__form" onSubmit={handleSubmit}>
         <section className="wizard__section">
           <div className="wizard__section-head">
-            <h2>League</h2>
-            <Link className="wizard__link" to="/settings/leagues/new">
+            <h2>Start from</h2>
+            <button
+              type="button"
+              className="wizard__link"
+              onClick={() => setShowLeagueModal(true)}
+            >
               + Set up a league
-            </Link>
+            </button>
           </div>
           <label className="field">
-            <span>Start from</span>
-            <select value={leagueId} onChange={(e) => setLeagueId(e.target.value)}>
+            <span>
+              Preset <em className="muted">(a starting point — tweak anything below)</em>
+            </span>
+            <select value={leagueId} onChange={(e) => selectLeague(e.target.value)}>
               {savedLeagues.length > 0 && (
                 <optgroup label="Your leagues">
                   {savedLeagues.map((l) => (
@@ -166,65 +150,10 @@ export function LobbyWizardPage() {
               </optgroup>
             </select>
           </label>
-
-          <label className="field">
-            <span>
-              Scoring <em className="muted">(override the league default)</em>
-            </span>
-            <select
-              value={scoringChoice}
-              onChange={(e) => setScoringChoice(e.target.value)}
-            >
-              <option value={USE_LEAGUE_SCORING}>Use league scoring</option>
-              <optgroup label="Presets">
-                {(Object.keys(SCORING_PRESETS) as (keyof typeof SCORING_PRESETS)[]).map(
-                  (p) => (
-                    <option key={p} value={`preset:${p}`}>
-                      {SCORING_PRESETS[p].label}
-                    </option>
-                  ),
-                )}
-              </optgroup>
-              {scoringFormats.length > 0 && (
-                <optgroup label="Your saved formats">
-                  {scoringFormats.map((f) => (
-                    <option key={f.id} value={`format:${f.id}`}>
-                      {f.name} (custom)
-                    </option>
-                  ))}
-                </optgroup>
-              )}
-            </select>
-          </label>
-
-          <ul className="league-summary">
-            <li>
-              <span className="muted">Teams</span>
-              {s.teamCount}
-            </li>
-            <li>
-              <span className="muted">Draft</span>
-              {s.draftType === 'SNAKE' ? 'Snake' : 'Straight'}
-            </li>
-            <li>
-              <span className="muted">Rounds</span>
-              {roundsForSettings(s)}
-            </li>
-            <li>
-              <span className="muted">Clock</span>
-              {clockSummary(s.pickTiers)}
-            </li>
-            <li>
-              <span className="muted">Scoring</span>
-              {scoringLabel}
-            </li>
-            {s.keepersEnabled && (
-              <li>
-                <span className="muted">Keepers</span>on
-              </li>
-            )}
-          </ul>
         </section>
+
+        {/* Fully editable league parameters, seeded from the preset above. */}
+        <LeagueSettingsFields settings={settings} onChange={setSettings} />
 
         <section className="wizard__section">
           <h2>This draft</h2>
@@ -233,7 +162,7 @@ export function LobbyWizardPage() {
             <input
               value={lobbyName}
               onChange={(e) => setLobbyName(e.target.value)}
-              placeholder={league.settings.name}
+              placeholder={settings.name || 'Draft lobby'}
               maxLength={60}
             />
           </label>
@@ -266,6 +195,20 @@ export function LobbyWizardPage() {
           </button>
         </div>
       </form>
+
+      {showLeagueModal && (
+        <Modal
+          title="Set up a league"
+          wide
+          onClose={() => setShowLeagueModal(false)}
+        >
+          <LeagueWizardPage
+            embedded
+            onSaved={onLeagueCreated}
+            onCancel={() => setShowLeagueModal(false)}
+          />
+        </Modal>
+      )}
     </main>
   );
 }

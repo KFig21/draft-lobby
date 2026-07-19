@@ -1,0 +1,15 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+.app-shell {
+  min-height: 100%;
+
+  &__content {
+    // Leave room for the fixed mobile bottom bar; not needed on desktop.
+    padding-bottom: calc(64px + env(safe-area-inset-bottom, 0));
+
+    @include md {
+      padding-bottom: 0;
+    }
+  }
+}

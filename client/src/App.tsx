@@ -1,5 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider, useAuth } from './auth/AuthContext';
+import { MainLayout } from './components/Navbar/MainLayout';
 import { AuthPage } from './pages/Auth/AuthPage';
 import { DraftBoardPage } from './pages/DraftBoard/DraftBoardPage';
 import { HomePage } from './pages/Home/HomePage';
@@ -48,86 +49,27 @@ export default function App() {
               </PublicOnly>
             }
           />
+          {/* Main signed-in pages share the navbar shell. */}
           <Route
-            path="/home"
             element={
               <Protected>
-                <HomePage />
+                <MainLayout />
               </Protected>
             }
-          />
-          <Route
-            path="/profile"
-            element={
-              <Protected>
-                <ProfilePage />
-              </Protected>
-            }
-          />
-          <Route
-            path="/settings"
-            element={
-              <Protected>
-                <SettingsPage />
-              </Protected>
-            }
-          />
-          <Route
-            path="/settings/leagues/new"
-            element={
-              <Protected>
-                <LeagueWizardPage />
-              </Protected>
-            }
-          />
-          <Route
-            path="/settings/leagues/:id/edit"
-            element={
-              <Protected>
-                <LeagueWizardPage />
-              </Protected>
-            }
-          />
-          <Route
-            path="/settings/scoring/new"
-            element={
-              <Protected>
-                <ScoringFormatCreatorPage />
-              </Protected>
-            }
-          />
-          <Route
-            path="/settings/scoring/:id/edit"
-            element={
-              <Protected>
-                <ScoringFormatCreatorPage />
-              </Protected>
-            }
-          />
-          <Route
-            path="/lobby/new"
-            element={
-              <Protected>
-                <LobbyWizardPage />
-              </Protected>
-            }
-          />
-          <Route
-            path="/lobby/join"
-            element={
-              <Protected>
-                <JoinLobbyPage />
-              </Protected>
-            }
-          />
-          <Route
-            path="/lobby/:id"
-            element={
-              <Protected>
-                <LobbyRoomPage />
-              </Protected>
-            }
-          />
+          >
+            <Route path="/home" element={<HomePage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/settings/leagues/new" element={<LeagueWizardPage />} />
+            <Route path="/settings/leagues/:id/edit" element={<LeagueWizardPage />} />
+            <Route path="/settings/scoring/new" element={<ScoringFormatCreatorPage />} />
+            <Route path="/settings/scoring/:id/edit" element={<ScoringFormatCreatorPage />} />
+            <Route path="/lobby/new" element={<LobbyWizardPage />} />
+            <Route path="/lobby/join" element={<JoinLobbyPage />} />
+            <Route path="/lobby/:id" element={<LobbyRoomPage />} />
+          </Route>
+
+          {/* Draft board is full-screen with its own section tabs — no shell. */}
           <Route
             path="/lobby/:id/draft"
             element={

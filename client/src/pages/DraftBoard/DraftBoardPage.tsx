@@ -4,6 +4,11 @@ import {
   roundsForSettings,
   type Position,
 } from '@draft-lobby/shared';
+import BarChartIcon from '@mui/icons-material/BarChart';
+import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlined';
+import GridViewOutlinedIcon from '@mui/icons-material/GridViewOutlined';
+import SportsFootballIcon from '@mui/icons-material/SportsFootball';
+import type { SvgIconComponent } from '@mui/icons-material';
 import { useMemo, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { DraftGrid } from '../../components/DraftGrid/DraftGrid';
@@ -21,11 +26,11 @@ import './DraftBoardPage.scss';
 type Filter = 'ALL' | Position;
 
 type MobileTab = 'board' | 'players' | 'chat' | 'rankings';
-const MOBILE_TABS: { key: MobileTab; label: string; icon: string }[] = [
-  { key: 'board', label: 'Board', icon: '🗒️' },
-  { key: 'players', label: 'Players', icon: '🏈' },
-  { key: 'chat', label: 'Chat', icon: '💬' },
-  { key: 'rankings', label: 'Rankings', icon: '📊' },
+const MOBILE_TABS: { key: MobileTab; label: string; Icon: SvgIconComponent }[] = [
+  { key: 'board', label: 'Board', Icon: GridViewOutlinedIcon },
+  { key: 'players', label: 'Players', Icon: SportsFootballIcon },
+  { key: 'chat', label: 'Chat', Icon: ChatBubbleOutlineIcon },
+  { key: 'rankings', label: 'Rankings', Icon: BarChartIcon },
 ];
 
 export function DraftBoardPage() {
@@ -240,14 +245,16 @@ export function DraftBoardPage() {
 
       {/* Mobile-only section tabs. */}
       <nav className="draft__tabs">
-        {MOBILE_TABS.map((t) => (
+        {MOBILE_TABS.map(({ key, label, Icon }) => (
           <button
-            key={t.key}
-            className={`draft__tab ${mobileTab === t.key ? 'is-active' : ''}`}
-            onClick={() => setMobileTab(t.key)}
+            key={key}
+            className={`draft__tab ${mobileTab === key ? 'is-active' : ''}`}
+            onClick={() => setMobileTab(key)}
           >
-            <span className="draft__tab-icon">{t.icon}</span>
-            {t.label}
+            <span className="draft__tab-icon">
+              <Icon fontSize="small" />
+            </span>
+            {label}
           </button>
         ))}
       </nav>

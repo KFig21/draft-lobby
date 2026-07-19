@@ -13,11 +13,6 @@ export function HomePage() {
     <main className="home">
       <header className="home__header">
         <h1>Welcome, {username}</h1>
-        <div className="home__header-actions">
-          <Link className="button" to="/settings">
-            Settings
-          </Link>
-        </div>
       </header>
 
       <div className="home__actions">
