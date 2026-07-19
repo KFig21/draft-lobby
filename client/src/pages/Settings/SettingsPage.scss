@@ -83,4 +83,14 @@
       color: $text;
     }
   }
+
+  &__signout {
+    align-self: flex-start;
+    color: $danger;
+    border-color: $danger;
+
+    &:hover {
+      background: rgba($danger, 0.12);
+    }
+  }
 }

@@ -1,0 +1,126 @@
+@use 'variables' as *;
+
+.avatar-editor {
+  display: flex;
+  flex-direction: column;
+  gap: $space;
+
+  &__preview {
+    display: flex;
+    justify-content: center;
+    padding: $space 0 $space * 1.5;
+  }
+
+  &__label {
+    margin-top: $space;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: $text-muted;
+  }
+
+  &__grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: $space * 0.75;
+
+    @media (max-width: $bp-md) {
+      grid-template-columns: repeat(6, 1fr);
+    }
+  }
+
+  &__cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: 1;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: $bg;
+    color: $text;
+    cursor: pointer;
+
+    &:hover {
+      background: $bg-overlay;
+    }
+
+    &--active {
+      border-color: $accent;
+      background: $bg-overlay;
+    }
+
+    &--more {
+      font-size: 1.25rem;
+      color: $text-muted;
+    }
+  }
+
+  &__emoji {
+    font-size: 1.25rem;
+    line-height: 1;
+  }
+
+  &__picker {
+    margin-top: $space;
+
+    // The library ships its own theming; just round the container.
+    .EmojiPickerReact {
+      --epr-bg-color: #{$bg};
+      --epr-category-label-bg-color: #{$bg-raised};
+      border-color: $border !important;
+      border-radius: $radius !important;
+    }
+  }
+
+  &__colors {
+    display: flex;
+    align-items: center;
+    gap: $space;
+    flex-wrap: wrap;
+  }
+
+  &__swatch {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+
+    &--active {
+      border-color: $text;
+    }
+  }
+
+  &__native {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: none;
+    background: none;
+    cursor: pointer;
+  }
+
+  &__shapes {
+    display: flex;
+    gap: $space;
+  }
+
+  &__shape {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $space * 0.5;
+    padding: $space;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: $bg;
+    color: $text-muted;
+    font-size: 0.85rem;
+    cursor: pointer;
+    flex: 1;
+
+    &--active {
+      border-color: $accent;
+      color: $text;
+    }
+  }
+}

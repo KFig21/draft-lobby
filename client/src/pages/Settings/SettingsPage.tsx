@@ -8,6 +8,8 @@ import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../auth/AuthContext';
+import { ProfileEditor } from '../../components/ProfileEditor/ProfileEditor';
 import { supabase } from '../../supabase';
 import './SettingsPage.scss';
 
@@ -28,6 +30,7 @@ function categoryCount(rules: ScoringRules): number {
 
 export function SettingsPage() {
   const navigate = useNavigate();
+  const { signOut } = useAuth();
   const [formats, setFormats] = useState<ScoringFormatRow[]>([]);
   const [leagues, setLeagues] = useState<LeagueRow[]>([]);
 
@@ -63,6 +66,12 @@ export function SettingsPage() {
         </Link>
         <h1>Settings</h1>
       </header>
+
+      {/* Profile */}
+      <section className="settings__section">
+        <h2>Profile</h2>
+        <ProfileEditor />
+      </section>
 
       {/* Leagues */}
       <section className="settings__section">
@@ -129,6 +138,14 @@ export function SettingsPage() {
         <Link className="settings__setup" to="/settings/scoring/new">
           Create a custom scoring format →
         </Link>
+      </section>
+
+      {/* Account */}
+      <section className="settings__section">
+        <h2>Account</h2>
+        <button className="button settings__signout" onClick={signOut}>
+          Sign out
+        </button>
       </section>
     </main>
   );

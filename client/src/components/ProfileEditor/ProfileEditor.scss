@@ -1,0 +1,23 @@
+@use 'variables' as *;
+
+.profile-editor {
+  display: flex;
+  flex-direction: column;
+  gap: $space * 2;
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: $space * 1.5;
+  }
+
+  &__status {
+    font-size: 0.85rem;
+    color: $text-muted;
+
+    &--ok {
+      color: $accent;
+    }
+  }
+}

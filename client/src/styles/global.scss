@@ -121,23 +121,77 @@ a {
   }
 }
 
+// Dark-theme checkbox: replace the white native box with a bordered dark
+// square that fills with $primary + a check when selected.
+input[type='checkbox'] {
+  appearance: none;
+  -webkit-appearance: none;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border: 1px solid $border;
+  border-radius: $radius-sm;
+  background: $bg;
+  cursor: pointer;
+  display: inline-grid;
+  place-content: center;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease;
+
+  &::before {
+    content: '';
+    width: 10px;
+    height: 10px;
+    transform: scale(0);
+    transition: transform 120ms ease;
+    background: #fff;
+    // Checkmark shape via clip-path.
+    clip-path: polygon(
+      14% 44%,
+      0 65%,
+      50% 100%,
+      100% 16%,
+      80% 0,
+      43% 62%
+    );
+  }
+
+  &:checked {
+    background: $primary;
+    border-color: $primary;
+
+    &::before {
+      transform: scale(1);
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid $primary;
+    outline-offset: 2px;
+  }
+}
+
 .toggle {
   display: flex;
   align-items: center;
   gap: $space * 1.5;
   cursor: pointer;
-
-  input {
-    width: 18px;
-    height: 18px;
-    accent-color: $primary;
-  }
 }
 
+// Works as either an <a> or a <button>; reset native button chrome so both
+// render as a plain back-arrow link.
 .back-link {
-  color: $text-muted;
-  font-size: 0.85rem;
+  display: inline-flex;
+  align-items: center;
   width: fit-content;
+  padding: 0;
+  border: none;
+  background: none;
+  color: $text-muted;
+  font-family: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
 
   &:hover {
     color: $text;

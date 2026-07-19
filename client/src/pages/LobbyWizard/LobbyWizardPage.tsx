@@ -5,6 +5,7 @@ import {
   matchPreset,
   roundsForSettings,
   type LobbySettings,
+  type ScoringRules,
 } from '@draft-lobby/shared';
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -17,19 +18,44 @@ interface LeagueRow {
   id: string;
   name: string;
   settings: LobbySettings;
+  builtIn?: boolean;
+}
+interface ScoringFormatRow {
+  id: string;
+  name: string;
+  rules: ScoringRules;
 }
 
-// Built-in fallback so a lobby can be created without saving a league first.
-const DEFAULT_LEAGUE: LeagueRow = {
-  id: 'default',
-  name: 'Default (10-team PPR)',
-  settings: { ...DEFAULT_LOBBY_SETTINGS, name: 'Default league' },
-};
+// Common configs so a lobby can be spun up without saving a league first.
+function baseLeague(name: string, teamCount: number, preset: keyof typeof SCORING_PRESETS): LeagueRow {
+  return {
+    id: `builtin:${teamCount}-${preset}`,
+    name,
+    builtIn: true,
+    settings: {
+      ...DEFAULT_LOBBY_SETTINGS,
+      name,
+      teamCount,
+      scoring: SCORING_PRESETS[preset].rules,
+    },
+  };
+}
+const BUILT_IN_LEAGUES: LeagueRow[] = [
+  baseLeague('10-team PPR', 10, 'PPR'),
+  baseLeague('12-team PPR', 12, 'PPR'),
+  baseLeague('12-team Half-PPR', 12, 'HALF_PPR'),
+  baseLeague('12-team Standard', 12, 'STANDARD'),
+];
+
+// 'league' = inherit the chosen league's scoring; otherwise override it.
+const USE_LEAGUE_SCORING = 'league';
 
 export function LobbyWizardPage() {
   const navigate = useNavigate();
-  const [leagues, setLeagues] = useState<LeagueRow[]>([]);
-  const [leagueId, setLeagueId] = useState<string>('default');
+  const [savedLeagues, setSavedLeagues] = useState<LeagueRow[]>([]);
+  const [scoringFormats, setScoringFormats] = useState<ScoringFormatRow[]>([]);
+  const [leagueId, setLeagueId] = useState<string>(BUILT_IN_LEAGUES[0].id);
+  const [scoringChoice, setScoringChoice] = useState<string>(USE_LEAGUE_SCORING);
   const [lobbyName, setLobbyName] = useState('');
   const [password, setPassword] = useState('');
   const [scheduledStart, setScheduledStart] = useState('');
@@ -41,26 +67,45 @@ export function LobbyWizardPage() {
       .from('league_templates')
       .select('id, name, settings')
       .order('created_at')
-      .then(({ data }) => {
-        if (data && data.length) {
-          setLeagues(data as LeagueRow[]);
-          setLeagueId(data[0].id); // default to the first saved league
-        }
-      });
+      .then(({ data }) => data && setSavedLeagues(data as LeagueRow[]));
+    void supabase
+      .from('scoring_formats')
+      .select('id, name, rules')
+      .order('created_at')
+      .then(({ data }) => data && setScoringFormats(data as ScoringFormatRow[]));
   }, []);
 
-  const options = useMemo(() => [...leagues, DEFAULT_LEAGUE], [leagues]);
-  const league = options.find((l) => l.id === leagueId) ?? DEFAULT_LEAGUE;
+  const league =
+    [...savedLeagues, ...BUILT_IN_LEAGUES].find((l) => l.id === leagueId) ??
+    BUILT_IN_LEAGUES[0];
+
+  // Effective scoring: the league's own rules, unless overridden here.
+  const effectiveScoring = useMemo<ScoringRules>(() => {
+    if (scoringChoice === USE_LEAGUE_SCORING) return league.settings.scoring;
+    const [kind, key] = scoringChoice.split(':');
+    if (kind === 'preset' && key in SCORING_PRESETS) {
+      return SCORING_PRESETS[key as keyof typeof SCORING_PRESETS].rules;
+    }
+    if (kind === 'format') {
+      return scoringFormats.find((f) => f.id === key)?.rules ?? league.settings.scoring;
+    }
+    return league.settings.scoring;
+  }, [scoringChoice, league, scoringFormats]);
+
   const s = league.settings;
-  const scoringLabel = matchPreset(s.scoring)
-    ? SCORING_PRESETS[matchPreset(s.scoring)!].label
-    : 'Custom';
+  const scoringLabel = (() => {
+    const preset = matchPreset(effectiveScoring);
+    if (preset) return SCORING_PRESETS[preset].label;
+    const json = JSON.stringify(effectiveScoring);
+    return scoringFormats.find((f) => JSON.stringify(f.rules) === json)?.name ?? 'Custom';
+  })();
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
     const settings: LobbySettings = {
       ...league.settings,
+      scoring: effectiveScoring,
       name: lobbyName.trim() || league.settings.name,
       scheduledStart: scheduledStart ? new Date(scheduledStart).toISOString() : null,
     };
@@ -101,14 +146,54 @@ export function LobbyWizardPage() {
             </Link>
           </div>
           <label className="field">
-            <span>Use league settings from</span>
+            <span>Start from</span>
             <select value={leagueId} onChange={(e) => setLeagueId(e.target.value)}>
-              {leagues.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.name}
-                </option>
-              ))}
-              <option value="default">{DEFAULT_LEAGUE.name}</option>
+              {savedLeagues.length > 0 && (
+                <optgroup label="Your leagues">
+                  {savedLeagues.map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {l.name}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+              <optgroup label="Defaults">
+                {BUILT_IN_LEAGUES.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.name}
+                  </option>
+                ))}
+              </optgroup>
+            </select>
+          </label>
+
+          <label className="field">
+            <span>
+              Scoring <em className="muted">(override the league default)</em>
+            </span>
+            <select
+              value={scoringChoice}
+              onChange={(e) => setScoringChoice(e.target.value)}
+            >
+              <option value={USE_LEAGUE_SCORING}>Use league scoring</option>
+              <optgroup label="Presets">
+                {(Object.keys(SCORING_PRESETS) as (keyof typeof SCORING_PRESETS)[]).map(
+                  (p) => (
+                    <option key={p} value={`preset:${p}`}>
+                      {SCORING_PRESETS[p].label}
+                    </option>
+                  ),
+                )}
+              </optgroup>
+              {scoringFormats.length > 0 && (
+                <optgroup label="Your saved formats">
+                  {scoringFormats.map((f) => (
+                    <option key={f.id} value={`format:${f.id}`}>
+                      {f.name} (custom)
+                    </option>
+                  ))}
+                </optgroup>
+              )}
             </select>
           </label>
 
