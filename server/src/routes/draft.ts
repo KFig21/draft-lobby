@@ -1,8 +1,11 @@
 import { Router, type Response } from 'express';
 import {
+  CHAT_LOCK_MS,
+  chatReactSchema,
   draftPositionForOverall,
   inviteToLobbySchema,
   makePickSchema,
+  postChatSchema,
   renameTeamSchema,
   roundsForSettings,
   secondsForRound,
@@ -29,6 +32,45 @@ async function getRole(lobbyId: string, userId: string): Promise<Role | null> {
 
 function isCommish(role: Role | null): boolean {
   return role === 'COMMISSIONER' || role === 'SUB_COMMISSIONER';
+}
+
+async function usernameOf(userId: string): Promise<string> {
+  const { data } = await supabaseAdmin
+    .from('profiles')
+    .select('username')
+    .eq('id', userId)
+    .maybeSingle();
+  return data?.username ?? 'Someone';
+}
+
+/** Post a system message (pause/resume/rollback/etc.) into the lobby chat. */
+async function postSystemMessage(lobbyId: string, userId: string, body: string): Promise<void> {
+  await supabaseAdmin
+    .from('chat_messages')
+    .insert({ lobby_id: lobbyId, user_id: userId, kind: 'SYSTEM', body });
+}
+
+/** Chat locks CHAT_LOCK_MS after the draft ends. */
+async function isChatLocked(lobbyId: string): Promise<boolean> {
+  const { data: lobby } = await supabaseAdmin
+    .from('lobbies')
+    .select('status, completed_at')
+    .eq('id', lobbyId)
+    .maybeSingle();
+  if (!lobby || lobby.status !== 'COMPLETE') return false;
+  let endedAt = lobby.completed_at as string | null;
+  if (!endedAt) {
+    const { data: lastPick } = await supabaseAdmin
+      .from('picks')
+      .select('picked_at')
+      .eq('lobby_id', lobbyId)
+      .order('picked_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    endedAt = lastPick?.picked_at ?? null;
+  }
+  if (!endedAt) return false;
+  return Date.now() > new Date(endedAt).getTime() + CHAT_LOCK_MS;
 }
 
 /** POST /api/lobbies/:id/start — commissioner kicks off the draft. */
@@ -156,6 +198,7 @@ draftRouter.post('/:id/pick', async (req: AuthedRequest, res: Response) => {
     .update({
       current_overall: nextOverall,
       status: isComplete ? 'COMPLETE' : 'DRAFTING',
+      completed_at: isComplete ? new Date().toISOString() : null,
       pick_deadline: isComplete
         ? null
         : new Date(
@@ -217,6 +260,7 @@ draftRouter.post('/:id/pause', async (req: AuthedRequest, res: Response) => {
     res.status(500).json({ error: error.message });
     return;
   }
+  await postSystemMessage(lobbyId, req.user!.id, `⏸️ ${await usernameOf(req.user!.id)} paused the draft`);
   res.json({ ok: true, status: 'PAUSED' });
 });
 
@@ -257,6 +301,7 @@ draftRouter.post('/:id/resume', async (req: AuthedRequest, res: Response) => {
     res.status(500).json({ error: error.message });
     return;
   }
+  await postSystemMessage(lobbyId, req.user!.id, `▶️ ${await usernameOf(req.user!.id)} resumed the draft`);
   res.json({ ok: true, status: 'DRAFTING' });
 });
 
@@ -281,7 +326,7 @@ draftRouter.post('/:id/rollback', async (req: AuthedRequest, res: Response) => {
 
   const { data: lastPick } = await supabaseAdmin
     .from('picks')
-    .select('id, overall, round')
+    .select('id, overall, round, player_id')
     .eq('lobby_id', lobbyId)
     .order('overall', { ascending: false })
     .limit(1)
@@ -290,6 +335,12 @@ draftRouter.post('/:id/rollback', async (req: AuthedRequest, res: Response) => {
     res.status(409).json({ error: 'There are no picks to roll back' });
     return;
   }
+
+  const { data: rolledPlayer } = await supabaseAdmin
+    .from('players')
+    .select('name')
+    .eq('id', lastPick.player_id)
+    .maybeSingle();
 
   const { error: delError } = await supabaseAdmin
     .from('picks')
@@ -320,6 +371,13 @@ draftRouter.post('/:id/rollback', async (req: AuthedRequest, res: Response) => {
     res.status(500).json({ error: updateError.message });
     return;
   }
+  const who = await usernameOf(req.user!.id);
+  const what = rolledPlayer?.name ? ` (${rolledPlayer.name})` : '';
+  await postSystemMessage(
+    lobbyId,
+    req.user!.id,
+    `↩️ ${who} rolled back pick ${lastPick.overall}${what}`,
+  );
   res.json({ ok: true, rolledBackOverall: lastPick.overall });
 });
 
@@ -490,6 +548,99 @@ draftRouter.post('/:id/archive', async (req: AuthedRequest, res: Response) => {
     return;
   }
   res.json({ ok: true, archived });
+});
+
+/** POST /api/lobbies/:id/chat — post a chat message (members only, before the lock). */
+draftRouter.post('/:id/chat', async (req: AuthedRequest, res: Response) => {
+  const lobbyId = req.params.id;
+  const userId = req.user!.id;
+
+  const role = await getRole(lobbyId, userId);
+  if (!role) {
+    res.status(403).json({ error: 'Only members can chat in this lobby' });
+    return;
+  }
+  const parsed = postChatSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.flatten() });
+    return;
+  }
+  if (await isChatLocked(lobbyId)) {
+    res.status(409).json({ error: 'Chat is locked for this draft' });
+    return;
+  }
+
+  const { error } = await supabaseAdmin
+    .from('chat_messages')
+    .insert({ lobby_id: lobbyId, user_id: userId, kind: 'USER', body: parsed.data.body });
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
+  res.json({ ok: true });
+});
+
+/** POST /api/lobbies/:id/chat-react — toggle an emoji reaction on a message or pick. */
+draftRouter.post('/:id/chat-react', async (req: AuthedRequest, res: Response) => {
+  const lobbyId = req.params.id;
+  const userId = req.user!.id;
+
+  const role = await getRole(lobbyId, userId);
+  if (!role) {
+    res.status(403).json({ error: 'Only members can react in this lobby' });
+    return;
+  }
+  const parsed = chatReactSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.flatten() });
+    return;
+  }
+  const { targetType, targetId, emoji } = parsed.data;
+
+  const { data: existing } = await supabaseAdmin
+    .from('chat_reactions')
+    .select('id')
+    .eq('target_type', targetType)
+    .eq('target_id', targetId)
+    .eq('user_id', userId)
+    .eq('emoji', emoji)
+    .maybeSingle();
+
+  if (existing) {
+    await supabaseAdmin.from('chat_reactions').delete().eq('id', existing.id);
+    res.json({ ok: true, reacted: false });
+    return;
+  }
+  const { error } = await supabaseAdmin.from('chat_reactions').insert({
+    lobby_id: lobbyId,
+    target_type: targetType,
+    target_id: targetId,
+    user_id: userId,
+    emoji,
+  });
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
+  res.json({ ok: true, reacted: true });
+});
+
+/** POST /api/lobbies/:id/request-pause — any member flags the commissioner for a pause. */
+draftRouter.post('/:id/request-pause', async (req: AuthedRequest, res: Response) => {
+  const lobbyId = req.params.id;
+  const userId = req.user!.id;
+
+  const role = await getRole(lobbyId, userId);
+  if (!role) {
+    res.status(403).json({ error: 'Only members can request a pause' });
+    return;
+  }
+  await postSystemMessage(
+    lobbyId,
+    userId,
+    `🙋 ${await usernameOf(userId)} requested a pause`,
+  );
+  res.json({ ok: true });
 });
 
 /** POST /api/lobbies/:id/draft-order — commissioner sets the draft order (pre-draft). */

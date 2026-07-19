@@ -46,3 +46,24 @@ export const reactSchema = z.object({
   emoji: z.enum(REACTION_EMOJIS),
 });
 export type ReactInput = z.infer<typeof reactSchema>;
+
+// ── Draft-room chat ─────────────────────────────────────────────────
+export const CHAT_TARGET_TYPES = ['MESSAGE', 'PICK'] as const;
+export type ChatTargetType = (typeof CHAT_TARGET_TYPES)[number];
+
+/** Post a chat message in the draft room. */
+export const postChatSchema = z.object({
+  body: z.string().trim().min(1).max(1000),
+});
+export type PostChatInput = z.infer<typeof postChatSchema>;
+
+/** Toggle an emoji reaction on a chat message or a pick. */
+export const chatReactSchema = z.object({
+  targetType: z.enum(CHAT_TARGET_TYPES),
+  targetId: z.string().uuid(),
+  emoji: z.enum(REACTION_EMOJIS),
+});
+export type ChatReactInput = z.infer<typeof chatReactSchema>;
+
+/** How long after a draft ends the chat locks. */
+export const CHAT_LOCK_MS = 10 * 60 * 1000;

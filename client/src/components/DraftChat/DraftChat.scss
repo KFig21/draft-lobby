@@ -1,0 +1,241 @@
+@use 'variables' as *;
+
+.chat {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+
+  &__scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: $space * 1.5;
+    display: flex;
+    flex-direction: column;
+    gap: $space * 1.25;
+  }
+
+  &__empty {
+    margin: auto;
+  }
+
+  // ── System alert ──
+  &__system {
+    align-self: center;
+    max-width: 90%;
+    text-align: center;
+    padding: $space * 0.5 $space * 1.25;
+    border-radius: 999px;
+    background: rgba($warning, 0.14);
+    color: $warning;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+
+  // ── Pick line ──
+  &__pick {
+    padding: $space $space * 1.25;
+    border: 1px solid $border;
+    border-left: 3px solid $accent;
+    border-radius: $radius-sm;
+    background: rgba($accent, 0.06);
+  }
+
+  &__pick-main {
+    display: flex;
+    align-items: center;
+    gap: $space;
+  }
+
+  &__pick-pos {
+    flex-shrink: 0;
+    width: 26px;
+    height: 26px;
+    display: grid;
+    place-items: center;
+    border-radius: $radius-sm;
+    font-size: 0.6rem;
+    font-weight: 800;
+    color: #05231a;
+  }
+
+  &__pick-text {
+    font-size: 0.9rem;
+  }
+
+  // ── User message ──
+  &__msg {
+    display: flex;
+    gap: $space;
+
+    .avatar {
+      flex-shrink: 0;
+    }
+  }
+
+  &__msg-body {
+    min-width: 0;
+    flex: 1;
+  }
+
+  &__msg-head {
+    display: flex;
+    align-items: baseline;
+    gap: $space;
+  }
+
+  &__msg-name {
+    font-weight: 700;
+    font-size: 0.85rem;
+  }
+
+  &__msg-time {
+    color: $text-muted;
+    font-size: 0.7rem;
+  }
+
+  &__msg-text {
+    font-size: 0.9rem;
+    line-height: 1.35;
+    word-break: break-word;
+  }
+
+  &__error {
+    padding: 0 $space * 1.5;
+    color: $danger;
+    font-size: 0.8rem;
+  }
+
+  &__locked {
+    padding: $space * 1.5;
+    text-align: center;
+    color: $text-muted;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border-top: 1px solid $border;
+  }
+
+  &__compose {
+    display: flex;
+    gap: $space;
+    padding: $space;
+    border-top: 1px solid $border;
+
+    input {
+      flex: 1;
+      min-width: 0;
+      padding: $space * 1.25;
+      border: 1px solid $border;
+      border-radius: $radius-sm;
+      background: $bg;
+      color: $text;
+      font-size: 0.9rem;
+
+      &:focus {
+        outline: 2px solid $primary;
+        outline-offset: -1px;
+      }
+    }
+  }
+
+  &__send {
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    width: 42px;
+    border: none;
+    border-radius: $radius-sm;
+    background: $primary;
+    color: #fff;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      background: $primary-hover;
+    }
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+}
+
+// ── Reaction bar (messages + picks) ──
+.chat-react {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: $space * 0.5;
+
+  &__chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 1px 7px;
+    border: 1px solid $border;
+    border-radius: 999px;
+    background: $bg;
+    color: $text;
+    font-size: 0.8rem;
+    cursor: pointer;
+
+    &.is-mine {
+      border-color: $primary;
+      background: rgba($primary, 0.18);
+    }
+  }
+
+  &__count {
+    font-size: 0.72rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__add {
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border: none;
+    border-radius: 999px;
+    background: none;
+    color: $text-muted;
+    cursor: pointer;
+
+    &:hover {
+      background: $bg-overlay;
+      color: $text;
+    }
+  }
+
+  &__palette {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    z-index: 5;
+    display: flex;
+    gap: 2px;
+    margin-bottom: 4px;
+    padding: 4px;
+    border: 1px solid $border;
+    border-radius: 999px;
+    background: $bg-raised;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+
+    button {
+      width: 30px;
+      height: 30px;
+      border: none;
+      border-radius: 50%;
+      background: none;
+      font-size: 1.05rem;
+      cursor: pointer;
+
+      &:hover {
+        background: $bg-overlay;
+      }
+    }
+  }
+}

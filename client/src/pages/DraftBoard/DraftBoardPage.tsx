@@ -16,6 +16,7 @@ import UndoIcon from '@mui/icons-material/Undo';
 import type { SvgIconComponent } from '@mui/icons-material';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
+import { DraftChat } from '../../components/DraftChat/DraftChat';
 import { DraftGrid } from '../../components/DraftGrid/DraftGrid';
 import { LockInModal } from '../../components/LockInModal/LockInModal';
 import { NavDrawer } from '../../components/Navbar/NavDrawer';
@@ -70,6 +71,7 @@ export function DraftBoardPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [commishBusy, setCommishBusy] = useState(false);
   const [commishError, setCommishError] = useState<string | null>(null);
+  const [reqPauseBusy, setReqPauseBusy] = useState(false);
 
   // Resizable sidebar (desktop). Persisted across sessions.
   const [sidebarWidth, setSidebarWidth] = useState(() => {
@@ -211,6 +213,17 @@ export function DraftBoardPage() {
     }
   }
 
+  async function requestPause() {
+    setReqPauseBusy(true);
+    try {
+      await api(`/lobbies/${id}/request-pause`, { method: 'POST' });
+    } catch {
+      /* the alert is best-effort */
+    } finally {
+      setReqPauseBusy(false);
+    }
+  }
+
   return (
     <div className="draft">
       <header className="draft__topbar">
@@ -281,6 +294,18 @@ export function DraftBoardPage() {
             <UndoIcon fontSize="small" /> Undo last pick
           </button>
           {commishError && <span className="draft__commish-error">{commishError}</span>}
+        </div>
+      )}
+
+      {!isCommish && !isComplete && !isPaused && (
+        <div className="draft__commish">
+          <button
+            className="button draft__commish-btn"
+            onClick={requestPause}
+            disabled={reqPauseBusy}
+          >
+            🙋 Request pause
+          </button>
         </div>
       )}
 
@@ -402,11 +427,19 @@ export function DraftBoardPage() {
 
           {/* Chat */}
           <div
-            className={`draft__panel-body draft__chat ${
-              panelTab === 'chat' ? 'is-desktop-active' : ''
-            } ${mobileTab === 'chat' ? 'is-mobile-active' : ''}`}
+            className={`draft__panel-body ${panelTab === 'chat' ? 'is-desktop-active' : ''} ${
+              mobileTab === 'chat' ? 'is-mobile-active' : ''
+            }`}
           >
-            <p className="muted">💬 Chat is coming soon.</p>
+            <DraftChat
+              lobbyId={id}
+              status={lobby.status}
+              completedAt={lobby.completed_at}
+              picks={picks}
+              teamsById={teamsById}
+              playersById={playersById}
+              members={members}
+            />
           </div>
         </aside>
       </div>

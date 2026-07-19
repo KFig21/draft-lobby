@@ -17,6 +17,26 @@ export interface LobbyRow {
   status: LobbyStatus;
   current_overall: number;
   pick_deadline: string | null;
+  completed_at: string | null;
+  created_at: string;
+}
+
+export interface ChatMessageRow {
+  id: string;
+  lobby_id: string;
+  user_id: string;
+  body: string;
+  kind: 'USER' | 'SYSTEM';
+  created_at: string;
+}
+
+export interface ChatReactionRow {
+  id: string;
+  lobby_id: string;
+  target_type: 'MESSAGE' | 'PICK';
+  target_id: string;
+  user_id: string;
+  emoji: string;
   created_at: string;
 }
 
