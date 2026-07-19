@@ -1,65 +1,6 @@
 @use 'variables' as *;
 @use 'mixins' as *;
 
-// ── Desktop top bar ─────────────────────────────────────────────────
-.navbar {
-  display: none; // mobile uses the bottom bar
-
-  @include md {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: $space * 2;
-    height: 56px;
-    padding: 0 $space * 3;
-    background: $bg-raised;
-    border-bottom: 1px solid $border;
-    position: sticky;
-    top: 0;
-    z-index: 20;
-  }
-
-  &__brand {
-    display: inline-flex;
-    align-items: center;
-    gap: $space;
-    font-weight: 800;
-    font-size: 1.05rem;
-    color: $text;
-
-    svg {
-      color: $accent;
-    }
-  }
-
-  &__links {
-    display: flex;
-    align-items: center;
-    gap: $space * 0.5;
-  }
-
-  &__link {
-    display: inline-flex;
-    align-items: center;
-    gap: $space * 0.75;
-    padding: $space * 0.75 $space * 1.5;
-    border-radius: $radius-sm;
-    color: $text-muted;
-    font-size: 0.9rem;
-    font-weight: 600;
-
-    &:hover {
-      background: $bg-overlay;
-      color: $text;
-    }
-
-    &--active {
-      background: rgba($primary, 0.18);
-      color: $primary-hover;
-    }
-  }
-}
-
 // ── Mobile bottom bar ───────────────────────────────────────────────
 .navbar-bottom {
   position: fixed;

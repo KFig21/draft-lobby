@@ -181,6 +181,33 @@ input[type='checkbox'] {
 
 // Works as either an <a> or a <button>; reset native button chrome so both
 // render as a plain back-arrow link.
+// Segmented (pill) toggle for a small set of mutually exclusive options.
+.segmented {
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  border: 1px solid $border;
+  border-radius: 999px;
+  background: $bg;
+  width: fit-content;
+
+  &__opt {
+    padding: $space * 0.75 $space * 2;
+    border: none;
+    border-radius: 999px;
+    background: none;
+    color: $text-muted;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+
+    &--on {
+      background: $primary;
+      color: #fff;
+    }
+  }
+}
+
 .back-link {
   display: inline-flex;
   align-items: center;

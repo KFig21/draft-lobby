@@ -37,6 +37,25 @@ async function profileExists(userId: string): Promise<boolean> {
   return !!data;
 }
 
+async function usernameOf(userId: string): Promise<string | null> {
+  const { data } = await supabaseAdmin
+    .from('profiles')
+    .select('username')
+    .eq('id', userId)
+    .maybeSingle();
+  return data?.username ?? null;
+}
+
+/** Record a "became friends" event (actor = accepter, subject = requester). */
+async function recordFriendAccepted(accepter: string, requester: string): Promise<void> {
+  await supabaseAdmin.from('activity_events').insert({
+    actor_id: accepter,
+    type: 'FRIEND_ACCEPTED',
+    subject_id: requester,
+    subject_name: await usernameOf(requester),
+  });
+}
+
 /** POST /api/friends/request — send a friend request. */
 socialRouter.post('/request', async (req: AuthedRequest, res: Response) => {
   const me = req.user!.id;
@@ -72,6 +91,7 @@ socialRouter.post('/request', async (req: AuthedRequest, res: Response) => {
         actor_id: me,
         type: 'FRIEND_ACCEPTED',
       });
+      await recordFriendAccepted(me, target);
       res.json({ ok: true, status: 'ACCEPTED' });
       return;
     }
@@ -130,6 +150,7 @@ socialRouter.post('/respond', async (req: AuthedRequest, res: Response) => {
       actor_id: me,
       type: 'FRIEND_ACCEPTED',
     });
+    await recordFriendAccepted(me, requesterId);
     res.json({ ok: true, status: 'ACCEPTED' });
     return;
   }

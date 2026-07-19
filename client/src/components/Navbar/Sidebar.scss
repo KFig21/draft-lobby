@@ -1,0 +1,140 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+.sidebar {
+  display: none; // mobile uses the bottom bar + drawer
+
+  @include md {
+    display: flex;
+    flex-direction: column;
+    gap: $space;
+    position: sticky;
+    top: 0;
+    align-self: flex-start;
+    height: 100vh;
+    height: 100dvh;
+    width: 240px;
+    flex-shrink: 0;
+    padding: $space * 2 $space * 1.5;
+    background: $bg-raised;
+    border-right: 1px solid $border;
+  }
+
+  @media (min-width: $bp-lg) {
+    width: 260px;
+  }
+
+  &__brand {
+    display: inline-flex;
+    align-items: center;
+    gap: $space;
+    padding: $space $space * 1.5;
+    font-weight: 800;
+    font-size: 1.15rem;
+    color: $text;
+
+    svg {
+      color: $accent;
+    }
+  }
+
+  &__nav {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-top: $space;
+  }
+
+  &__link {
+    display: flex;
+    align-items: center;
+    gap: $space * 1.5;
+    padding: $space * 1.25 $space * 1.5;
+    border-radius: 999px;
+    color: $text;
+    font-size: 1.05rem;
+    font-weight: 600;
+
+    &:hover {
+      background: $bg-overlay;
+    }
+
+    &--active {
+      background: rgba($primary, 0.18);
+      color: $primary-hover;
+    }
+  }
+
+  &__link-icon {
+    position: relative;
+    display: inline-flex;
+    flex-shrink: 0;
+  }
+
+  &__badge {
+    position: absolute;
+    top: -6px;
+    left: 100%;
+    margin-left: -10px;
+    display: inline-grid;
+    place-items: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: $danger;
+    color: #fff;
+    font-size: 0.68rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  &__footer {
+    margin-top: auto;
+    display: flex;
+    align-items: center;
+    gap: $space;
+    padding-top: $space;
+    border-top: 1px solid $border;
+  }
+
+  &__me {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: $space;
+    padding: $space * 0.5;
+    border-radius: $radius-sm;
+    color: $text;
+
+    &:hover {
+      background: $bg-overlay;
+    }
+  }
+
+  &__me-name {
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__signout {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    border: none;
+    border-radius: $radius-sm;
+    background: none;
+    color: $text-muted;
+    cursor: pointer;
+
+    &:hover {
+      background: $bg-overlay;
+      color: $danger;
+    }
+  }
+}

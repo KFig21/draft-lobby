@@ -2,71 +2,166 @@
 @use 'mixins' as *;
 
 .home {
-  max-width: 900px;
+  max-width: 640px;
   margin: 0 auto;
-  padding: $space * 4 $space * 3;
+  padding: $space * 3;
+  display: flex;
+  flex-direction: column;
+  gap: $space * 3;
 
-  &__header {
+  &__top {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    flex-wrap: wrap;
     gap: $space * 2;
-    margin-bottom: $space * 4;
+    flex-wrap: wrap;
 
     h1 {
-      font-size: 1.4rem;
+      font-size: 1.5rem;
     }
   }
 
-  &__header-actions {
-    display: flex;
-    gap: $space;
+  &__new {
     flex-shrink: 0;
+    gap: 4px;
   }
 
-  &__actions {
+  &__section-title {
+    font-size: 1rem;
+    margin-bottom: $space * 1.5;
+    color: $text-muted;
+  }
+
+  &__pinned-grid {
     display: grid;
-    gap: $space * 2;
+    gap: $space;
     grid-template-columns: 1fr;
 
     @include md {
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: 1fr 1fr;
     }
   }
 }
 
-// Clickable action card (used on the home screen).
-.card--action {
-  display: block;
+.pinned-card {
+  display: flex;
+  flex-direction: column;
+  gap: $space * 0.5;
+  align-items: flex-start;
+  @include card-surface;
+  padding: $space * 1.5;
   transition: border-color 120ms ease;
 
   &:hover {
     border-color: $primary;
   }
 
-  &__icon {
-    display: inline-grid;
-    place-items: center;
-    width: 44px;
-    height: 44px;
-    margin-bottom: $space * 1.5;
-    border-radius: $radius-sm;
-    background: rgba($primary, 0.18);
-    color: $primary-hover;
+  &__name {
+    font-weight: 700;
+    font-size: 1.05rem;
+  }
+}
 
-    svg {
-      font-size: 1.5rem;
+// ── Feed ────────────────────────────────────────────────────────────
+.feed {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: $space * 1.5;
+}
+
+.feed-card {
+  display: flex;
+  gap: $space * 1.5;
+  @include card-surface;
+  padding: $space * 2;
+
+  &__avatars {
+    display: flex;
+    flex-shrink: 0;
+
+    // Overlap stacked avatars.
+    > * + * {
+      margin-left: -14px;
+    }
+
+    .avatar {
+      border: 2px solid $bg-raised;
     }
   }
 
-  h2 {
-    margin-bottom: $space;
-    font-size: 1.1rem;
+  &__body {
+    flex: 1;
+    min-width: 0;
   }
 
-  p {
+  &__text {
+    font-size: 0.95rem;
+    line-height: 1.4;
+  }
+
+  &__link {
+    color: $accent;
+    font-weight: 700;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  &__time {
+    display: block;
+    margin-top: 2px;
     color: $text-muted;
-    font-size: 0.9rem;
+    font-size: 0.75rem;
+  }
+
+  &__reactions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $space * 0.5;
+    margin-top: $space * 1.5;
+  }
+}
+
+.reaction {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: $bg;
+  cursor: pointer;
+  font-size: 0.9rem;
+  line-height: 1;
+  opacity: 0.75;
+  transition:
+    opacity 120ms ease,
+    background 120ms ease;
+
+  &:hover {
+    opacity: 1;
+    background: $bg-overlay;
+  }
+
+  // Emphasize reactions that have a count.
+  &--has {
+    opacity: 1;
+    border-color: $border;
+  }
+
+  // The current user's own reaction.
+  &--on {
+    opacity: 1;
+    border-color: $primary;
+    background: rgba($primary, 0.18);
+  }
+
+  &__count {
+    font-size: 0.78rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: $text;
   }
 }

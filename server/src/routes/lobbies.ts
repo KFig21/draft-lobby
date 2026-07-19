@@ -67,7 +67,69 @@ lobbiesRouter.post('/', async (req: AuthedRequest, res: Response) => {
     return;
   }
 
+  // Surface open lobbies in friends' feeds.
+  if ((settings as { visibility?: string }).visibility === 'OPEN') {
+    await supabaseAdmin.from('activity_events').insert({
+      actor_id: userId,
+      type: 'OPEN_LOBBY_CREATED',
+      lobby_id: lobby.id,
+      lobby_name: settings.name,
+    });
+  }
+
   res.status(201).json({ lobby });
+});
+
+/** GET /api/lobbies/open — browsable lobbies anyone can join (pre-draft, not full). */
+lobbiesRouter.get('/open', async (req: AuthedRequest, res: Response) => {
+  const { data: lobbies } = await supabaseAdmin
+    .from('lobbies')
+    .select('id, name, settings, status, created_at, commissioner_id')
+    .in('status', ['SETUP', 'SCHEDULED'])
+    .order('created_at', { ascending: false })
+    .limit(50);
+
+  const open = (lobbies ?? []).filter(
+    (l) => (l.settings as { visibility?: string }).visibility === 'OPEN',
+  );
+  if (open.length === 0) {
+    res.json({ lobbies: [] });
+    return;
+  }
+
+  // Team counts (filled slots) per lobby.
+  const ids = open.map((l) => l.id);
+  const { data: teams } = await supabaseAdmin
+    .from('teams')
+    .select('lobby_id')
+    .in('lobby_id', ids);
+  const counts = new Map<string, number>();
+  for (const t of teams ?? []) {
+    counts.set(t.lobby_id, (counts.get(t.lobby_id) ?? 0) + 1);
+  }
+
+  const me = req.user!.id;
+  const { data: myMemberships } = await supabaseAdmin
+    .from('lobby_members')
+    .select('lobby_id')
+    .eq('user_id', me)
+    .in('lobby_id', ids);
+  const mine = new Set((myMemberships ?? []).map((m) => m.lobby_id));
+
+  const result = open.map((l) => {
+    const filled = counts.get(l.id) ?? 0;
+    const teamCount = (l.settings as { teamCount: number }).teamCount;
+    return {
+      id: l.id,
+      name: l.name,
+      settings: l.settings,
+      filled,
+      teamCount,
+      isMember: mine.has(l.id),
+      isFull: filled >= teamCount,
+    };
+  });
+  res.json({ lobbies: result });
 });
 
 /** POST /api/lobbies/join — join an existing lobby with its password. */
@@ -89,7 +151,9 @@ lobbiesRouter.post('/join', async (req: AuthedRequest, res: Response) => {
     res.status(404).json({ error: 'Lobby not found' });
     return;
   }
-  if (!verifyPassword(password, lobby.password_hash)) {
+  // OPEN lobbies are joinable without a password; PRIVATE ones require it.
+  const isOpen = (lobby.settings as { visibility?: string }).visibility === 'OPEN';
+  if (!isOpen && !verifyPassword(password ?? '', lobby.password_hash)) {
     res.status(403).json({ error: 'Incorrect password' });
     return;
   }

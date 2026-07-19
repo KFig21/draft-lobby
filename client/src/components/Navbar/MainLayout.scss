@@ -4,11 +4,18 @@
 .app-shell {
   min-height: 100%;
 
+  @include md {
+    display: flex;
+    align-items: flex-start;
+  }
+
   &__content {
     // Leave room for the fixed mobile bottom bar; not needed on desktop.
     padding-bottom: calc(64px + env(safe-area-inset-bottom, 0));
 
     @include md {
+      flex: 1;
+      min-width: 0;
       padding-bottom: 0;
     }
   }

@@ -28,3 +28,21 @@ export type RemoveFriendInput = z.infer<typeof removeFriendSchema>;
 /** Invite a user to a lobby. */
 export const inviteToLobbySchema = z.object({ userId: z.string().uuid() });
 export type InviteToLobbyInput = z.infer<typeof inviteToLobbySchema>;
+
+// ── Activity feed ───────────────────────────────────────────────────
+export const ACTIVITY_TYPES = [
+  'DRAFT_COMPLETED',
+  'FRIEND_ACCEPTED',
+  'OPEN_LOBBY_CREATED',
+] as const;
+export type ActivityType = (typeof ACTIVITY_TYPES)[number];
+
+/** Emoji reactions available on feed items. */
+export const REACTION_EMOJIS = ['❤️', '😂', '🤮', '😡', '🏆', '🐐', '🍻', '🗑️'] as const;
+export type ReactionEmoji = (typeof REACTION_EMOJIS)[number];
+
+/** Toggle a reaction on a feed item. */
+export const reactSchema = z.object({
+  emoji: z.enum(REACTION_EMOJIS),
+});
+export type ReactInput = z.infer<typeof reactSchema>;

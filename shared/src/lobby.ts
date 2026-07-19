@@ -70,10 +70,15 @@ export function secondsForRound(round: number, tiers: PickTier[]): number {
 }
 
 /** The full, editable configuration for a draft lobby. */
+export const lobbyVisibilitySchema = z.enum(['PRIVATE', 'OPEN']);
+export type LobbyVisibility = z.infer<typeof lobbyVisibilitySchema>;
+
 export const lobbySettingsSchema = z.object({
   name: z.string().min(1).max(60),
   teamCount: z.number().int().min(2).max(32),
   draftType: draftTypeSchema.default('SNAKE'),
+  /** OPEN lobbies are discoverable and joinable without the password. */
+  visibility: lobbyVisibilitySchema.default('PRIVATE'),
   // Rounds are derived from the roster (one pick per spot) — not stored.
   rosterComposition: rosterCompositionSchema,
   /** Per-round pick clock. */
@@ -110,6 +115,7 @@ export const DEFAULT_LOBBY_SETTINGS: LobbySettings = {
   name: '',
   teamCount: 10,
   draftType: 'SNAKE',
+  visibility: 'PRIVATE',
   rosterComposition: DEFAULT_ROSTER,
   pickTiers: DEFAULT_PICK_TIERS,
   timeoutAllowance: null,
@@ -134,7 +140,8 @@ export type CreateLobbyInput = z.infer<typeof createLobbySchema>;
 
 export const joinLobbySchema = z.object({
   lobbyId: z.string().uuid(),
-  password: z.string().min(1).max(100),
+  // Optional: OPEN lobbies don't require a password.
+  password: z.string().max(100).optional(),
   teamName: z.string().min(1).max(40).optional(),
 });
 export type JoinLobbyInput = z.infer<typeof joinLobbySchema>;

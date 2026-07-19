@@ -166,6 +166,34 @@ export function LobbyWizardPage() {
               maxLength={60}
             />
           </label>
+          <div className="field">
+            <span>Visibility</span>
+            <div className="segmented">
+              <button
+                type="button"
+                className={`segmented__opt${
+                  settings.visibility === 'PRIVATE' ? ' segmented__opt--on' : ''
+                }`}
+                onClick={() => setSettings((s) => ({ ...s, visibility: 'PRIVATE' }))}
+              >
+                🔒 Private
+              </button>
+              <button
+                type="button"
+                className={`segmented__opt${
+                  settings.visibility === 'OPEN' ? ' segmented__opt--on' : ''
+                }`}
+                onClick={() => setSettings((s) => ({ ...s, visibility: 'OPEN' }))}
+              >
+                🌐 Open
+              </button>
+            </div>
+            <em className="muted">
+              {settings.visibility === 'OPEN'
+                ? 'Anyone can find this lobby on the Join page and join without the password.'
+                : 'Only people with the lobby link + password can join.'}
+            </em>
+          </div>
           <label className="field">
             <span>Lobby password</span>
             <input

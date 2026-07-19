@@ -2,13 +2,74 @@
 @use 'mixins' as *;
 
 .join {
-  @include centered-page;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: $space * 3;
+  display: flex;
+  flex-direction: column;
+  gap: $space * 3;
 
-  &__card {
-    @include form-card;
+  &__header {
+    display: flex;
+    flex-direction: column;
+    gap: $space;
 
     h1 {
-      font-size: 1.5rem;
+      font-size: 1.6rem;
+    }
+  }
+
+  &__open {
+    h2 {
+      font-size: 1rem;
+      margin-bottom: $space * 1.5;
+    }
+  }
+
+  &__open-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: $space;
+  }
+
+  &__open-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $space * 1.5;
+    background: $bg-raised;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    padding: $space * 1.25 $space * 1.5;
+
+    .button {
+      flex-shrink: 0;
+      padding: $space * 0.6 $space * 1.5;
+      font-size: 0.9rem;
+    }
+  }
+
+  &__open-main {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  &__open-name {
+    font-weight: 700;
+  }
+
+  &__card {
+    display: flex;
+    flex-direction: column;
+    gap: $space * 2;
+    @include card-surface;
+    padding: $space * 3;
+
+    h2 {
+      font-size: 1rem;
     }
   }
 

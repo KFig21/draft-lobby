@@ -167,6 +167,21 @@ draftRouter.post('/:id/pick', async (req: AuthedRequest, res: Response) => {
     return;
   }
 
+  // Post a completion event per participant so it lands in friends' feeds.
+  if (isComplete) {
+    const { data: members } = await supabaseAdmin
+      .from('lobby_members')
+      .select('user_id')
+      .eq('lobby_id', lobbyId);
+    const rows = (members ?? []).map((m) => ({
+      actor_id: m.user_id,
+      type: 'DRAFT_COMPLETED',
+      lobby_id: lobbyId,
+      lobby_name: settings.name,
+    }));
+    if (rows.length) await supabaseAdmin.from('activity_events').insert(rows);
+  }
+
   res.json({ ok: true, overall, round, complete: isComplete });
 });
 

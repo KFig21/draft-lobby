@@ -1,5 +1,4 @@
 import MenuIcon from '@mui/icons-material/Menu';
-import SportsFootballIcon from '@mui/icons-material/SportsFootball';
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useNotifications } from '../../notifications/NotificationsContext';
@@ -9,36 +8,13 @@ import './Navbar.scss';
 // Bottom bar shows the top actions; the rest live behind the menu drawer.
 const BOTTOM = NAV_ITEMS.slice(0, 4);
 
+/** Mobile-only bottom bar + slide-in menu. Desktop uses the Sidebar. */
 export function Navbar() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { unreadCount } = useNotifications();
 
-  const linkClass = ({ isActive }: { isActive: boolean }) =>
-    `navbar__link${isActive ? ' navbar__link--active' : ''}`;
-
   return (
     <>
-      {/* Desktop top bar */}
-      <header className="navbar">
-        <NavLink to="/home" className="navbar__brand">
-          <SportsFootballIcon fontSize="small" />
-          <span>Draft Lobby</span>
-        </NavLink>
-        <nav className="navbar__links">
-          {NAV_ITEMS.map(({ to, label, Icon, end }) => (
-            <NavLink key={to} to={to} end={end} className={linkClass}>
-              <span className="navbar__link-icon">
-                <Icon fontSize="small" />
-                {to === '/notifications' && unreadCount > 0 && (
-                  <span className="navbar__badge navbar__badge--dot">{unreadCount}</span>
-                )}
-              </span>
-              {label}
-            </NavLink>
-          ))}
-        </nav>
-      </header>
-
       {/* Mobile bottom bar */}
       <nav className="navbar-bottom">
         {BOTTOM.map(({ to, label, Icon, end }) => (
