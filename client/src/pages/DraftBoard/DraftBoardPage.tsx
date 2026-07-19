@@ -4,7 +4,6 @@ import {
   roundsForSettings,
   type Position,
 } from '@draft-lobby/shared';
-import BarChartIcon from '@mui/icons-material/BarChart';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlined';
 import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
 import GridViewOutlinedIcon from '@mui/icons-material/GridViewOutlined';
@@ -15,11 +14,10 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import SportsFootballIcon from '@mui/icons-material/SportsFootball';
 import UndoIcon from '@mui/icons-material/Undo';
 import type { SvgIconComponent } from '@mui/icons-material';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { DraftGrid } from '../../components/DraftGrid/DraftGrid';
 import { LockInModal } from '../../components/LockInModal/LockInModal';
-import { Modal } from '../../components/Modal/Modal';
 import { NavDrawer } from '../../components/Navbar/NavDrawer';
 import { PickClock } from '../../components/PickClock/PickClock';
 import { PlayerCard } from '../../components/PlayerCard/PlayerCard';
@@ -33,14 +31,25 @@ import type { PlayerRow, TeamRow } from '../../lib/types';
 import './DraftBoardPage.scss';
 
 type Filter = 'ALL' | Position;
+type PanelTab = 'players' | 'roster' | 'chat';
+type MobileTab = 'board' | PanelTab;
 
-type MobileTab = 'board' | 'players' | 'chat' | 'rankings';
+// The right sidebar's tabs (desktop) — labels shown in the tab strip.
+const SIDEBAR_TABS: { key: PanelTab; label: string; Icon: SvgIconComponent }[] = [
+  { key: 'players', label: 'Players & queue', Icon: SportsFootballIcon },
+  { key: 'roster', label: 'Roster', Icon: FormatListBulletedIcon },
+  { key: 'chat', label: 'Chat', Icon: ChatBubbleOutlineIcon },
+];
+// Bottom-bar sections (mobile) — Board plus the three sidebar tabs.
 const MOBILE_TABS: { key: MobileTab; label: string; Icon: SvgIconComponent }[] = [
   { key: 'board', label: 'Board', Icon: GridViewOutlinedIcon },
   { key: 'players', label: 'Players', Icon: SportsFootballIcon },
+  { key: 'roster', label: 'Roster', Icon: FormatListBulletedIcon },
   { key: 'chat', label: 'Chat', Icon: ChatBubbleOutlineIcon },
-  { key: 'rankings', label: 'Rankings', Icon: BarChartIcon },
 ];
+
+const MIN_SIDEBAR = 300;
+const MAX_SIDEBAR = 600;
 
 export function DraftBoardPage() {
   const { id = '' } = useParams();
@@ -52,13 +61,52 @@ export function DraftBoardPage() {
   const [filter, setFilter] = useState<Filter>('ALL');
   const [search, setSearch] = useState('');
   const [mobileTab, setMobileTab] = useState<MobileTab>('board');
+  const [panelTab, setPanelTab] = useState<PanelTab>('players');
+  const [rosterTeamSel, setRosterTeamSel] = useState<string | null>(null);
+  const [queue, setQueue] = useState<string[]>([]);
   const [selected, setSelected] = useState<PlayerRow | null>(null);
   const [pickBusy, setPickBusy] = useState(false);
   const [pickError, setPickError] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [commishBusy, setCommishBusy] = useState(false);
   const [commishError, setCommishError] = useState<string | null>(null);
-  const [lineupTeamId, setLineupTeamId] = useState<string | null>(null);
+
+  // Resizable sidebar (desktop). Persisted across sessions.
+  const [sidebarWidth, setSidebarWidth] = useState(() => {
+    const saved = Number(localStorage.getItem('draftSidebarWidth'));
+    return saved >= MIN_SIDEBAR && saved <= MAX_SIDEBAR ? saved : 380;
+  });
+  const draggingRef = useRef(false);
+
+  useEffect(() => {
+    function onMove(e: MouseEvent) {
+      if (!draggingRef.current) return;
+      const w = window.innerWidth - e.clientX;
+      setSidebarWidth(Math.min(MAX_SIDEBAR, Math.max(MIN_SIDEBAR, w)));
+    }
+    function onUp() {
+      if (!draggingRef.current) return;
+      draggingRef.current = false;
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+    }
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+  }, []);
+  useEffect(() => {
+    localStorage.setItem('draftSidebarWidth', String(sidebarWidth));
+  }, [sidebarWidth]);
+
+  function startResize(e: React.MouseEvent) {
+    e.preventDefault();
+    draggingRef.current = true;
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'col-resize';
+  }
 
   const userId = session?.user.id;
 
@@ -68,10 +116,7 @@ export function DraftBoardPage() {
     return m;
   }, [players]);
 
-  const draftedIds = useMemo(
-    () => new Set(picks.map((p) => p.player_id)),
-    [picks],
-  );
+  const draftedIds = useMemo(() => new Set(picks.map((p) => p.player_id)), [picks]);
 
   const teamsById = useMemo(() => {
     const m = new Map<string, TeamRow>();
@@ -80,12 +125,7 @@ export function DraftBoardPage() {
   }, [teams]);
 
   function doExport(kind: 'csv' | 'xls') {
-    const opts = {
-      lobbyName: lobby?.name ?? 'draft',
-      picks,
-      teamsById,
-      playersById,
-    };
+    const opts = { lobbyName: lobby?.name ?? 'draft', picks, teamsById, playersById };
     if (kind === 'csv') exportDraftCsv(opts);
     else exportDraftExcel(opts);
   }
@@ -95,22 +135,15 @@ export function DraftBoardPage() {
     const s = lobby.settings;
     const overall = lobby.current_overall;
     const round = Math.floor((overall - 1) / s.teamCount) + 1;
-    const onClockPosition = draftPositionForOverall(
-      overall,
-      s.teamCount,
-      s.draftType,
-    );
-    const onClockTeam =
-      teams.find((t) => t.draft_position === onClockPosition) ?? null;
+    const onClockPosition = draftPositionForOverall(overall, s.teamCount, s.draftType);
+    const onClockTeam = teams.find((t) => t.draft_position === onClockPosition) ?? null;
     return { s, overall, round, onClockTeam };
   }, [lobby, teams]);
 
   const isCommish = useMemo(() => {
     if (!userId || !lobby) return false;
     if (lobby.commissioner_id === userId) return true;
-    return members.some(
-      (m) => m.user_id === userId && m.role === 'SUB_COMMISSIONER',
-    );
+    return members.some((m) => m.user_id === userId && m.role === 'SUB_COMMISSIONER');
   }, [userId, lobby, members]);
 
   const available = useMemo(() => {
@@ -133,19 +166,30 @@ export function DraftBoardPage() {
   const isPaused = lobby.status === 'PAUSED';
   const isMyTurn = !!onClockTeam && onClockTeam.owner_id === userId;
   const canPick = !isComplete && !isPaused && (isMyTurn || isCommish);
-  // When a commissioner picks for a team that isn't theirs, surface it in the modal.
   const pickingForTeam = !isMyTurn && onClockTeam ? onClockTeam.name : null;
   const myTeamId = teams.find((t) => t.owner_id === userId)?.id ?? teams[0]?.id ?? null;
+  const rosterTeamId = rosterTeamSel ?? myTeamId ?? teams[0]?.id ?? '';
+
+  // Queued players still on the board, in queue order.
+  const queuedPlayers = queue
+    .map((pid) => playersById.get(pid))
+    .filter((p): p is PlayerRow => !!p && !draftedIds.has(p.id));
+
+  function toggleQueue(pid: string) {
+    setQueue((q) => (q.includes(pid) ? q.filter((x) => x !== pid) : [...q, pid]));
+  }
+  function openTeamRoster(teamId: string) {
+    setRosterTeamSel(teamId);
+    setPanelTab('roster');
+    setMobileTab('roster');
+  }
 
   async function confirmPick() {
     if (!selected) return;
     setPickError(null);
     setPickBusy(true);
     try {
-      await api(`/lobbies/${id}/pick`, {
-        method: 'POST',
-        body: { playerId: selected.id },
-      });
+      await api(`/lobbies/${id}/pick`, { method: 'POST', body: { playerId: selected.id } });
       setSelected(null);
     } catch (err) {
       setPickError(err instanceof Error ? err.message : 'Pick failed');
@@ -170,20 +214,9 @@ export function DraftBoardPage() {
   return (
     <div className="draft">
       <header className="draft__topbar">
-        <div className="draft__left">
-          <Link to={`/lobby/${id}`} className="back-link draft__desktop-only">
-            ← Room
-          </Link>
-          <button
-            type="button"
-            className="draft__lineup-open"
-            onClick={() => setLineupTeamId(myTeamId)}
-            disabled={!myTeamId}
-          >
-            <FormatListBulletedIcon fontSize="small" />
-            My team
-          </button>
-        </div>
+        <Link to={`/lobby/${id}`} className="back-link draft__desktop-only">
+          ← Room
+        </Link>
         <div className="draft__status">
           {isComplete ? (
             <strong className="draft__complete">🏆 Draft complete</strong>
@@ -212,10 +245,7 @@ export function DraftBoardPage() {
                 Excel
               </button>
             </div>
-            <button
-              className="button button--primary"
-              onClick={() => navigate('/home')}
-            >
+            <button className="button button--primary" onClick={() => navigate('/home')}>
               Home
             </button>
           </div>
@@ -263,7 +293,7 @@ export function DraftBoardPage() {
 
       <div className="draft__body">
         <section
-          className={`draft__board ${mobileTab === 'board' ? 'is-active' : ''}`}
+          className={`draft__board ${mobileTab === 'board' ? 'is-mobile-active' : ''}`}
         >
           <DraftGrid
             teams={teams}
@@ -272,57 +302,113 @@ export function DraftBoardPage() {
             playersById={playersById}
             onClockTeamId={onClockTeam?.id ?? null}
             currentRound={round}
-            onTeamClick={setLineupTeamId}
+            onTeamClick={openTeamRoster}
           />
         </section>
 
+        <div className="draft__resizer" onMouseDown={startResize} aria-hidden />
+
         <aside
-          className={`draft__pool ${mobileTab === 'players' ? 'is-active' : ''}`}
+          className={`draft__sidebar ${mobileTab !== 'board' ? 'is-mobile-active' : ''}`}
+          style={{ ['--sidebar-w' as string]: `${sidebarWidth}px` }}
         >
-          <div className="pool__filters">
-            <div className="chip-row">
-              {(['ALL', ...POSITIONS] as Filter[]).map((f) => (
-                <button
-                  key={f}
-                  className={`chip ${filter === f ? 'chip--active' : ''}`}
-                  onClick={() => setFilter(f)}
-                >
-                  {f === 'DEF' ? 'D/ST' : f}
-                </button>
-              ))}
-            </div>
-            <input
-              className="pool__search"
-              placeholder="Search players…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+          <div className="draft__sidebar-tabs">
+            {SIDEBAR_TABS.map(({ key, label, Icon }) => (
+              <button
+                key={key}
+                className={`draft__stab ${panelTab === key ? 'is-active' : ''}`}
+                onClick={() => setPanelTab(key)}
+              >
+                <Icon fontSize="small" />
+                {label}
+              </button>
+            ))}
           </div>
 
-          <div className="pool__list">
-            {available.slice(0, 200).map((p) => (
-              <PlayerCard
-                key={p.id}
-                player={p}
-                onPick={canPick ? () => setSelected(p) : undefined}
-                disabled={!canPick}
-              />
-            ))}
-            {available.length === 0 && (
-              <p className="muted pool__empty">No players match.</p>
+          {/* Players & queue */}
+          <div
+            className={`draft__panel-body ${panelTab === 'players' ? 'is-desktop-active' : ''} ${
+              mobileTab === 'players' ? 'is-mobile-active' : ''
+            }`}
+          >
+            {queuedPlayers.length > 0 && (
+              <div className="pool__queue">
+                <div className="pool__queue-head">Queue ({queuedPlayers.length})</div>
+                {queuedPlayers.map((p) => (
+                  <PlayerCard
+                    key={p.id}
+                    player={p}
+                    queued
+                    onQueue={() => toggleQueue(p.id)}
+                    onPick={canPick ? () => setSelected(p) : undefined}
+                    disabled={!canPick}
+                  />
+                ))}
+              </div>
             )}
+            <div className="pool__filters">
+              <div className="chip-row">
+                {(['ALL', ...POSITIONS] as Filter[]).map((f) => (
+                  <button
+                    key={f}
+                    className={`chip ${filter === f ? 'chip--active' : ''}`}
+                    onClick={() => setFilter(f)}
+                  >
+                    {f === 'DEF' ? 'D/ST' : f}
+                  </button>
+                ))}
+              </div>
+              <input
+                className="pool__search"
+                placeholder="Search players…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <div className="pool__list">
+              {available.slice(0, 200).map((p) => (
+                <PlayerCard
+                  key={p.id}
+                  player={p}
+                  onPick={canPick ? () => setSelected(p) : undefined}
+                  disabled={!canPick}
+                  onQueue={() => toggleQueue(p.id)}
+                  queued={queue.includes(p.id)}
+                />
+              ))}
+              {available.length === 0 && (
+                <p className="muted pool__empty">No players match.</p>
+              )}
+            </div>
+          </div>
+
+          {/* Roster */}
+          <div
+            className={`draft__panel-body ${panelTab === 'roster' ? 'is-desktop-active' : ''} ${
+              mobileTab === 'roster' ? 'is-mobile-active' : ''
+            }`}
+          >
+            <div className="draft__roster">
+              <TeamLineup
+                teams={teams}
+                selectedTeamId={rosterTeamId}
+                onSelectTeam={setRosterTeamSel}
+                picks={picks}
+                playersById={playersById}
+                settings={lobby.settings}
+              />
+            </div>
+          </div>
+
+          {/* Chat */}
+          <div
+            className={`draft__panel-body draft__chat ${
+              panelTab === 'chat' ? 'is-desktop-active' : ''
+            } ${mobileTab === 'chat' ? 'is-mobile-active' : ''}`}
+          >
+            <p className="muted">💬 Chat is coming soon.</p>
           </div>
         </aside>
-
-        {/* Placeholder sections — wired up in later epics. */}
-        <div className={`draft__panel ${mobileTab === 'chat' ? 'is-active' : ''}`}>
-          <p className="muted">💬 Chat is coming soon.</p>
-        </div>
-        <div
-          className={`draft__panel ${mobileTab === 'rankings' ? 'is-active' : ''}`}
-        >
-          <p className="muted">📊 Power rankings are coming soon.</p>
-        </div>
       </div>
 
       {/* Mobile-only section tabs + nav. */}
@@ -372,19 +458,6 @@ export function DraftBoardPage() {
           { to: `/lobby/${id}`, label: 'Lobby room', Icon: MeetingRoomOutlinedIcon },
         ]}
       />
-
-      {lineupTeamId && (
-        <Modal title="Team lineup" onClose={() => setLineupTeamId(null)}>
-          <TeamLineup
-            teams={teams}
-            selectedTeamId={lineupTeamId}
-            onSelectTeam={setLineupTeamId}
-            picks={picks}
-            playersById={playersById}
-            settings={lobby.settings}
-          />
-        </Modal>
-      )}
     </div>
   );
 }

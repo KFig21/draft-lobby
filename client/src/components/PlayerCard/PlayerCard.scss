@@ -56,6 +56,27 @@
     font-size: 0.65rem;
     color: $text-muted;
   }
+  &__queue {
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: $radius-sm;
+    background: none;
+    color: $text-muted;
+    cursor: pointer;
+
+    &:hover {
+      background: $bg-overlay;
+      color: $text;
+    }
+
+    &--on {
+      color: $accent;
+    }
+  }
   &__draft {
     flex-shrink: 0;
     padding: $space $space * 1.5;
