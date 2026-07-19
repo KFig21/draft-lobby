@@ -23,6 +23,7 @@ import { NavDrawer } from '../../components/Navbar/NavDrawer';
 import { PickClock } from '../../components/PickClock/PickClock';
 import { PlayerCard } from '../../components/PlayerCard/PlayerCard';
 import { TeamLineup } from '../../components/TeamLineup/TeamLineup';
+import { ThemeToggle } from '../../components/ThemeToggle/ThemeToggle';
 import { useAuth } from '../../auth/AuthContext';
 import { useLobby } from '../../hooks/useLobby';
 import { usePlayers } from '../../hooks/usePlayers';
@@ -227,9 +228,12 @@ export function DraftBoardPage() {
   return (
     <div className="draft">
       <header className="draft__topbar">
-        <Link to={`/lobby/${id}`} className="back-link draft__desktop-only">
-          ← Room
-        </Link>
+        <div className="draft__left">
+          <Link to={`/lobby/${id}`} className="back-link draft__desktop-only">
+            ← Room
+          </Link>
+          <ThemeToggle className="draft__icon-btn" />
+        </div>
         <div className="draft__status">
           {isComplete ? (
             <strong className="draft__complete">🏆 Draft complete</strong>

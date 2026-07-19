@@ -117,7 +117,7 @@
     cursor: pointer;
 
     &:hover {
-      background: color.adjust($bg-overlay, $lightness: 3%);
+      background: $bg-hover;
     }
   }
 

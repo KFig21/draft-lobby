@@ -1,6 +1,26 @@
 // App-wide base styles + shared primitives. Imported once in main.tsx.
-@use 'sass:color';
 @use 'variables' as *;
+
+// ── Theme surfaces (flip at runtime via <html data-theme>) ──────────
+:root {
+  --bg: #12141d;
+  --bg-raised: #1b1e2b;
+  --bg-overlay: #232738;
+  --bg-hover: #2a2f42;
+  --border: #2e3347;
+  --text: #e8eaf2;
+  --text-muted: #8a94a6;
+}
+
+:root[data-theme='light'] {
+  --bg: #f4f5f8;
+  --bg-raised: #ffffff;
+  --bg-overlay: #e9ebf1;
+  --bg-hover: #dfe2ea;
+  --border: #d4d8e2;
+  --text: #1a1d29;
+  --text-muted: #667085;
+}
 
 // ── Reset & base ────────────────────────────────────────────────────
 *,
@@ -46,7 +66,7 @@ a {
   transition: background 120ms ease;
 
   &:hover {
-    background: color.adjust($bg-overlay, $lightness: 4%);
+    background: $bg-hover;
   }
 
   &--primary {

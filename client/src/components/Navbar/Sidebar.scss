@@ -120,7 +120,7 @@
     white-space: nowrap;
   }
 
-  &__signout {
+  &__iconbtn {
     display: grid;
     place-items: center;
     width: 36px;
@@ -134,7 +134,11 @@
 
     &:hover {
       background: $bg-overlay;
-      color: $danger;
+      color: $text;
     }
+  }
+
+  &__signout:hover {
+    color: $danger;
   }
 }

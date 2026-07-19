@@ -10,6 +10,8 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
 import { ProfileEditor } from '../../components/ProfileEditor/ProfileEditor';
+import { ThemeToggle } from '../../components/ThemeToggle/ThemeToggle';
+import { useTheme } from '../../theme/ThemeContext';
 import { supabase } from '../../supabase';
 import './SettingsPage.scss';
 
@@ -31,6 +33,7 @@ function categoryCount(rules: ScoringRules): number {
 export function SettingsPage() {
   const navigate = useNavigate();
   const { signOut } = useAuth();
+  const { theme } = useTheme();
   const [formats, setFormats] = useState<ScoringFormatRow[]>([]);
   const [leagues, setLeagues] = useState<LeagueRow[]>([]);
 
@@ -66,6 +69,18 @@ export function SettingsPage() {
         </Link>
         <h1>Settings</h1>
       </header>
+
+      {/* Appearance */}
+      <section className="settings__section">
+        <h2>Appearance</h2>
+        <div className="settings__row">
+          <div className="settings__row-main">
+            <span className="settings__row-name">Theme</span>
+            <span className="muted">{theme === 'dark' ? 'Dark' : 'Light'}</span>
+          </div>
+          <ThemeToggle className="settings__icon" />
+        </div>
+      </section>
 
       {/* Profile */}
       <section className="settings__section">

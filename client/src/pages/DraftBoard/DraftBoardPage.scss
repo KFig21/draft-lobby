@@ -18,6 +18,30 @@
     flex-shrink: 0;
   }
 
+  &__left {
+    display: flex;
+    align-items: center;
+    gap: $space;
+    min-width: 0;
+  }
+
+  &__icon-btn {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: $bg-overlay;
+    color: $text;
+    cursor: pointer;
+
+    &:hover {
+      border-color: $primary;
+    }
+  }
+
   &__status {
     display: flex;
     flex-direction: column;

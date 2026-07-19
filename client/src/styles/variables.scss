@@ -1,10 +1,14 @@
-// ── Palette (dark, Sleeper-inspired) ────────────────────────────────
-$bg: #12141d;
-$bg-raised: #1b1e2b;
-$bg-overlay: #232738;
-$border: #2e3347;
-$text: #e8eaf2;
-$text-muted: #8a94a6;
+// ── Palette ─────────────────────────────────────────────────────────
+// Surface colors are CSS custom properties so the theme can flip at runtime
+// (values live in global.scss :root / [data-theme='light']). Brand colors are
+// static — they read well on both themes, so their rgba() tints work as-is.
+$bg: var(--bg);
+$bg-raised: var(--bg-raised);
+$bg-overlay: var(--bg-overlay);
+$bg-hover: var(--bg-hover);
+$border: var(--border);
+$text: var(--text);
+$text-muted: var(--text-muted);
 
 $primary: #6c5ce7;
 $primary-hover: #7d6ef0;

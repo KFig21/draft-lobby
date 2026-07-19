@@ -9,6 +9,7 @@ import {
 import { AuthProvider, useAuth } from './auth/AuthContext';
 import { MainLayout } from './components/Navbar/MainLayout';
 import { NotificationsProvider } from './notifications/NotificationsContext';
+import { ThemeProvider } from './theme/ThemeContext';
 import { AuthPage } from './pages/Auth/AuthPage';
 import { DraftBoardPage } from './pages/DraftBoard/DraftBoardPage';
 import { FriendsPage } from './pages/Friends/FriendsPage';
@@ -49,8 +50,9 @@ function PublicOnly({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <NotificationsProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <NotificationsProvider>
         <BrowserRouter>
           <ScrollToTop />
           <Routes>
@@ -104,7 +106,8 @@ export default function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>
-      </NotificationsProvider>
-    </AuthProvider>
+        </NotificationsProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }

@@ -5,6 +5,7 @@ import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
 import { useNotifications } from '../../notifications/NotificationsContext';
 import { Avatar } from '../Avatar/Avatar';
+import { ThemeToggle } from '../ThemeToggle/ThemeToggle';
 import { NAV_ITEMS } from './NavDrawer';
 import './Sidebar.scss';
 
@@ -51,9 +52,10 @@ export function Sidebar() {
           <Avatar avatar={defaultAvatar(userId)} size={36} />
           <span className="sidebar__me-name">{username}</span>
         </NavLink>
+        <ThemeToggle className="sidebar__iconbtn" />
         <button
           type="button"
-          className="sidebar__signout"
+          className="sidebar__iconbtn sidebar__signout"
           aria-label="Sign out"
           onClick={() => void signOut()}
         >
