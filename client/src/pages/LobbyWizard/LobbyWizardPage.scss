@@ -1,0 +1,264 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+.wizard {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: $space * 3;
+
+  &__header {
+    display: flex;
+    flex-direction: column;
+    gap: $space;
+    margin-bottom: $space * 3;
+
+    h1 {
+      font-size: 1.5rem;
+    }
+  }
+
+  &__form {
+    display: flex;
+    flex-direction: column;
+    gap: $space * 3;
+  }
+
+  &__section {
+    display: flex;
+    flex-direction: column;
+    gap: $space * 2;
+    @include card-surface;
+    padding: $space * 3;
+
+    h2 {
+      font-size: 1rem;
+      color: $text;
+    }
+  }
+
+  &__section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $space;
+    flex-wrap: wrap;
+  }
+
+  &__scoring-select {
+    padding: $space * 1.5;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: $bg;
+    color: $text;
+    font-size: 1rem;
+  }
+
+  &__link {
+    align-self: flex-start;
+    background: none;
+    border: none;
+    color: $accent;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 0;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  &__grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: $space * 2;
+
+    @include md {
+      grid-template-columns: repeat(3, 1fr);
+
+      &--2 {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+  }
+
+  &__error {
+    color: $danger;
+    font-size: 0.9rem;
+  }
+
+  &__submit-row {
+    position: sticky;
+    bottom: $space * 2;
+    display: flex;
+    gap: $space;
+
+    .button {
+      flex: 1;
+    }
+  }
+
+  &__template select {
+    font-weight: 600;
+  }
+}
+
+.timer-tiers {
+  display: flex;
+  flex-direction: column;
+  gap: $space;
+
+  &__row {
+    display: flex;
+    align-items: center;
+    gap: $space;
+    background: $bg;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    padding: $space $space * 1.5;
+  }
+
+  &__range {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__label {
+    display: inline-flex;
+    align-items: center;
+    gap: $space;
+    font-size: 0.9rem;
+    font-weight: 600;
+
+    input {
+      width: 60px;
+      padding: $space * 0.5;
+      border: 1px solid $border;
+      border-radius: $radius-sm;
+      background: $bg-raised;
+      color: $text;
+      text-align: center;
+    }
+  }
+
+  &__seconds {
+    padding: $space * 0.75 $space;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: $bg-raised;
+    color: $text;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__remove {
+    background: none;
+    border: none;
+    color: $text-muted;
+    cursor: pointer;
+    font-size: 0.9rem;
+    padding: $space * 0.5;
+
+    &:hover {
+      color: $danger;
+    }
+  }
+
+  &__add {
+    align-self: flex-start;
+    padding: $space $space * 1.5;
+    font-size: 0.85rem;
+  }
+}
+
+.league-summary {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: $space;
+
+  @include md {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  li {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    background: $bg;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    padding: $space $space * 1.25;
+    font-weight: 700;
+
+    .muted {
+      font-weight: 400;
+    }
+  }
+}
+
+.lineup {
+  display: flex;
+  flex-direction: column;
+
+  &__slot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $space;
+    padding: $space * 1.25 0;
+    border-top: 1px solid $border;
+
+    &:first-child {
+      border-top: none;
+    }
+  }
+
+  &__label {
+    display: flex;
+    align-items: baseline;
+    gap: $space;
+    font-weight: 700;
+  }
+
+  &__hint {
+    color: $text-muted;
+    font-weight: 400;
+    font-size: 0.75rem;
+  }
+
+  &__stepper {
+    display: flex;
+    align-items: center;
+    gap: $space * 1.5;
+  }
+
+  &__step {
+    width: 32px;
+    height: 32px;
+    display: grid;
+    place-items: center;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: $bg;
+    color: $text;
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      border-color: $primary;
+    }
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+  }
+
+  &__count {
+    min-width: 1.5rem;
+    text-align: center;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+}

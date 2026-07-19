@@ -1,0 +1,64 @@
+@use 'variables' as *;
+
+.player-card {
+  display: flex;
+  align-items: center;
+  gap: $space * 1.25;
+  padding: $space * 1.25;
+  background: $bg;
+  border: 1px solid $border;
+  border-radius: $radius-sm;
+
+  &__pos {
+    flex-shrink: 0;
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    border-radius: $radius-sm;
+    font-size: 0.65rem;
+    font-weight: 800;
+    color: #05231a;
+  }
+  &__main {
+    flex: 1;
+    min-width: 0;
+  }
+  &__name {
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: $space * 0.75;
+  }
+  &__injury {
+    font-size: 0.6rem;
+    font-weight: 800;
+    color: $danger;
+    border: 1px solid $danger;
+    border-radius: 3px;
+    padding: 0 3px;
+  }
+  &__sub {
+    font-size: 0.75rem;
+    color: $text-muted;
+  }
+  &__stats {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+  }
+  &__proj {
+    font-weight: 700;
+    font-size: 0.9rem;
+  }
+  &__adp {
+    font-size: 0.65rem;
+    color: $text-muted;
+  }
+  &__draft {
+    flex-shrink: 0;
+    padding: $space $space * 1.5;
+    font-size: 0.8rem;
+  }
+}

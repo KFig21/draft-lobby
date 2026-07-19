@@ -1,0 +1,19 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+.join {
+  @include centered-page;
+
+  &__card {
+    @include form-card;
+
+    h1 {
+      font-size: 1.5rem;
+    }
+  }
+
+  &__error {
+    color: $danger;
+    font-size: 0.9rem;
+  }
+}

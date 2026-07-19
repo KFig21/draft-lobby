@@ -1,0 +1,86 @@
+@use 'variables' as *;
+
+.settings {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: $space * 3;
+  display: flex;
+  flex-direction: column;
+  gap: $space * 3;
+
+  &__header {
+    display: flex;
+    flex-direction: column;
+    gap: $space;
+
+    h1 {
+      font-size: 1.6rem;
+    }
+  }
+
+  &__section {
+    display: flex;
+    flex-direction: column;
+
+    h2 {
+      font-size: 1.2rem;
+      margin-bottom: $space * 1.5;
+    }
+  }
+
+  &__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $space;
+    padding: $space * 1.5 0;
+    border-top: 1px solid $border;
+  }
+
+  &__row-main {
+    display: flex;
+    align-items: baseline;
+    gap: $space;
+    min-width: 0;
+  }
+
+  &__row-name {
+    font-weight: 600;
+    font-size: 1.05rem;
+  }
+
+  &__row-actions {
+    display: flex;
+    gap: $space * 0.5;
+    flex-shrink: 0;
+  }
+
+  &__icon {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border: none;
+    border-radius: $radius-sm;
+    background: none;
+    color: $text-muted;
+    cursor: pointer;
+
+    &:hover {
+      background: $bg-overlay;
+      color: $text;
+    }
+  }
+
+  &__setup {
+    display: block;
+    padding: $space * 1.5 0;
+    border-top: 1px solid $border;
+    color: $accent;
+    font-weight: 600;
+
+    &:hover {
+      color: $text;
+    }
+  }
+}

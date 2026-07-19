@@ -1,0 +1,130 @@
+@use 'variables' as *;
+
+.room {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: $space * 3;
+  display: flex;
+  flex-direction: column;
+  gap: $space * 3;
+
+  &__header {
+    display: flex;
+    flex-direction: column;
+    gap: $space;
+  }
+
+  &__title {
+    display: flex;
+    align-items: center;
+    gap: $space * 1.5;
+
+    h1 {
+      font-size: 1.6rem;
+    }
+  }
+
+  &__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $space * 1.5;
+
+    span {
+      background: $bg-raised;
+      border: 1px solid $border;
+      border-radius: 999px;
+      padding: $space * 0.5 $space * 1.5;
+      font-size: 0.8rem;
+      color: $text-muted;
+    }
+  }
+
+  &__invite {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: $space * 2;
+
+    @media (min-width: $bp-md) {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    h2 {
+      font-size: 1rem;
+      margin-bottom: $space * 0.5;
+    }
+  }
+
+  &__id {
+    display: inline-block;
+    margin-top: $space;
+    padding: $space * 0.5 $space;
+    background: $bg;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    font-size: 0.75rem;
+    color: $text-muted;
+    word-break: break-all;
+  }
+
+  &__teams h2 {
+    font-size: 1rem;
+    margin-bottom: $space * 1.5;
+  }
+
+  &__error {
+    color: $danger;
+    font-size: 0.9rem;
+  }
+
+  &__actions {
+    display: flex;
+    justify-content: center;
+  }
+}
+
+.team-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: $space;
+
+  &__row {
+    display: flex;
+    align-items: center;
+    gap: $space * 1.5;
+    background: $bg-raised;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    padding: $space * 1.25 $space * 1.5;
+
+    &--empty {
+      border-style: dashed;
+      opacity: 0.7;
+    }
+  }
+
+  &__pos {
+    width: 1.5rem;
+    text-align: center;
+    color: $text-muted;
+    font-weight: 700;
+    font-size: 0.85rem;
+  }
+
+  &__name {
+    flex: 1;
+    font-weight: 600;
+  }
+
+  &__you {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    background: $primary;
+    color: #fff;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+}

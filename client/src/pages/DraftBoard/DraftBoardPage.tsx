@@ -1,0 +1,269 @@
+import {
+  POSITIONS,
+  draftPositionForOverall,
+  roundsForSettings,
+  type Position,
+} from '@draft-lobby/shared';
+import { useMemo, useState } from 'react';
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
+import { DraftGrid } from '../../components/DraftGrid/DraftGrid';
+import { LockInModal } from '../../components/LockInModal/LockInModal';
+import { PickClock } from '../../components/PickClock/PickClock';
+import { PlayerCard } from '../../components/PlayerCard/PlayerCard';
+import { useAuth } from '../../auth/AuthContext';
+import { useLobby } from '../../hooks/useLobby';
+import { usePlayers } from '../../hooks/usePlayers';
+import { api } from '../../lib/api';
+import { exportDraftCsv, exportDraftExcel } from '../../lib/exportDraft';
+import type { PlayerRow, TeamRow } from '../../lib/types';
+import './DraftBoardPage.scss';
+
+type Filter = 'ALL' | Position;
+
+type MobileTab = 'board' | 'players' | 'chat' | 'rankings';
+const MOBILE_TABS: { key: MobileTab; label: string; icon: string }[] = [
+  { key: 'board', label: 'Board', icon: '🗒️' },
+  { key: 'players', label: 'Players', icon: '🏈' },
+  { key: 'chat', label: 'Chat', icon: '💬' },
+  { key: 'rankings', label: 'Rankings', icon: '📊' },
+];
+
+export function DraftBoardPage() {
+  const { id = '' } = useParams();
+  const navigate = useNavigate();
+  const { session } = useAuth();
+  const { lobby, teams, members, picks, loading } = useLobby(id);
+  const { players, loading: playersLoading } = usePlayers();
+
+  const [filter, setFilter] = useState<Filter>('ALL');
+  const [search, setSearch] = useState('');
+  const [mobileTab, setMobileTab] = useState<MobileTab>('board');
+  const [selected, setSelected] = useState<PlayerRow | null>(null);
+  const [pickBusy, setPickBusy] = useState(false);
+  const [pickError, setPickError] = useState<string | null>(null);
+
+  const userId = session?.user.id;
+
+  const playersById = useMemo(() => {
+    const m = new Map<string, PlayerRow>();
+    for (const p of players) m.set(p.id, p);
+    return m;
+  }, [players]);
+
+  const draftedIds = useMemo(
+    () => new Set(picks.map((p) => p.player_id)),
+    [picks],
+  );
+
+  const teamsById = useMemo(() => {
+    const m = new Map<string, TeamRow>();
+    for (const t of teams) m.set(t.id, t);
+    return m;
+  }, [teams]);
+
+  function doExport(kind: 'csv' | 'xls') {
+    const opts = {
+      lobbyName: lobby?.name ?? 'draft',
+      picks,
+      teamsById,
+      playersById,
+    };
+    if (kind === 'csv') exportDraftCsv(opts);
+    else exportDraftExcel(opts);
+  }
+
+  const derived = useMemo(() => {
+    if (!lobby) return null;
+    const s = lobby.settings;
+    const overall = lobby.current_overall;
+    const round = Math.floor((overall - 1) / s.teamCount) + 1;
+    const onClockPosition = draftPositionForOverall(
+      overall,
+      s.teamCount,
+      s.draftType,
+    );
+    const onClockTeam =
+      teams.find((t) => t.draft_position === onClockPosition) ?? null;
+    return { s, overall, round, onClockTeam };
+  }, [lobby, teams]);
+
+  const isCommish = useMemo(() => {
+    if (!userId || !lobby) return false;
+    if (lobby.commissioner_id === userId) return true;
+    return members.some(
+      (m) => m.user_id === userId && m.role === 'SUB_COMMISSIONER',
+    );
+  }, [userId, lobby, members]);
+
+  const available = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return players.filter((p) => {
+      if (draftedIds.has(p.id)) return false;
+      if (filter !== 'ALL' && p.position !== filter) return false;
+      if (q && !p.name.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [players, draftedIds, filter, search]);
+
+  if (loading || playersLoading) return <div className="loading">Loading draft…</div>;
+  if (!lobby) return <div className="loading">Lobby not found</div>;
+  if (lobby.status === 'SETUP' || lobby.status === 'SCHEDULED')
+    return <Navigate to={`/lobby/${id}`} replace />;
+
+  const { round, onClockTeam } = derived!;
+  const isComplete = lobby.status === 'COMPLETE';
+  const isMyTurn = !!onClockTeam && onClockTeam.owner_id === userId;
+  const canPick = !isComplete && (isMyTurn || isCommish);
+
+  async function confirmPick() {
+    if (!selected) return;
+    setPickError(null);
+    setPickBusy(true);
+    try {
+      await api(`/lobbies/${id}/pick`, {
+        method: 'POST',
+        body: { playerId: selected.id },
+      });
+      setSelected(null);
+    } catch (err) {
+      setPickError(err instanceof Error ? err.message : 'Pick failed');
+    } finally {
+      setPickBusy(false);
+    }
+  }
+
+  return (
+    <div className="draft">
+      <header className="draft__topbar">
+        <Link to={`/lobby/${id}`} className="back-link">
+          ← Room
+        </Link>
+        <div className="draft__status">
+          {isComplete ? (
+            <strong className="draft__complete">🏆 Draft complete</strong>
+          ) : (
+            <>
+              <span className="draft__onclock-team">
+                {onClockTeam ? onClockTeam.name : 'Waiting…'}
+                {isMyTurn && <span className="draft__yourturn">Your pick</span>}
+              </span>
+              <span className="muted">
+                Round {round} · Pick {lobby.current_overall}
+              </span>
+            </>
+          )}
+        </div>
+        {isComplete ? (
+          <div className="draft__actions">
+            <div className="draft__export">
+              <button className="button" onClick={() => doExport('csv')}>
+                Export CSV
+              </button>
+              <button className="button" onClick={() => doExport('xls')}>
+                Excel
+              </button>
+            </div>
+            <button
+              className="button button--primary"
+              onClick={() => navigate('/home')}
+            >
+              Home
+            </button>
+          </div>
+        ) : (
+          <PickClock deadline={lobby.pick_deadline} />
+        )}
+      </header>
+
+      <div className="draft__body">
+        <section
+          className={`draft__board ${mobileTab === 'board' ? 'is-active' : ''}`}
+        >
+          <DraftGrid
+            teams={teams}
+            rounds={roundsForSettings(lobby.settings)}
+            picks={picks}
+            playersById={playersById}
+            onClockTeamId={onClockTeam?.id ?? null}
+            currentRound={round}
+          />
+        </section>
+
+        <aside
+          className={`draft__pool ${mobileTab === 'players' ? 'is-active' : ''}`}
+        >
+          <div className="pool__filters">
+            <div className="chip-row">
+              {(['ALL', ...POSITIONS] as Filter[]).map((f) => (
+                <button
+                  key={f}
+                  className={`chip ${filter === f ? 'chip--active' : ''}`}
+                  onClick={() => setFilter(f)}
+                >
+                  {f === 'DEF' ? 'D/ST' : f}
+                </button>
+              ))}
+            </div>
+            <input
+              className="pool__search"
+              placeholder="Search players…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+
+          <div className="pool__list">
+            {available.slice(0, 200).map((p) => (
+              <PlayerCard
+                key={p.id}
+                player={p}
+                onPick={canPick ? () => setSelected(p) : undefined}
+                disabled={!canPick}
+              />
+            ))}
+            {available.length === 0 && (
+              <p className="muted pool__empty">No players match.</p>
+            )}
+          </div>
+        </aside>
+
+        {/* Placeholder sections — wired up in later epics. */}
+        <div className={`draft__panel ${mobileTab === 'chat' ? 'is-active' : ''}`}>
+          <p className="muted">💬 Chat is coming soon.</p>
+        </div>
+        <div
+          className={`draft__panel ${mobileTab === 'rankings' ? 'is-active' : ''}`}
+        >
+          <p className="muted">📊 Power rankings are coming soon.</p>
+        </div>
+      </div>
+
+      {/* Mobile-only section tabs. */}
+      <nav className="draft__tabs">
+        {MOBILE_TABS.map((t) => (
+          <button
+            key={t.key}
+            className={`draft__tab ${mobileTab === t.key ? 'is-active' : ''}`}
+            onClick={() => setMobileTab(t.key)}
+          >
+            <span className="draft__tab-icon">{t.icon}</span>
+            {t.label}
+          </button>
+        ))}
+      </nav>
+
+      {selected && (
+        <LockInModal
+          player={selected}
+          onConfirm={confirmPick}
+          onCancel={() => {
+            setSelected(null);
+            setPickError(null);
+          }}
+          busy={pickBusy}
+          error={pickError}
+        />
+      )}
+    </div>
+  );
+}

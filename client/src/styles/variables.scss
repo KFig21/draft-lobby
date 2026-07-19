@@ -1,0 +1,34 @@
+// ── Palette (dark, Sleeper-inspired) ────────────────────────────────
+$bg: #12141d;
+$bg-raised: #1b1e2b;
+$bg-overlay: #232738;
+$border: #2e3347;
+$text: #e8eaf2;
+$text-muted: #8a94a6;
+
+$primary: #6c5ce7;
+$primary-hover: #7d6ef0;
+$accent: #3fd6a5;
+$danger: #f8577d;
+$warning: #f6a642;
+
+// Position colors — keep in sync with POSITION_COLORS in @draft-lobby/shared
+$pos-qb: #f8577d;
+$pos-rb: #3fd6a5;
+$pos-wr: #4aa8ff;
+$pos-te: #f6a642;
+$pos-k: #b98bff;
+$pos-def: #8a94a6;
+
+// ── Type ────────────────────────────────────────────────────────────
+$font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
+  Ubuntu, sans-serif;
+
+// ── Layout ──────────────────────────────────────────────────────────
+$radius: 10px;
+$radius-sm: 6px;
+$space: 8px;
+
+// Breakpoints (mobile-first)
+$bp-md: 768px;
+$bp-lg: 1100px;

@@ -1,0 +1,11 @@
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-weight: 700;
+  line-height: 1;
+  user-select: none;
+  overflow: hidden;
+  // border-radius + size set inline per the avatar's shape.
+}

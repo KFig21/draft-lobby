@@ -1,0 +1,57 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+.home {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: $space * 4 $space * 3;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: $space * 2;
+    margin-bottom: $space * 4;
+
+    h1 {
+      font-size: 1.4rem;
+    }
+  }
+
+  &__header-actions {
+    display: flex;
+    gap: $space;
+    flex-shrink: 0;
+  }
+
+  &__actions {
+    display: grid;
+    gap: $space * 2;
+    grid-template-columns: 1fr;
+
+    @include md {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+}
+
+// Clickable action card (used on the home screen).
+.card--action {
+  display: block;
+  transition: border-color 120ms ease;
+
+  &:hover {
+    border-color: $primary;
+  }
+
+  h2 {
+    margin-bottom: $space;
+    font-size: 1.1rem;
+  }
+
+  p {
+    color: $text-muted;
+    font-size: 0.9rem;
+  }
+}

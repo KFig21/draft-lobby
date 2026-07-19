@@ -1,0 +1,25 @@
+@use 'variables' as *;
+
+.splash {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: $space * 3;
+  padding: $space * 3;
+  text-align: center;
+
+  &__title {
+    font-size: clamp(2.5rem, 8vw, 4rem);
+    background: linear-gradient(120deg, $primary, $accent);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  &__tagline {
+    color: $text-muted;
+    max-width: 32ch;
+  }
+}

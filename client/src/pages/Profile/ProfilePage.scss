@@ -1,0 +1,67 @@
+@use 'variables' as *;
+
+.profile {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: $space * 3;
+  display: flex;
+  flex-direction: column;
+  gap: $space * 3;
+
+  &__header {
+    display: flex;
+    flex-direction: column;
+    gap: $space * 2;
+  }
+
+  &__identity {
+    display: flex;
+    align-items: center;
+    gap: $space * 2;
+
+    h1 {
+      font-size: 1.6rem;
+    }
+  }
+
+  &__section {
+    h2 {
+      font-size: 1rem;
+      margin-bottom: $space * 1.5;
+    }
+  }
+}
+
+.lobby-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: $space;
+
+  &__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $space * 1.5;
+    background: $bg-raised;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    padding: $space * 1.5;
+    transition: border-color 120ms ease;
+
+    &:hover {
+      border-color: $primary;
+    }
+  }
+
+  &__main {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  &__name {
+    font-weight: 600;
+  }
+}

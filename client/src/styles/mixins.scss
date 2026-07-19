@@ -1,0 +1,38 @@
+@use 'variables' as *;
+
+// ── Responsive (mobile-first: styles apply from small up, mixins add larger) ──
+@mixin md {
+  @media (min-width: $bp-md) {
+    @content;
+  }
+}
+
+@mixin lg {
+  @media (min-width: $bp-lg) {
+    @content;
+  }
+}
+
+// ── Surfaces / layout helpers ───────────────────────────────────────
+@mixin card-surface {
+  background: $bg-raised;
+  border: 1px solid $border;
+  border-radius: $radius;
+}
+
+@mixin centered-page {
+  display: grid;
+  place-items: center;
+  min-height: 100%;
+  padding: $space * 3;
+}
+
+// Reusable centered auth/join form card.
+@mixin form-card {
+  display: flex;
+  flex-direction: column;
+  gap: $space * 2;
+  width: min(400px, 100%);
+  @include card-surface;
+  padding: $space * 4;
+}

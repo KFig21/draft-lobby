@@ -1,0 +1,281 @@
+@use 'sass:color';
+@use 'variables' as *;
+
+.scoring {
+  &__page-header {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: $space * 3 $space * 3 0;
+    display: flex;
+    flex-direction: column;
+    gap: $space;
+
+    h1 {
+      font-size: 1.5rem;
+    }
+
+    .back-link {
+      background: none;
+      border: none;
+      cursor: pointer;
+    }
+  }
+
+  &__form {
+    max-width: 680px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: $space * 1.5;
+    padding: $space * 2 $space * 3 $space * 3;
+  }
+
+  &__name,
+  &__preset {
+    padding: $space * 1.25;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: $bg;
+    color: $text;
+    font: inherit;
+  }
+
+  &__preset-label {
+    font-size: 0.85rem;
+    color: $text-muted;
+    font-weight: 600;
+  }
+
+  // Rate-entry style toggle (whole vs decimal).
+  &__rate-style {
+    display: flex;
+    align-items: center;
+    gap: $space * 0.75;
+    flex-wrap: wrap;
+  }
+
+  &__rate-style-label {
+    margin-right: $space * 0.5;
+    font-size: 0.85rem;
+    color: $text-muted;
+
+    @media (max-width: $bp-md) {
+      width: 100%;
+      margin: 0 0 $space * 0.5;
+    }
+  }
+
+  &__rate-tab {
+    padding: $space * 0.5 $space * 1.25;
+    border: 1px solid $border;
+    border-radius: 999px;
+    background: none;
+    color: $text-muted;
+    font-size: 0.85rem;
+    cursor: pointer;
+
+    &:hover {
+      background: $bg-overlay;
+    }
+
+    &--on {
+      border-color: $accent;
+      color: $accent;
+      background: rgba($accent, 0.12);
+    }
+  }
+
+  &__pts-unit {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  &__unit {
+    color: $text-muted;
+    font-size: 0.85rem;
+  }
+
+  // Category groups (collapsible)
+  &__group {
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    overflow: hidden;
+  }
+
+  &__group-toggle {
+    display: flex;
+    align-items: center;
+    gap: $space;
+    width: 100%;
+    padding: $space $space * 1.5;
+    background: $bg-overlay;
+    border: none;
+    color: $text;
+    font-weight: 700;
+    cursor: pointer;
+
+    &:hover {
+      background: color.adjust($bg-overlay, $lightness: 3%);
+    }
+  }
+
+  &__chevron {
+    display: inline-flex;
+    color: $text-muted;
+    transition: transform 0.15s ease;
+
+    &--open {
+      transform: rotate(90deg);
+    }
+  }
+
+  &__group-title {
+    flex: 1;
+    text-align: left;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  &__group-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: $accent;
+    color: #05231a;
+    font-size: 0.8rem;
+    font-weight: 700;
+  }
+
+  &__group-body {
+    display: flex;
+    flex-direction: column;
+  }
+
+  &__cat {
+    display: flex;
+    flex-direction: column;
+    border-top: 1px solid $border;
+
+    &--off {
+      opacity: 0.55;
+    }
+  }
+
+  &__cat-main {
+    display: flex;
+    align-items: center;
+    gap: $space;
+    padding: $space $space * 1.5;
+
+    &--override {
+      padding-left: 42px;
+      color: $text-muted;
+    }
+  }
+
+  &__check {
+    accent-color: $accent;
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+  }
+
+  &__desc {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: $space * 0.5;
+    min-width: 0;
+    color: $text;
+    cursor: default;
+  }
+
+  &__pts,
+  &__per-input {
+    padding: $space * 0.5 $space;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: $bg;
+    color: $text;
+    font: inherit;
+    text-align: right;
+
+    &:disabled {
+      background: $bg-overlay;
+      color: $text-muted;
+    }
+  }
+
+  &__pts {
+    width: 64px;
+    flex-shrink: 0;
+  }
+
+  &__per-input {
+    width: 56px;
+    text-align: center;
+  }
+
+  &__advanced-toggle {
+    align-self: flex-start;
+    padding: $space $space * 1.5;
+    border: none;
+    border-top: 1px solid $border;
+    width: 100%;
+    text-align: left;
+    background: none;
+    color: $accent;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+
+    &:hover {
+      background: $bg-overlay;
+    }
+  }
+
+  &__error {
+    margin: 0;
+    color: $danger;
+    font-size: 0.85rem;
+  }
+
+  &__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: $space;
+    border-top: 1px solid $border;
+  }
+
+  &__count {
+    color: $text-muted;
+    font-size: 0.85rem;
+  }
+
+  &__save {
+    padding: $space $space * 3;
+    border: none;
+    border-radius: 999px;
+    background: $accent;
+    color: #05231a;
+    font-weight: 700;
+    cursor: pointer;
+
+    &:hover {
+      background: color.adjust($accent, $lightness: 5%);
+    }
+
+    &:disabled {
+      opacity: 0.6;
+    }
+  }
+}

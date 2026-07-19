@@ -1,0 +1,91 @@
+@use 'variables' as *;
+
+.grid-scroll {
+  overflow: auto;
+}
+
+.draft-grid {
+  border-collapse: separate;
+  border-spacing: 4px;
+  font-size: 0.75rem;
+
+  &__team,
+  &__round,
+  &__corner {
+    position: sticky;
+    z-index: 1;
+  }
+  &__team {
+    top: 0;
+    background: $bg-overlay;
+    padding: $space;
+    border-radius: $radius-sm;
+    white-space: nowrap;
+    font-size: 0.7rem;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  &__team-swatch {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    margin-right: 5px;
+  }
+  &__round {
+    left: 0;
+    background: $bg-overlay;
+    color: $text-muted;
+    font-weight: 700;
+    text-align: center;
+    border-radius: $radius-sm;
+    width: 28px;
+  }
+  &__corner {
+    top: 0;
+    left: 0;
+    z-index: 2;
+    background: $bg;
+  }
+
+  &__cell {
+    width: 120px;
+    height: 52px;
+    background: $bg;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    padding: $space * 0.75;
+    vertical-align: top;
+
+    &--onclock {
+      border-color: $accent;
+      box-shadow: 0 0 0 1px $accent inset;
+    }
+  }
+
+  &__pick {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+  &__pos {
+    font-weight: 800;
+    font-size: 0.65rem;
+  }
+  &__player {
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  &__meta {
+    color: $text-muted;
+    font-size: 0.65rem;
+  }
+  &__onclock-label {
+    color: $accent;
+    font-weight: 700;
+    font-size: 0.65rem;
+  }
+}
