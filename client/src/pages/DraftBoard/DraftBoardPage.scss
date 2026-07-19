@@ -231,10 +231,12 @@
       }
     }
 
+    // flex: none !important beats the mobile `.is-mobile-active { flex: 1 }`
+    // (which is otherwise more specific) so the width var is respected.
     &__sidebar {
       display: flex !important;
       flex-direction: column;
-      flex: none;
+      flex: none !important;
       width: var(--sidebar-w, 380px);
       min-height: 0;
       border-left: 1px solid $border;

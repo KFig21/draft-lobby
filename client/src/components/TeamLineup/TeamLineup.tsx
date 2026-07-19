@@ -1,10 +1,10 @@
 import {
-  POSITION_COLORS,
   SLOT_LABELS,
   type LobbySettings,
   type Position,
   type RosterSlot,
 } from '@draft-lobby/shared';
+import { PlayerCard } from '../PlayerCard/PlayerCard';
 import type { PickRow, PlayerRow, TeamRow } from '../../lib/types';
 import './TeamLineup.scss';
 
@@ -95,38 +95,28 @@ export function TeamLineup({
 
       <ul className="lineup-view__rows">
         {starters.map((r, i) => (
-          <LineupRow key={`s${i}`} row={r} />
+          <LineupSlot key={`s${i}`} row={r} />
         ))}
         {bench.length > 0 && <li className="lineup-view__divider">Bench</li>}
         {bench.map((r, i) => (
-          <LineupRow key={`b${i}`} row={r} />
+          <LineupSlot key={`b${i}`} row={r} />
         ))}
       </ul>
     </div>
   );
 }
 
-function LineupRow({ row }: { row: Row }) {
+function LineupSlot({ row }: { row: Row }) {
   const { slot, player } = row;
   return (
-    <li className={`lineup-row${player ? '' : ' lineup-row--empty'}`}>
-      <span className="lineup-row__slot">{SLOT_LABELS[slot]}</span>
+    <li className="lineup-slot">
+      <span className="lineup-slot__label">{SLOT_LABELS[slot]}</span>
       {player ? (
-        <>
-          <span
-            className="lineup-row__pos"
-            style={{ color: POSITION_COLORS[player.position as Position] }}
-          >
-            {player.position}
-          </span>
-          <span className="lineup-row__name">{player.name}</span>
-          <span className="lineup-row__meta muted">
-            {player.nfl_team}
-            {player.bye_week ? ` · Bye ${player.bye_week}` : ''}
-          </span>
-        </>
+        <div className="lineup-slot__card">
+          <PlayerCard player={player} />
+        </div>
       ) : (
-        <span className="lineup-row__empty muted">Empty</span>
+        <div className="lineup-slot__empty muted">Empty</div>
       )}
     </li>
   );
