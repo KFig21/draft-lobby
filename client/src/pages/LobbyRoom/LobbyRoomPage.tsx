@@ -3,9 +3,12 @@ import {
   roundsForSettings,
   type Avatar as AvatarData,
 } from '@draft-lobby/shared';
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import ShuffleIcon from '@mui/icons-material/Shuffle';
 import { clockSummary } from '../../lib/format';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
@@ -31,6 +34,9 @@ export function LobbyRoomPage() {
   const [friends, setFriends] = useState<ProfileMini[]>([]);
   const [invitedIds, setInvitedIds] = useState<Set<string>>(new Set());
   const [inviteBusy, setInviteBusy] = useState<string | null>(null);
+  const [orderMode, setOrderMode] = useState(false);
+  const [orderIds, setOrderIds] = useState<string[]>([]);
+  const [savingOrder, setSavingOrder] = useState(false);
 
   const userId = session?.user.id;
   const isCommish = useMemo(() => {
@@ -148,8 +154,47 @@ export function LobbyRoomPage() {
     }
   }
 
+  function startOrderEdit() {
+    setOrderIds(teams.map((t) => t.id));
+    setOrderMode(true);
+    setActionError(null);
+  }
+  function moveTeam(index: number, dir: -1 | 1) {
+    const next = [...orderIds];
+    const j = index + dir;
+    if (j < 0 || j >= next.length) return;
+    [next[index], next[j]] = [next[j], next[index]];
+    setOrderIds(next);
+  }
+  function randomizeOrder() {
+    const next = [...orderIds];
+    for (let i = next.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [next[i], next[j]] = [next[j], next[i]];
+    }
+    setOrderIds(next);
+  }
+  async function saveOrder() {
+    setSavingOrder(true);
+    setActionError(null);
+    try {
+      await api(`/lobbies/${id}/draft-order`, {
+        method: 'POST',
+        body: { teamIds: orderIds },
+      });
+      setOrderMode(false);
+      refetch();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Failed to save order');
+    } finally {
+      setSavingOrder(false);
+    }
+  }
+
   const draftLive = lobby.status === 'DRAFTING' || lobby.status === 'COMPLETE';
   const memberIds = new Set(members.map((m) => m.user_id));
+  const teamById = new Map(teams.map((t) => [t.id, t]));
+  const canSetOrder = isCommish && !draftLive && teams.length > 1;
 
   return (
     <main className="room">
@@ -185,8 +230,69 @@ export function LobbyRoomPage() {
       </section>
 
       <section className="room__teams">
-        <h2>Draft order</h2>
-        <ol className="team-list">
+        <div className="room__teams-head">
+          <h2>Draft order</h2>
+          {canSetOrder && !orderMode && (
+            <button type="button" className="room__order-btn" onClick={startOrderEdit}>
+              Set draft order
+            </button>
+          )}
+        </div>
+
+        {orderMode ? (
+          <>
+            <ol className="team-list">
+              {orderIds.map((tid, i) => {
+                const team = teamById.get(tid);
+                if (!team) return null;
+                return (
+                  <li key={tid} className="team-list__row">
+                    <span className="team-list__pos">{i + 1}</span>
+                    <Avatar avatar={avatarFor(team.owner_id)} size={32} />
+                    <span className="team-list__name">{team.name}</span>
+                    <div className="team-list__order-ctrls">
+                      <button
+                        type="button"
+                        className="team-list__icon"
+                        aria-label="Move up"
+                        disabled={i === 0}
+                        onClick={() => moveTeam(i, -1)}
+                      >
+                        <ArrowUpwardIcon fontSize="small" />
+                      </button>
+                      <button
+                        type="button"
+                        className="team-list__icon"
+                        aria-label="Move down"
+                        disabled={i === orderIds.length - 1}
+                        onClick={() => moveTeam(i, 1)}
+                      >
+                        <ArrowDownwardIcon fontSize="small" />
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+            <div className="room__order-actions">
+              <button type="button" className="button" onClick={randomizeOrder}>
+                <ShuffleIcon fontSize="small" /> Randomize
+              </button>
+              <button type="button" className="button" onClick={() => setOrderMode(false)}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="button button--primary"
+                onClick={saveOrder}
+                disabled={savingOrder}
+              >
+                {savingOrder ? 'Saving…' : 'Save order'}
+              </button>
+            </div>
+          </>
+        ) : (
+          <ol className="team-list">
           {teams.map((team) => {
             const canEdit = team.owner_id === userId || isCommish;
             const editing = editingTeamId === team.id;
@@ -256,7 +362,8 @@ export function LobbyRoomPage() {
               <span className="team-list__name muted">Open slot</span>
             </li>
           ))}
-        </ol>
+          </ol>
+        )}
       </section>
 
       {!draftLive && (

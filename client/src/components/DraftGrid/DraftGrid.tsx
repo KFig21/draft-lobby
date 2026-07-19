@@ -9,6 +9,8 @@ interface Props {
   playersById: Map<string, PlayerRow>;
   onClockTeamId: string | null;
   currentRound: number;
+  /** Click a team header to view that team's lineup. */
+  onTeamClick?: (teamId: string) => void;
 }
 
 /**
@@ -23,6 +25,7 @@ export function DraftGrid({
   playersById,
   onClockTeamId,
   currentRound,
+  onTeamClick,
 }: Props) {
   // Index picks by "round:teamId" for O(1) cell lookup.
   const byCell = new Map<string, PickRow>();
@@ -36,11 +39,18 @@ export function DraftGrid({
             <th className="draft-grid__corner" />
             {teams.map((team) => (
               <th key={team.id} className="draft-grid__team">
-                <span
-                  className="draft-grid__team-swatch"
-                  style={{ background: team.color }}
-                />
-                {team.name}
+                <button
+                  type="button"
+                  className="draft-grid__team-btn"
+                  onClick={() => onTeamClick?.(team.id)}
+                  title={`View ${team.name}'s lineup`}
+                >
+                  <span
+                    className="draft-grid__team-swatch"
+                    style={{ background: team.color }}
+                  />
+                  {team.name}
+                </button>
               </th>
             ))}
           </tr>

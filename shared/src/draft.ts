@@ -50,6 +50,12 @@ export const renameTeamSchema = z.object({
 });
 export type RenameTeamInput = z.infer<typeof renameTeamSchema>;
 
+/** Commissioner sets the draft order: team ids in the desired 1..N sequence. */
+export const setDraftOrderSchema = z.object({
+  teamIds: z.array(z.string().uuid()).min(1),
+});
+export type SetDraftOrderInput = z.infer<typeof setDraftOrderSchema>;
+
 export const chatMessageSchema = z.object({
   id: z.string().uuid(),
   lobbyId: z.string().uuid(),

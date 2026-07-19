@@ -142,6 +142,44 @@
   }
 }
 
+.room__teams-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: $space;
+  margin-bottom: $space * 1.5;
+
+  h2 {
+    font-size: 1rem;
+  }
+}
+
+.room__order-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: $accent;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:hover {
+    color: $text;
+  }
+}
+
+.room__order-actions {
+  display: flex;
+  gap: $space;
+  margin-top: $space * 1.5;
+
+  .button {
+    gap: 4px;
+    padding: $space * 0.75 $space * 1.5;
+    font-size: 0.9rem;
+  }
+}
+
 .team-list {
   list-style: none;
   display: flex;
@@ -234,5 +272,11 @@
     &:hover {
       opacity: 1;
     }
+  }
+
+  &__order-ctrls {
+    display: flex;
+    gap: $space * 0.25;
+    flex-shrink: 0;
   }
 }

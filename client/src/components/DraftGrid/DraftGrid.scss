@@ -26,8 +26,27 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
+  &__team-btn {
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+    border: none;
+    background: none;
+    padding: 0;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    &:hover {
+      color: $primary-hover;
+    }
+  }
   &__team-swatch {
     display: inline-block;
+    flex-shrink: 0;
     width: 8px;
     height: 8px;
     border-radius: 2px;

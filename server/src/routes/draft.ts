@@ -6,6 +6,7 @@ import {
   renameTeamSchema,
   roundsForSettings,
   secondsForRound,
+  setDraftOrderSchema,
   type LobbySettings,
 } from '@draft-lobby/shared';
 import { requireAuth, type AuthedRequest } from '../middleware/auth.js';
@@ -489,6 +490,64 @@ draftRouter.post('/:id/archive', async (req: AuthedRequest, res: Response) => {
     return;
   }
   res.json({ ok: true, archived });
+});
+
+/** POST /api/lobbies/:id/draft-order — commissioner sets the draft order (pre-draft). */
+draftRouter.post('/:id/draft-order', async (req: AuthedRequest, res: Response) => {
+  const lobbyId = req.params.id;
+  const role = await getRole(lobbyId, req.user!.id);
+  if (!isCommish(role)) {
+    res.status(403).json({ error: 'Only the commissioner can set the draft order' });
+    return;
+  }
+
+  const parsed = setDraftOrderSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.flatten() });
+    return;
+  }
+  const { teamIds } = parsed.data;
+
+  const { data: lobby } = await supabaseAdmin
+    .from('lobbies')
+    .select('status')
+    .eq('id', lobbyId)
+    .single();
+  if (!lobby) {
+    res.status(404).json({ error: 'Lobby not found' });
+    return;
+  }
+  if (lobby.status !== 'SETUP' && lobby.status !== 'SCHEDULED') {
+    res.status(409).json({ error: 'The draft order is locked once the draft starts' });
+    return;
+  }
+
+  const { data: teams } = await supabaseAdmin
+    .from('teams')
+    .select('id')
+    .eq('lobby_id', lobbyId);
+  const existing = new Set((teams ?? []).map((t) => t.id));
+  const requested = new Set(teamIds);
+  if (existing.size !== requested.size || [...existing].some((id) => !requested.has(id))) {
+    res.status(400).json({ error: 'Draft order must include every team exactly once' });
+    return;
+  }
+
+  // Two-pass to dodge the unique(lobby_id, draft_position) constraint:
+  // park everyone at negative slots, then assign the final 1..N positions.
+  for (let i = 0; i < teamIds.length; i++) {
+    await supabaseAdmin
+      .from('teams')
+      .update({ draft_position: -(i + 1) })
+      .eq('id', teamIds[i]);
+  }
+  for (let i = 0; i < teamIds.length; i++) {
+    await supabaseAdmin
+      .from('teams')
+      .update({ draft_position: i + 1 })
+      .eq('id', teamIds[i]);
+  }
+  res.json({ ok: true });
 });
 
 /** POST /api/lobbies/:id/team-name — rename your own team (or any team, if commissioner). */

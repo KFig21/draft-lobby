@@ -6,6 +6,7 @@ import {
 } from '@draft-lobby/shared';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlined';
+import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
 import GridViewOutlinedIcon from '@mui/icons-material/GridViewOutlined';
 import MeetingRoomOutlinedIcon from '@mui/icons-material/MeetingRoomOutlined';
 import MenuIcon from '@mui/icons-material/Menu';
@@ -18,9 +19,11 @@ import { useMemo, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { DraftGrid } from '../../components/DraftGrid/DraftGrid';
 import { LockInModal } from '../../components/LockInModal/LockInModal';
+import { Modal } from '../../components/Modal/Modal';
 import { NavDrawer } from '../../components/Navbar/NavDrawer';
 import { PickClock } from '../../components/PickClock/PickClock';
 import { PlayerCard } from '../../components/PlayerCard/PlayerCard';
+import { TeamLineup } from '../../components/TeamLineup/TeamLineup';
 import { useAuth } from '../../auth/AuthContext';
 import { useLobby } from '../../hooks/useLobby';
 import { usePlayers } from '../../hooks/usePlayers';
@@ -55,6 +58,7 @@ export function DraftBoardPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [commishBusy, setCommishBusy] = useState(false);
   const [commishError, setCommishError] = useState<string | null>(null);
+  const [lineupTeamId, setLineupTeamId] = useState<string | null>(null);
 
   const userId = session?.user.id;
 
@@ -131,6 +135,7 @@ export function DraftBoardPage() {
   const canPick = !isComplete && !isPaused && (isMyTurn || isCommish);
   // When a commissioner picks for a team that isn't theirs, surface it in the modal.
   const pickingForTeam = !isMyTurn && onClockTeam ? onClockTeam.name : null;
+  const myTeamId = teams.find((t) => t.owner_id === userId)?.id ?? teams[0]?.id ?? null;
 
   async function confirmPick() {
     if (!selected) return;
@@ -165,9 +170,20 @@ export function DraftBoardPage() {
   return (
     <div className="draft">
       <header className="draft__topbar">
-        <Link to={`/lobby/${id}`} className="back-link draft__desktop-only">
-          ← Room
-        </Link>
+        <div className="draft__left">
+          <Link to={`/lobby/${id}`} className="back-link draft__desktop-only">
+            ← Room
+          </Link>
+          <button
+            type="button"
+            className="draft__lineup-open"
+            onClick={() => setLineupTeamId(myTeamId)}
+            disabled={!myTeamId}
+          >
+            <FormatListBulletedIcon fontSize="small" />
+            My team
+          </button>
+        </div>
         <div className="draft__status">
           {isComplete ? (
             <strong className="draft__complete">🏆 Draft complete</strong>
@@ -256,6 +272,7 @@ export function DraftBoardPage() {
             playersById={playersById}
             onClockTeamId={onClockTeam?.id ?? null}
             currentRound={round}
+            onTeamClick={setLineupTeamId}
           />
         </section>
 
@@ -355,6 +372,19 @@ export function DraftBoardPage() {
           { to: `/lobby/${id}`, label: 'Lobby room', Icon: MeetingRoomOutlinedIcon },
         ]}
       />
+
+      {lineupTeamId && (
+        <Modal title="Team lineup" onClose={() => setLineupTeamId(null)}>
+          <TeamLineup
+            teams={teams}
+            selectedTeamId={lineupTeamId}
+            onSelectTeam={setLineupTeamId}
+            picks={picks}
+            playersById={playersById}
+            settings={lobby.settings}
+          />
+        </Modal>
+      )}
     </div>
   );
 }

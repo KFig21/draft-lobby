@@ -1,0 +1,85 @@
+@use 'variables' as *;
+
+.lineup-view {
+  display: flex;
+  flex-direction: column;
+  gap: $space * 1.5;
+
+  &__select {
+    padding: $space * 1.25;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: $bg;
+    color: $text;
+    font-size: 1rem;
+    font-weight: 700;
+  }
+
+  &__rows {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &__divider {
+    margin-top: $space;
+    padding: $space * 0.5 0;
+    color: $text-muted;
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+}
+
+.lineup-row {
+  display: flex;
+  align-items: center;
+  gap: $space;
+  padding: $space $space * 1.25;
+  background: $bg;
+  border: 1px solid $border;
+  border-radius: $radius-sm;
+
+  &--empty {
+    border-style: dashed;
+    opacity: 0.7;
+  }
+
+  &__slot {
+    width: 3.5rem;
+    flex-shrink: 0;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: $text-muted;
+  }
+
+  &__pos {
+    width: 2.2rem;
+    flex-shrink: 0;
+    font-size: 0.75rem;
+    font-weight: 800;
+  }
+
+  &__name {
+    flex: 1;
+    min-width: 0;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__meta {
+    flex-shrink: 0;
+    font-size: 0.8rem;
+  }
+
+  &__empty {
+    flex: 1;
+    font-size: 0.85rem;
+  }
+}

@@ -18,6 +18,36 @@
     flex-shrink: 0;
   }
 
+  &__left {
+    display: flex;
+    align-items: center;
+    gap: $space * 1.5;
+    min-width: 0;
+  }
+
+  &__lineup-open {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: $space * 0.5 $space * 1.25;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: $bg-overlay;
+    color: $text;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+
+    &:hover:not(:disabled) {
+      border-color: $primary;
+    }
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+
   &__status {
     display: flex;
     flex-direction: column;
