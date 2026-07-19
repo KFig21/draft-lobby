@@ -3,6 +3,9 @@ import {
   roundsForSettings,
   type Avatar as AvatarData,
 } from '@draft-lobby/shared';
+import CheckIcon from '@mui/icons-material/Check';
+import CloseIcon from '@mui/icons-material/Close';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import { clockSummary } from '../../lib/format';
 import { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
@@ -16,10 +19,13 @@ export function LobbyRoomPage() {
   const { id = '' } = useParams();
   const { session } = useAuth();
   const navigate = useNavigate();
-  const { lobby, teams, members, loading, error } = useLobby(id);
+  const { lobby, teams, members, loading, error, refetch } = useLobby(id);
   const [starting, setStarting] = useState(false);
   const [copied, setCopied] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [savingName, setSavingName] = useState(false);
 
   const userId = session?.user.id;
   const isCommish = useMemo(() => {
@@ -64,6 +70,31 @@ export function LobbyRoomPage() {
     setTimeout(() => setCopied(false), 1500);
   }
 
+  function startEditName(teamId: string, current: string) {
+    setActionError(null);
+    setEditingTeamId(teamId);
+    setEditName(current);
+  }
+
+  async function saveName(teamId: string) {
+    const name = editName.trim();
+    if (!name) return;
+    setSavingName(true);
+    setActionError(null);
+    try {
+      await api(`/lobbies/${id}/team-name`, {
+        method: 'POST',
+        body: { teamId, name },
+      });
+      setEditingTeamId(null);
+      refetch();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Failed to rename team');
+    } finally {
+      setSavingName(false);
+    }
+  }
+
   const draftLive = lobby.status === 'DRAFTING' || lobby.status === 'COMPLETE';
 
   return (
@@ -102,17 +133,68 @@ export function LobbyRoomPage() {
       <section className="room__teams">
         <h2>Draft order</h2>
         <ol className="team-list">
-          {teams.map((team) => (
-            <li key={team.id} className="team-list__row">
-              <span className="team-list__pos">{team.draft_position}</span>
-              <Avatar avatar={avatarFor(team.owner_id)} size={32} />
-              <span className="team-list__name">{team.name}</span>
-              {team.is_prev_champion && <span title="Defending champion">👑</span>}
-              {team.owner_id === userId && (
-                <span className="team-list__you">you</span>
-              )}
-            </li>
-          ))}
+          {teams.map((team) => {
+            const canEdit = team.owner_id === userId || isCommish;
+            const editing = editingTeamId === team.id;
+            return (
+              <li key={team.id} className="team-list__row">
+                <span className="team-list__pos">{team.draft_position}</span>
+                <Avatar avatar={avatarFor(team.owner_id)} size={32} />
+                {editing ? (
+                  <form
+                    className="team-list__edit"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      void saveName(team.id);
+                    }}
+                  >
+                    <input
+                      autoFocus
+                      value={editName}
+                      maxLength={40}
+                      onChange={(e) => setEditName(e.target.value)}
+                    />
+                    <button
+                      type="submit"
+                      className="team-list__icon"
+                      aria-label="Save team name"
+                      disabled={savingName || !editName.trim()}
+                    >
+                      <CheckIcon fontSize="small" />
+                    </button>
+                    <button
+                      type="button"
+                      className="team-list__icon"
+                      aria-label="Cancel"
+                      onClick={() => setEditingTeamId(null)}
+                    >
+                      <CloseIcon fontSize="small" />
+                    </button>
+                  </form>
+                ) : (
+                  <>
+                    <span className="team-list__name">{team.name}</span>
+                    {team.is_prev_champion && (
+                      <span title="Defending champion">👑</span>
+                    )}
+                    {team.owner_id === userId && (
+                      <span className="team-list__you">you</span>
+                    )}
+                    {canEdit && (
+                      <button
+                        type="button"
+                        className="team-list__icon team-list__edit-btn"
+                        aria-label={`Rename ${team.name}`}
+                        onClick={() => startEditName(team.id, team.name)}
+                      >
+                        <EditOutlinedIcon fontSize="small" />
+                      </button>
+                    )}
+                  </>
+                )}
+              </li>
+            );
+          })}
           {Array.from({ length: emptySlots }, (_, i) => (
             <li key={`empty-${i}`} className="team-list__row team-list__row--empty">
               <span className="team-list__pos">{filledSlots + i + 1}</span>

@@ -43,6 +43,13 @@ export const makePickSchema = z.object({
 });
 export type MakePickInput = z.infer<typeof makePickSchema>;
 
+export const renameTeamSchema = z.object({
+  /** Omit to rename your own team; a commissioner may target any team. */
+  teamId: z.string().uuid().optional(),
+  name: z.string().trim().min(1).max(40),
+});
+export type RenameTeamInput = z.infer<typeof renameTeamSchema>;
+
 export const chatMessageSchema = z.object({
   id: z.string().uuid(),
   lobbyId: z.string().uuid(),

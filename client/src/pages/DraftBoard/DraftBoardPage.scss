@@ -66,6 +66,61 @@
     gap: $space * 0.5;
   }
 
+  // Shown only on desktop; the mobile bottom bar covers these actions.
+  &__desktop-only {
+    display: none;
+
+    @include lg {
+      display: flex;
+    }
+  }
+
+  &__paused-pill {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    background: rgba($warning, 0.25);
+    color: $warning;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 800;
+  }
+
+  // ── Commissioner toolbar ──
+  &__commish {
+    display: flex;
+    align-items: center;
+    gap: $space;
+    flex-wrap: wrap;
+    padding: $space $space * 2;
+    background: $bg-raised;
+    border-bottom: 1px solid $border;
+    flex-shrink: 0;
+  }
+
+  &__commish-btn {
+    padding: $space * 0.5 $space * 1.25;
+    font-size: 0.8rem;
+
+    svg {
+      margin-right: 2px;
+    }
+  }
+
+  &__commish-error {
+    color: $danger;
+    font-size: 0.8rem;
+  }
+
+  &__paused-banner {
+    flex-shrink: 0;
+    padding: $space $space * 2;
+    text-align: center;
+    font-size: 0.85rem;
+    font-weight: 700;
+    background: rgba($warning, 0.15);
+    color: $warning;
+  }
+
   &__body {
     display: flex;
     flex: 1;

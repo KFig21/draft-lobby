@@ -127,4 +127,55 @@
     padding: 2px 6px;
     border-radius: 4px;
   }
+
+  &__edit {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: $space * 0.5;
+
+    input {
+      flex: 1;
+      min-width: 0;
+      padding: $space * 0.5 $space;
+      border: 1px solid $border;
+      border-radius: $radius-sm;
+      background: $bg;
+      color: $text;
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+  }
+
+  &__icon {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    flex-shrink: 0;
+    border: none;
+    border-radius: $radius-sm;
+    background: none;
+    color: $text-muted;
+    cursor: pointer;
+
+    &:hover {
+      background: $bg-overlay;
+      color: $text;
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+
+  // Reveal the pencil on hover (still tappable on touch, which has no hover).
+  &__edit-btn {
+    opacity: 0.55;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
 }

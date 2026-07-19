@@ -2,6 +2,7 @@ import { Router, type Response } from 'express';
 import {
   draftPositionForOverall,
   makePickSchema,
+  renameTeamSchema,
   roundsForSettings,
   secondsForRound,
   type LobbySettings,
@@ -166,4 +167,188 @@ draftRouter.post('/:id/pick', async (req: AuthedRequest, res: Response) => {
   }
 
   res.json({ ok: true, overall, round, complete: isComplete });
+});
+
+/** POST /api/lobbies/:id/pause — commissioner freezes the clock. */
+draftRouter.post('/:id/pause', async (req: AuthedRequest, res: Response) => {
+  const lobbyId = req.params.id;
+  const role = await getRole(lobbyId, req.user!.id);
+  if (!isCommish(role)) {
+    res.status(403).json({ error: 'Only the commissioner can pause the draft' });
+    return;
+  }
+
+  const { data: lobby } = await supabaseAdmin
+    .from('lobbies')
+    .select('status')
+    .eq('id', lobbyId)
+    .single();
+  if (!lobby) {
+    res.status(404).json({ error: 'Lobby not found' });
+    return;
+  }
+  if (lobby.status !== 'DRAFTING') {
+    res.status(409).json({ error: 'Draft is not active' });
+    return;
+  }
+
+  const { error } = await supabaseAdmin
+    .from('lobbies')
+    .update({ status: 'PAUSED', pick_deadline: null })
+    .eq('id', lobbyId);
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
+  res.json({ ok: true, status: 'PAUSED' });
+});
+
+/** POST /api/lobbies/:id/resume — commissioner restarts a paused draft with a fresh clock. */
+draftRouter.post('/:id/resume', async (req: AuthedRequest, res: Response) => {
+  const lobbyId = req.params.id;
+  const role = await getRole(lobbyId, req.user!.id);
+  if (!isCommish(role)) {
+    res.status(403).json({ error: 'Only the commissioner can resume the draft' });
+    return;
+  }
+
+  const { data: lobby } = await supabaseAdmin
+    .from('lobbies')
+    .select('status, settings, current_overall')
+    .eq('id', lobbyId)
+    .single();
+  if (!lobby) {
+    res.status(404).json({ error: 'Lobby not found' });
+    return;
+  }
+  if (lobby.status !== 'PAUSED') {
+    res.status(409).json({ error: 'Draft is not paused' });
+    return;
+  }
+
+  const settings = lobby.settings as LobbySettings;
+  const round = Math.floor(((lobby.current_overall as number) - 1) / settings.teamCount) + 1;
+  const deadline = new Date(
+    Date.now() + secondsForRound(round, settings.pickTiers) * 1000,
+  ).toISOString();
+
+  const { error } = await supabaseAdmin
+    .from('lobbies')
+    .update({ status: 'DRAFTING', pick_deadline: deadline })
+    .eq('id', lobbyId);
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
+  res.json({ ok: true, status: 'DRAFTING' });
+});
+
+/** POST /api/lobbies/:id/rollback — commissioner undoes the most recent pick. */
+draftRouter.post('/:id/rollback', async (req: AuthedRequest, res: Response) => {
+  const lobbyId = req.params.id;
+  const role = await getRole(lobbyId, req.user!.id);
+  if (!isCommish(role)) {
+    res.status(403).json({ error: 'Only the commissioner can roll back picks' });
+    return;
+  }
+
+  const { data: lobby } = await supabaseAdmin
+    .from('lobbies')
+    .select('status, settings')
+    .eq('id', lobbyId)
+    .single();
+  if (!lobby) {
+    res.status(404).json({ error: 'Lobby not found' });
+    return;
+  }
+
+  const { data: lastPick } = await supabaseAdmin
+    .from('picks')
+    .select('id, overall, round')
+    .eq('lobby_id', lobbyId)
+    .order('overall', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!lastPick) {
+    res.status(409).json({ error: 'There are no picks to roll back' });
+    return;
+  }
+
+  const { error: delError } = await supabaseAdmin
+    .from('picks')
+    .delete()
+    .eq('id', lastPick.id);
+  if (delError) {
+    res.status(500).json({ error: delError.message });
+    return;
+  }
+
+  // The rolled-back slot is now on the clock again; reopen the draft if it had ended.
+  const settings = lobby.settings as LobbySettings;
+  const round = lastPick.round as number;
+  const wasPaused = lobby.status === 'PAUSED';
+  const deadline = wasPaused
+    ? null
+    : new Date(Date.now() + secondsForRound(round, settings.pickTiers) * 1000).toISOString();
+
+  const { error: updateError } = await supabaseAdmin
+    .from('lobbies')
+    .update({
+      current_overall: lastPick.overall,
+      status: wasPaused ? 'PAUSED' : 'DRAFTING',
+      pick_deadline: deadline,
+    })
+    .eq('id', lobbyId);
+  if (updateError) {
+    res.status(500).json({ error: updateError.message });
+    return;
+  }
+  res.json({ ok: true, rolledBackOverall: lastPick.overall });
+});
+
+/** POST /api/lobbies/:id/team-name — rename your own team (or any team, if commissioner). */
+draftRouter.post('/:id/team-name', async (req: AuthedRequest, res: Response) => {
+  const lobbyId = req.params.id;
+  const userId = req.user!.id;
+
+  const parsed = renameTeamSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.flatten() });
+    return;
+  }
+  const { teamId, name } = parsed.data;
+  const role = await getRole(lobbyId, userId);
+  if (!role) {
+    res.status(403).json({ error: 'You are not a member of this lobby' });
+    return;
+  }
+
+  // Resolve the target team: an explicit teamId (commissioner only for others),
+  // otherwise the caller's own team.
+  const query = supabaseAdmin
+    .from('teams')
+    .select('id, owner_id')
+    .eq('lobby_id', lobbyId);
+  const { data: team } = await (teamId
+    ? query.eq('id', teamId)
+    : query.eq('owner_id', userId)
+  ).maybeSingle();
+  if (!team) {
+    res.status(404).json({ error: 'Team not found' });
+    return;
+  }
+  if (team.owner_id !== userId && !isCommish(role)) {
+    res.status(403).json({ error: 'You can only rename your own team' });
+    return;
+  }
+
+  const { error } = await supabaseAdmin
+    .from('teams')
+    .update({ name })
+    .eq('id', team.id);
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
+  res.json({ ok: true, name });
 });

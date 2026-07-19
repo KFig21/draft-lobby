@@ -8,14 +8,28 @@ interface Props {
   onCancel: () => void;
   busy?: boolean;
   error?: string | null;
+  /** Set when a commissioner is picking on behalf of another team. */
+  onBehalfOfTeam?: string | null;
 }
 
 /** Confirmation modal shown before a pick is locked in. */
-export function LockInModal({ player, onConfirm, onCancel, busy, error }: Props) {
+export function LockInModal({
+  player,
+  onConfirm,
+  onCancel,
+  busy,
+  error,
+  onBehalfOfTeam,
+}: Props) {
   return (
     <div className="modal-overlay" onClick={onCancel}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <h2>Lock in your pick?</h2>
+        <h2>{onBehalfOfTeam ? 'Make this pick?' : 'Lock in your pick?'}</h2>
+        {onBehalfOfTeam && (
+          <p className="modal__on-behalf">
+            Picking for <strong>{onBehalfOfTeam}</strong> as commissioner
+          </p>
+        )}
         <div className="modal__player">
           <span
             className="modal__pos"
@@ -37,7 +51,7 @@ export function LockInModal({ player, onConfirm, onCancel, busy, error }: Props)
             Cancel
           </button>
           <button className="button button--primary" onClick={onConfirm} disabled={busy}>
-            {busy ? 'Drafting…' : 'Lock it in'}
+            {busy ? 'Drafting…' : onBehalfOfTeam ? 'Make pick' : 'Lock it in'}
           </button>
         </div>
       </div>

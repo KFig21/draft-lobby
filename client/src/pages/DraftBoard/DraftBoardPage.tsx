@@ -7,12 +7,18 @@ import {
 import BarChartIcon from '@mui/icons-material/BarChart';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlined';
 import GridViewOutlinedIcon from '@mui/icons-material/GridViewOutlined';
+import MeetingRoomOutlinedIcon from '@mui/icons-material/MeetingRoomOutlined';
+import MenuIcon from '@mui/icons-material/Menu';
+import PauseIcon from '@mui/icons-material/Pause';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import SportsFootballIcon from '@mui/icons-material/SportsFootball';
+import UndoIcon from '@mui/icons-material/Undo';
 import type { SvgIconComponent } from '@mui/icons-material';
 import { useMemo, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { DraftGrid } from '../../components/DraftGrid/DraftGrid';
 import { LockInModal } from '../../components/LockInModal/LockInModal';
+import { NavDrawer } from '../../components/Navbar/NavDrawer';
 import { PickClock } from '../../components/PickClock/PickClock';
 import { PlayerCard } from '../../components/PlayerCard/PlayerCard';
 import { useAuth } from '../../auth/AuthContext';
@@ -46,6 +52,9 @@ export function DraftBoardPage() {
   const [selected, setSelected] = useState<PlayerRow | null>(null);
   const [pickBusy, setPickBusy] = useState(false);
   const [pickError, setPickError] = useState<string | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [commishBusy, setCommishBusy] = useState(false);
+  const [commishError, setCommishError] = useState<string | null>(null);
 
   const userId = session?.user.id;
 
@@ -117,8 +126,11 @@ export function DraftBoardPage() {
 
   const { round, onClockTeam } = derived!;
   const isComplete = lobby.status === 'COMPLETE';
+  const isPaused = lobby.status === 'PAUSED';
   const isMyTurn = !!onClockTeam && onClockTeam.owner_id === userId;
-  const canPick = !isComplete && (isMyTurn || isCommish);
+  const canPick = !isComplete && !isPaused && (isMyTurn || isCommish);
+  // When a commissioner picks for a team that isn't theirs, surface it in the modal.
+  const pickingForTeam = !isMyTurn && onClockTeam ? onClockTeam.name : null;
 
   async function confirmPick() {
     if (!selected) return;
@@ -137,10 +149,23 @@ export function DraftBoardPage() {
     }
   }
 
+  async function commishAction(path: 'pause' | 'resume' | 'rollback') {
+    if (path === 'rollback' && !confirm('Undo the most recent pick?')) return;
+    setCommishError(null);
+    setCommishBusy(true);
+    try {
+      await api(`/lobbies/${id}/${path}`, { method: 'POST' });
+    } catch (err) {
+      setCommishError(err instanceof Error ? err.message : 'Action failed');
+    } finally {
+      setCommishBusy(false);
+    }
+  }
+
   return (
     <div className="draft">
       <header className="draft__topbar">
-        <Link to={`/lobby/${id}`} className="back-link">
+        <Link to={`/lobby/${id}`} className="back-link draft__desktop-only">
           ← Room
         </Link>
         <div className="draft__status">
@@ -150,7 +175,10 @@ export function DraftBoardPage() {
             <>
               <span className="draft__onclock-team">
                 {onClockTeam ? onClockTeam.name : 'Waiting…'}
-                {isMyTurn && <span className="draft__yourturn">Your pick</span>}
+                {isMyTurn && !isPaused && (
+                  <span className="draft__yourturn">Your pick</span>
+                )}
+                {isPaused && <span className="draft__paused-pill">Paused</span>}
               </span>
               <span className="muted">
                 Round {round} · Pick {lobby.current_overall}
@@ -159,7 +187,7 @@ export function DraftBoardPage() {
           )}
         </div>
         {isComplete ? (
-          <div className="draft__actions">
+          <div className="draft__actions draft__desktop-only">
             <div className="draft__export">
               <button className="button" onClick={() => doExport('csv')}>
                 Export CSV
@@ -179,6 +207,43 @@ export function DraftBoardPage() {
           <PickClock deadline={lobby.pick_deadline} />
         )}
       </header>
+
+      {isCommish && !isComplete && (
+        <div className="draft__commish">
+          {isPaused ? (
+            <button
+              className="button draft__commish-btn"
+              onClick={() => commishAction('resume')}
+              disabled={commishBusy}
+            >
+              <PlayArrowIcon fontSize="small" /> Resume
+            </button>
+          ) : (
+            <button
+              className="button draft__commish-btn"
+              onClick={() => commishAction('pause')}
+              disabled={commishBusy}
+            >
+              <PauseIcon fontSize="small" /> Pause
+            </button>
+          )}
+          <button
+            className="button draft__commish-btn"
+            onClick={() => commishAction('rollback')}
+            disabled={commishBusy || picks.length === 0}
+          >
+            <UndoIcon fontSize="small" /> Undo last pick
+          </button>
+          {commishError && <span className="draft__commish-error">{commishError}</span>}
+        </div>
+      )}
+
+      {isPaused && (
+        <div className="draft__paused-banner">
+          The draft is paused
+          {isCommish ? '.' : ' by the commissioner.'}
+        </div>
+      )}
 
       <div className="draft__body">
         <section
@@ -243,7 +308,7 @@ export function DraftBoardPage() {
         </div>
       </div>
 
-      {/* Mobile-only section tabs. */}
+      {/* Mobile-only section tabs + nav. */}
       <nav className="draft__tabs">
         {MOBILE_TABS.map(({ key, label, Icon }) => (
           <button
@@ -257,6 +322,22 @@ export function DraftBoardPage() {
             {label}
           </button>
         ))}
+        <Link to={`/lobby/${id}`} className="draft__tab">
+          <span className="draft__tab-icon">
+            <MeetingRoomOutlinedIcon fontSize="small" />
+          </span>
+          Room
+        </Link>
+        <button
+          className="draft__tab"
+          onClick={() => setDrawerOpen(true)}
+          aria-label="Open menu"
+        >
+          <span className="draft__tab-icon">
+            <MenuIcon fontSize="small" />
+          </span>
+          Menu
+        </button>
       </nav>
 
       {selected && (
@@ -269,8 +350,11 @@ export function DraftBoardPage() {
           }}
           busy={pickBusy}
           error={pickError}
+          onBehalfOfTeam={pickingForTeam}
         />
       )}
+
+      <NavDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
     </div>
   );
 }

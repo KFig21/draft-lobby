@@ -44,6 +44,14 @@
     font-weight: 700;
     font-size: 1.05rem;
   }
+  &__on-behalf {
+    margin-top: -$space;
+    padding: $space $space * 1.5;
+    border-radius: $radius-sm;
+    background: rgba($warning, 0.15);
+    color: $warning;
+    font-size: 0.9rem;
+  }
   &__error {
     color: $danger;
     font-size: 0.9rem;

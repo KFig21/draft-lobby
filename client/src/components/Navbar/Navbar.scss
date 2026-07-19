@@ -97,6 +97,8 @@
 }
 
 // ── Mobile drawer ───────────────────────────────────────────────────
+// Only rendered while open (controlled by the NavDrawer component), so it needs
+// no responsive hiding — it's used by both the mobile bottom bar and the draft board.
 .navbar-drawer {
   position: fixed;
   inset: 0;
@@ -104,10 +106,6 @@
   background: rgba(0, 0, 0, 0.55);
   display: flex;
   justify-content: flex-end;
-
-  @include md {
-    display: none;
-  }
 
   &__panel {
     width: min(280px, 82%);

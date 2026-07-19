@@ -1,4 +1,11 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { useEffect } from 'react';
+import {
+  BrowserRouter,
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+} from 'react-router-dom';
 import { AuthProvider, useAuth } from './auth/AuthContext';
 import { MainLayout } from './components/Navbar/MainLayout';
 import { AuthPage } from './pages/Auth/AuthPage';
@@ -20,6 +27,15 @@ function Protected({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+/** Reset scroll to the top whenever the route changes. */
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+  return null;
+}
+
 /** Splash / auth are for signed-out visitors; send signed-in users home. */
 function PublicOnly({ children }: { children: React.ReactNode }) {
   const { session, loading } = useAuth();
@@ -32,6 +48,7 @@ export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        <ScrollToTop />
         <Routes>
           <Route
             path="/"
