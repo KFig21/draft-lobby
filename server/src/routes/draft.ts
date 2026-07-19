@@ -306,6 +306,30 @@ draftRouter.post('/:id/rollback', async (req: AuthedRequest, res: Response) => {
   res.json({ ok: true, rolledBackOverall: lastPick.overall });
 });
 
+/** POST /api/lobbies/:id/archive — hide/unhide this draft from the caller's own lists. */
+draftRouter.post('/:id/archive', async (req: AuthedRequest, res: Response) => {
+  const lobbyId = req.params.id;
+  const userId = req.user!.id;
+  const archived = req.body?.archived !== false; // default to archiving
+
+  const { data, error } = await supabaseAdmin
+    .from('lobby_members')
+    .update({ archived })
+    .eq('lobby_id', lobbyId)
+    .eq('user_id', userId)
+    .select('lobby_id')
+    .maybeSingle();
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
+  if (!data) {
+    res.status(404).json({ error: 'You are not a member of this lobby' });
+    return;
+  }
+  res.json({ ok: true, archived });
+});
+
 /** POST /api/lobbies/:id/team-name — rename your own team (or any team, if commissioner). */
 draftRouter.post('/:id/team-name', async (req: AuthedRequest, res: Response) => {
   const lobbyId = req.params.id;

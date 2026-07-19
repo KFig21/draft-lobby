@@ -45,6 +45,21 @@
     border-color: $primary;
   }
 
+  &__icon {
+    display: inline-grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    margin-bottom: $space * 1.5;
+    border-radius: $radius-sm;
+    background: rgba($primary, 0.18);
+    color: $primary-hover;
+
+    svg {
+      font-size: 1.5rem;
+    }
+  }
+
   h2 {
     margin-bottom: $space;
     font-size: 1.1rem;

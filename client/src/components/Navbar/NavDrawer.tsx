@@ -25,8 +25,15 @@ export const NAV_ITEMS: NavItem[] = [
   { to: '/settings', label: 'Settings', Icon: SettingsOutlinedIcon },
 ];
 
+interface NavDrawerProps {
+  open: boolean;
+  onClose: () => void;
+  /** Context-specific links rendered above the standard nav (e.g. "Lobby room"). */
+  extraItems?: NavItem[];
+}
+
 /** Slide-in menu used by the mobile bottom bar and the draft board. */
-export function NavDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function NavDrawer({ open, onClose, extraItems }: NavDrawerProps) {
   const { signOut } = useAuth();
   if (!open) return null;
 
@@ -52,6 +59,25 @@ export function NavDrawer({ open, onClose }: { open: boolean; onClose: () => voi
             <CloseIcon fontSize="small" />
           </button>
         </div>
+        {extraItems && extraItems.length > 0 && (
+          <>
+            {extraItems.map(({ to, label, Icon, end }) => (
+              <NavLink
+                key={to}
+                to={to}
+                end={end}
+                className={({ isActive }) =>
+                  `navbar-drawer__link${isActive ? ' is-active' : ''}`
+                }
+                onClick={onClose}
+              >
+                <Icon fontSize="small" />
+                {label}
+              </NavLink>
+            ))}
+            <div className="navbar-drawer__divider" />
+          </>
+        )}
         {NAV_ITEMS.map(({ to, label, Icon, end }) => (
           <NavLink
             key={to}

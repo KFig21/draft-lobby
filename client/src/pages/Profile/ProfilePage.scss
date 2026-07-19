@@ -30,6 +30,21 @@
       margin-bottom: $space * 1.5;
     }
   }
+
+  &__archived-toggle {
+    background: none;
+    border: none;
+    padding: 0;
+    margin-bottom: $space * 1.5;
+    color: $text-muted;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+
+    &:hover {
+      color: $text;
+    }
+  }
 }
 
 .lobby-list {
@@ -38,7 +53,15 @@
   flex-direction: column;
   gap: $space;
 
+  &__item {
+    display: flex;
+    align-items: stretch;
+    gap: $space;
+  }
+
   &__row {
+    flex: 1;
+    min-width: 0;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -51,6 +74,23 @@
 
     &:hover {
       border-color: $primary;
+    }
+  }
+
+  &__action {
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    width: 44px;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: $bg-raised;
+    color: $text-muted;
+    cursor: pointer;
+
+    &:hover {
+      background: $bg-overlay;
+      color: $text;
     }
   }
 

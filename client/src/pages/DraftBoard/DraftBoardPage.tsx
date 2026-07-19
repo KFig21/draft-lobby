@@ -322,12 +322,6 @@ export function DraftBoardPage() {
             {label}
           </button>
         ))}
-        <Link to={`/lobby/${id}`} className="draft__tab">
-          <span className="draft__tab-icon">
-            <MeetingRoomOutlinedIcon fontSize="small" />
-          </span>
-          Room
-        </Link>
         <button
           className="draft__tab"
           onClick={() => setDrawerOpen(true)}
@@ -354,7 +348,13 @@ export function DraftBoardPage() {
         />
       )}
 
-      <NavDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+      <NavDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        extraItems={[
+          { to: `/lobby/${id}`, label: 'Lobby room', Icon: MeetingRoomOutlinedIcon },
+        ]}
+      />
     </div>
   );
 }

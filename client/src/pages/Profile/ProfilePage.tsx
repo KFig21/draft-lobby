@@ -1,14 +1,18 @@
 import { defaultAvatar } from '@draft-lobby/shared';
-import { useEffect, useState } from 'react';
+import ArchiveOutlinedIcon from '@mui/icons-material/ArchiveOutlined';
+import UnarchiveOutlinedIcon from '@mui/icons-material/UnarchiveOutlined';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Avatar } from '../../components/Avatar/Avatar';
 import { useAuth } from '../../auth/AuthContext';
+import { api } from '../../lib/api';
 import { supabase } from '../../supabase';
 import type { LobbyRow } from '../../lib/types';
 import './ProfilePage.scss';
 
 interface MyLobby {
   role: string;
+  archived: boolean;
   lobby: Pick<LobbyRow, 'id' | 'name' | 'status' | 'settings' | 'created_at'>;
 }
 
@@ -16,6 +20,7 @@ export function ProfilePage() {
   const { session } = useAuth();
   const [lobbies, setLobbies] = useState<MyLobby[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showArchived, setShowArchived] = useState(false);
 
   const userId = session?.user.id;
   const username =
@@ -27,7 +32,7 @@ export function ProfilePage() {
     if (!userId) return;
     supabase
       .from('lobby_members')
-      .select('role, lobbies ( id, name, status, settings, created_at )')
+      .select('role, archived, lobbies ( id, name, status, settings, created_at )')
       .eq('user_id', userId)
       .then(({ data }) => {
         const rows: MyLobby[] = (data ?? [])
@@ -36,7 +41,9 @@ export function ProfilePage() {
             const lobby = (
               Array.isArray(r.lobbies) ? r.lobbies[0] : r.lobbies
             ) as MyLobby['lobby'] | undefined;
-            return lobby ? { role: r.role as string, lobby } : null;
+            return lobby
+              ? { role: r.role as string, archived: !!r.archived, lobby }
+              : null;
           })
           .filter((r): r is MyLobby => r !== null)
           .sort(
@@ -49,8 +56,23 @@ export function ProfilePage() {
       });
   }, [userId]);
 
-  const drafts = lobbies.filter((l) => l.lobby.status === 'COMPLETE');
-  const active = lobbies.filter((l) => l.lobby.status !== 'COMPLETE');
+  async function setArchived(lobbyId: string, archived: boolean) {
+    // Optimistic; the flag is personal so there's no conflict to reconcile.
+    setLobbies((prev) =>
+      prev.map((r) => (r.lobby.id === lobbyId ? { ...r, archived } : r)),
+    );
+    try {
+      await api(`/lobbies/${lobbyId}/archive`, { method: 'POST', body: { archived } });
+    } catch {
+      setLobbies((prev) =>
+        prev.map((r) => (r.lobby.id === lobbyId ? { ...r, archived: !archived } : r)),
+      );
+    }
+  }
+
+  const active = lobbies.filter((l) => !l.archived && l.lobby.status !== 'COMPLETE');
+  const past = lobbies.filter((l) => !l.archived && l.lobby.status === 'COMPLETE');
+  const archived = lobbies.filter((l) => l.archived);
 
   return (
     <main className="profile">
@@ -77,26 +99,74 @@ export function ProfilePage() {
 
           <section className="profile__section">
             <h2>Past drafts</h2>
-            {drafts.length === 0 ? (
+            {past.length === 0 ? (
               <p className="muted">No completed drafts yet.</p>
             ) : (
-              <LobbyList rows={drafts} />
+              <LobbyList
+                rows={past}
+                renderAction={(row) => (
+                  <button
+                    type="button"
+                    className="lobby-list__action"
+                    aria-label={`Archive ${row.lobby.name}`}
+                    title="Archive"
+                    onClick={() => setArchived(row.lobby.id, true)}
+                  >
+                    <ArchiveOutlinedIcon fontSize="small" />
+                  </button>
+                )}
+              />
             )}
           </section>
+
+          {archived.length > 0 && (
+            <section className="profile__section">
+              <button
+                type="button"
+                className="profile__archived-toggle"
+                onClick={() => setShowArchived((v) => !v)}
+              >
+                {showArchived ? '▾' : '▸'} Archived ({archived.length})
+              </button>
+              {showArchived && (
+                <LobbyList
+                  rows={archived}
+                  renderAction={(row) => (
+                    <button
+                      type="button"
+                      className="lobby-list__action"
+                      aria-label={`Unarchive ${row.lobby.name}`}
+                      title="Unarchive"
+                      onClick={() => setArchived(row.lobby.id, false)}
+                    >
+                      <UnarchiveOutlinedIcon fontSize="small" />
+                    </button>
+                  )}
+                />
+              )}
+            </section>
+          )}
         </>
       )}
     </main>
   );
 }
 
-function LobbyList({ rows }: { rows: MyLobby[] }) {
+function LobbyList({
+  rows,
+  renderAction,
+}: {
+  rows: MyLobby[];
+  renderAction?: (row: MyLobby) => ReactNode;
+}) {
   return (
     <ul className="lobby-list">
-      {rows.map(({ lobby, role }) => {
+      {rows.map((row) => {
+        const { lobby, role } = row;
         const live = lobby.status === 'DRAFTING' || lobby.status === 'COMPLETE';
         const to = live ? `/lobby/${lobby.id}/draft` : `/lobby/${lobby.id}`;
         return (
-          <li key={lobby.id}>
+          <li key={lobby.id} className="lobby-list__item">
             <Link to={to} className="lobby-list__row">
               <div className="lobby-list__main">
                 <span className="lobby-list__name">{lobby.name}</span>
@@ -112,6 +182,7 @@ function LobbyList({ rows }: { rows: MyLobby[] }) {
                 {lobby.status}
               </span>
             </Link>
+            {renderAction?.(row)}
           </li>
         );
       })}
