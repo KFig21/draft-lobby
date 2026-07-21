@@ -1,6 +1,6 @@
 import { defaultAvatar } from '@draft-lobby/shared';
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Avatar } from '../../components/Avatar/Avatar';
 import { useNotifications } from '../../notifications/NotificationsContext';
 import { api } from '../../lib/api';
@@ -65,9 +65,6 @@ export function NotificationsPage() {
   return (
     <main className="notifs">
       <header className="notifs__header">
-        <Link to="/home" className="back-link">
-          ← Home
-        </Link>
         <h1>Notifications</h1>
       </header>
 

@@ -2,22 +2,37 @@
 @use 'mixins' as *;
 
 .home {
-  max-width: 640px;
-  margin: 0 auto;
-  padding: $space * 3;
+  padding: 0 0 $space * 3;
   display: flex;
   flex-direction: column;
   gap: $space * 3;
 
+  // Body sections are centred to a readable column; the pinned header below
+  // overrides this to span the full width of the content container.
+  > * {
+    width: 100%;
+    max-width: 640px;
+    margin-inline: auto;
+    padding-inline: $space * 3;
+  }
+
+  // Pinned page header (Twitter-style): sticks to the top, full-width bottom border.
   &__top {
+    max-width: none;
+    position: sticky;
+    top: 0;
+    z-index: 10;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: $space * 2;
-    flex-wrap: wrap;
+    min-height: 56px;
+    padding: $space $space * 3;
+    background: $bg;
+    border-bottom: 1px solid $border;
 
     h1 {
-      font-size: 1.5rem;
+      font-size: 1.3rem;
     }
   }
 
@@ -50,10 +65,12 @@
   align-items: flex-start;
   @include card-surface;
   padding: $space * 1.5;
+  // Active drafts get a green border to stand out in the timeline.
+  border-color: $accent;
   transition: border-color 120ms ease;
 
   &:hover {
-    border-color: $primary;
+    border-color: $accent;
   }
 
   &__name {
@@ -109,18 +126,56 @@
     }
   }
 
+  &__foot {
+    display: flex;
+    align-items: baseline;
+    gap: $space;
+    margin-top: 2px;
+  }
+
   &__time {
     display: block;
-    margin-top: 2px;
     color: $text-muted;
     font-size: 0.75rem;
   }
 
   &__reactions {
+    position: relative;
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     gap: $space * 0.5;
     margin-top: $space * 1.5;
+  }
+
+  &__palette {
+    position: absolute;
+    bottom: calc(100% + #{$space * 0.5});
+    left: 0;
+    z-index: 20;
+    display: flex;
+    gap: 2px;
+    padding: $space * 0.5;
+    background: $bg-overlay;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+
+    button {
+      display: grid;
+      place-items: center;
+      width: 30px;
+      height: 30px;
+      border: none;
+      border-radius: $radius-sm;
+      background: none;
+      cursor: pointer;
+      font-size: 1.15rem;
+
+      &:hover {
+        background: $bg-hover;
+      }
+    }
   }
 }
 
@@ -163,5 +218,15 @@
     font-weight: 700;
     font-variant-numeric: tabular-nums;
     color: $text;
+  }
+
+  // The "add reaction" (emoji +) trigger.
+  &--add {
+    opacity: 1;
+    color: $text-muted;
+
+    &:hover {
+      color: $text;
+    }
   }
 }

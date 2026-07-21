@@ -1,6 +1,7 @@
 import cors from 'cors';
 import express from 'express';
 import { env } from './env.js';
+import { startDraftEngine } from './draftEngine.js';
 import { authRouter } from './routes/auth.js';
 import { lobbiesRouter } from './routes/lobbies.js';
 import { draftRouter } from './routes/draft.js';
@@ -24,4 +25,5 @@ app.use('/api/feed', feedRouter);
 
 app.listen(env.PORT, () => {
   console.log(`⚡ draft-lobby server listening on http://localhost:${env.PORT}`);
+  startDraftEngine();
 });

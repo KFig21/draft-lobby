@@ -6,16 +6,52 @@
   flex-direction: column;
   height: 100vh;
   height: 100dvh; // account for mobile browser chrome
+  background: $bg; // fills correctly in fullscreen (TV mode)
 
   &__topbar {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: $space * 1.5;
-    padding: $space * 1.5 $space * 2;
+    padding: $space * 0.75 $space * 2;
     background: $bg-raised;
     border-bottom: 1px solid $border;
     flex-shrink: 0;
+    transition: background 150ms ease;
+
+    // Your turn: whole bar goes green with dark text for contrast.
+    &--myturn {
+      background: $accent;
+      border-bottom-color: rgba(#05231a, 0.35);
+      color: #05231a;
+
+      .draft__onclock-team,
+      .draft__home-btn,
+      .draft__room-btn,
+      .draft__icon-btn,
+      .clock {
+        color: #05231a;
+      }
+      .draft__home-btn,
+      .draft__room-btn {
+        border-color: rgba(#05231a, 0.35);
+
+        &:hover {
+          background: rgba(#05231a, 0.14);
+        }
+      }
+      .muted {
+        color: rgba(#05231a, 0.72);
+      }
+      .draft__yourturn {
+        background: #05231a;
+        color: $accent;
+      }
+      .draft__icon-btn:hover {
+        background: rgba(#05231a, 0.14);
+        color: #05231a;
+      }
+    }
   }
 
   &__left {
@@ -23,6 +59,73 @@
     align-items: center;
     gap: $space;
     min-width: 0;
+    flex-wrap: wrap;
+  }
+
+  // Home + Room: traditional buttons, pinned to the far left. Desktop-only —
+  // mobile reaches both via the "Menu" drawer.
+  &__nav-links {
+    display: none;
+    align-items: center;
+    gap: $space * 0.75;
+
+    @include lg {
+      display: flex;
+    }
+  }
+
+  &__home-btn,
+  &__room-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: $space * 0.5 $space;
+    font-size: 0.85rem;
+
+    svg {
+      font-size: 1rem;
+    }
+  }
+
+  // Compact commissioner / member tools that live in the top bar.
+  &__tool-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: $space * 0.4 $space * 0.9;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: $bg-overlay;
+    color: $text;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      border-color: $primary;
+    }
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    svg {
+      font-size: 1rem;
+    }
+  }
+
+  // "Skip bots" toggle: same tool-btn look, accented when on.
+  &__skipbots-btn.is-on {
+    border-color: $accent;
+    background: rgba($accent, 0.16);
+    color: $accent;
+  }
+
+  &__right {
+    display: flex;
+    align-items: center;
+    gap: $space;
+    justify-content: flex-end;
   }
 
   &__icon-btn {
@@ -31,11 +134,93 @@
     width: 34px;
     height: 34px;
     flex-shrink: 0;
+    border: none;
+    border-radius: $radius-sm;
+    background: none;
+    color: $text-muted;
+    cursor: pointer;
+
+    &:hover {
+      background: $bg-overlay;
+      color: $text;
+    }
+  }
+
+  // Fullscreen is desktop-only (TV mode); hidden on mobile.
+  &__fs-btn {
+    display: none;
+
+    @include lg {
+      display: grid;
+    }
+  }
+
+  // Theme toggle now lives in the mobile nav drawer too — desktop-only here.
+  &__theme-btn {
+    display: none;
+
+    @include lg {
+      display: grid;
+    }
+  }
+
+  &__export-btn {
+    display: none;
+    align-items: center;
+    gap: 4px;
+    padding: $space $space * 1.5;
+    font-size: 0.85rem;
+
+    @include lg {
+      display: inline-flex;
+    }
+  }
+
+  // Auto-draft toggle: faded robot when off, filled + accent when on.
+  &__auto-btn {
+    opacity: 0.5;
+
+    &:hover {
+      opacity: 1;
+    }
+    &.is-on {
+      opacity: 1;
+      color: $accent;
+      background: rgba($accent, 0.15);
+
+      &:hover {
+        background: rgba($accent, 0.25);
+        color: $accent;
+      }
+    }
+  }
+
+  // Fullscreen: only the board fills the screen (TV mode).
+  &__board--fs,
+  &__board:fullscreen {
+    display: block !important;
+    position: relative;
+    background: $bg;
+    padding: $space * 2;
+  }
+
+  &__fs-exit {
+    position: absolute;
+    top: $space;
+    right: $space;
+    z-index: 10;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: $space * 0.5 $space;
     border: 1px solid $border;
     border-radius: $radius-sm;
     background: $bg-overlay;
     color: $text;
+    font-size: 0.8rem;
+    font-weight: 600;
     cursor: pointer;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
 
     &:hover {
       border-color: $primary;
@@ -72,33 +257,6 @@
     color: $primary-hover;
   }
 
-  &__actions {
-    display: flex;
-    align-items: center;
-    gap: $space;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-
-    .button {
-      padding: $space $space * 1.5;
-      font-size: 0.85rem;
-    }
-  }
-
-  &__export {
-    display: flex;
-    gap: $space * 0.5;
-  }
-
-  // Shown only on desktop; the mobile bottom bar covers these actions.
-  &__desktop-only {
-    display: none;
-
-    @include lg {
-      display: flex;
-    }
-  }
-
   &__paused-pill {
     font-size: 0.65rem;
     text-transform: uppercase;
@@ -107,27 +265,6 @@
     padding: 2px 6px;
     border-radius: 4px;
     font-weight: 800;
-  }
-
-  // ── Commissioner toolbar ──
-  &__commish {
-    display: flex;
-    align-items: center;
-    gap: $space;
-    flex-wrap: wrap;
-    padding: $space $space * 2;
-    background: $bg-raised;
-    border-bottom: 1px solid $border;
-    flex-shrink: 0;
-  }
-
-  &__commish-btn {
-    padding: $space * 0.5 $space * 1.25;
-    font-size: 0.8rem;
-
-    svg {
-      margin-right: 2px;
-    }
   }
 
   &__commish-error {
@@ -333,6 +470,7 @@
     max-height: 42%;
     overflow-y: auto;
   }
+
   &__queue-head {
     font-size: 0.7rem;
     font-weight: 800;
@@ -340,6 +478,7 @@
     letter-spacing: 0.05em;
     color: $accent;
   }
+
   &__filters {
     display: flex;
     flex-direction: column;
@@ -347,6 +486,17 @@
     padding: $space * 1.5;
     border-bottom: 1px solid $border;
   }
+
+  // Pick count on a position filter chip, e.g. "QB · 2".
+  .chip__dot {
+    margin: 0 4px;
+    opacity: 0.6;
+  }
+
+  .chip__count {
+    font-weight: 800;
+  }
+
   &__search {
     padding: $space;
     border: 1px solid $border;
@@ -360,6 +510,7 @@
       outline-offset: -1px;
     }
   }
+
   &__list {
     flex: 1;
     overflow-y: auto;
@@ -368,8 +519,35 @@
     flex-direction: column;
     gap: $space * 0.75;
   }
+
   &__empty {
     padding: $space * 2;
     text-align: center;
+  }
+}
+// Export-options list shown inside the "Export draft" modal.
+.draft-export-options {
+  display: flex;
+  flex-direction: column;
+  gap: $space;
+
+  &__opt {
+    display: flex;
+    align-items: center;
+    gap: $space * 1.5;
+    justify-content: flex-start;
+    padding: $space * 1.5;
+    text-align: left;
+
+    span {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .muted {
+      font-size: 0.8rem;
+      font-weight: 400;
+    }
   }
 }

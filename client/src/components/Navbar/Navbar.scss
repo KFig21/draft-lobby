@@ -8,6 +8,8 @@
   left: 0;
   right: 0;
   z-index: 20;
+  // Deterministic height (56px + safe area) so overlays can sit flush on it.
+  height: calc(56px + env(safe-area-inset-bottom, 0));
   display: flex;
   background: $bg-raised;
   border-top: 1px solid $border;
@@ -22,6 +24,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     gap: 2px;
     padding: $space $space * 0.5;
     background: none;
@@ -119,15 +122,80 @@
     }
   }
 
-  &__signout {
+  &__theme {
     margin-top: auto;
+  }
+
+  &__signout {
     color: $danger;
+  }
+
+  &__live-dot--idle {
+    background: $text-muted;
+    box-shadow: none;
+    animation: none;
+  }
+
+  &__live-tag--setup {
+    background: $bg-overlay;
+    color: $text-muted;
   }
 
   &__divider {
     height: 1px;
     background: $border;
     margin: $space * 0.5 0;
+  }
+
+  &__section-label {
+    padding: $space * 0.5 $space;
+    color: $text-muted;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  &__live {
+    gap: $space;
+  }
+
+  &__live-dot {
+    flex-shrink: 0;
+    width: 9px;
+    height: 9px;
+    border-radius: 999px;
+    background: $accent;
+    box-shadow: 0 0 0 4px rgba($accent, 0.2);
+    animation: navbar-live-pulse 1.6s ease-in-out infinite;
+  }
+
+  &__live-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__live-tag {
+    flex-shrink: 0;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: rgba($warning, 0.2);
+    color: $warning;
+    font-size: 0.68rem;
+    font-weight: 800;
+  }
+}
+
+@keyframes navbar-live-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
   }
 }
 

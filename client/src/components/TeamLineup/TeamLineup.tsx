@@ -1,4 +1,6 @@
 import {
+  POSITIONS,
+  POSITION_COLORS,
   SLOT_LABELS,
   type LobbySettings,
   type Position,
@@ -15,6 +17,11 @@ interface Props {
   picks: PickRow[];
   playersById: Map<string, PlayerRow>;
   settings: LobbySettings;
+  /** Current user id — controls whether the auto-draft toggle is theirs to flip. */
+  myUserId?: string;
+  isCommish?: boolean;
+  /** When provided, shows an auto-draft toggle for the selected team. */
+  onToggleAuto?: (teamId: string, on: boolean) => void;
 }
 
 const FLEX_ELIGIBLE: Position[] = ['RB', 'WR', 'TE'];
@@ -74,10 +81,27 @@ export function TeamLineup({
   picks,
   playersById,
   settings,
+  myUserId,
+  isCommish,
+  onToggleAuto,
 }: Props) {
   const rows = buildLineup(selectedTeamId, picks, playersById, settings);
   const starters = rows.filter((r) => r.slot !== 'BENCH');
   const bench = rows.filter((r) => r.slot === 'BENCH');
+  const selectedTeam = teams.find((t) => t.id === selectedTeamId);
+  const canToggleAuto =
+    !!onToggleAuto &&
+    !!selectedTeam &&
+    !selectedTeam.is_bot &&
+    (isCommish || selectedTeam.owner_id === myUserId);
+
+  // Roster composition: how many players drafted at each position.
+  const posCounts: Record<Position, number> = { QB: 0, RB: 0, WR: 0, TE: 0, K: 0, DEF: 0 };
+  for (const p of picks) {
+    if (p.team_id !== selectedTeamId) continue;
+    const pos = playersById.get(p.player_id)?.position as Position | undefined;
+    if (pos) posCounts[pos] += 1;
+  }
 
   return (
     <div className="lineup-view">
@@ -93,15 +117,66 @@ export function TeamLineup({
         ))}
       </select>
 
-      <ul className="lineup-view__rows">
-        {starters.map((r, i) => (
-          <LineupSlot key={`s${i}`} row={r} />
+      {selectedTeam && (
+        <div className="lineup-view__auto">
+          {selectedTeam.is_bot ? (
+            <span className="muted">🤖 Bot — drafts automatically</span>
+          ) : canToggleAuto ? (
+            <label className="auto-toggle">
+              <input
+                type="checkbox"
+                checked={selectedTeam.auto_draft}
+                onChange={(e) => onToggleAuto!(selectedTeam.id, e.target.checked)}
+              />
+              <span>
+                Auto-draft {selectedTeam.auto_draft ? 'on' : 'off'}
+                {isCommish && selectedTeam.owner_id !== myUserId ? ' (for this team)' : ''}
+              </span>
+            </label>
+          ) : onToggleAuto && selectedTeam.auto_draft ? (
+            <span className="muted">🤖 Auto-drafting</span>
+          ) : null}
+        </div>
+      )}
+
+      <div className="lineup-view__composition">
+        {POSITIONS.map((pos) => (
+          <span
+            key={pos}
+            className="roster-count"
+            style={{ ['--pos' as string]: POSITION_COLORS[pos] }}
+          >
+            <span className="roster-count__pos">{pos === 'DEF' ? 'D/ST' : pos}</span>
+            <span className="roster-count__n">{posCounts[pos]}</span>
+          </span>
         ))}
-        {bench.length > 0 && <li className="lineup-view__divider">Bench</li>}
-        {bench.map((r, i) => (
-          <LineupSlot key={`b${i}`} row={r} />
-        ))}
-      </ul>
+      </div>
+
+      <section className="lineup-view__section">
+        <h4 className="lineup-view__section-title">
+          <span>Starting lineup</span>
+          <span className="lineup-view__section-count">{starters.length}</span>
+        </h4>
+        <ul className="lineup-view__rows">
+          {starters.map((r, i) => (
+            <LineupSlot key={`s${i}`} row={r} />
+          ))}
+        </ul>
+      </section>
+
+      {bench.length > 0 && (
+        <section className="lineup-view__section">
+          <h4 className="lineup-view__section-title lineup-view__section-title--bench">
+            <span>Bench</span>
+            <span className="lineup-view__section-count">{bench.length}</span>
+          </h4>
+          <ul className="lineup-view__rows">
+            {bench.map((r, i) => (
+              <LineupSlot key={`b${i}`} row={r} />
+            ))}
+          </ul>
+        </section>
+      )}
     </div>
   );
 }

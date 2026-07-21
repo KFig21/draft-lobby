@@ -3,15 +3,20 @@ import CloseIcon from '@mui/icons-material/Close';
 import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
 import ListAltOutlinedIcon from '@mui/icons-material/ListAltOutlined';
 import LoginIcon from '@mui/icons-material/Login';
-import LogoutIcon from '@mui/icons-material/Logout';
 import NotificationsNoneOutlinedIcon from '@mui/icons-material/NotificationsNoneOutlined';
 import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import SportsFootballIcon from '@mui/icons-material/SportsFootball';
+import DarkModeIcon from '@mui/icons-material/DarkMode';
+import LightModeIcon from '@mui/icons-material/LightMode';
 import type { SvgIconComponent } from '@mui/icons-material';
+// (sign-out lives in Settings only)
+import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
 import { useNotifications } from '../../notifications/NotificationsContext';
+import { useTheme } from '../../theme/ThemeContext';
+import { supabase } from '../../supabase';
 
 export interface NavItem {
   to: string;
@@ -37,11 +42,50 @@ interface NavDrawerProps {
   extraItems?: NavItem[];
 }
 
+interface LiveDraft {
+  id: string;
+  name: string;
+  status: string;
+}
+
 /** Slide-in menu used by the mobile bottom bar and the draft board. */
 export function NavDrawer({ open, onClose, extraItems }: NavDrawerProps) {
-  const { signOut } = useAuth();
+  const { session } = useAuth();
   const { unreadCount } = useNotifications();
+  const { theme, toggle } = useTheme();
+  const userId = session?.user.id;
+  const [liveDrafts, setLiveDrafts] = useState<LiveDraft[]>([]);
+
+  // Surface the user's active drafts (pre-draft and in-progress) at the top.
+  useEffect(() => {
+    if (!open || !userId) return;
+    let cancelled = false;
+    void (async () => {
+      const { data: mem } = await supabase
+        .from('lobby_members')
+        .select('lobby_id')
+        .eq('user_id', userId);
+      const ids = (mem ?? []).map((m) => m.lobby_id);
+      if (ids.length === 0) {
+        if (!cancelled) setLiveDrafts([]);
+        return;
+      }
+      const { data } = await supabase
+        .from('lobbies')
+        .select('id, name, status')
+        .in('id', ids)
+        .in('status', ['SETUP', 'SCHEDULED', 'DRAFTING', 'PAUSED'])
+        .order('created_at', { ascending: false });
+      if (!cancelled) setLiveDrafts((data ?? []) as LiveDraft[]);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, userId]);
+
   if (!open) return null;
+
+  const isLive = (s: string) => s === 'DRAFTING' || s === 'PAUSED';
 
   return (
     <div className="navbar-drawer" onClick={onClose}>
@@ -65,6 +109,35 @@ export function NavDrawer({ open, onClose, extraItems }: NavDrawerProps) {
             <CloseIcon fontSize="small" />
           </button>
         </div>
+        {liveDrafts.length > 0 && (
+          <>
+            <div className="navbar-drawer__section-label">Your drafts</div>
+            {liveDrafts.map((d) => (
+              <NavLink
+                key={d.id}
+                to={isLive(d.status) ? `/lobby/${d.id}/draft` : `/lobby/${d.id}`}
+                className="navbar-drawer__link navbar-drawer__live"
+                onClick={onClose}
+              >
+                <span
+                  className={`navbar-drawer__live-dot${
+                    isLive(d.status) ? '' : ' navbar-drawer__live-dot--idle'
+                  }`}
+                />
+                <span className="navbar-drawer__live-name">{d.name}</span>
+                {d.status === 'PAUSED' && (
+                  <span className="navbar-drawer__live-tag">Paused</span>
+                )}
+                {!isLive(d.status) && (
+                  <span className="navbar-drawer__live-tag navbar-drawer__live-tag--setup">
+                    Lobby
+                  </span>
+                )}
+              </NavLink>
+            ))}
+            <div className="navbar-drawer__divider" />
+          </>
+        )}
         {extraItems && extraItems.length > 0 && (
           <>
             {extraItems.map(({ to, label, Icon, end }) => (
@@ -103,14 +176,15 @@ export function NavDrawer({ open, onClose, extraItems }: NavDrawerProps) {
         ))}
         <button
           type="button"
-          className="navbar-drawer__link navbar-drawer__signout"
-          onClick={() => {
-            onClose();
-            void signOut();
-          }}
+          className="navbar-drawer__link navbar-drawer__theme"
+          onClick={toggle}
         >
-          <LogoutIcon fontSize="small" />
-          Sign out
+          {theme === 'dark' ? (
+            <LightModeIcon fontSize="small" />
+          ) : (
+            <DarkModeIcon fontSize="small" />
+          )}
+          {theme === 'dark' ? 'Light mode' : 'Dark mode'}
         </button>
       </div>
     </div>

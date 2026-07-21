@@ -2,18 +2,35 @@
 @use 'mixins' as *;
 
 .wizard {
-  max-width: 640px;
-  margin: 0 auto;
-  padding: $space * 3;
+  padding: 0 0 $space * 3;
+  display: flex;
+  flex-direction: column;
+  gap: $space * 3;
 
+  // Centre the form body; the header (below) spans the full container width.
+  // Scoped to the form so inline-rendered modal overlays aren't constrained.
+  > .wizard__form {
+    width: 100%;
+    max-width: 640px;
+    margin-inline: auto;
+    padding-inline: $space * 3;
+  }
+
+  // Pinned page header with a full-width bottom border.
   &__header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
     display: flex;
-    flex-direction: column;
+    align-items: center;
     gap: $space;
-    margin-bottom: $space * 3;
+    min-height: 56px;
+    padding: $space $space * 3;
+    background: $bg;
+    border-bottom: 1px solid $border;
 
     h1 {
-      font-size: 1.5rem;
+      font-size: 1.3rem;
     }
   }
 

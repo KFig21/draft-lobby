@@ -1,4 +1,5 @@
 import { POSITION_COLORS, type Position } from '@draft-lobby/shared';
+import { useModalClose } from '../../lib/useModalClose';
 import type { PlayerRow } from '../../lib/types';
 import './LockInModal.scss';
 
@@ -21,9 +22,16 @@ export function LockInModal({
   error,
   onBehalfOfTeam,
 }: Props) {
+  const { closing, requestClose } = useModalClose(onCancel);
   return (
-    <div className="modal-overlay" onClick={onCancel}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+    <div
+      className={`modal-overlay modal-anim-backdrop${closing ? ' is-closing' : ''}`}
+      onClick={() => !busy && requestClose()}
+    >
+      <div
+        className={`modal modal-anim-card${closing ? ' is-closing' : ''}`}
+        onClick={(e) => e.stopPropagation()}
+      >
         <h2>{onBehalfOfTeam ? 'Make this pick?' : 'Lock in your pick?'}</h2>
         {onBehalfOfTeam && (
           <p className="modal__on-behalf">
@@ -47,7 +55,7 @@ export function LockInModal({
         </div>
         {error && <p className="modal__error">{error}</p>}
         <div className="modal__actions">
-          <button className="button" onClick={onCancel} disabled={busy}>
+          <button className="button" onClick={requestClose} disabled={busy}>
             Cancel
           </button>
           <button className="button button--primary" onClick={onConfirm} disabled={busy}>

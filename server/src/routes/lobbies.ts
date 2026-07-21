@@ -2,6 +2,7 @@ import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 import { Router, type Response } from 'express';
 import { createLobbySchema, joinLobbySchema } from '@draft-lobby/shared';
 import { requireAuth, type AuthedRequest } from '../middleware/auth.js';
+import { claimSeat } from '../draftEngine.js';
 import { supabaseAdmin } from '../supabase.js';
 
 export const lobbiesRouter = Router();
@@ -35,7 +36,7 @@ lobbiesRouter.post('/', async (req: AuthedRequest, res: Response) => {
     .insert({
       name: settings.name,
       commissioner_id: userId,
-      password_hash: hashPassword(password),
+      password_hash: hashPassword(password ?? ''),
       settings,
       status: 'SETUP',
     })
@@ -67,8 +68,11 @@ lobbiesRouter.post('/', async (req: AuthedRequest, res: Response) => {
     return;
   }
 
-  // Surface open lobbies in friends' feeds.
-  if ((settings as { visibility?: string }).visibility === 'OPEN') {
+  // Surface open lobbies in friends' feeds (mock drafts stay off feeds).
+  if (
+    (settings as { visibility?: string }).visibility === 'OPEN' &&
+    (settings as { draftMode?: string }).draftMode !== 'MOCK'
+  ) {
     await supabaseAdmin.from('activity_events').insert({
       actor_id: userId,
       type: 'OPEN_LOBBY_CREATED',
@@ -170,13 +174,10 @@ lobbiesRouter.post('/join', async (req: AuthedRequest, res: Response) => {
     return;
   }
 
-  const { count } = await supabaseAdmin
-    .from('teams')
-    .select('*', { count: 'exact', head: true })
-    .eq('lobby_id', lobbyId);
   const teamCount = (lobby.settings as { teamCount: number }).teamCount;
-  if ((count ?? 0) >= teamCount) {
-    res.status(409).json({ error: 'Lobby is full' });
+  const seat = await claimSeat(lobbyId, userId, teamCount, teamName);
+  if (!seat.ok) {
+    res.status(409).json({ error: seat.error });
     return;
   }
 
@@ -189,17 +190,5 @@ lobbiesRouter.post('/join', async (req: AuthedRequest, res: Response) => {
     res.status(500).json({ error: memberError.message });
     return;
   }
-  const draftPosition = (count ?? 0) + 1;
-  const { error: teamError } = await supabaseAdmin.from('teams').insert({
-    lobby_id: lobbyId,
-    owner_id: userId,
-    name: teamName ?? `Team ${draftPosition}`,
-    draft_position: draftPosition,
-  });
-  if (teamError) {
-    res.status(500).json({ error: teamError.message });
-    return;
-  }
-
   res.json({ joined: true });
 });

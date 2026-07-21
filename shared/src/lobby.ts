@@ -73,12 +73,18 @@ export function secondsForRound(round: number, tiers: PickTier[]): number {
 export const lobbyVisibilitySchema = z.enum(['PRIVATE', 'OPEN']);
 export type LobbyVisibility = z.infer<typeof lobbyVisibilitySchema>;
 
+/** MOCK = practice draft (bots welcome, kept out of friends' feeds); LIVE = a real league draft. */
+export const draftModeSchema = z.enum(['LIVE', 'MOCK']);
+export type DraftMode = z.infer<typeof draftModeSchema>;
+
 export const lobbySettingsSchema = z.object({
   name: z.string().min(1).max(60),
   teamCount: z.number().int().min(2).max(32),
   draftType: draftTypeSchema.default('SNAKE'),
   /** OPEN lobbies are discoverable and joinable without the password. */
   visibility: lobbyVisibilitySchema.default('PRIVATE'),
+  /** MOCK drafts are for practice — empty seats fill with bots and results stay off friends' feeds. */
+  draftMode: draftModeSchema.default('LIVE'),
   // Rounds are derived from the roster (one pick per spot) — not stored.
   rosterComposition: rosterCompositionSchema,
   /** Per-round pick clock. */
@@ -116,6 +122,7 @@ export const DEFAULT_LOBBY_SETTINGS: LobbySettings = {
   teamCount: 10,
   draftType: 'SNAKE',
   visibility: 'PRIVATE',
+  draftMode: 'LIVE',
   rosterComposition: DEFAULT_ROSTER,
   pickTiers: DEFAULT_PICK_TIERS,
   timeoutAllowance: null,
@@ -131,10 +138,11 @@ export const createTemplateSchema = z.object({
 });
 export type CreateTemplateInput = z.infer<typeof createTemplateSchema>;
 
-/** Payload for creating a lobby (settings + a password to gate entry). */
+/** Payload for creating a lobby (settings + an optional password to gate entry). */
 export const createLobbySchema = z.object({
   settings: lobbySettingsSchema,
-  password: z.string().min(1).max(100),
+  // Optional: OPEN lobbies don't need a password.
+  password: z.string().max(100).optional(),
 });
 export type CreateLobbyInput = z.infer<typeof createLobbySchema>;
 

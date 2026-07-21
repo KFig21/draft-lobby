@@ -74,9 +74,6 @@ export function JoinLobbyPage() {
   return (
     <main className="join">
       <header className="join__header">
-        <Link to="/home" className="back-link">
-          ← Back
-        </Link>
         <h1>Join a lobby</h1>
       </header>
 

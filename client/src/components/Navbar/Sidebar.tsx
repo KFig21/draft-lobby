@@ -1,5 +1,4 @@
 import { defaultAvatar } from '@draft-lobby/shared';
-import LogoutIcon from '@mui/icons-material/Logout';
 import SportsFootballIcon from '@mui/icons-material/SportsFootball';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
@@ -11,10 +10,11 @@ import './Sidebar.scss';
 
 /** Desktop-only left navigation rail (Twitter-style). Hidden on mobile. */
 export function Sidebar() {
-  const { session, signOut } = useAuth();
+  const { session, profile } = useAuth();
   const { unreadCount } = useNotifications();
   const userId = session?.user.id ?? '';
   const username =
+    profile?.username ??
     (session?.user.user_metadata?.username as string | undefined) ??
     session?.user.email ??
     'me';
@@ -49,18 +49,10 @@ export function Sidebar() {
 
       <div className="sidebar__footer">
         <NavLink to="/settings" className="sidebar__me">
-          <Avatar avatar={defaultAvatar(userId)} size={36} />
+          <Avatar avatar={profile?.avatar ?? defaultAvatar(userId)} size={36} />
           <span className="sidebar__me-name">{username}</span>
         </NavLink>
         <ThemeToggle className="sidebar__iconbtn" />
-        <button
-          type="button"
-          className="sidebar__iconbtn sidebar__signout"
-          aria-label="Sign out"
-          onClick={() => void signOut()}
-        >
-          <LogoutIcon fontSize="small" />
-        </button>
       </div>
     </aside>
   );

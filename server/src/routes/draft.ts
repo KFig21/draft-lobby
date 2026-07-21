@@ -2,17 +2,24 @@ import { Router, type Response } from 'express';
 import {
   CHAT_LOCK_MS,
   chatReactSchema,
-  draftPositionForOverall,
   inviteToLobbySchema,
   makePickSchema,
+  pickCommentSchema,
   postChatSchema,
   renameTeamSchema,
-  roundsForSettings,
-  secondsForRound,
+  setAutoDraftSchema,
   setDraftOrderSchema,
   type LobbySettings,
 } from '@draft-lobby/shared';
 import { requireAuth, type AuthedRequest } from '../middleware/auth.js';
+import {
+  applyPick,
+  choosePlayer,
+  claimSeat,
+  computeDeadline,
+  fillOpenSeatsWithBots,
+  onClockTeam,
+} from '../draftEngine.js';
 import { supabaseAdmin } from '../supabase.js';
 
 export const draftRouter = Router();
@@ -103,8 +110,12 @@ draftRouter.post('/:id/start', async (req: AuthedRequest, res: Response) => {
   }
 
   const settings = lobby.settings as LobbySettings;
-  const firstRoundSeconds = secondsForRound(1, settings.pickTiers);
-  const deadline = new Date(Date.now() + firstRoundSeconds * 1000).toISOString();
+
+  // Fill any empty seats with bots so every draft slot has a drafter.
+  await fillOpenSeatsWithBots(lobbyId, settings);
+
+  // Deadline honours whoever lands on the clock first (a bot gets a short one).
+  const deadline = await computeDeadline(lobbyId, settings, 1);
 
   const { error: updateError } = await supabaseAdmin
     .from('lobbies')
@@ -112,6 +123,38 @@ draftRouter.post('/:id/start', async (req: AuthedRequest, res: Response) => {
     .eq('id', lobbyId);
   if (updateError) {
     res.status(500).json({ error: updateError.message });
+    return;
+  }
+  res.json({ ok: true });
+});
+
+/** DELETE /api/lobbies/:id — commissioner cancels/deletes a lobby before the draft starts. */
+draftRouter.delete('/:id', async (req: AuthedRequest, res: Response) => {
+  const lobbyId = req.params.id;
+  const userId = req.user!.id;
+
+  const { data: lobby } = await supabaseAdmin
+    .from('lobbies')
+    .select('commissioner_id, status')
+    .eq('id', lobbyId)
+    .maybeSingle();
+  if (!lobby) {
+    res.status(404).json({ error: 'Lobby not found' });
+    return;
+  }
+  if (lobby.commissioner_id !== userId) {
+    res.status(403).json({ error: 'Only the commissioner can delete this lobby' });
+    return;
+  }
+  if (lobby.status !== 'SETUP' && lobby.status !== 'SCHEDULED') {
+    res.status(409).json({ error: 'You can only delete a lobby before the draft starts' });
+    return;
+  }
+
+  // Child rows (teams, members, picks, chat, invites, activity, notifications) cascade.
+  const { error } = await supabaseAdmin.from('lobbies').delete().eq('id', lobbyId);
+  if (error) {
+    res.status(500).json({ error: error.message });
     return;
   }
   res.json({ ok: true });
@@ -145,88 +188,67 @@ draftRouter.post('/:id/pick', async (req: AuthedRequest, res: Response) => {
 
   const settings = lobby.settings as LobbySettings;
   const overall = lobby.current_overall as number;
-  const totalPicks = settings.teamCount * roundsForSettings(settings);
   const round = Math.floor((overall - 1) / settings.teamCount) + 1;
-  const onClockPosition = draftPositionForOverall(
-    overall,
-    settings.teamCount,
-    settings.draftType,
-  );
 
-  const { data: onClockTeam } = await supabaseAdmin
-    .from('teams')
-    .select('id, owner_id')
-    .eq('lobby_id', lobbyId)
-    .eq('draft_position', onClockPosition)
-    .maybeSingle();
-  if (!onClockTeam) {
+  const team = await onClockTeam(lobbyId, settings, overall);
+  if (!team) {
     res.status(409).json({ error: 'No team is on the clock' });
     return;
   }
 
   // Authorize: you own the team on the clock, or you're a commissioner.
   const role = await getRole(lobbyId, userId);
-  const ownsTeam = onClockTeam.owner_id === userId;
+  const ownsTeam = team.owner_id === userId;
   if (!ownsTeam && !isCommish(role)) {
     res.status(403).json({ error: "It's not your turn" });
     return;
   }
 
-  const { error: insertError } = await supabaseAdmin.from('picks').insert({
-    lobby_id: lobbyId,
-    overall,
-    round,
-    team_id: onClockTeam.id,
-    player_id: playerId,
-    is_auto_pick: false,
-  });
-  if (insertError) {
-    // Unique violations = player already taken or pick slot filled (race).
-    const alreadyTaken = insertError.code === '23505';
-    res
-      .status(alreadyTaken ? 409 : 500)
-      .json({ error: alreadyTaken ? 'That player is already drafted' : insertError.message });
+  const result = await applyPick(lobbyId, settings, overall, team, playerId, false);
+  if (!result.ok) {
+    if (result.error === 'taken') {
+      res.status(409).json({ error: 'That player is already drafted' });
+    } else {
+      res.status(500).json({ error: result.message ?? 'Pick failed' });
+    }
     return;
   }
 
-  // Advance the clock (or finish the draft).
-  const nextOverall = overall + 1;
-  const isComplete = nextOverall > totalPicks;
-  const nextRound = Math.floor((nextOverall - 1) / settings.teamCount) + 1;
-  const { error: advanceError } = await supabaseAdmin
-    .from('lobbies')
-    .update({
-      current_overall: nextOverall,
-      status: isComplete ? 'COMPLETE' : 'DRAFTING',
-      completed_at: isComplete ? new Date().toISOString() : null,
-      pick_deadline: isComplete
-        ? null
-        : new Date(
-            Date.now() + secondsForRound(nextRound, settings.pickTiers) * 1000,
-          ).toISOString(),
-    })
-    .eq('id', lobbyId);
-  if (advanceError) {
-    res.status(500).json({ error: advanceError.message });
+  res.json({ ok: true, overall, round, complete: result.complete });
+});
+
+/** POST /api/lobbies/:id/fast-forward — commissioner burns through consecutive bot picks. */
+draftRouter.post('/:id/fast-forward', async (req: AuthedRequest, res: Response) => {
+  const lobbyId = req.params.id;
+  const role = await getRole(lobbyId, req.user!.id);
+  if (!isCommish(role)) {
+    res.status(403).json({ error: 'Only the commissioner can fast-forward' });
     return;
   }
 
-  // Post a completion event per participant so it lands in friends' feeds.
-  if (isComplete) {
-    const { data: members } = await supabaseAdmin
-      .from('lobby_members')
-      .select('user_id')
-      .eq('lobby_id', lobbyId);
-    const rows = (members ?? []).map((m) => ({
-      actor_id: m.user_id,
-      type: 'DRAFT_COMPLETED',
-      lobby_id: lobbyId,
-      lobby_name: settings.name,
-    }));
-    if (rows.length) await supabaseAdmin.from('activity_events').insert(rows);
-  }
+  let made = 0;
+  // Cap the loop so a bug can never spin forever.
+  for (let i = 0; i < 1000; i++) {
+    const { data: lobby } = await supabaseAdmin
+      .from('lobbies')
+      .select('status, settings, current_overall')
+      .eq('id', lobbyId)
+      .maybeSingle();
+    if (!lobby || lobby.status !== 'DRAFTING') break;
 
-  res.json({ ok: true, overall, round, complete: isComplete });
+    const settings = lobby.settings as LobbySettings;
+    const overall = lobby.current_overall as number;
+    const team = await onClockTeam(lobbyId, settings, overall);
+    if (!team || !team.is_bot) break; // stop as soon as a human is on the clock
+
+    const playerId = await choosePlayer(lobbyId, settings, team.id);
+    if (!playerId) break;
+    const result = await applyPick(lobbyId, settings, overall, team, playerId, true);
+    if (!result.ok) break;
+    made++;
+    if (result.complete) break;
+  }
+  res.json({ ok: true, picks: made });
 });
 
 /** POST /api/lobbies/:id/pause — commissioner freezes the clock. */
@@ -288,10 +310,7 @@ draftRouter.post('/:id/resume', async (req: AuthedRequest, res: Response) => {
   }
 
   const settings = lobby.settings as LobbySettings;
-  const round = Math.floor(((lobby.current_overall as number) - 1) / settings.teamCount) + 1;
-  const deadline = new Date(
-    Date.now() + secondsForRound(round, settings.pickTiers) * 1000,
-  ).toISOString();
+  const deadline = await computeDeadline(lobbyId, settings, lobby.current_overall as number);
 
   const { error } = await supabaseAdmin
     .from('lobbies')
@@ -353,11 +372,10 @@ draftRouter.post('/:id/rollback', async (req: AuthedRequest, res: Response) => {
 
   // The rolled-back slot is now on the clock again; reopen the draft if it had ended.
   const settings = lobby.settings as LobbySettings;
-  const round = lastPick.round as number;
   const wasPaused = lobby.status === 'PAUSED';
   const deadline = wasPaused
     ? null
-    : new Date(Date.now() + secondsForRound(round, settings.pickTiers) * 1000).toISOString();
+    : await computeDeadline(lobbyId, settings, lastPick.overall as number);
 
   const { error: updateError } = await supabaseAdmin
     .from('lobbies')
@@ -477,13 +495,10 @@ draftRouter.post('/:id/accept-invite', async (req: AuthedRequest, res: Response)
     return;
   }
 
-  const { count } = await supabaseAdmin
-    .from('teams')
-    .select('*', { count: 'exact', head: true })
-    .eq('lobby_id', lobbyId);
   const teamCount = (lobby.settings as { teamCount: number }).teamCount;
-  if ((count ?? 0) >= teamCount) {
-    res.status(409).json({ error: 'Lobby is full' });
+  const seat = await claimSeat(lobbyId, me, teamCount);
+  if (!seat.ok) {
+    res.status(409).json({ error: seat.error });
     return;
   }
 
@@ -494,17 +509,6 @@ draftRouter.post('/:id/accept-invite', async (req: AuthedRequest, res: Response)
   });
   if (memberError) {
     res.status(500).json({ error: memberError.message });
-    return;
-  }
-  const draftPosition = (count ?? 0) + 1;
-  const { error: teamError } = await supabaseAdmin.from('teams').insert({
-    lobby_id: lobbyId,
-    owner_id: me,
-    name: `Team ${draftPosition}`,
-    draft_position: draftPosition,
-  });
-  if (teamError) {
-    res.status(500).json({ error: teamError.message });
     return;
   }
   await supabaseAdmin
@@ -573,6 +577,52 @@ draftRouter.post('/:id/chat', async (req: AuthedRequest, res: Response) => {
   const { error } = await supabaseAdmin
     .from('chat_messages')
     .insert({ lobby_id: lobbyId, user_id: userId, kind: 'USER', body: parsed.data.body });
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
+  res.json({ ok: true });
+});
+
+/** POST /api/lobbies/:id/pick-comment — comment on a pick; posts to chat as a reply. */
+draftRouter.post('/:id/pick-comment', async (req: AuthedRequest, res: Response) => {
+  const lobbyId = req.params.id;
+  const userId = req.user!.id;
+
+  const role = await getRole(lobbyId, userId);
+  if (!role) {
+    res.status(403).json({ error: 'Only members can comment in this lobby' });
+    return;
+  }
+  const parsed = pickCommentSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.flatten() });
+    return;
+  }
+  if (await isChatLocked(lobbyId)) {
+    res.status(409).json({ error: 'Chat is locked for this draft' });
+    return;
+  }
+
+  // The pick must belong to this lobby.
+  const { data: pick } = await supabaseAdmin
+    .from('picks')
+    .select('id')
+    .eq('id', parsed.data.pickId)
+    .eq('lobby_id', lobbyId)
+    .maybeSingle();
+  if (!pick) {
+    res.status(404).json({ error: 'Pick not found' });
+    return;
+  }
+
+  const { error } = await supabaseAdmin.from('chat_messages').insert({
+    lobby_id: lobbyId,
+    user_id: userId,
+    kind: 'USER',
+    body: parsed.data.body,
+    reply_to_pick_id: parsed.data.pickId,
+  });
   if (error) {
     res.status(500).json({ error: error.message });
     return;
@@ -657,11 +707,11 @@ draftRouter.post('/:id/draft-order', async (req: AuthedRequest, res: Response) =
     res.status(400).json({ error: parsed.error.flatten() });
     return;
   }
-  const { teamIds } = parsed.data;
+  const { slots } = parsed.data;
 
   const { data: lobby } = await supabaseAdmin
     .from('lobbies')
-    .select('status')
+    .select('status, settings')
     .eq('id', lobbyId)
     .single();
   if (!lobby) {
@@ -673,32 +723,91 @@ draftRouter.post('/:id/draft-order', async (req: AuthedRequest, res: Response) =
     return;
   }
 
+  const teamCount = (lobby.settings as LobbySettings).teamCount;
+  if (slots.length > teamCount) {
+    res.status(400).json({ error: `Draft order can have at most ${teamCount} slots` });
+    return;
+  }
+
   const { data: teams } = await supabaseAdmin
     .from('teams')
     .select('id')
     .eq('lobby_id', lobbyId);
-  const existing = new Set((teams ?? []).map((t) => t.id));
-  const requested = new Set(teamIds);
-  if (existing.size !== requested.size || [...existing].some((id) => !requested.has(id))) {
-    res.status(400).json({ error: 'Draft order must include every team exactly once' });
+  const existing = new Set((teams ?? []).map((t) => t.id as string));
+  const assigned = slots.filter((s): s is string => s !== null);
+
+  // Every real team must be placed exactly once; open slots are just left null.
+  if (new Set(assigned).size !== assigned.length) {
+    res.status(400).json({ error: 'A team cannot appear in two slots' });
+    return;
+  }
+  if (assigned.length !== existing.size || assigned.some((id) => !existing.has(id))) {
+    res.status(400).json({ error: 'Draft order must place every team exactly once' });
     return;
   }
 
-  // Two-pass to dodge the unique(lobby_id, draft_position) constraint:
-  // park everyone at negative slots, then assign the final 1..N positions.
-  for (let i = 0; i < teamIds.length; i++) {
-    await supabaseAdmin
-      .from('teams')
-      .update({ draft_position: -(i + 1) })
-      .eq('id', teamIds[i]);
+  // Two-pass to dodge the unique(lobby_id, draft_position) constraint: park
+  // everyone at negative slots, then assign the final position (index + 1).
+  for (let i = 0; i < slots.length; i++) {
+    const teamId = slots[i];
+    if (teamId) await supabaseAdmin.from('teams').update({ draft_position: -(i + 1) }).eq('id', teamId);
   }
-  for (let i = 0; i < teamIds.length; i++) {
-    await supabaseAdmin
-      .from('teams')
-      .update({ draft_position: i + 1 })
-      .eq('id', teamIds[i]);
+  for (let i = 0; i < slots.length; i++) {
+    const teamId = slots[i];
+    if (teamId) await supabaseAdmin.from('teams').update({ draft_position: i + 1 }).eq('id', teamId);
   }
   res.json({ ok: true });
+});
+
+/** POST /api/lobbies/:id/add-bot — commissioner adds a single bot to the lowest open seat. */
+draftRouter.post('/:id/add-bot', async (req: AuthedRequest, res: Response) => {
+  const lobbyId = req.params.id;
+  const role = await getRole(lobbyId, req.user!.id);
+  if (!isCommish(role)) {
+    res.status(403).json({ error: 'Only the commissioner can add bots' });
+    return;
+  }
+
+  const { data: lobby } = await supabaseAdmin
+    .from('lobbies')
+    .select('status, settings')
+    .eq('id', lobbyId)
+    .single();
+  if (!lobby) {
+    res.status(404).json({ error: 'Lobby not found' });
+    return;
+  }
+  if (lobby.status !== 'SETUP' && lobby.status !== 'SCHEDULED') {
+    res.status(409).json({ error: 'Bots can only be added before the draft starts' });
+    return;
+  }
+
+  const teamCount = (lobby.settings as LobbySettings).teamCount;
+  const { data: teams } = await supabaseAdmin
+    .from('teams')
+    .select('draft_position')
+    .eq('lobby_id', lobbyId);
+  const taken = new Set((teams ?? []).map((t) => t.draft_position as number));
+  let pos = 1;
+  while (taken.has(pos)) pos++;
+  if (pos > teamCount) {
+    res.status(409).json({ error: 'Lobby is already full' });
+    return;
+  }
+
+  const { error } = await supabaseAdmin.from('teams').insert({
+    lobby_id: lobbyId,
+    owner_id: null,
+    name: `Bot ${pos}`,
+    draft_position: pos,
+    is_bot: true,
+    auto_draft: true,
+  });
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
+  res.json({ ok: true, draftPosition: pos });
 });
 
 /** POST /api/lobbies/:id/team-name — rename your own team (or any team, if commissioner). */
@@ -746,4 +855,133 @@ draftRouter.post('/:id/team-name', async (req: AuthedRequest, res: Response) => 
     return;
   }
   res.json({ ok: true, name });
+});
+
+/** POST /api/lobbies/:id/auto-draft — toggle auto-draft (own team, or any team if commissioner). */
+draftRouter.post('/:id/auto-draft', async (req: AuthedRequest, res: Response) => {
+  const lobbyId = req.params.id;
+  const userId = req.user!.id;
+
+  const parsed = setAutoDraftSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.flatten() });
+    return;
+  }
+  const { teamId, on } = parsed.data;
+
+  const role = await getRole(lobbyId, userId);
+  if (!role) {
+    res.status(403).json({ error: 'You are not a member of this lobby' });
+    return;
+  }
+  const { data: team } = await supabaseAdmin
+    .from('teams')
+    .select('id, owner_id')
+    .eq('lobby_id', lobbyId)
+    .eq('id', teamId)
+    .maybeSingle();
+  if (!team) {
+    res.status(404).json({ error: 'Team not found' });
+    return;
+  }
+  if (team.owner_id !== userId && !isCommish(role)) {
+    res.status(403).json({ error: 'You can only auto-draft your own team' });
+    return;
+  }
+
+  const { error } = await supabaseAdmin
+    .from('teams')
+    .update({ auto_draft: on })
+    .eq('id', team.id);
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
+
+  // If this team is on the clock right now, snap the deadline so the engine
+  // picks on the short auto clock (or, when turning off, restores the full one).
+  const { data: lobby } = await supabaseAdmin
+    .from('lobbies')
+    .select('status, settings, current_overall')
+    .eq('id', lobbyId)
+    .maybeSingle();
+  if (lobby && lobby.status === 'DRAFTING') {
+    const settings = lobby.settings as LobbySettings;
+    const overall = lobby.current_overall as number;
+    const current = await onClockTeam(lobbyId, settings, overall);
+    if (current?.id === team.id) {
+      const deadline = await computeDeadline(lobbyId, settings, overall);
+      await supabaseAdmin.from('lobbies').update({ pick_deadline: deadline }).eq('id', lobbyId);
+    }
+  }
+  res.json({ ok: true, autoDraft: on });
+});
+
+/** POST /api/lobbies/:id/fill-bots — commissioner fills every open seat with a bot (pre-draft). */
+draftRouter.post('/:id/fill-bots', async (req: AuthedRequest, res: Response) => {
+  const lobbyId = req.params.id;
+  const role = await getRole(lobbyId, req.user!.id);
+  if (!isCommish(role)) {
+    res.status(403).json({ error: 'Only the commissioner can add bots' });
+    return;
+  }
+
+  const { data: lobby } = await supabaseAdmin
+    .from('lobbies')
+    .select('status, settings')
+    .eq('id', lobbyId)
+    .single();
+  if (!lobby) {
+    res.status(404).json({ error: 'Lobby not found' });
+    return;
+  }
+  if (lobby.status !== 'SETUP' && lobby.status !== 'SCHEDULED') {
+    res.status(409).json({ error: 'Bots can only be added before the draft starts' });
+    return;
+  }
+
+  const added = await fillOpenSeatsWithBots(lobbyId, lobby.settings as LobbySettings);
+  res.json({ ok: true, added });
+});
+
+/** POST /api/lobbies/:id/remove-bot — commissioner removes a bot seat (pre-draft). */
+draftRouter.post('/:id/remove-bot', async (req: AuthedRequest, res: Response) => {
+  const lobbyId = req.params.id;
+  const role = await getRole(lobbyId, req.user!.id);
+  if (!isCommish(role)) {
+    res.status(403).json({ error: 'Only the commissioner can remove bots' });
+    return;
+  }
+  const teamId = typeof req.body?.teamId === 'string' ? req.body.teamId : null;
+  if (!teamId) {
+    res.status(400).json({ error: 'teamId is required' });
+    return;
+  }
+
+  const { data: lobby } = await supabaseAdmin
+    .from('lobbies')
+    .select('status')
+    .eq('id', lobbyId)
+    .single();
+  if (!lobby) {
+    res.status(404).json({ error: 'Lobby not found' });
+    return;
+  }
+  if (lobby.status !== 'SETUP' && lobby.status !== 'SCHEDULED') {
+    res.status(409).json({ error: 'Bots can only be removed before the draft starts' });
+    return;
+  }
+
+  const { data: team } = await supabaseAdmin
+    .from('teams')
+    .select('id, is_bot')
+    .eq('lobby_id', lobbyId)
+    .eq('id', teamId)
+    .maybeSingle();
+  if (!team || !team.is_bot) {
+    res.status(404).json({ error: 'Bot not found' });
+    return;
+  }
+  await supabaseAdmin.from('teams').delete().eq('id', team.id);
+  res.json({ ok: true });
 });

@@ -1,0 +1,261 @@
+@use 'variables' as *;
+
+.pick-modal {
+  position: relative;
+  width: min(440px, 94vw);
+  max-height: 90dvh;
+  overflow-y: auto;
+  background: $bg-raised;
+  border: 1px solid $border;
+  border-radius: $radius;
+  padding: $space * 3;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
+
+  &__backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: grid;
+    place-items: center;
+    padding: $space * 2;
+    background: rgba(0, 0, 0, 0.6);
+  }
+
+  &__close {
+    position: absolute;
+    top: $space * 1.5;
+    right: $space * 1.5;
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: $radius-sm;
+    background: $bg-overlay;
+    color: $text-muted;
+    cursor: pointer;
+
+    &:hover {
+      color: $text;
+    }
+  }
+
+  &__head {
+    display: flex;
+    align-items: center;
+    gap: $space * 1.5;
+    padding-right: $space * 4;
+  }
+
+  &__pos {
+    display: inline-grid;
+    place-items: center;
+    min-width: 44px;
+    padding: $space * 0.5 $space;
+    border-radius: $radius-sm;
+    color: #fff;
+    font-weight: 800;
+    font-size: 0.9rem;
+  }
+
+  &__title {
+    min-width: 0;
+
+    h3 {
+      font-size: 1.3rem;
+      line-height: 1.2;
+    }
+
+    .muted {
+      font-size: 0.85rem;
+    }
+  }
+
+  &__drafted {
+    margin-top: $space * 1.5;
+    padding: $space $space * 1.5;
+    background: $bg;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    font-size: 0.9rem;
+  }
+
+  &__auto {
+    color: $text-muted;
+  }
+
+  &__stats {
+    margin-top: $space * 2;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: $space;
+  }
+
+  &__stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: $space;
+    background: $bg;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    text-align: center;
+  }
+
+  &__stat-label {
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: $text-muted;
+    font-weight: 700;
+  }
+
+  &__stat-value {
+    font-size: 1.05rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__note {
+    margin-top: $space;
+    font-size: 0.8rem;
+  }
+
+  &__section-label {
+    margin-top: $space * 2.5;
+    margin-bottom: $space;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: $text-muted;
+  }
+
+  &__reactions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $space * 0.5;
+  }
+
+  &__react {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: $space * 0.5 $space;
+    border: 1px solid $border;
+    border-radius: 999px;
+    background: $bg;
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+
+    &:hover {
+      background: $bg-overlay;
+    }
+
+    &.is-mine {
+      border-color: $accent;
+      background: rgba($accent, 0.16);
+    }
+
+    // Discord-style tooltip: who reacted with this emoji.
+    &:hover .pick-modal__react-tip {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+  }
+
+  &__react-count {
+    font-size: 0.8rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__react-tip {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    z-index: 5;
+    transform: translateX(-50%) translateY(4px);
+    max-width: 220px;
+    width: max-content;
+    padding: $space * 0.5 $space;
+    border-radius: $radius-sm;
+    background: var(--tooltip-bg, #0b0d14);
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 600;
+    line-height: 1.3;
+    white-space: normal;
+    text-align: center;
+    pointer-events: none;
+    opacity: 0;
+    transition:
+      opacity 120ms ease,
+      transform 120ms ease;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+
+    // Little pointer.
+    &::after {
+      content: '';
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 5px solid transparent;
+      border-top-color: var(--tooltip-bg, #0b0d14);
+    }
+  }
+
+  &__comment {
+    display: flex;
+    gap: $space;
+
+    input {
+      flex: 1;
+      min-width: 0;
+      padding: $space;
+      border: 1px solid $border;
+      border-radius: $radius-sm;
+      background: $bg;
+      color: $text;
+      font-size: 0.9rem;
+
+      &:focus {
+        outline: 2px solid $primary;
+        outline-offset: -1px;
+      }
+    }
+  }
+
+  &__send {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    flex-shrink: 0;
+    border: none;
+    border-radius: $radius-sm;
+    background: $primary;
+    color: #fff;
+    cursor: pointer;
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+
+  &__sent {
+    margin-top: $space;
+    color: $accent;
+    font-size: 0.82rem;
+    font-weight: 700;
+  }
+
+  &__error {
+    margin-top: $space;
+    color: $danger;
+    font-size: 0.82rem;
+  }
+}

@@ -1,6 +1,8 @@
 @use 'variables' as *;
 
 .grid-scroll {
+  // Own the scroll so the sticky header row / round column freeze against it.
+  height: 100%;
   overflow: auto;
 }
 
@@ -15,8 +17,10 @@
     position: sticky;
     z-index: 1;
   }
+
   &__team {
     top: 0;
+    z-index: 2; // header row rides above the sticky round column
     background: $bg-overlay;
     padding: $space;
     border-radius: $radius-sm;
@@ -25,7 +29,22 @@
     max-width: 120px;
     overflow: hidden;
     text-overflow: ellipsis;
+    box-shadow: inset 0 0 0 1px transparent;
+    transition:
+      box-shadow 120ms ease,
+      background 120ms ease;
+
+    // The team currently on the clock gets a green outline.
+    &--onclock {
+      box-shadow: inset 0 0 0 2px $accent;
+    }
+
+    // Cross-highlight when hovering one of this team's picks.
+    &--hi {
+      background: rgba($accent, 0.2);
+    }
   }
+
   &__team-btn {
     display: inline-flex;
     align-items: center;
@@ -44,6 +63,7 @@
       color: $primary-hover;
     }
   }
+
   &__team-swatch {
     display: inline-block;
     flex-shrink: 0;
@@ -52,23 +72,54 @@
     border-radius: 2px;
     margin-right: 5px;
   }
+
   &__round {
-    left: 0;
+    left: 0; // frozen on the left edge of the board
     background: $bg-overlay;
     color: $text-muted;
     font-weight: 700;
     text-align: center;
     border-radius: $radius-sm;
-    width: 28px;
+    width: 30px;
+    transition: background 120ms ease;
+
+    // Cross-highlight when hovering a pick in this round.
+    &--hi {
+      background: rgba($accent, 0.2);
+      color: $accent;
+    }
   }
+
+  &__round-num {
+    display: block;
+  }
+
+  // Snake-draft direction arrow beneath the round number — matches the round
+  // number colour (faded), turns green on the live round.
+  &__round-dir {
+    display: block;
+    margin-top: 1px;
+    color: $text-muted;
+    opacity: 0.6;
+    font-size: 0.7rem;
+    font-weight: 800;
+    line-height: 1;
+
+    &.is-live {
+      color: $accent;
+      opacity: 1;
+    }
+  }
+
   &__corner {
     top: 0;
     left: 0;
-    z-index: 2;
+    z-index: 3; // top-left corner sits above both sticky header and round column
     background: $bg;
   }
 
   &__cell {
+    position: relative;
     width: 120px;
     height: 52px;
     background: $bg;
@@ -81,6 +132,92 @@
       border-color: $accent;
       box-shadow: 0 0 0 1px $accent inset;
     }
+
+    // Made picks: clickable, and lift on hover (desktop). Touch has no hover.
+    &--pick {
+      cursor: pointer;
+      transition:
+        transform 120ms ease,
+        box-shadow 120ms ease,
+        border-color 120ms ease;
+
+      @media (hover: hover) {
+        &:hover {
+          transform: translateY(-2px);
+          border-color: $accent;
+          box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
+          z-index: 4;
+        }
+      }
+    }
+  }
+
+  // Uncluttered "has reactions" indicator (grayed) shown when not hovering.
+  &__react-flag {
+    position: absolute;
+    bottom: 2px;
+    right: 4px;
+    color: $text-muted;
+    font-size: 0.6rem;
+    font-weight: 900;
+    letter-spacing: 0.5px;
+    line-height: 1;
+    opacity: 0.7;
+    pointer-events: none;
+
+    // On hover the popover takes over, so drop the flag.
+    @media (hover: hover) {
+      .draft-grid__cell--pick:hover & {
+        display: none;
+      }
+    }
+  }
+
+  // Full reactions + add affordance — unfolds just below the pick on hover.
+  &__react-pop {
+    position: absolute;
+    top: calc(100% + 2px);
+    left: 0;
+    z-index: 30;
+    display: none;
+    align-items: center;
+    gap: 2px;
+    padding: 3px 4px;
+    background: $bg-raised;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.5);
+    white-space: nowrap;
+
+    // Only reveal on real hover (desktop); touch uses the pick modal.
+    @media (hover: hover) {
+      .draft-grid__cell--pick:hover & {
+        display: flex;
+      }
+    }
+  }
+
+  &__rchip {
+    display: inline-flex;
+    align-items: center;
+    gap: 1px;
+    padding: 1px 5px;
+    border: none;
+    border-radius: 999px;
+    background: $bg-overlay;
+    color: $text;
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1.4;
+    cursor: pointer;
+
+    &:hover {
+      background: $bg-hover;
+    }
+
+    &.is-mine {
+      background: rgba($accent, 0.25);
+    }
   }
 
   &__pick {
@@ -88,20 +225,24 @@
     flex-direction: column;
     gap: 1px;
   }
+
   &__pos {
     font-weight: 800;
     font-size: 0.65rem;
   }
+
   &__player {
     font-weight: 600;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
+
   &__meta {
     color: $text-muted;
     font-size: 0.65rem;
   }
+
   &__onclock-label {
     color: $accent;
     font-weight: 700;

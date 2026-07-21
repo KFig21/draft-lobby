@@ -1,26 +1,68 @@
 @use 'variables' as *;
 
 .room {
-  max-width: 720px;
-  margin: 0 auto;
-  padding: $space * 3;
   display: flex;
   flex-direction: column;
   gap: $space * 3;
+  align-items: stretch;
 
-  &__header {
+  // Desktop: main column on the left, chat pinned flush to the far right edge.
+  @media (min-width: $bp-lg) {
+    flex-direction: row;
+    align-items: stretch;
+    gap: 0;
+  }
+
+  &__main {
+    flex: 1;
+    min-width: 0;
     display: flex;
     flex-direction: column;
+    gap: $space * 3;
+    padding-bottom: $space * 3;
+
+    // Body sections are centred to a readable column; the pinned header
+    // (below) overrides this to span the full width of the main column.
+    > * {
+      width: 100%;
+      max-width: 820px;
+      margin-inline: auto;
+      padding-inline: $space * 3;
+    }
+
+    @media (min-width: $bp-lg) {
+      align-self: flex-start;
+    }
+  }
+
+  // Pinned page header (like Home/Settings): sticky, full-width bottom border.
+  &__header {
+    max-width: none;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
     gap: $space;
+    min-height: 56px;
+    padding-inline: $space * 3;
+    padding-block: $space;
+    background: $bg;
+    border-bottom: 1px solid $border;
   }
 
   &__title {
     display: flex;
     align-items: center;
     gap: $space * 1.5;
+    min-width: 0;
 
     h1 {
-      font-size: 1.6rem;
+      font-size: 1.3rem;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
   }
 
@@ -79,9 +121,122 @@
     font-size: 0.9rem;
   }
 
-  &__actions {
+  // Primary call-to-action (Start draft / Go to board), just under the invite.
+  &__primary-action {
     display: flex;
     justify-content: center;
+
+    .button {
+      width: 100%;
+      max-width: 360px;
+    }
+  }
+
+  // Delete sits alone at the very bottom.
+  &__actions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $space * 1.5;
+  }
+
+  &__start {
+    min-width: 220px;
+  }
+
+  &__delete {
+    color: $danger;
+    border-color: rgba($danger, 0.5);
+    background: none;
+
+    &:hover:not(:disabled) {
+      background: rgba($danger, 0.12);
+      border-color: $danger;
+    }
+  }
+
+  // Chat sidebar — flush to the far right edge on desktop, stacked below on mobile.
+  &__chat {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+
+    @media (min-width: $bp-lg) {
+      width: 360px;
+      flex-shrink: 0;
+      align-self: stretch;
+      position: sticky;
+      top: 0;
+      height: 100dvh;
+      background: $bg-raised;
+      border-left: 1px solid $border;
+    }
+  }
+
+  &__chat-title {
+    font-size: 1rem;
+    margin-bottom: $space * 1.5;
+
+    @media (min-width: $bp-lg) {
+      margin: 0;
+      padding: $space * 2;
+      border-bottom: 1px solid $border;
+    }
+  }
+
+  &__chat-panel {
+    flex: 1;
+    min-height: 360px;
+    display: flex;
+    flex-direction: column;
+    background: $bg-raised;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    overflow: hidden;
+
+    @media (min-width: $bp-lg) {
+      min-height: 0;
+      border: none;
+      border-radius: 0;
+    }
+  }
+}
+
+// Delete-confirmation modal.
+.room-modal {
+  width: min(420px, 92vw);
+  background: $bg-raised;
+  border: 1px solid $border;
+  border-radius: $radius;
+  padding: $space * 3;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+
+  &__backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: grid;
+    place-items: center;
+    padding: $space * 2;
+    background: rgba(0, 0, 0, 0.55);
+  }
+
+  &__title {
+    font-size: 1.2rem;
+    margin-bottom: $space;
+  }
+
+  &__body {
+    color: $text-muted;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    margin-bottom: $space * 2.5;
+  }
+
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: $space;
   }
 }
 
@@ -154,17 +309,34 @@
   }
 }
 
+.room__teams-actions {
+  display: flex;
+  align-items: center;
+  gap: $space;
+  flex-wrap: wrap;
+}
+
 .room__order-btn {
-  background: none;
-  border: none;
-  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: $space * 0.5 $space;
+  background: $bg-raised;
+  border: 1px solid $border;
+  border-radius: $radius-sm;
   color: $accent;
   font-size: 0.85rem;
   font-weight: 700;
   cursor: pointer;
 
-  &:hover {
+  &:hover:not(:disabled) {
+    border-color: $accent;
     color: $text;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 }
 
@@ -178,6 +350,11 @@
     padding: $space * 0.75 $space * 1.5;
     font-size: 0.9rem;
   }
+}
+
+.room__order-hint {
+  font-size: 0.85rem;
+  margin-bottom: $space;
 }
 
 .team-list {
@@ -199,6 +376,79 @@
       border-style: dashed;
       opacity: 0.7;
     }
+
+    &--draggable {
+      cursor: grab;
+    }
+
+    &--dragging {
+      opacity: 0.5;
+      border-color: $primary;
+    }
+  }
+
+  &__drag {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    color: $text-muted;
+    cursor: grab;
+  }
+
+  // Small status chips shown right next to the team name (you / Friends / Bot / Requested).
+  &__chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    flex-shrink: 0;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: $bg-overlay;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: $text-muted;
+
+    &.muted {
+      color: $text-muted;
+    }
+
+    &--friend {
+      background: rgba($accent, 0.15);
+      color: $accent;
+    }
+  }
+
+  // Pushes the action buttons to the right so chips hug the name.
+  &__spacer {
+    flex: 1;
+    min-width: $space;
+  }
+
+  &__friend-tag {
+    flex-shrink: 0;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: $accent;
+
+    &.muted {
+      color: $text-muted;
+    }
+  }
+
+  &__friend-btn {
+    flex-shrink: 0;
+    padding: $space * 0.4 $space;
+    font-size: 0.8rem;
+  }
+
+  &__friend-add {
+    opacity: 0.7;
+    color: $accent;
+
+    &:hover {
+      opacity: 1;
+      color: $accent;
+    }
   }
 
   &__pos {
@@ -210,8 +460,11 @@
   }
 
   &__name {
-    flex: 1;
     font-weight: 600;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   &__you {
@@ -278,5 +531,117 @@
     display: flex;
     gap: $space * 0.25;
     flex-shrink: 0;
+  }
+}
+
+// ── Mobile chat drawer (lobby) — a bottom sheet flush above the app's nav ──
+$nav-h: 56px; // height of the mobile bottom nav (matches .navbar-bottom)
+$chat-handle-h: 48px;
+$nav-total: calc(#{$nav-h} + env(safe-area-inset-bottom, 0));
+
+.room-chatdrawer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: $nav-total; // sit flush on the nav
+  // Below the mobile nav drawer (z 40) so the menu overlays the chat.
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: $bg;
+  border-top: 1px solid $border;
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.28);
+  // Collapsed: only the handle shows. State changes animate the height.
+  height: $chat-handle-h;
+  transition: height 280ms cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: height;
+
+  @media (min-width: $bp-lg) {
+    display: none;
+  }
+
+  // Opened ~80% of the way up.
+  &.is-open {
+    height: calc(80dvh - #{$nav-total});
+  }
+
+  // Full screen: fill everything above the nav.
+  &.is-full {
+    height: calc(100dvh - #{$nav-total});
+  }
+
+  &__handle {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    height: $chat-handle-h;
+    width: 100%;
+    background: $bg-raised;
+  }
+
+  &__handle-label {
+    display: flex;
+    align-items: center;
+    gap: $space;
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    padding: 0 $space * 1.5;
+    background: none;
+    border: none;
+    color: $text;
+    font-size: 0.9rem;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  &__ctrls {
+    display: flex;
+    align-items: center;
+    padding-right: $space * 0.5;
+  }
+
+  &__ctrl {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: $chat-handle-h;
+    border: none;
+    background: none;
+    color: $text-muted;
+    cursor: pointer;
+
+    &:hover {
+      color: $text;
+    }
+  }
+
+  &__badge {
+    display: inline-grid;
+    place-items: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: $danger;
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  &__body {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+  }
+}
+
+// Give lobby content room to clear the collapsed chat bar on mobile.
+@media (max-width: #{$bp-lg - 1px}) {
+  .room {
+    padding-bottom: 84px;
   }
 }

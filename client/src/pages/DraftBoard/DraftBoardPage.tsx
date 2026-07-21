@@ -1,4 +1,5 @@
 import {
+  CHAT_LOCK_MS,
   POSITIONS,
   draftPositionForOverall,
   roundsForSettings,
@@ -6,21 +7,33 @@ import {
 } from '@draft-lobby/shared';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlined';
 import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
+import FastForwardIcon from '@mui/icons-material/FastForward';
+import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
+import FullscreenIcon from '@mui/icons-material/Fullscreen';
+import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 import GridViewOutlinedIcon from '@mui/icons-material/GridViewOutlined';
+import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
+import InsertDriveFileOutlinedIcon from '@mui/icons-material/InsertDriveFileOutlined';
 import MeetingRoomOutlinedIcon from '@mui/icons-material/MeetingRoomOutlined';
 import MenuIcon from '@mui/icons-material/Menu';
 import PauseIcon from '@mui/icons-material/Pause';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import SmartToyIcon from '@mui/icons-material/SmartToy';
+import SmartToyOutlinedIcon from '@mui/icons-material/SmartToyOutlined';
 import SportsFootballIcon from '@mui/icons-material/SportsFootball';
+import TableChartOutlinedIcon from '@mui/icons-material/TableChartOutlined';
 import UndoIcon from '@mui/icons-material/Undo';
 import type { SvgIconComponent } from '@mui/icons-material';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
+import { ConfirmModal } from '../../components/ConfirmModal/ConfirmModal';
 import { DraftChat } from '../../components/DraftChat/DraftChat';
-import { DraftGrid } from '../../components/DraftGrid/DraftGrid';
+import { DraftGrid, type ReactionEntry } from '../../components/DraftGrid/DraftGrid';
 import { LockInModal } from '../../components/LockInModal/LockInModal';
+import { Modal } from '../../components/Modal/Modal';
 import { NavDrawer } from '../../components/Navbar/NavDrawer';
 import { PickClock } from '../../components/PickClock/PickClock';
+import { PickModal } from '../../components/PickModal/PickModal';
 import { PlayerCard } from '../../components/PlayerCard/PlayerCard';
 import { TeamLineup } from '../../components/TeamLineup/TeamLineup';
 import { ThemeToggle } from '../../components/ThemeToggle/ThemeToggle';
@@ -29,16 +42,21 @@ import { useLobby } from '../../hooks/useLobby';
 import { usePlayers } from '../../hooks/usePlayers';
 import { api } from '../../lib/api';
 import { exportDraftCsv, exportDraftExcel } from '../../lib/exportDraft';
-import type { PlayerRow, TeamRow } from '../../lib/types';
+import { supabase } from '../../supabase';
+import type { ChatReactionRow, PickRow, PlayerRow, TeamRow } from '../../lib/types';
 import './DraftBoardPage.scss';
 
-type Filter = 'ALL' | Position;
+type Filter = 'ALL' | Position | 'FLEX' | 'SUPERFLEX';
 type PanelTab = 'players' | 'roster' | 'chat';
 type MobileTab = 'board' | PanelTab;
 
+// Multi-position filters (no pick counts shown next to these).
+const FLEX_POS: Position[] = ['RB', 'WR', 'TE'];
+const SUPERFLEX_POS: Position[] = ['QB', 'RB', 'WR', 'TE'];
+
 // The right sidebar's tabs (desktop) — labels shown in the tab strip.
 const SIDEBAR_TABS: { key: PanelTab; label: string; Icon: SvgIconComponent }[] = [
-  { key: 'players', label: 'Players & queue', Icon: SportsFootballIcon },
+  { key: 'players', label: 'Players', Icon: SportsFootballIcon },
   { key: 'roster', label: 'Roster', Icon: FormatListBulletedIcon },
   { key: 'chat', label: 'Chat', Icon: ChatBubbleOutlineIcon },
 ];
@@ -73,6 +91,24 @@ export function DraftBoardPage() {
   const [commishBusy, setCommishBusy] = useState(false);
   const [commishError, setCommishError] = useState<string | null>(null);
   const [reqPauseBusy, setReqPauseBusy] = useState(false);
+  const [showRollback, setShowRollback] = useState(false);
+  const [showExport, setShowExport] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  // Commissioner toggle: auto-skip bot picks as they come on the clock,
+  // instead of clicking "Skip bots" every time.
+  const [autoSkipBots, setAutoSkipBots] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', onFsChange);
+    return () => document.removeEventListener('fullscreenchange', onFsChange);
+  }, []);
+
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) void rootRef.current?.requestFullscreen?.();
+    else void document.exitFullscreen?.();
+  }
 
   // Resizable sidebar (desktop). Persisted across sessions.
   const [sidebarWidth, setSidebarWidth] = useState(() => {
@@ -127,6 +163,59 @@ export function DraftBoardPage() {
     return m;
   }, [teams]);
 
+  const usernameById = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const mem of members) m.set(mem.user_id, mem.profiles?.username ?? 'Player');
+    return m;
+  }, [members]);
+
+  // ── Pick reactions (board hover + pick modal) ──
+  const [pickReactions, setPickReactions] = useState<ChatReactionRow[]>([]);
+  const [pickModal, setPickModal] = useState<PickRow | null>(null);
+  useEffect(() => {
+    const load = () =>
+      supabase
+        .from('chat_reactions')
+        .select('*')
+        .eq('lobby_id', id)
+        .eq('target_type', 'PICK')
+        .then(({ data }) => setPickReactions((data ?? []) as ChatReactionRow[]));
+    void load();
+    const ch = supabase
+      .channel(`board-react:${id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'chat_reactions', filter: `lobby_id=eq.${id}` },
+        () => void load(),
+      )
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(ch);
+    };
+  }, [id]);
+
+  const reactionsByPick = useMemo(() => {
+    const m = new Map<string, ReactionEntry>();
+    for (const r of pickReactions) {
+      const e = m.get(r.target_id) ?? { counts: {}, mine: new Set<string>() };
+      e.counts[r.emoji] = (e.counts[r.emoji] ?? 0) + 1;
+      if (r.user_id === userId) e.mine.add(r.emoji);
+      m.set(r.target_id, e);
+    }
+    return m;
+  }, [pickReactions, userId]);
+
+  async function reactPick(pickId: string, emoji: string) {
+    try {
+      await api(`/lobbies/${id}/chat-react`, {
+        method: 'POST',
+        body: { targetType: 'PICK', targetId: pickId, emoji },
+      });
+    } catch {
+      /* realtime reconciles */
+    }
+  }
+
   function doExport(kind: 'csv' | 'xls') {
     const opts = { lobbyName: lobby?.name ?? 'draft', picks, teamsById, playersById };
     if (kind === 'csv') exportDraftCsv(opts);
@@ -149,11 +238,28 @@ export function DraftBoardPage() {
     return members.some((m) => m.user_id === userId && m.role === 'SUB_COMMISSIONER');
   }, [userId, lobby, members]);
 
+  // While "Skip bots" is toggled on, auto-fast-forward whenever a bot lands on
+  // the clock — re-fires each time the on-the-clock team changes, so it keeps
+  // skipping through bot turns without the commissioner re-clicking.
+  useEffect(() => {
+    if (!autoSkipBots || !isCommish || commishBusy) return;
+    if (!lobby || lobby.status === 'PAUSED' || lobby.status === 'COMPLETE') return;
+    if (!derived?.onClockTeam?.is_bot) return;
+    void fastForward();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoSkipBots, isCommish, lobby?.status, derived?.onClockTeam?.id, derived?.onClockTeam?.is_bot]);
+
   const available = useMemo(() => {
     const q = search.trim().toLowerCase();
     return players.filter((p) => {
       if (draftedIds.has(p.id)) return false;
-      if (filter !== 'ALL' && p.position !== filter) return false;
+      if (filter === 'FLEX') {
+        if (!(FLEX_POS as string[]).includes(p.position)) return false;
+      } else if (filter === 'SUPERFLEX') {
+        if (!(SUPERFLEX_POS as string[]).includes(p.position)) return false;
+      } else if (filter !== 'ALL' && p.position !== filter) {
+        return false;
+      }
       if (q && !p.name.toLowerCase().includes(q)) return false;
       return true;
     });
@@ -171,7 +277,16 @@ export function DraftBoardPage() {
   const canPick = !isComplete && !isPaused && (isMyTurn || isCommish);
   const pickingForTeam = !isMyTurn && onClockTeam ? onClockTeam.name : null;
   const myTeamId = teams.find((t) => t.owner_id === userId)?.id ?? teams[0]?.id ?? null;
+  const myTeam = teams.find((t) => t.owner_id === userId) ?? null;
   const rosterTeamId = rosterTeamSel ?? myTeamId ?? teams[0]?.id ?? '';
+
+  // How many players the current user has drafted at each position (for filter badges).
+  const myPosCounts: Partial<Record<Position, number>> = {};
+  for (const p of picks) {
+    if (p.team_id !== myTeamId) continue;
+    const pos = playersById.get(p.player_id)?.position as Position | undefined;
+    if (pos) myPosCounts[pos] = (myPosCounts[pos] ?? 0) + 1;
+  }
 
   // Queued players still on the board, in queue order.
   const queuedPlayers = queue
@@ -202,7 +317,6 @@ export function DraftBoardPage() {
   }
 
   async function commishAction(path: 'pause' | 'resume' | 'rollback') {
-    if (path === 'rollback' && !confirm('Undo the most recent pick?')) return;
     setCommishError(null);
     setCommishBusy(true);
     try {
@@ -211,6 +325,7 @@ export function DraftBoardPage() {
       setCommishError(err instanceof Error ? err.message : 'Action failed');
     } finally {
       setCommishBusy(false);
+      setShowRollback(false);
     }
   }
 
@@ -225,14 +340,92 @@ export function DraftBoardPage() {
     }
   }
 
+  async function toggleAuto(teamId: string, on: boolean) {
+    try {
+      await api(`/lobbies/${id}/auto-draft`, { method: 'POST', body: { teamId, on } });
+    } catch {
+      /* realtime will reconcile the team row */
+    }
+  }
+
+  async function fastForward() {
+    setCommishError(null);
+    setCommishBusy(true);
+    try {
+      await api(`/lobbies/${id}/fast-forward`, { method: 'POST' });
+    } catch (err) {
+      setCommishError(err instanceof Error ? err.message : 'Fast-forward failed');
+    } finally {
+      setCommishBusy(false);
+    }
+  }
+
+  const myTurnHighlight = isMyTurn && !isPaused && !isComplete;
+
   return (
     <div className="draft">
-      <header className="draft__topbar">
+      <header className={`draft__topbar${myTurnHighlight ? ' draft__topbar--myturn' : ''}`}>
         <div className="draft__left">
-          <Link to={`/lobby/${id}`} className="back-link draft__desktop-only">
-            ← Room
-          </Link>
-          <ThemeToggle className="draft__icon-btn" />
+          <div className="draft__nav-links">
+            <button
+              type="button"
+              className="button draft__home-btn"
+              onClick={() => navigate('/home')}
+            >
+              <HomeOutlinedIcon fontSize="small" /> Home
+            </button>
+            <Link to={`/lobby/${id}`} className="button draft__room-btn">
+              <MeetingRoomOutlinedIcon fontSize="small" /> Room
+            </Link>
+          </div>
+          {isCommish && !isComplete && (
+            <>
+              {isPaused ? (
+                <button
+                  className="draft__tool-btn"
+                  onClick={() => commishAction('resume')}
+                  disabled={commishBusy}
+                >
+                  <PlayArrowIcon fontSize="small" /> Resume
+                </button>
+              ) : (
+                <button
+                  className="draft__tool-btn"
+                  onClick={() => commishAction('pause')}
+                  disabled={commishBusy}
+                >
+                  <PauseIcon fontSize="small" /> Pause
+                </button>
+              )}
+              <button
+                className="draft__tool-btn"
+                onClick={() => setShowRollback(true)}
+                disabled={commishBusy || picks.length === 0}
+              >
+                <UndoIcon fontSize="small" /> Undo
+              </button>
+              <button
+                className={`draft__tool-btn draft__skipbots-btn${
+                  autoSkipBots ? ' is-on' : ''
+                }`}
+                onClick={() => setAutoSkipBots((v) => !v)}
+                title="Automatically skip bot picks as they come on the clock"
+              >
+                <FastForwardIcon fontSize="small" /> Skip bots
+                {autoSkipBots ? ' · On' : ''}
+              </button>
+              {commishError && <span className="draft__commish-error">{commishError}</span>}
+            </>
+          )}
+          {!isCommish && !isComplete && !isPaused && (
+            <button
+              className="draft__tool-btn"
+              onClick={requestPause}
+              disabled={reqPauseBusy}
+            >
+              🙋 Request pause
+            </button>
+          )}
         </div>
         <div className="draft__status">
           {isComplete ? (
@@ -252,66 +445,43 @@ export function DraftBoardPage() {
             </>
           )}
         </div>
-        {isComplete ? (
-          <div className="draft__actions draft__desktop-only">
-            <div className="draft__export">
-              <button className="button" onClick={() => doExport('csv')}>
-                Export CSV
-              </button>
-              <button className="button" onClick={() => doExport('xls')}>
-                Excel
-              </button>
-            </div>
-            <button className="button button--primary" onClick={() => navigate('/home')}>
-              Home
-            </button>
-          </div>
-        ) : (
-          <PickClock deadline={lobby.pick_deadline} />
-        )}
-      </header>
-
-      {isCommish && !isComplete && (
-        <div className="draft__commish">
-          {isPaused ? (
-            <button
-              className="button draft__commish-btn"
-              onClick={() => commishAction('resume')}
-              disabled={commishBusy}
-            >
-              <PlayArrowIcon fontSize="small" /> Resume
+        <div className="draft__right">
+          {isComplete ? (
+            <button className="button draft__export-btn" onClick={() => setShowExport(true)}>
+              <FileDownloadOutlinedIcon fontSize="small" /> Export
             </button>
           ) : (
+            <PickClock deadline={lobby.pick_deadline} />
+          )}
+          {myTeam && !myTeam.is_bot && !isComplete && (
             <button
-              className="button draft__commish-btn"
-              onClick={() => commishAction('pause')}
-              disabled={commishBusy}
+              className={`draft__icon-btn draft__auto-btn${myTeam.auto_draft ? ' is-on' : ''}`}
+              onClick={() => toggleAuto(myTeam.id, !myTeam.auto_draft)}
+              aria-label={myTeam.auto_draft ? 'Turn auto-draft off' : 'Turn auto-draft on'}
+              title={`Auto-draft ${myTeam.auto_draft ? 'on' : 'off'}`}
             >
-              <PauseIcon fontSize="small" /> Pause
+              {myTeam.auto_draft ? (
+                <SmartToyIcon fontSize="small" />
+              ) : (
+                <SmartToyOutlinedIcon fontSize="small" />
+              )}
             </button>
           )}
           <button
-            className="button draft__commish-btn"
-            onClick={() => commishAction('rollback')}
-            disabled={commishBusy || picks.length === 0}
+            className="draft__icon-btn draft__fs-btn"
+            onClick={toggleFullscreen}
+            aria-label={isFullscreen ? 'Exit full screen' : 'Full screen'}
+            title={isFullscreen ? 'Exit full screen' : 'Full screen (great for a TV)'}
           >
-            <UndoIcon fontSize="small" /> Undo last pick
+            {isFullscreen ? (
+              <FullscreenExitIcon fontSize="small" />
+            ) : (
+              <FullscreenIcon fontSize="small" />
+            )}
           </button>
-          {commishError && <span className="draft__commish-error">{commishError}</span>}
+          <ThemeToggle className="draft__icon-btn draft__theme-btn" />
         </div>
-      )}
-
-      {!isCommish && !isComplete && !isPaused && (
-        <div className="draft__commish">
-          <button
-            className="button draft__commish-btn"
-            onClick={requestPause}
-            disabled={reqPauseBusy}
-          >
-            🙋 Request pause
-          </button>
-        </div>
-      )}
+      </header>
 
       {isPaused && (
         <div className="draft__paused-banner">
@@ -322,8 +492,20 @@ export function DraftBoardPage() {
 
       <div className="draft__body">
         <section
-          className={`draft__board ${mobileTab === 'board' ? 'is-mobile-active' : ''}`}
+          ref={rootRef}
+          className={`draft__board ${mobileTab === 'board' ? 'is-mobile-active' : ''}${
+            isFullscreen ? ' draft__board--fs' : ''
+          }`}
         >
+          {isFullscreen && (
+            <button
+              className="draft__fs-exit"
+              onClick={toggleFullscreen}
+              aria-label="Exit full screen"
+            >
+              <FullscreenExitIcon fontSize="small" /> Exit full screen
+            </button>
+          )}
           <DraftGrid
             teams={teams}
             rounds={roundsForSettings(lobby.settings)}
@@ -331,7 +513,11 @@ export function DraftBoardPage() {
             playersById={playersById}
             onClockTeamId={onClockTeam?.id ?? null}
             currentRound={round}
+            draftType={lobby.settings.draftType}
             onTeamClick={openTeamRoster}
+            reactionsByPick={reactionsByPick}
+            onReactPick={reactPick}
+            onPickClick={setPickModal}
           />
         </section>
 
@@ -377,13 +563,30 @@ export function DraftBoardPage() {
             )}
             <div className="pool__filters">
               <div className="chip-row">
-                {(['ALL', ...POSITIONS] as Filter[]).map((f) => (
+                <button
+                  className={`chip ${filter === 'ALL' ? 'chip--active' : ''}`}
+                  onClick={() => setFilter('ALL')}
+                >
+                  ALL
+                </button>
+                {POSITIONS.map((pos) => (
+                  <button
+                    key={pos}
+                    className={`chip ${filter === pos ? 'chip--active' : ''}`}
+                    onClick={() => setFilter(pos)}
+                  >
+                    {pos === 'DEF' ? 'D/ST' : pos}
+                    <span className="chip__dot"> · </span>
+                    <span className="chip__count">{myPosCounts[pos] ?? 0}</span>
+                  </button>
+                ))}
+                {(['FLEX', 'SUPERFLEX'] as const).map((f) => (
                   <button
                     key={f}
                     className={`chip ${filter === f ? 'chip--active' : ''}`}
                     onClick={() => setFilter(f)}
                   >
-                    {f === 'DEF' ? 'D/ST' : f}
+                    {f}
                   </button>
                 ))}
               </div>
@@ -425,6 +628,9 @@ export function DraftBoardPage() {
                 picks={picks}
                 playersById={playersById}
                 settings={lobby.settings}
+                myUserId={userId}
+                isCommish={isCommish}
+                onToggleAuto={isComplete ? undefined : toggleAuto}
               />
             </div>
           </div>
@@ -495,6 +701,80 @@ export function DraftBoardPage() {
           { to: `/lobby/${id}`, label: 'Lobby room', Icon: MeetingRoomOutlinedIcon },
         ]}
       />
+
+      {pickModal &&
+        (() => {
+          const player = playersById.get(pickModal.player_id);
+          if (!player) return null;
+          const endedAt = isComplete ? lobby.completed_at ?? null : null;
+          const chatLocked =
+            !!endedAt && Date.now() >= new Date(endedAt).getTime() + CHAT_LOCK_MS;
+          // Usernames that reacted to this pick, grouped by emoji (for tooltips).
+          const reactors: Record<string, string[]> = {};
+          for (const r of pickReactions) {
+            if (r.target_id !== pickModal.id) continue;
+            (reactors[r.emoji] ??= []).push(usernameById.get(r.user_id) ?? 'Someone');
+          }
+          return (
+            <PickModal
+              lobbyId={id}
+              pick={pickModal}
+              player={player}
+              team={teamsById.get(pickModal.team_id)}
+              entry={reactionsByPick.get(pickModal.id)}
+              reactors={reactors}
+              onReact={(emoji) => reactPick(pickModal.id, emoji)}
+              locked={chatLocked}
+              onClose={() => setPickModal(null)}
+            />
+          );
+        })()}
+
+      {showRollback && (
+        <ConfirmModal
+          title="Undo the last pick?"
+          confirmLabel="Undo pick"
+          busyLabel="Undoing…"
+          busy={commishBusy}
+          onConfirm={() => commishAction('rollback')}
+          onClose={() => setShowRollback(false)}
+        >
+          This removes the most recent pick and puts that team back on the clock.
+        </ConfirmModal>
+      )}
+
+      {showExport && (
+        <Modal title="Export draft" onClose={() => setShowExport(false)}>
+          <div className="draft-export-options">
+            <button
+              className="button draft-export-options__opt"
+              onClick={() => {
+                doExport('csv');
+                setShowExport(false);
+              }}
+            >
+              <InsertDriveFileOutlinedIcon fontSize="small" />
+              <span>
+                <strong>CSV</strong>
+                <span className="muted">A plain spreadsheet file (.csv)</span>
+              </span>
+            </button>
+            <button
+              className="button draft-export-options__opt"
+              onClick={() => {
+                doExport('xls');
+                setShowExport(false);
+              }}
+            >
+              <TableChartOutlinedIcon fontSize="small" />
+              <span>
+                <strong>Excel</strong>
+                <span className="muted">A formatted workbook (.xlsx)</span>
+              </span>
+            </button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

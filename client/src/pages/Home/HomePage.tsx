@@ -6,11 +6,10 @@ import {
   type LobbySettings,
   type LobbyStatus,
 } from '@draft-lobby/shared';
-import AddIcon from '@mui/icons-material/Add';
+import AddReactionOutlinedIcon from '@mui/icons-material/AddReactionOutlined';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Avatar } from '../../components/Avatar/Avatar';
-import { useAuth } from '../../auth/AuthContext';
 import { api } from '../../lib/api';
 import './HomePage.scss';
 
@@ -25,6 +24,8 @@ interface FeedItem {
   createdAt: string;
   lobbyId: string | null;
   lobbyName: string | null;
+  lobbyStatus: string | null;
+  isMember: boolean;
   actors: FeedActor[];
   subject: { id: string; username: string } | null;
   reactions: Record<string, number>;
@@ -49,11 +50,6 @@ function timeAgo(iso: string): string {
 }
 
 export function HomePage() {
-  const { session } = useAuth();
-  const username =
-    (session?.user.user_metadata?.username as string | undefined) ??
-    session?.user.email ??
-    'drafter';
 
   const [items, setItems] = useState<FeedItem[]>([]);
   const [activeLobbies, setActiveLobbies] = useState<ActiveLobby[]>([]);
@@ -93,10 +89,7 @@ export function HomePage() {
   return (
     <main className="home">
       <header className="home__top">
-        <h1>Welcome, {username}</h1>
-        <Link className="button button--primary home__new" to="/lobby/new">
-          <AddIcon fontSize="small" /> New lobby
-        </Link>
+        <h1>Home</h1>
       </header>
 
       {/* Pinned active drafts */}
@@ -183,36 +176,86 @@ function FeedCard({
           {item.type === 'OPEN_LOBBY_CREATED' && (
             <>
               <strong>{lead?.username ?? 'Someone'}</strong> opened{' '}
-              <strong>{item.lobbyName ?? 'a lobby'}</strong> —{' '}
-              {item.lobbyId && (
-                <Link to={`/lobby/${item.lobbyId}`} className="feed-card__link">
-                  join up →
-                </Link>
+              <strong>{item.lobbyName ?? 'a lobby'}</strong>
+              {/* Only offer to join if the draft hasn't started yet. */}
+              {item.lobbyId &&
+              (item.lobbyStatus === 'SETUP' || item.lobbyStatus === 'SCHEDULED') ? (
+                <>
+                  {' '}—{' '}
+                  <Link to={`/lobby/${item.lobbyId}`} className="feed-card__link">
+                    join up →
+                  </Link>
+                </>
+              ) : (
+                item.lobbyStatus && ' — draft already started'
               )}
             </>
           )}
         </p>
-        <span className="feed-card__time">{timeAgo(item.createdAt)}</span>
-
-        <div className="feed-card__reactions">
-          {REACTION_EMOJIS.map((emoji) => {
-            const count = item.reactions[emoji] ?? 0;
-            const mine = item.myReactions.includes(emoji);
-            return (
-              <button
-                key={emoji}
-                className={`reaction${mine ? ' reaction--on' : ''}${
-                  count > 0 ? ' reaction--has' : ''
-                }`}
-                onClick={() => onReact(item.id, emoji)}
-              >
-                <span className="reaction__emoji">{emoji}</span>
-                {count > 0 && <span className="reaction__count">{count}</span>}
-              </button>
-            );
-          })}
+        <div className="feed-card__foot">
+          <span className="feed-card__time">{timeAgo(item.createdAt)}</span>
+          {/* Drafts the user is part of link straight to the lobby. */}
+          {item.isMember && item.lobbyId && item.type !== 'OPEN_LOBBY_CREATED' && (
+            <Link to={`/lobby/${item.lobbyId}`} className="feed-card__link">
+              View draft →
+            </Link>
+          )}
         </div>
+
+        <FeedReactions item={item} onReact={onReact} />
       </div>
     </li>
+  );
+}
+
+function FeedReactions({
+  item,
+  onReact,
+}: {
+  item: FeedItem;
+  onReact: (id: string, emoji: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const active = REACTION_EMOJIS.filter((e) => (item.reactions[e] ?? 0) > 0);
+
+  return (
+    <div className="feed-card__reactions">
+      {active.map((emoji) => {
+        const count = item.reactions[emoji] ?? 0;
+        const mine = item.myReactions.includes(emoji);
+        return (
+          <button
+            key={emoji}
+            className={`reaction reaction--has${mine ? ' reaction--on' : ''}`}
+            onClick={() => onReact(item.id, emoji)}
+          >
+            <span className="reaction__emoji">{emoji}</span>
+            <span className="reaction__count">{count}</span>
+          </button>
+        );
+      })}
+      <button
+        className="reaction reaction--add"
+        aria-label="Add reaction"
+        onClick={() => setOpen((o) => !o)}
+      >
+        <AddReactionOutlinedIcon sx={{ fontSize: 18 }} />
+      </button>
+      {open && (
+        <div className="feed-card__palette">
+          {REACTION_EMOJIS.map((emoji) => (
+            <button
+              key={emoji}
+              onClick={() => {
+                onReact(item.id, emoji);
+                setOpen(false);
+              }}
+            >
+              {emoji}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }

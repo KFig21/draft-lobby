@@ -6,7 +6,7 @@ import {
   type LobbySettings,
 } from '@draft-lobby/shared';
 import { useEffect, useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   LeagueSettingsFields,
   normalizeTiers,
@@ -109,9 +109,6 @@ export function LobbyWizardPage() {
   return (
     <main className="wizard">
       <header className="wizard__header">
-        <Link to="/home" className="back-link">
-          ← Back
-        </Link>
         <h1>Create a lobby</h1>
       </header>
 
@@ -194,15 +191,45 @@ export function LobbyWizardPage() {
                 : 'Only people with the lobby link + password can join.'}
             </em>
           </div>
-          <label className="field">
-            <span>Lobby password</span>
-            <input
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Members enter this to join"
-              required
-            />
-          </label>
+          <div className="field">
+            <span>Draft type</span>
+            <div className="segmented">
+              <button
+                type="button"
+                className={`segmented__opt${
+                  settings.draftMode === 'LIVE' ? ' segmented__opt--on' : ''
+                }`}
+                onClick={() => setSettings((s) => ({ ...s, draftMode: 'LIVE' }))}
+              >
+                🏈 Live
+              </button>
+              <button
+                type="button"
+                className={`segmented__opt${
+                  settings.draftMode === 'MOCK' ? ' segmented__opt--on' : ''
+                }`}
+                onClick={() => setSettings((s) => ({ ...s, draftMode: 'MOCK' }))}
+              >
+                🤖 Mock
+              </button>
+            </div>
+            <em className="muted">
+              {settings.draftMode === 'MOCK'
+                ? 'Practice run — empty seats fill with bots and results stay off friends’ timelines.'
+                : 'A real league draft. Empty seats fill with bots at start so no pick is missed.'}
+            </em>
+          </div>
+          {settings.visibility === 'PRIVATE' && (
+            <label className="field">
+              <span>Lobby password</span>
+              <input
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Members enter this to join"
+                required
+              />
+            </label>
+          )}
           <label className="field">
             <span>
               Scheduled start <em className="muted">(optional)</em>

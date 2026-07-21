@@ -103,6 +103,27 @@ feedRouter.get('/', async (req: AuthedRequest, res: Response) => {
   }
   feedGroups.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
+  // Lobby status + my membership for lobby-related items (drives "join up" vs
+  // "view draft" links in the timeline).
+  const lobbyIds = [
+    ...new Set(feedGroups.map((g) => g.lobbyId).filter((x): x is string => !!x)),
+  ];
+  const lobbyStatusMap = new Map<string, string>();
+  const myLobbySet = new Set<string>();
+  if (lobbyIds.length > 0) {
+    const { data: lobbyRows } = await supabaseAdmin
+      .from('lobbies')
+      .select('id, status')
+      .in('id', lobbyIds);
+    for (const l of lobbyRows ?? []) lobbyStatusMap.set(l.id, l.status as string);
+    const { data: mem } = await supabaseAdmin
+      .from('lobby_members')
+      .select('lobby_id')
+      .eq('user_id', me)
+      .in('lobby_id', lobbyIds);
+    for (const m of mem ?? []) myLobbySet.add(m.lobby_id);
+  }
+
   // Actor profiles.
   const allActorIds = [...new Set(feedGroups.flatMap((g) => g.actorIds))];
   const profileMap = new Map<string, { id: string; username: string; avatar: unknown }>();
@@ -139,6 +160,8 @@ feedRouter.get('/', async (req: AuthedRequest, res: Response) => {
     createdAt: g.createdAt,
     lobbyId: g.lobbyId,
     lobbyName: g.lobbyName,
+    lobbyStatus: g.lobbyId ? lobbyStatusMap.get(g.lobbyId) ?? null : null,
+    isMember: g.lobbyId ? myLobbySet.has(g.lobbyId) : false,
     actors: g.actorIds.map((id) => profileMap.get(id)).filter(Boolean),
     subject: g.subjectName ? { id: g.subjectId, username: g.subjectName } : null,
     reactions: reactionCounts.get(g.id) ?? {},

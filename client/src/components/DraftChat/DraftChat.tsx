@@ -32,6 +32,9 @@ interface Props {
   teamsById: Map<string, TeamRow>;
   playersById: Map<string, PlayerRow>;
   members: MemberRow[];
+  /** When false (e.g. a collapsed mobile drawer), new items are counted as unread. */
+  active?: boolean;
+  onUnread?: (count: number) => void;
 }
 
 type TargetType = 'MESSAGE' | 'PICK';
@@ -41,7 +44,14 @@ interface ReactionEntry {
 }
 
 type Item =
-  | { type: 'msg'; id: string; at: string; userId: string; body: string }
+  | {
+      type: 'msg';
+      id: string;
+      at: string;
+      userId: string;
+      body: string;
+      replyToPickId: string | null;
+    }
   | { type: 'sys'; id: string; at: string; body: string }
   | { type: 'pick'; id: string; at: string; pick: PickRow };
 
@@ -53,9 +63,13 @@ export function DraftChat({
   teamsById,
   playersById,
   members,
+  active = true,
+  onUnread,
 }: Props) {
   const { session } = useAuth();
   const userId = session?.user.id;
+  const lastSeenRef = useRef(0);
+  const initedRef = useRef(false);
 
   const [messages, setMessages] = useState<ChatMessageRow[]>([]);
   const [reactions, setReactions] = useState<ChatReactionRow[]>([]);
@@ -63,7 +77,23 @@ export function DraftChat({
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [nowMs, setNowMs] = useState(Date.now());
+  const [atBottom, setAtBottom] = useState(true);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const atBottomRef = useRef(true);
+
+  function onScroll() {
+    const el = scrollRef.current;
+    if (!el) return;
+    const near = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    atBottomRef.current = near;
+    setAtBottom(near);
+  }
+  function jumpToLive() {
+    atBottomRef.current = true;
+    setAtBottom(true);
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }
 
   // ── Load + realtime ──
   useEffect(() => {
@@ -99,6 +129,12 @@ export function DraftChat({
     };
   }, [lobbyId]);
 
+  const picksById = useMemo(() => {
+    const m = new Map<string, PickRow>();
+    for (const p of picks) m.set(p.id, p);
+    return m;
+  }, [picks]);
+
   const userMap = useMemo(() => {
     const m = new Map<string, { username: string; avatar: AvatarData | null }>();
     for (const mem of members) {
@@ -117,7 +153,14 @@ export function DraftChat({
       out.push(
         m.kind === 'SYSTEM'
           ? { type: 'sys', id: m.id, at: m.created_at, body: m.body }
-          : { type: 'msg', id: m.id, at: m.created_at, userId: m.user_id, body: m.body },
+          : {
+              type: 'msg',
+              id: m.id,
+              at: m.created_at,
+              userId: m.user_id,
+              body: m.body,
+              replyToPickId: m.reply_to_pick_id,
+            },
       );
     }
     for (const p of picks) out.push({ type: 'pick', id: p.id, at: p.picked_at, pick: p });
@@ -150,10 +193,37 @@ export function DraftChat({
     return () => clearTimeout(t);
   }, [lockAtMs]);
 
-  // Keep pinned to the newest item.
+  // Keep pinned to the newest item — but only if the reader is already at the
+  // bottom, so scrolling up to read history isn't yanked back down.
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ block: 'end' });
+    if (atBottomRef.current) bottomRef.current?.scrollIntoView({ block: 'end' });
   }, [items.length]);
+
+  // When the drawer (re)opens, jump to the newest message.
+  useEffect(() => {
+    if (active) {
+      atBottomRef.current = true;
+      setAtBottom(true);
+      requestAnimationFrame(() => bottomRef.current?.scrollIntoView({ block: 'end' }));
+    }
+  }, [active]);
+
+  // Report unread count while inactive (mobile drawer collapsed).
+  useEffect(() => {
+    if (!initedRef.current) {
+      if (items.length === 0) return; // wait for the initial load to settle
+      initedRef.current = true;
+      lastSeenRef.current = items.length;
+      onUnread?.(0);
+      return;
+    }
+    if (active) {
+      lastSeenRef.current = items.length;
+      onUnread?.(0);
+    } else {
+      onUnread?.(Math.max(0, items.length - lastSeenRef.current));
+    }
+  }, [items.length, active, onUnread]);
 
   async function send(e: FormEvent) {
     e.preventDefault();
@@ -184,7 +254,7 @@ export function DraftChat({
 
   return (
     <div className="chat">
-      <div className="chat__scroll">
+      <div className="chat__scroll" ref={scrollRef} onScroll={onScroll}>
         {items.length === 0 && (
           <p className="muted chat__empty">No messages yet. Say something!</p>
         )}
@@ -226,6 +296,10 @@ export function DraftChat({
           }
           const u = userMap.get(it.userId);
           const mine = it.userId === userId;
+          const repliedPick = it.replyToPickId ? picksById.get(it.replyToPickId) : null;
+          const repliedPlayer = repliedPick
+            ? playersById.get(repliedPick.player_id)
+            : null;
           return (
             <div key={it.id} className={`chat__msg${mine ? ' chat__msg--mine' : ''}`}>
               <Avatar avatar={u?.avatar ?? defaultAvatar(it.userId)} size={28} />
@@ -234,6 +308,16 @@ export function DraftChat({
                   <span className="chat__msg-name">{u?.username ?? 'Player'}</span>
                   <span className="chat__msg-time">{formatTime(it.at)}</span>
                 </div>
+                {repliedPick && (
+                  <div className="chat__reply">
+                    ↩ replied to{' '}
+                    <strong>
+                      {teamsById.get(repliedPick.team_id)?.name ?? 'a team'}
+                    </strong>
+                    {repliedPlayer ? ` — ${repliedPlayer.name}` : ''}
+                    <span className="muted"> · Pick {repliedPick.overall}</span>
+                  </div>
+                )}
                 <div className="chat__msg-text">{it.body}</div>
                 <ReactionBar
                   entry={reactionsByTarget.get(`MESSAGE:${it.id}`)}
@@ -245,6 +329,12 @@ export function DraftChat({
         })}
         <div ref={bottomRef} />
       </div>
+
+      {!atBottom && (
+        <button type="button" className="chat__jump" onClick={jumpToLive}>
+          ↓ Scroll to live
+        </button>
+      )}
 
       {error && <p className="chat__error">{error}</p>}
 

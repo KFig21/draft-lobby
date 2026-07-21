@@ -6,7 +6,7 @@ import { AvatarEditor } from '../AvatarEditor/AvatarEditor';
 import './ProfileEditor.scss';
 
 export function ProfileEditor() {
-  const { session } = useAuth();
+  const { session, refreshProfile } = useAuth();
   const userId = session?.user.id;
 
   const [username, setUsername] = useState('');
@@ -60,6 +60,8 @@ export function ProfileEditor() {
 
     // Keep auth metadata in sync so greetings/headers reflect the new name.
     await supabase.auth.updateUser({ data: { username: trimmed } });
+    // Refresh the shared profile so the sidebar avatar/name update immediately.
+    await refreshProfile();
     setSaving(false);
     setStatus('Saved');
   }

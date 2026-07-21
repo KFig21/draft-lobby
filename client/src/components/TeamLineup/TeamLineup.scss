@@ -15,21 +15,117 @@
     font-weight: 700;
   }
 
+  &__auto {
+    display: flex;
+    align-items: center;
+    font-size: 0.85rem;
+
+    .auto-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: $space * 0.75;
+      cursor: pointer;
+      font-weight: 600;
+
+      input {
+        width: 16px;
+        height: 16px;
+        accent-color: $accent;
+        cursor: pointer;
+      }
+    }
+  }
+
+  &__composition {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $space * 0.75;
+    padding: $space;
+    background: $bg;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+  }
+
+  &__section {
+    display: flex;
+    flex-direction: column;
+    gap: $space * 0.75;
+  }
+
+  &__section-title {
+    display: flex;
+    align-items: center;
+    gap: $space * 0.75;
+    padding-bottom: $space * 0.5;
+    border-bottom: 1px solid $border;
+    color: $text;
+    font-size: 0.78rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+
+    // A little accent tick before the label.
+    &::before {
+      content: '';
+      width: 4px;
+      height: 14px;
+      border-radius: 2px;
+      background: $accent;
+    }
+
+    &--bench::before {
+      background: $text-muted;
+    }
+  }
+
+  &__section-count {
+    margin-left: auto;
+    display: inline-grid;
+    place-items: center;
+    min-width: 22px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: $bg-overlay;
+    color: $text-muted;
+    font-size: 0.72rem;
+    letter-spacing: 0;
+  }
+
   &__rows {
     list-style: none;
     display: flex;
     flex-direction: column;
     gap: $space * 0.75;
   }
+}
 
-  &__divider {
-    margin-top: $space * 0.5;
-    padding: $space * 0.5 0;
-    color: $text-muted;
-    font-size: 0.75rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+// Segmented pill: colored position cell + a lighter number cell, e.g. ( QB )( 1 ).
+.roster-count {
+  display: inline-flex;
+  align-items: stretch;
+  border-radius: 999px;
+  overflow: hidden;
+  font-size: 0.72rem;
+  font-weight: 800;
+
+  &__pos {
+    display: inline-grid;
+    place-items: center;
+    min-width: 2.6rem;
+    padding: 3px 8px;
+    background: var(--pos);
+    color: #fff;
+    letter-spacing: 0.02em;
+  }
+
+  &__n {
+    display: inline-grid;
+    place-items: center;
+    min-width: 1.7rem;
+    padding: 3px 8px;
+    background: color-mix(in srgb, var(--pos) 26%, transparent);
+    color: $text;
   }
 }
 

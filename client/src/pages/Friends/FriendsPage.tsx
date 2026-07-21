@@ -1,7 +1,6 @@
 import { defaultAvatar } from '@draft-lobby/shared';
 import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { Avatar } from '../../components/Avatar/Avatar';
 import { useAuth } from '../../auth/AuthContext';
 import { api } from '../../lib/api';
@@ -94,9 +93,6 @@ export function FriendsPage() {
   return (
     <main className="friends">
       <header className="friends__header">
-        <Link to="/home" className="back-link">
-          ← Home
-        </Link>
         <h1>Friends</h1>
       </header>
 

@@ -77,11 +77,8 @@ export function ProfilePage() {
   return (
     <main className="profile">
       <header className="profile__header">
-        <Link to="/home" className="back-link">
-          ← Home
-        </Link>
         <div className="profile__identity">
-          <Avatar avatar={defaultAvatar(userId ?? username)} size={64} />
+          <Avatar avatar={defaultAvatar(userId ?? username)} size={32} />
           <h1>{username}</h1>
         </div>
       </header>

@@ -57,6 +57,13 @@ export const postChatSchema = z.object({
 });
 export type PostChatInput = z.infer<typeof postChatSchema>;
 
+/** Comment on a specific pick — posts to chat as a reply to that pick. */
+export const pickCommentSchema = z.object({
+  pickId: z.string().uuid(),
+  body: z.string().trim().min(1).max(1000),
+});
+export type PickCommentInput = z.infer<typeof pickCommentSchema>;
+
 /** Toggle an emoji reaction on a chat message or a pick. */
 export const chatReactSchema = z.object({
   targetType: z.enum(CHAT_TARGET_TYPES),

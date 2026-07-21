@@ -50,11 +50,26 @@ export const renameTeamSchema = z.object({
 });
 export type RenameTeamInput = z.infer<typeof renameTeamSchema>;
 
-/** Commissioner sets the draft order: team ids in the desired 1..N sequence. */
+/**
+ * Commissioner sets the draft order. `slots` is positional: index 0 = pick 1,
+ * index N-1 = pick N. Each entry is a team id, or null for an open (unassigned)
+ * slot — so the commissioner can seat themselves at any pick and leave the rest
+ * open for players to trickle in.
+ */
 export const setDraftOrderSchema = z.object({
-  teamIds: z.array(z.string().uuid()).min(1),
+  slots: z.array(z.string().uuid().nullable()).min(1),
 });
 export type SetDraftOrderInput = z.infer<typeof setDraftOrderSchema>;
+
+/** Toggle auto-draft for a team (owner for their own team; commissioner for any). */
+export const setAutoDraftSchema = z.object({
+  teamId: z.string().uuid(),
+  on: z.boolean(),
+});
+export type SetAutoDraftInput = z.infer<typeof setAutoDraftSchema>;
+
+/** Seconds a bot / auto-draft team gets on the clock before the engine picks. */
+export const AUTO_PICK_SECONDS = 5;
 
 export const chatMessageSchema = z.object({
   id: z.string().uuid(),

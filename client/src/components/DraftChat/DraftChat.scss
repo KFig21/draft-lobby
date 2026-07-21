@@ -1,10 +1,33 @@
 @use 'variables' as *;
 
 .chat {
+  position: relative;
   display: flex;
   flex-direction: column;
   flex: 1;
   min-height: 0;
+
+  // Floating "jump to newest" button, shown when scrolled up.
+  &__jump {
+    position: absolute;
+    left: 50%;
+    bottom: 64px;
+    transform: translateX(-50%);
+    z-index: 5;
+    padding: $space * 0.5 $space * 1.25;
+    border: 1px solid $accent;
+    border-radius: 999px;
+    background: $accent;
+    color: #05231a;
+    font-size: 0.78rem;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+
+    &:hover {
+      background: color-mix(in srgb, $accent 88%, white);
+    }
+  }
 
   &__scroll {
     flex: 1;
@@ -93,6 +116,17 @@
   &__msg-time {
     color: $text-muted;
     font-size: 0.7rem;
+  }
+
+  // "replied to pick …" reference above a pick comment.
+  &__reply {
+    margin: 2px 0 3px;
+    padding: 2px 8px;
+    border-left: 2px solid $accent;
+    border-radius: 3px;
+    background: rgba($accent, 0.1);
+    color: $text-muted;
+    font-size: 0.72rem;
   }
 
   &__msg-text {

@@ -64,9 +64,6 @@ export function SettingsPage() {
   return (
     <main className="settings">
       <header className="settings__header">
-        <Link to="/home" className="back-link">
-          ← Home
-        </Link>
         <h1>Settings</h1>
       </header>
 

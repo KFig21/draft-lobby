@@ -27,6 +27,7 @@ export interface ChatMessageRow {
   user_id: string;
   body: string;
   kind: 'USER' | 'SYSTEM';
+  reply_to_pick_id: string | null;
   created_at: string;
 }
 
@@ -48,6 +49,8 @@ export interface TeamRow {
   draft_position: number;
   color: string;
   is_prev_champion: boolean;
+  is_bot: boolean;
+  auto_draft: boolean;
 }
 
 export interface MemberRow {
