@@ -2,17 +2,22 @@ import {
   CHAT_LOCK_MS,
   POSITION_COLORS,
   REACTION_EMOJIS,
+  REACTION_LOCK_MS,
   defaultAvatar,
   type Avatar as AvatarData,
   type LobbyStatus,
   type Position,
 } from '@draft-lobby/shared';
 import AddReactionOutlinedIcon from '@mui/icons-material/AddReactionOutlined';
+import CloseIcon from '@mui/icons-material/Close';
+import ReplyIcon from '@mui/icons-material/Reply';
 import SendIcon from '@mui/icons-material/Send';
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useAuth } from '../../auth/AuthContext';
 import { api } from '../../lib/api';
 import { supabase } from '../../supabase';
+import { avatarForTeam } from '../../lib/teamAvatar';
+import { renderMentionText } from '../../lib/renderMentions';
 import type {
   ChatMessageRow,
   ChatReactionRow,
@@ -22,6 +27,7 @@ import type {
   TeamRow,
 } from '../../lib/types';
 import { Avatar } from '../Avatar/Avatar';
+import { MentionInput } from '../MentionInput/MentionInput';
 import './DraftChat.scss';
 
 interface Props {
@@ -35,12 +41,21 @@ interface Props {
   /** When false (e.g. a collapsed mobile drawer), new items are counted as unread. */
   active?: boolean;
   onUnread?: (count: number) => void;
+  /** Click a "replied to pick" line to open that pick's detail modal. */
+  onOpenPick?: (pick: PickRow) => void;
+  /** Scroll to + briefly highlight this message once it's loaded (deep link
+   * from a notification for a mention or a reaction on a plain message). */
+  focusMessageId?: string | null;
+  /** Called once the requested scroll/highlight has been carried out. */
+  onFocusHandled?: () => void;
 }
 
 type TargetType = 'MESSAGE' | 'PICK';
 interface ReactionEntry {
   counts: Record<string, number>;
   mine: Set<string>;
+  /** Usernames that used each emoji (for the Discord-style hover tooltip). */
+  reactors: Record<string, string[]>;
 }
 
 type Item =
@@ -65,6 +80,9 @@ export function DraftChat({
   members,
   active = true,
   onUnread,
+  onOpenPick,
+  focusMessageId,
+  onFocusHandled,
 }: Props) {
   const { session } = useAuth();
   const userId = session?.user.id;
@@ -78,8 +96,12 @@ export function DraftChat({
   const [error, setError] = useState<string | null>(null);
   const [nowMs, setNowMs] = useState(Date.now());
   const [atBottom, setAtBottom] = useState(true);
+  // Set when the user hits "reply" on a pick line — the next send posts as a
+  // pick comment instead of a plain message.
+  const [replyTarget, setReplyTarget] = useState<PickRow | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const composeRef = useRef<HTMLInputElement>(null);
   const atBottomRef = useRef(true);
 
   function onScroll() {
@@ -146,6 +168,11 @@ export function DraftChat({
     return m;
   }, [members]);
 
+  const memberUsernames = useMemo(
+    () => members.map((m) => m.profiles?.username).filter((u): u is string => !!u),
+    [members],
+  );
+
   // Merge chat + picks into one time-ordered timeline.
   const items = useMemo<Item[]>(() => {
     const out: Item[] = [];
@@ -168,30 +195,53 @@ export function DraftChat({
     return out;
   }, [messages, picks]);
 
+  const [highlightId, setHighlightId] = useState<string | null>(null);
+
+  // Deep-link from a notification: once the target message has loaded, scroll
+  // to it and flash-highlight it (mentions, or a reaction on a plain message).
+  useEffect(() => {
+    if (!focusMessageId) return;
+    if (!items.some((it) => it.id === focusMessageId)) return; // still loading
+    const targetId = focusMessageId;
+    const t = window.setTimeout(() => {
+      document
+        .getElementById(`chat-msg-${targetId}`)
+        ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setHighlightId(targetId);
+      onFocusHandled?.();
+      window.setTimeout(() => setHighlightId((h) => (h === targetId ? null : h)), 2200);
+    }, 60);
+    return () => window.clearTimeout(t);
+  }, [focusMessageId, items, onFocusHandled]);
+
   const reactionsByTarget = useMemo(() => {
     const m = new Map<string, ReactionEntry>();
     for (const r of reactions) {
       const key = `${r.target_type}:${r.target_id}`;
-      const entry = m.get(key) ?? { counts: {}, mine: new Set<string>() };
+      const entry = m.get(key) ?? { counts: {}, mine: new Set<string>(), reactors: {} };
       entry.counts[r.emoji] = (entry.counts[r.emoji] ?? 0) + 1;
       if (r.user_id === userId) entry.mine.add(r.emoji);
+      (entry.reactors[r.emoji] ??= []).push(userMap.get(r.user_id)?.username ?? 'Someone');
       m.set(key, entry);
     }
     return m;
-  }, [reactions, userId]);
+  }, [reactions, userId, userMap]);
 
-  // ── Lock: CHAT_LOCK_MS after the draft ends ──
+  // ── Lock: CHAT_LOCK_MS after the draft ends (reactions get much longer — REACTION_LOCK_MS) ──
   const lastPickAt = picks.reduce((max, p) => (p.picked_at > max ? p.picked_at : max), '');
   const endedAt = status === 'COMPLETE' ? completedAt ?? (lastPickAt || null) : null;
   const lockAtMs = endedAt ? new Date(endedAt).getTime() + CHAT_LOCK_MS : null;
   const locked = !!lockAtMs && nowMs >= lockAtMs;
+  const reactionLockAtMs = endedAt ? new Date(endedAt).getTime() + REACTION_LOCK_MS : null;
+  const reactionsLocked = !!reactionLockAtMs && nowMs >= reactionLockAtMs;
   useEffect(() => {
-    if (!lockAtMs) return;
-    const remaining = lockAtMs - Date.now();
-    if (remaining <= 0) return;
-    const t = setTimeout(() => setNowMs(Date.now()), remaining + 500);
+    const nextLockAt = [lockAtMs, reactionLockAtMs]
+      .filter((t): t is number => t != null && t > Date.now())
+      .sort((a, b) => a - b)[0];
+    if (nextLockAt == null) return;
+    const t = setTimeout(() => setNowMs(Date.now()), nextLockAt - Date.now() + 500);
     return () => clearTimeout(t);
-  }, [lockAtMs]);
+  }, [lockAtMs, reactionLockAtMs]);
 
   // Keep pinned to the newest item — but only if the reader is already at the
   // bottom, so scrolling up to read history isn't yanked back down.
@@ -232,8 +282,16 @@ export function DraftChat({
     setSending(true);
     setError(null);
     try {
-      await api(`/lobbies/${lobbyId}/chat`, { method: 'POST', body: { body } });
+      if (replyTarget) {
+        await api(`/lobbies/${lobbyId}/pick-comment`, {
+          method: 'POST',
+          body: { pickId: replyTarget.id, body },
+        });
+      } else {
+        await api(`/lobbies/${lobbyId}/chat`, { method: 'POST', body: { body } });
+      }
       setDraft('');
+      setReplyTarget(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send');
     } finally {
@@ -242,6 +300,7 @@ export function DraftChat({
   }
 
   async function react(targetType: TargetType, targetId: string, emoji: string) {
+    if (reactionsLocked) return;
     try {
       await api(`/lobbies/${lobbyId}/chat-react`, {
         method: 'POST',
@@ -273,24 +332,47 @@ export function DraftChat({
             return (
               <div key={it.id} className="chat__pick">
                 <div className="chat__pick-main">
-                  {player && (
-                    <span
-                      className="chat__pick-pos"
-                      style={{ background: POSITION_COLORS[player.position as Position] }}
-                    >
-                      {player.position}
+                  {team && (
+                    <span className="chat__pick-avatar">
+                      <Avatar avatar={avatarForTeam(team, members)} size={20} />
                     </span>
                   )}
                   <span className="chat__pick-text">
-                    <strong>{team?.name ?? 'A team'}</strong> drafted{' '}
+                    <strong>{team?.name ?? 'A team'}</strong>
+                    <span>drafted</span>
+                    {player && (
+                      <span
+                        className="chat__pick-pos"
+                        style={{ background: POSITION_COLORS[player.position as Position] }}
+                      >
+                        {player.position}
+                      </span>
+                    )}
                     <strong>{player?.name ?? 'a player'}</strong>
-                    <span className="muted"> · Pick {pick.overall}</span>
+                    <span className="muted">· Pick {pick.overall}</span>
                   </span>
                 </div>
-                <ReactionBar
-                  entry={reactionsByTarget.get(`PICK:${pick.id}`)}
-                  onReact={(emoji) => react('PICK', pick.id, emoji)}
-                />
+                <div className="chat__pick-actions">
+                  <ReactionBar
+                    entry={reactionsByTarget.get(`PICK:${pick.id}`)}
+                    onReact={(emoji) => react('PICK', pick.id, emoji)}
+                    disabled={reactionsLocked}
+                  />
+                  {!locked && (
+                    <button
+                      type="button"
+                      className="chat__reply-btn"
+                      aria-label={`Reply to ${team?.name ?? 'this'} pick`}
+                      title="Reply"
+                      onClick={() => {
+                        setReplyTarget(pick);
+                        composeRef.current?.focus();
+                      }}
+                    >
+                      <ReplyIcon sx={{ fontSize: 16 }} />
+                    </button>
+                  )}
+                </div>
               </div>
             );
           }
@@ -301,27 +383,48 @@ export function DraftChat({
             ? playersById.get(repliedPick.player_id)
             : null;
           return (
-            <div key={it.id} className={`chat__msg${mine ? ' chat__msg--mine' : ''}`}>
+            <div
+              key={it.id}
+              id={`chat-msg-${it.id}`}
+              className={`chat__msg${mine ? ' chat__msg--mine' : ''}${
+                highlightId === it.id ? ' chat__msg--focused' : ''
+              }`}
+            >
               <Avatar avatar={u?.avatar ?? defaultAvatar(it.userId)} size={28} />
               <div className="chat__msg-body">
                 <div className="chat__msg-head">
                   <span className="chat__msg-name">{u?.username ?? 'Player'}</span>
                   <span className="chat__msg-time">{formatTime(it.at)}</span>
                 </div>
-                {repliedPick && (
-                  <div className="chat__reply">
-                    ↩ replied to{' '}
-                    <strong>
-                      {teamsById.get(repliedPick.team_id)?.name ?? 'a team'}
-                    </strong>
-                    {repliedPlayer ? ` — ${repliedPlayer.name}` : ''}
-                    <span className="muted"> · Pick {repliedPick.overall}</span>
-                  </div>
-                )}
-                <div className="chat__msg-text">{it.body}</div>
+                {repliedPick &&
+                  (onOpenPick ? (
+                    <button
+                      type="button"
+                      className="chat__reply chat__reply--link"
+                      onClick={() => onOpenPick(repliedPick)}
+                    >
+                      ↩ replied to{' '}
+                      <strong>
+                        {teamsById.get(repliedPick.team_id)?.name ?? 'a team'}
+                      </strong>
+                      {repliedPlayer ? ` — ${repliedPlayer.name}` : ''}
+                      <span className="muted"> · Pick {repliedPick.overall}</span>
+                    </button>
+                  ) : (
+                    <div className="chat__reply">
+                      ↩ replied to{' '}
+                      <strong>
+                        {teamsById.get(repliedPick.team_id)?.name ?? 'a team'}
+                      </strong>
+                      {repliedPlayer ? ` — ${repliedPlayer.name}` : ''}
+                      <span className="muted"> · Pick {repliedPick.overall}</span>
+                    </div>
+                  ))}
+                <div className="chat__msg-text">{renderMentionText(it.body, memberUsernames)}</div>
                 <ReactionBar
                   entry={reactionsByTarget.get(`MESSAGE:${it.id}`)}
                   onReact={(emoji) => react('MESSAGE', it.id, emoji)}
+                  disabled={reactionsLocked}
                 />
               </div>
             </div>
@@ -341,21 +444,44 @@ export function DraftChat({
       {locked ? (
         <div className="chat__locked">🔒 Chat is locked for this draft.</div>
       ) : (
-        <form className="chat__compose" onSubmit={send}>
-          <input
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            placeholder="Message…"
-            maxLength={1000}
-          />
-          <button
-            className="chat__send"
-            disabled={sending || !draft.trim()}
-            aria-label="Send"
-          >
-            <SendIcon fontSize="small" />
-          </button>
-        </form>
+        <>
+          {replyTarget && (
+            <div className="chat__reply-banner">
+              <span>
+                Replying to{' '}
+                <strong>{teamsById.get(replyTarget.team_id)?.name ?? 'a team'}</strong>
+                {(() => {
+                  const p = playersById.get(replyTarget.player_id);
+                  return p ? ` — ${p.name}` : '';
+                })()}
+              </span>
+              <button
+                type="button"
+                aria-label="Cancel reply"
+                onClick={() => setReplyTarget(null)}
+              >
+                <CloseIcon sx={{ fontSize: 14 }} />
+              </button>
+            </div>
+          )}
+          <form className="chat__compose" onSubmit={send}>
+            <MentionInput
+              value={draft}
+              onChange={setDraft}
+              members={members}
+              placeholder={replyTarget ? 'Reply…' : 'Message…'}
+              maxLength={1000}
+              inputRef={composeRef}
+            />
+            <button
+              className="chat__send"
+              disabled={sending || !draft.trim()}
+              aria-label="Send"
+            >
+              <SendIcon fontSize="small" />
+            </button>
+          </form>
+        </>
       )}
     </div>
   );
@@ -364,32 +490,45 @@ export function DraftChat({
 function ReactionBar({
   entry,
   onReact,
+  disabled = false,
 }: {
   entry: ReactionEntry | undefined;
   onReact: (emoji: string) => void;
+  disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const active = entry ? Object.keys(entry.counts) : [];
 
   return (
     <div className="chat-react">
-      {active.map((e) => (
+      {active.map((e) => {
+        const names = entry?.reactors[e] ?? [];
+        return (
+          <button
+            key={e}
+            className={`chat-react__chip${entry?.mine.has(e) ? ' is-mine' : ''}`}
+            onClick={() => onReact(e)}
+            disabled={disabled}
+          >
+            <span>{e}</span>
+            <span className="chat-react__count">{entry?.counts[e]}</span>
+            {names.length > 0 && (
+              <span className="chat-react__tip" role="tooltip">
+                {names.join(', ')}
+              </span>
+            )}
+          </button>
+        );
+      })}
+      {!disabled && (
         <button
-          key={e}
-          className={`chat-react__chip${entry?.mine.has(e) ? ' is-mine' : ''}`}
-          onClick={() => onReact(e)}
+          className="chat-react__add"
+          onClick={() => setOpen((o) => !o)}
+          aria-label="Add reaction"
         >
-          <span>{e}</span>
-          <span className="chat-react__count">{entry?.counts[e]}</span>
+          <AddReactionOutlinedIcon sx={{ fontSize: 16 }} />
         </button>
-      ))}
-      <button
-        className="chat-react__add"
-        onClick={() => setOpen((o) => !o)}
-        aria-label="Add reaction"
-      >
-        <AddReactionOutlinedIcon sx={{ fontSize: 16 }} />
-      </button>
+      )}
       {open && (
         <div className="chat-react__palette">
           {REACTION_EMOJIS.map((e) => (

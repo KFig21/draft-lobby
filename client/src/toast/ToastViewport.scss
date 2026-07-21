@@ -1,0 +1,189 @@
+@use 'variables' as *;
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes toast-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+}
+
+@keyframes toast-progress {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
+}
+
+.toast-viewport {
+  position: fixed;
+  top: $space * 2;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 500; // above modals (200) and nav drawers (40/60)
+  display: flex;
+  flex-direction: column;
+  gap: $space;
+  width: min(420px, calc(100vw - #{$space * 4}));
+  pointer-events: none; // gaps between toasts stay click-through
+
+  @media (max-width: #{$bp-md - 1px}) {
+    top: env(safe-area-inset-top, 0);
+    left: 0;
+    right: 0;
+    transform: none;
+    width: auto;
+    padding: $space;
+  }
+}
+
+// Solid, unmissable tone color. The progress bar (below) fills the whole
+// toast in a slightly different shade of the same color, and shrinks away to
+// reveal the base color as time runs out.
+.toast {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-start;
+  gap: $space;
+  padding: $space * 1.5 $space * 1.75;
+  border-radius: $radius-sm;
+  background: $primary;
+  color: #fff;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  pointer-events: auto;
+  animation: toast-in 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+
+  &.is-closing {
+    animation: toast-out 180ms ease both;
+  }
+
+  &--success {
+    background: $accent;
+    color: #05231a;
+  }
+  &--warning {
+    background: $warning;
+    color: #05231a;
+  }
+  &--danger {
+    background: $danger;
+    color: #fff;
+  }
+}
+
+.toast__avatar {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  display: inline-flex;
+}
+
+.toast__content {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-width: 0;
+}
+
+.toast__title {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.toast__body {
+  margin-top: 2px;
+  font-size: 0.82rem;
+  opacity: 0.85;
+}
+
+.toast__controls {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.toast__action {
+  padding: 4px 10px;
+  margin-right: 4px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  background: none;
+  color: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.14);
+  }
+}
+
+.toast__icon-btn {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: $radius-sm;
+  background: none;
+  color: inherit;
+  opacity: 0.85;
+  cursor: pointer;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.14);
+    opacity: 1;
+  }
+}
+
+// Fills the entire toast — a darker shade of the same tone. Anchored to the
+// right edge (not inset:0) so the animated width shrinks the bar in toward
+// the right as the auto-dismiss timer runs down, rather than draining left.
+.toast__bar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: auto;
+  z-index: 0;
+  background: color-mix(in srgb, black 18%, $primary);
+  animation-name: toast-progress;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+
+  &.is-paused {
+    animation-play-state: paused;
+  }
+}
+
+.toast--success .toast__bar {
+  background: color-mix(in srgb, black 12%, $accent);
+}
+.toast--warning .toast__bar {
+  background: color-mix(in srgb, black 12%, $warning);
+}
+.toast--danger .toast__bar {
+  background: color-mix(in srgb, black 18%, $danger);
+}

@@ -51,6 +51,14 @@
       border-color: $primary;
       background: rgba($primary, 0.08);
     }
+
+    &--link {
+      cursor: pointer;
+
+      &:hover {
+        border-color: $primary;
+      }
+    }
   }
 
   &__body {

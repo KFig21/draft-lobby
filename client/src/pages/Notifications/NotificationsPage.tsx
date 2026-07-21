@@ -1,11 +1,23 @@
 import { defaultAvatar } from '@draft-lobby/shared';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Avatar } from '../../components/Avatar/Avatar';
+import { Loader } from '../../components/Loader/Loader';
 import { useNotifications } from '../../notifications/NotificationsContext';
 import { api } from '../../lib/api';
 import type { NotificationRow } from '../../lib/types';
 import './NotificationsPage.scss';
+
+/** "Kevin" or "Kevin and 2 others" — for notifications grouped by `count`. */
+function withGroup(name: string, count: number): ReactNode {
+  if (count <= 1) return <strong>{name}</strong>;
+  const others = count - 1;
+  return (
+    <>
+      <strong>{name}</strong> and {others} other{others > 1 ? 's' : ''}
+    </>
+  );
+}
 
 function timeAgo(iso: string): string {
   const secs = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
@@ -69,7 +81,9 @@ export function NotificationsPage() {
       </header>
 
       {loading ? (
-        <p className="muted">Loading…</p>
+        <div className="section-loading">
+          <Loader label="Loading…" />
+        </div>
       ) : notifications.length === 0 ? (
         <p className="muted">You're all caught up.</p>
       ) : (
@@ -79,8 +93,36 @@ export function NotificationsPage() {
             const avatar = n.actor?.avatar ?? defaultAvatar(n.actor_id ?? n.id);
             const resolved = handled[n.id];
             const busy = busyId === n.id;
+            const isDraftLink =
+              (n.type === 'PICK_REACTION' ||
+                n.type === 'MESSAGE_REACTION' ||
+                n.type === 'PICK_REPLY' ||
+                n.type === 'MENTION') &&
+              !!n.lobby_id;
             return (
-              <li key={n.id} className={`notifs__row${n.read ? '' : ' notifs__row--unread'}`}>
+              <li
+                key={n.id}
+                className={`notifs__row${n.read ? '' : ' notifs__row--unread'}${
+                  isDraftLink ? ' notifs__row--link' : ''
+                }`}
+                onClick={
+                  isDraftLink
+                    ? () =>
+                        navigate(`/lobby/${n.lobby_id}/draft`, {
+                          state:
+                            n.target_type && n.target_id
+                              ? {
+                                  focusTarget: {
+                                    targetType: n.target_type,
+                                    targetId: n.target_id,
+                                    notifType: n.type,
+                                  },
+                                }
+                              : undefined,
+                        })
+                    : undefined
+                }
+              >
                 <Avatar avatar={avatar} size={40} />
                 <div className="notifs__body">
                   <p className="notifs__text">
@@ -97,6 +139,41 @@ export function NotificationsPage() {
                     {n.type === 'LOBBY_INVITE' && (
                       <>
                         <strong>{name}</strong> invited you to{' '}
+                        <strong>{n.lobby_name ?? 'a draft'}</strong>
+                      </>
+                    )}
+                    {n.type === 'PICK_REACTION' && (
+                      <>
+                        {withGroup(name, n.count)} reacted to your pick
+                        {n.snippet ? (
+                          <>
+                            {' '}
+                            of <strong>{n.snippet}</strong>
+                          </>
+                        ) : (
+                          ''
+                        )}{' '}
+                        in <strong>{n.lobby_name ?? 'a draft'}</strong>
+                      </>
+                    )}
+                    {n.type === 'MESSAGE_REACTION' && (
+                      <>
+                        {withGroup(name, n.count)} reacted to your message
+                        {n.snippet ? <>: “{n.snippet}”</> : ''} in{' '}
+                        <strong>{n.lobby_name ?? 'a draft'}</strong>
+                      </>
+                    )}
+                    {n.type === 'PICK_REPLY' && (
+                      <>
+                        {withGroup(name, n.count)} replied to your pick
+                        {n.snippet ? <>: “{n.snippet}”</> : ''} in{' '}
+                        <strong>{n.lobby_name ?? 'a draft'}</strong>
+                      </>
+                    )}
+                    {n.type === 'MENTION' && (
+                      <>
+                        <strong>{name}</strong> mentioned you
+                        {n.snippet ? <>: “{n.snippet}”</> : ''} in{' '}
                         <strong>{n.lobby_name ?? 'a draft'}</strong>
                       </>
                     )}

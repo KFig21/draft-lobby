@@ -2,7 +2,7 @@ import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 import { Router, type Response } from 'express';
 import { createLobbySchema, joinLobbySchema } from '@draft-lobby/shared';
 import { requireAuth, type AuthedRequest } from '../middleware/auth.js';
-import { claimSeat } from '../draftEngine.js';
+import { claimSeat, usernameOf } from '../draftEngine.js';
 import { supabaseAdmin } from '../supabase.js';
 
 export const lobbiesRouter = Router();
@@ -60,7 +60,7 @@ lobbiesRouter.post('/', async (req: AuthedRequest, res: Response) => {
   const { error: teamError } = await supabaseAdmin.from('teams').insert({
     lobby_id: lobby.id,
     owner_id: userId,
-    name: `Team 1`,
+    name: (await usernameOf(userId)) ?? 'Team 1',
     draft_position: 1,
   });
   if (teamError) {

@@ -4,8 +4,16 @@ export const NOTIFICATION_TYPES = [
   'FRIEND_REQUEST',
   'FRIEND_ACCEPTED',
   'LOBBY_INVITE',
+  'PICK_REACTION',
+  'MESSAGE_REACTION',
+  'PICK_REPLY',
+  'MENTION',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
+
+/** Notification target for the pick/message-scoped types (for grouping). */
+export const NOTIFICATION_TARGET_TYPES = ['PICK', 'MESSAGE'] as const;
+export type NotificationTargetType = (typeof NOTIFICATION_TARGET_TYPES)[number];
 
 export const FRIENDSHIP_STATUSES = ['PENDING', 'ACCEPTED'] as const;
 export type FriendshipStatus = (typeof FRIENDSHIP_STATUSES)[number];
@@ -72,5 +80,32 @@ export const chatReactSchema = z.object({
 });
 export type ChatReactInput = z.infer<typeof chatReactSchema>;
 
-/** How long after a draft ends the chat locks. */
-export const CHAT_LOCK_MS = 10 * 60 * 1000;
+/** How long after a draft ends the chat locks (matches REACTION_LOCK_MS). */
+export const CHAT_LOCK_MS = 24 * 60 * 60 * 1000;
+
+/** How long after a draft ends emoji reactions (on picks and messages) lock. */
+export const REACTION_LOCK_MS = 24 * 60 * 60 * 1000;
+
+/** Keep usernames short enough to fit in the draft board's team columns,
+ * chat author names, etc. without truncation looking cramped. */
+export const USERNAME_MIN_LEN = 3;
+export const USERNAME_MAX_LEN = 20;
+
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Usernames referenced via "@username" in a message body. Matches are
+ * case-insensitive and exact — `@Kevin` won't match a candidate `Kevin2`
+ * because of the trailing word-boundary lookahead.
+ */
+export function extractMentionedUsernames(
+  body: string,
+  candidateUsernames: string[],
+): string[] {
+  return candidateUsernames.filter((uname) => {
+    const re = new RegExp(`@${escapeRegExp(uname)}(?![\\w])`, 'i');
+    return re.test(body);
+  });
+}

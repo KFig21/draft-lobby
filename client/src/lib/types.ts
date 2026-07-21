@@ -4,6 +4,7 @@ import type {
   LobbySettings,
   LobbyStatus,
   LobbyRole,
+  NotificationTargetType,
   NotificationType,
 } from '@draft-lobby/shared';
 
@@ -95,6 +96,10 @@ export interface NotificationRow {
   type: NotificationType;
   lobby_id: string | null;
   lobby_name: string | null;
+  target_type: NotificationTargetType | null;
+  target_id: string | null;
+  count: number;
+  snippet: string | null;
   read: boolean;
   created_at: string;
   actor?: ProfileMini | null;

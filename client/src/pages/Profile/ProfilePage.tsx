@@ -4,6 +4,7 @@ import UnarchiveOutlinedIcon from '@mui/icons-material/UnarchiveOutlined';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Avatar } from '../../components/Avatar/Avatar';
+import { Loader } from '../../components/Loader/Loader';
 import { useAuth } from '../../auth/AuthContext';
 import { api } from '../../lib/api';
 import { supabase } from '../../supabase';
@@ -84,7 +85,9 @@ export function ProfilePage() {
       </header>
 
       {loading ? (
-        <p className="muted">Loading your drafts…</p>
+        <div className="section-loading">
+          <Loader label="Loading your drafts…" />
+        </div>
       ) : (
         <>
           {active.length > 0 && (

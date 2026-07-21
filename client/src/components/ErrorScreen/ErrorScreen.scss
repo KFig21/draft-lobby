@@ -1,0 +1,39 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+.error-screen {
+  @include centered-page;
+
+  &__card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $space;
+    width: min(360px, 100%);
+    padding: $space * 4 $space * 3;
+    border: 1px solid $border;
+    border-radius: $radius;
+    background: $bg-raised;
+    text-align: center;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+  }
+
+  &__icon {
+    font-size: 2.4rem;
+    margin-bottom: $space;
+  }
+
+  h1 {
+    font-size: 1.4rem;
+  }
+
+  p {
+    max-width: 300px;
+  }
+
+  &__actions {
+    display: flex;
+    gap: $space;
+    margin-top: $space * 2;
+  }
+}

@@ -34,14 +34,18 @@
       box-shadow 120ms ease,
       background 120ms ease;
 
-    // The team currently on the clock gets a green outline.
-    &--onclock {
-      box-shadow: inset 0 0 0 2px $accent;
+    // Cross-highlight when hovering one of this team's picks. Opaque (not
+    // rgba) — these cells are sticky and sit over scrolling content, so a
+    // translucent background lets scrolled-past text show through underneath.
+    &--hi {
+      background: color-mix(in srgb, $accent 22%, $bg-overlay);
     }
 
-    // Cross-highlight when hovering one of this team's picks.
-    &--hi {
-      background: rgba($accent, 0.2);
+    // The team currently on the clock: filled green, dark text — the avatar
+    // sets its own background inline, so it's unaffected by this.
+    &--onclock {
+      background: $accent;
+      color: #05231a;
     }
   }
 
@@ -64,12 +68,9 @@
     }
   }
 
-  &__team-swatch {
-    display: inline-block;
+  &__team-avatar {
+    display: inline-flex;
     flex-shrink: 0;
-    width: 8px;
-    height: 8px;
-    border-radius: 2px;
     margin-right: 5px;
   }
 
@@ -83,10 +84,18 @@
     width: 30px;
     transition: background 120ms ease;
 
-    // Cross-highlight when hovering a pick in this round.
+    // Cross-highlight when hovering a pick in this round. Opaque for the same
+    // reason as the team header's &--hi (this cell is sticky-left and scrolls
+    // over pick content).
     &--hi {
-      background: rgba($accent, 0.2);
+      background: color-mix(in srgb, $accent 22%, $bg-overlay);
       color: $accent;
+    }
+
+    // The live round: filled green, dark text — takes priority over &--hi.
+    &--current {
+      background: $accent;
+      color: #05231a;
     }
   }
 
@@ -108,6 +117,12 @@
     &.is-live {
       color: $accent;
       opacity: 1;
+
+      // The live round's cell is filled green (see &--current) — dark text
+      // for contrast there instead of the usual green arrow.
+      .draft-grid__round--current & {
+        color: #05231a;
+      }
     }
   }
 
@@ -152,25 +167,35 @@
     }
   }
 
-  // Uncluttered "has reactions" indicator (grayed) shown when not hovering.
-  &__react-flag {
+  // Uncluttered "has reactions/comments" indicators (grayed), shown when not hovering.
+  &__flags {
     position: absolute;
     bottom: 2px;
     right: 4px;
+    display: flex;
+    align-items: center;
+    gap: 3px;
     color: $text-muted;
-    font-size: 0.6rem;
-    font-weight: 900;
-    letter-spacing: 0.5px;
-    line-height: 1;
     opacity: 0.7;
     pointer-events: none;
 
-    // On hover the popover takes over, so drop the flag.
+    // On hover the reactions popover takes over, so drop the flags.
     @media (hover: hover) {
       .draft-grid__cell--pick:hover & {
         display: none;
       }
     }
+  }
+
+  &__comment-flag {
+    color: $text-muted;
+  }
+
+  &__react-flag {
+    font-size: 0.6rem;
+    font-weight: 900;
+    letter-spacing: 0.5px;
+    line-height: 1;
   }
 
   // Full reactions + add affordance — unfolds just below the pick on hover.

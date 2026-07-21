@@ -7,9 +7,12 @@ import {
   type LobbyStatus,
 } from '@draft-lobby/shared';
 import AddReactionOutlinedIcon from '@mui/icons-material/AddReactionOutlined';
+import HandshakeOutlinedIcon from '@mui/icons-material/HandshakeOutlined';
+import SportsFootballOutlinedIcon from '@mui/icons-material/SportsFootballOutlined';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Avatar } from '../../components/Avatar/Avatar';
+import { Loader } from '../../components/Loader/Loader';
 import { api } from '../../lib/api';
 import './HomePage.scss';
 
@@ -123,7 +126,9 @@ export function HomePage() {
       <section className="home__feed">
         <h2 className="home__section-title">Timeline</h2>
         {loading ? (
-          <p className="muted">Loading your feed…</p>
+          <div className="section-loading">
+            <Loader label="Loading your feed…" />
+          </div>
         ) : items.length === 0 ? (
           <p className="muted">
             Nothing here yet. Add friends and finish some drafts — activity from you
@@ -164,13 +169,15 @@ function FeedCard({
             <>
               <strong>{lead?.username ?? 'Someone'}</strong>
               {extra > 0 && ` & ${extra} other${extra > 1 ? 's' : ''}`} completed{' '}
-              {item.lobbyName ? <strong>{item.lobbyName}</strong> : 'a draft'} 🏈
+              {item.lobbyName ? <strong>{item.lobbyName}</strong> : 'a draft'}{' '}
+              <SportsFootballOutlinedIcon className="feed-card__icon" sx={{ fontSize: 17 }} />
             </>
           )}
           {item.type === 'FRIEND_ACCEPTED' && (
             <>
               <strong>{lead?.username ?? 'Someone'}</strong> and{' '}
-              <strong>{item.subject?.username ?? 'someone'}</strong> are now friends 🤝
+              <strong>{item.subject?.username ?? 'someone'}</strong> are now friends{' '}
+              <HandshakeOutlinedIcon className="feed-card__icon" sx={{ fontSize: 17 }} />
             </>
           )}
           {item.type === 'OPEN_LOBBY_CREATED' && (

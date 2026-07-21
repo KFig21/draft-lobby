@@ -19,6 +19,16 @@ export interface OnClockTeam {
 const SKILL: Position[] = ['RB', 'WR', 'TE'];
 const SUPERFLEX_POS: Position[] = ['QB', 'RB', 'WR', 'TE'];
 
+/** A user's profile username, for defaulting a team's name to it. */
+export async function usernameOf(userId: string): Promise<string | null> {
+  const { data } = await supabaseAdmin
+    .from('profiles')
+    .select('username')
+    .eq('id', userId)
+    .maybeSingle();
+  return (data?.username as string | undefined) ?? null;
+}
+
 /** Look up the team on the clock for a given overall pick. */
 export async function onClockTeam(
   lobbyId: string,
@@ -88,6 +98,10 @@ export async function claimSeat(
   teamCount: number,
   teamName?: string,
 ): Promise<{ ok: true; teamId: string; draftPosition: number } | { ok: false; error: string }> {
+  // Default an unnamed team to the joining user's username (falling back to
+  // "Team N" only if they somehow have none).
+  const defaultName = teamName ?? (await usernameOf(userId)) ?? undefined;
+
   // Prefer taking over a bot's seat (a human replaces a bot).
   const { data: botSeat } = await supabaseAdmin
     .from('teams')
@@ -104,7 +118,7 @@ export async function claimSeat(
         owner_id: userId,
         is_bot: false,
         auto_draft: false,
-        name: teamName ?? `Team ${botSeat.draft_position}`,
+        name: defaultName ?? `Team ${botSeat.draft_position}`,
       })
       .eq('id', botSeat.id);
     return { ok: true, teamId: botSeat.id as string, draftPosition: botSeat.draft_position as number };
@@ -125,7 +139,7 @@ export async function claimSeat(
     .insert({
       lobby_id: lobbyId,
       owner_id: userId,
-      name: teamName ?? `Team ${pos}`,
+      name: defaultName ?? `Team ${pos}`,
       draft_position: pos,
     })
     .select('id')

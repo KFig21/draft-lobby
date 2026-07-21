@@ -1,7 +1,9 @@
 import { Router, type Response } from 'express';
 import {
   CHAT_LOCK_MS,
+  REACTION_LOCK_MS,
   chatReactSchema,
+  extractMentionedUsernames,
   inviteToLobbySchema,
   makePickSchema,
   pickCommentSchema,
@@ -57,27 +59,190 @@ async function postSystemMessage(lobbyId: string, userId: string, body: string):
     .insert({ lobby_id: lobbyId, user_id: userId, kind: 'SYSTEM', body });
 }
 
-/** Chat locks CHAT_LOCK_MS after the draft ends. */
-async function isChatLocked(lobbyId: string): Promise<boolean> {
+type GroupableNotification = 'PICK_REACTION' | 'MESSAGE_REACTION' | 'PICK_REPLY' | 'MENTION';
+
+/**
+ * Create a notification, or — if the recipient already has an unread one for
+ * this exact type+target — bump its count instead. Keeps a pick/comment that
+ * gets a burst of reactions from flooding the feed with one row each.
+ */
+async function notifyGrouped(params: {
+  userId: string;
+  actorId: string;
+  type: GroupableNotification;
+  lobbyId: string;
+  lobbyName: string;
+  targetType: 'PICK' | 'MESSAGE';
+  targetId: string;
+  snippet: string;
+}): Promise<void> {
+  if (params.userId === params.actorId) return; // never notify yourself
+  const { data: existing } = await supabaseAdmin
+    .from('notifications')
+    .select('id, count')
+    .eq('user_id', params.userId)
+    .eq('type', params.type)
+    .eq('target_id', params.targetId)
+    .eq('read', false)
+    .maybeSingle();
+  if (existing) {
+    await supabaseAdmin
+      .from('notifications')
+      .update({
+        actor_id: params.actorId,
+        count: (existing.count as number) + 1,
+        snippet: params.snippet,
+        created_at: new Date().toISOString(),
+      })
+      .eq('id', existing.id);
+    return;
+  }
+  await supabaseAdmin.from('notifications').insert({
+    user_id: params.userId,
+    actor_id: params.actorId,
+    type: params.type,
+    lobby_id: params.lobbyId,
+    lobby_name: params.lobbyName,
+    target_type: params.targetType,
+    target_id: params.targetId,
+    snippet: params.snippet,
+  });
+}
+
+/** Notify whoever owns a reacted-to pick or message (skips bot-owned picks). */
+async function notifyReactionTarget(
+  lobbyId: string,
+  targetType: 'MESSAGE' | 'PICK',
+  targetId: string,
+  actorId: string,
+): Promise<void> {
+  const { data: lobbyRow } = await supabaseAdmin
+    .from('lobbies')
+    .select('name')
+    .eq('id', lobbyId)
+    .maybeSingle();
+  const lobbyName = (lobbyRow?.name as string | undefined) ?? 'a draft';
+
+  if (targetType === 'PICK') {
+    const { data: pick } = await supabaseAdmin
+      .from('picks')
+      .select('team_id, player_id')
+      .eq('id', targetId)
+      .maybeSingle();
+    if (!pick) return;
+    const [{ data: team }, { data: player }] = await Promise.all([
+      supabaseAdmin.from('teams').select('owner_id').eq('id', pick.team_id).maybeSingle(),
+      supabaseAdmin.from('players').select('name').eq('id', pick.player_id).maybeSingle(),
+    ]);
+    if (!team?.owner_id) return;
+    await notifyGrouped({
+      userId: team.owner_id as string,
+      actorId,
+      type: 'PICK_REACTION',
+      lobbyId,
+      lobbyName,
+      targetType: 'PICK',
+      targetId,
+      snippet: (player?.name as string | undefined) ?? 'a player',
+    });
+    return;
+  }
+
+  const { data: message } = await supabaseAdmin
+    .from('chat_messages')
+    .select('user_id, kind, body')
+    .eq('id', targetId)
+    .maybeSingle();
+  if (!message || message.kind !== 'USER') return;
+  const body = message.body as string;
+  await notifyGrouped({
+    userId: message.user_id as string,
+    actorId,
+    type: 'MESSAGE_REACTION',
+    lobbyId,
+    lobbyName,
+    targetType: 'MESSAGE',
+    targetId,
+    snippet: body.length > 80 ? `${body.slice(0, 80)}…` : body,
+  });
+}
+
+/** Notify every lobby member @mentioned in a chat message or pick comment. */
+async function notifyMentions(
+  lobbyId: string,
+  actorId: string,
+  messageId: string,
+  body: string,
+): Promise<void> {
+  const { data: memberRows } = await supabaseAdmin
+    .from('lobby_members')
+    .select('user_id, profiles ( username )')
+    .eq('lobby_id', lobbyId);
+  const memberList = (memberRows ?? []) as unknown as {
+    user_id: string;
+    profiles: { username: string } | null;
+  }[];
+  const usernames = memberList
+    .map((m) => m.profiles?.username)
+    .filter((u): u is string => !!u);
+  const mentioned = new Set(
+    extractMentionedUsernames(body, usernames).map((u) => u.toLowerCase()),
+  );
+  if (mentioned.size === 0) return;
+
+  const { data: lobbyRow } = await supabaseAdmin
+    .from('lobbies')
+    .select('name')
+    .eq('id', lobbyId)
+    .maybeSingle();
+  const lobbyName = (lobbyRow?.name as string | undefined) ?? 'a draft';
+  const snippet = body.length > 140 ? `${body.slice(0, 140)}…` : body;
+
+  for (const m of memberList) {
+    const uname = m.profiles?.username;
+    if (!uname || !mentioned.has(uname.toLowerCase()) || m.user_id === actorId) continue;
+    await notifyGrouped({
+      userId: m.user_id,
+      actorId,
+      type: 'MENTION',
+      lobbyId,
+      lobbyName,
+      targetType: 'MESSAGE',
+      targetId: messageId,
+      snippet,
+    });
+  }
+}
+
+/** When the draft ended (completed_at, falling back to the last pick), or null if not complete. */
+async function draftEndedAt(lobbyId: string): Promise<string | null> {
   const { data: lobby } = await supabaseAdmin
     .from('lobbies')
     .select('status, completed_at')
     .eq('id', lobbyId)
     .maybeSingle();
-  if (!lobby || lobby.status !== 'COMPLETE') return false;
-  let endedAt = lobby.completed_at as string | null;
-  if (!endedAt) {
-    const { data: lastPick } = await supabaseAdmin
-      .from('picks')
-      .select('picked_at')
-      .eq('lobby_id', lobbyId)
-      .order('picked_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    endedAt = lastPick?.picked_at ?? null;
-  }
-  if (!endedAt) return false;
-  return Date.now() > new Date(endedAt).getTime() + CHAT_LOCK_MS;
+  if (!lobby || lobby.status !== 'COMPLETE') return null;
+  if (lobby.completed_at) return lobby.completed_at as string;
+  const { data: lastPick } = await supabaseAdmin
+    .from('picks')
+    .select('picked_at')
+    .eq('lobby_id', lobbyId)
+    .order('picked_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return (lastPick?.picked_at as string | undefined) ?? null;
+}
+
+/** Chat locks CHAT_LOCK_MS after the draft ends. */
+async function isChatLocked(lobbyId: string): Promise<boolean> {
+  const endedAt = await draftEndedAt(lobbyId);
+  return !!endedAt && Date.now() > new Date(endedAt).getTime() + CHAT_LOCK_MS;
+}
+
+/** Emoji reactions lock REACTION_LOCK_MS (much later) after the draft ends. */
+async function isReactionsLocked(lobbyId: string): Promise<boolean> {
+  const endedAt = await draftEndedAt(lobbyId);
+  return !!endedAt && Date.now() > new Date(endedAt).getTime() + REACTION_LOCK_MS;
 }
 
 /** POST /api/lobbies/:id/start — commissioner kicks off the draft. */
@@ -574,13 +739,16 @@ draftRouter.post('/:id/chat', async (req: AuthedRequest, res: Response) => {
     return;
   }
 
-  const { error } = await supabaseAdmin
+  const { data: inserted, error } = await supabaseAdmin
     .from('chat_messages')
-    .insert({ lobby_id: lobbyId, user_id: userId, kind: 'USER', body: parsed.data.body });
+    .insert({ lobby_id: lobbyId, user_id: userId, kind: 'USER', body: parsed.data.body })
+    .select('id')
+    .single();
   if (error) {
     res.status(500).json({ error: error.message });
     return;
   }
+  await notifyMentions(lobbyId, userId, inserted.id as string, parsed.data.body);
   res.json({ ok: true });
 });
 
@@ -607,7 +775,7 @@ draftRouter.post('/:id/pick-comment', async (req: AuthedRequest, res: Response) 
   // The pick must belong to this lobby.
   const { data: pick } = await supabaseAdmin
     .from('picks')
-    .select('id')
+    .select('id, team_id')
     .eq('id', parsed.data.pickId)
     .eq('lobby_id', lobbyId)
     .maybeSingle();
@@ -616,17 +784,41 @@ draftRouter.post('/:id/pick-comment', async (req: AuthedRequest, res: Response) 
     return;
   }
 
-  const { error } = await supabaseAdmin.from('chat_messages').insert({
-    lobby_id: lobbyId,
-    user_id: userId,
-    kind: 'USER',
-    body: parsed.data.body,
-    reply_to_pick_id: parsed.data.pickId,
-  });
+  const { data: inserted, error } = await supabaseAdmin
+    .from('chat_messages')
+    .insert({
+      lobby_id: lobbyId,
+      user_id: userId,
+      kind: 'USER',
+      body: parsed.data.body,
+      reply_to_pick_id: parsed.data.pickId,
+    })
+    .select('id')
+    .single();
   if (error) {
     res.status(500).json({ error: error.message });
     return;
   }
+
+  // Notify the pick's owner that someone replied (grouped if several do).
+  const [{ data: team }, { data: lobbyRow }] = await Promise.all([
+    supabaseAdmin.from('teams').select('owner_id').eq('id', pick.team_id).maybeSingle(),
+    supabaseAdmin.from('lobbies').select('name').eq('id', lobbyId).maybeSingle(),
+  ]);
+  const body = parsed.data.body;
+  if (team?.owner_id) {
+    await notifyGrouped({
+      userId: team.owner_id as string,
+      actorId: userId,
+      type: 'PICK_REPLY',
+      lobbyId,
+      lobbyName: (lobbyRow?.name as string | undefined) ?? 'a draft',
+      targetType: 'PICK',
+      targetId: parsed.data.pickId,
+      snippet: body.length > 140 ? `${body.slice(0, 140)}…` : body,
+    });
+  }
+  await notifyMentions(lobbyId, userId, inserted.id as string, body);
   res.json({ ok: true });
 });
 
@@ -643,6 +835,10 @@ draftRouter.post('/:id/chat-react', async (req: AuthedRequest, res: Response) =>
   const parsed = chatReactSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.flatten() });
+    return;
+  }
+  if (await isReactionsLocked(lobbyId)) {
+    res.status(409).json({ error: 'Reactions are locked for this draft' });
     return;
   }
   const { targetType, targetId, emoji } = parsed.data;
@@ -672,6 +868,7 @@ draftRouter.post('/:id/chat-react', async (req: AuthedRequest, res: Response) =>
     res.status(500).json({ error: error.message });
     return;
   }
+  await notifyReactionTarget(lobbyId, targetType, targetId, userId);
   res.json({ ok: true, reacted: true });
 });
 
@@ -983,5 +1180,75 @@ draftRouter.post('/:id/remove-bot', async (req: AuthedRequest, res: Response) =>
     return;
   }
   await supabaseAdmin.from('teams').delete().eq('id', team.id);
+  res.json({ ok: true });
+});
+
+/** POST /api/lobbies/:id/leave — a member leaves the lobby (pre-draft only). */
+draftRouter.post('/:id/leave', async (req: AuthedRequest, res: Response) => {
+  const lobbyId = req.params.id;
+  const userId = req.user!.id;
+
+  const { data: lobby } = await supabaseAdmin
+    .from('lobbies')
+    .select('status, commissioner_id')
+    .eq('id', lobbyId)
+    .maybeSingle();
+  if (!lobby) {
+    res.status(404).json({ error: 'Lobby not found' });
+    return;
+  }
+  if (lobby.commissioner_id === userId) {
+    res.status(409).json({ error: 'The commissioner can’t leave — delete the lobby instead' });
+    return;
+  }
+  if (lobby.status !== 'SETUP' && lobby.status !== 'SCHEDULED') {
+    res.status(409).json({ error: 'You can only leave before the draft starts' });
+    return;
+  }
+  const role = await getRole(lobbyId, userId);
+  if (!role) {
+    res.status(403).json({ error: 'You are not a member of this lobby' });
+    return;
+  }
+
+  await supabaseAdmin.from('teams').delete().eq('lobby_id', lobbyId).eq('owner_id', userId);
+  await supabaseAdmin.from('lobby_members').delete().eq('lobby_id', lobbyId).eq('user_id', userId);
+  res.json({ ok: true });
+});
+
+/** POST /api/lobbies/:id/kick — commissioner removes a member (pre-draft only). */
+draftRouter.post('/:id/kick', async (req: AuthedRequest, res: Response) => {
+  const lobbyId = req.params.id;
+  const role = await getRole(lobbyId, req.user!.id);
+  if (!isCommish(role)) {
+    res.status(403).json({ error: 'Only the commissioner can remove members' });
+    return;
+  }
+  const targetId = typeof req.body?.userId === 'string' ? req.body.userId : null;
+  if (!targetId) {
+    res.status(400).json({ error: 'userId is required' });
+    return;
+  }
+
+  const { data: lobby } = await supabaseAdmin
+    .from('lobbies')
+    .select('status, commissioner_id')
+    .eq('id', lobbyId)
+    .maybeSingle();
+  if (!lobby) {
+    res.status(404).json({ error: 'Lobby not found' });
+    return;
+  }
+  if (targetId === lobby.commissioner_id) {
+    res.status(409).json({ error: 'The commissioner can’t be removed' });
+    return;
+  }
+  if (lobby.status !== 'SETUP' && lobby.status !== 'SCHEDULED') {
+    res.status(409).json({ error: 'Members can only be removed before the draft starts' });
+    return;
+  }
+
+  await supabaseAdmin.from('teams').delete().eq('lobby_id', lobbyId).eq('owner_id', targetId);
+  await supabaseAdmin.from('lobby_members').delete().eq('lobby_id', lobbyId).eq('user_id', targetId);
   res.json({ ok: true });
 });

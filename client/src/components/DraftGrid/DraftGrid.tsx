@@ -1,6 +1,9 @@
 import { POSITION_COLORS, type DraftType, type Position } from '@draft-lobby/shared';
+import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlined';
 import { useState } from 'react';
-import type { PickRow, PlayerRow, TeamRow } from '../../lib/types';
+import { avatarForTeam } from '../../lib/teamAvatar';
+import type { ChatMessageRow, MemberRow, PickRow, PlayerRow, TeamRow } from '../../lib/types';
+import { Avatar } from '../Avatar/Avatar';
 import './DraftGrid.scss';
 
 export interface ReactionEntry {
@@ -10,6 +13,7 @@ export interface ReactionEntry {
 
 interface Props {
   teams: TeamRow[];
+  members: MemberRow[];
   rounds: number;
   picks: PickRow[];
   playersById: Map<string, PlayerRow>;
@@ -23,6 +27,8 @@ interface Props {
   onReactPick?: (pickId: string, emoji: string) => void;
   /** Click a pick to open its detail modal. */
   onPickClick?: (pick: PickRow) => void;
+  /** Comments per pick id (just for the "has comments" board indicator). */
+  commentsByPick?: Map<string, ChatMessageRow[]>;
 }
 
 /**
@@ -32,6 +38,7 @@ interface Props {
  */
 export function DraftGrid({
   teams,
+  members,
   rounds,
   picks,
   playersById,
@@ -42,6 +49,7 @@ export function DraftGrid({
   reactionsByPick,
   onReactPick,
   onPickClick,
+  commentsByPick,
 }: Props) {
   // Index picks by "round:teamId" for O(1) cell lookup.
   const byCell = new Map<string, PickRow>();
@@ -69,10 +77,9 @@ export function DraftGrid({
                   onClick={() => onTeamClick?.(team.id)}
                   title={`View ${team.name}'s lineup`}
                 >
-                  <span
-                    className="draft-grid__team-swatch"
-                    style={{ background: team.color }}
-                  />
+                  <span className="draft-grid__team-avatar">
+                    <Avatar avatar={avatarForTeam(team, members)} size={16} />
+                  </span>
                   {team.name}
                 </button>
               </th>
@@ -87,7 +94,7 @@ export function DraftGrid({
                 <td
                   className={`draft-grid__round${
                     hover?.round === round ? ' draft-grid__round--hi' : ''
-                  }`}
+                  }${round === currentRound ? ' draft-grid__round--current' : ''}`}
                 >
                   <span className="draft-grid__round-num">{round}</span>
                   {draftType === 'SNAKE' && (
@@ -113,6 +120,7 @@ export function DraftGrid({
                         pick={pick}
                         player={player}
                         entry={reactionsByPick?.get(pick.id)}
+                        hasComment={(commentsByPick?.get(pick.id)?.length ?? 0) > 0}
                         onReact={onReactPick}
                         onClick={onPickClick}
                         onEnter={() => setHover({ round, teamId: team.id })}
@@ -150,6 +158,7 @@ function PickCell({
   pick,
   player,
   entry,
+  hasComment,
   onReact,
   onClick,
   onEnter,
@@ -158,6 +167,7 @@ function PickCell({
   pick: PickRow;
   player: PlayerRow;
   entry: ReactionEntry | undefined;
+  hasComment: boolean;
   onReact?: (pickId: string, emoji: string) => void;
   onClick?: (pick: PickRow) => void;
   onEnter: () => void;
@@ -186,10 +196,13 @@ function PickCell({
         </span>
       </div>
 
-      {/* Subtle, uncluttered indicator that this pick has reactions. */}
-      {active.length > 0 && (
-        <span className="draft-grid__react-flag" aria-hidden>
-          !!
+      {/* Subtle, uncluttered indicators for reactions / comments on this pick. */}
+      {(active.length > 0 || hasComment) && (
+        <span className="draft-grid__flags" aria-hidden>
+          {hasComment && (
+            <ChatBubbleOutlineIcon className="draft-grid__comment-flag" sx={{ fontSize: 11 }} />
+          )}
+          {active.length > 0 && <span className="draft-grid__react-flag">!!</span>}
         </span>
       )}
 

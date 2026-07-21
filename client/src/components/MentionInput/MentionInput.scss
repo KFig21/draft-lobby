@@ -1,0 +1,51 @@
+@use 'variables' as *;
+
+.mention-input {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+
+  input {
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+  }
+
+  &__dropdown {
+    position: absolute;
+    bottom: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    z-index: 20;
+    max-height: 200px;
+    overflow-y: auto;
+    background: $bg-overlay;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  }
+
+  &__opt {
+    display: flex;
+    align-items: center;
+    gap: $space;
+    width: 100%;
+    padding: $space $space * 1.25;
+    border: none;
+    background: none;
+    color: $text;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover {
+      background: $bg-hover;
+    }
+
+    &.is-active {
+      background: $bg-hover;
+    }
+  }
+}

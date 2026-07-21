@@ -32,6 +32,7 @@
       .clock {
         color: #05231a;
       }
+
       .draft__home-btn,
       .draft__room-btn {
         border-color: rgba(#05231a, 0.35);
@@ -40,13 +41,16 @@
           background: rgba(#05231a, 0.14);
         }
       }
+
       .muted {
         color: rgba(#05231a, 0.72);
       }
+
       .draft__yourturn {
         background: #05231a;
         color: $accent;
       }
+
       .draft__icon-btn:hover {
         background: rgba(#05231a, 0.14);
         color: #05231a;
@@ -74,16 +78,59 @@
     }
   }
 
+  // Self-contained (not `.button`) so the compact padding here always wins —
+  // reduce padding/font-size on the line below to resize these two buttons.
   &__home-btn,
   &__room-btn {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    padding: $space * 0.5 $space;
-    font-size: 0.85rem;
+    padding: $space * 0.4 $space * 0.9;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: $bg-overlay;
+    color: $text;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+
+    &:hover {
+      border-color: $primary;
+    }
 
     svg {
       font-size: 1rem;
+    }
+  }
+
+  // Wraps the commissioner/member tools in the desktop top bar — on mobile
+  // they instead render in &__mobile-commish, flush above the bottom nav.
+  &__commish-tools {
+    display: none;
+    align-items: center;
+    gap: $space * 0.5;
+    flex-wrap: wrap;
+
+    @include lg {
+      display: flex;
+    }
+  }
+
+  // Mobile-only: commissioner/member tools sit flush above the bottom nav
+  // (a sibling of &__tabs, so it naturally stacks right on top of it).
+  &__mobile-commish {
+    display: flex;
+    align-items: center;
+    gap: $space * 0.5;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+    padding: $space * 0.75 $space;
+    border-top: 1px solid $border;
+    background: $bg-raised;
+
+    @include lg {
+      display: none;
     }
   }
 
@@ -104,6 +151,7 @@
     &:hover:not(:disabled) {
       border-color: $primary;
     }
+
     &:disabled {
       opacity: 0.5;
       cursor: not-allowed;
@@ -164,12 +212,24 @@
     }
   }
 
+  // Self-contained (not `.button`) — hidden on mobile, shown desktop-only.
+  // Reduce padding/font-size on the line below to resize this button.
   &__export-btn {
     display: none;
     align-items: center;
     gap: 4px;
-    padding: $space $space * 1.5;
-    font-size: 0.85rem;
+    padding: $space * 0.4 $space * 0.9;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: $bg-overlay;
+    color: $text;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+
+    &:hover {
+      border-color: $primary;
+    }
 
     @include lg {
       display: inline-flex;
@@ -183,6 +243,7 @@
     &:hover {
       opacity: 1;
     }
+
     &.is-on {
       opacity: 1;
       color: $accent;
@@ -525,6 +586,7 @@
     text-align: center;
   }
 }
+
 // Export-options list shown inside the "Export draft" modal.
 .draft-export-options {
   display: flex;

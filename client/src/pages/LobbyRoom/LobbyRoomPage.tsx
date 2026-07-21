@@ -1,5 +1,6 @@
 import {
   defaultAvatar,
+  extractMentionedUsernames,
   roundsForSettings,
   type Avatar as AvatarData,
 } from '@draft-lobby/shared';
@@ -17,6 +18,7 @@ import HowToRegOutlinedIcon from '@mui/icons-material/HowToRegOutlined';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
+import PersonRemoveOutlinedIcon from '@mui/icons-material/PersonRemoveOutlined';
 import ShuffleIcon from '@mui/icons-material/Shuffle';
 import SmartToyOutlinedIcon from '@mui/icons-material/SmartToyOutlined';
 import { clockSummary } from '../../lib/format';
@@ -25,37 +27,35 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Avatar } from '../../components/Avatar/Avatar';
 import { ConfirmModal } from '../../components/ConfirmModal/ConfirmModal';
 import { DraftChat } from '../../components/DraftChat/DraftChat';
+import { ErrorScreen } from '../../components/ErrorScreen/ErrorScreen';
+import { Loader } from '../../components/Loader/Loader';
 import { useAuth } from '../../auth/AuthContext';
 import { useLobby } from '../../hooks/useLobby';
 import { usePlayers } from '../../hooks/usePlayers';
 import { api } from '../../lib/api';
+import { avatarForTeam } from '../../lib/teamAvatar';
 import { supabase } from '../../supabase';
+import { useToast } from '../../toast/ToastContext';
 import type { FriendshipRow, PlayerRow, ProfileMini, TeamRow } from '../../lib/types';
 import './LobbyRoomPage.scss';
 
 const OPEN_AVATAR = { bgColor: '#2e3347', shape: 'circle', emoji: '➕' } as const;
 
-// Vivid palette so each bot gets its own (stable) avatar colour.
-const BOT_COLORS = [
-  '#f8577d', '#f6a642', '#3fd6a5', '#6c5ce7', '#4aa8ff', '#e056fd',
-  '#ff7675', '#00b894', '#fd79a8', '#a29bfe', '#fdcb6e', '#55efc4',
-];
-function botAvatar(teamId: string): AvatarData {
-  let h = 0;
-  for (let i = 0; i < teamId.length; i++) h = (h * 31 + teamId.charCodeAt(i)) >>> 0;
-  return { bgColor: BOT_COLORS[h % BOT_COLORS.length], shape: 'circle', emoji: '🤖' };
-}
-
 export function LobbyRoomPage() {
   const { id = '' } = useParams();
   const { session } = useAuth();
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const { lobby, teams, members, picks, loading, error, refetch } = useLobby(id);
   const { players } = usePlayers();
   const [starting, setStarting] = useState(false);
   const [botBusy, setBotBusy] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+  const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const [kickTarget, setKickTarget] = useState<{ userId: string; name: string } | null>(null);
+  const [kicking, setKicking] = useState(false);
   const [copied, setCopied] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
@@ -87,6 +87,67 @@ export function LobbyRoomPage() {
   }, []);
 
   const userId = session?.user.id;
+
+  function memberAvatar(uid: string): AvatarData {
+    return members.find((m) => m.user_id === uid)?.profiles?.avatar ?? defaultAvatar(uid);
+  }
+
+  // Toast: alert everyone else when a new team joins the lobby — a real user
+  // claiming a bot's seat (UPDATE) or the lowest open slot (INSERT).
+  useEffect(() => {
+    const ch = supabase
+      .channel(`lobby-toast:${id}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'teams', filter: `lobby_id=eq.${id}` },
+        (payload) => {
+          const oldRow = payload.old as { owner_id: string | null };
+          const newRow = payload.new as { owner_id: string | null; name: string };
+          if (!newRow.owner_id || newRow.owner_id === oldRow.owner_id) return;
+          if (newRow.owner_id === userId) return;
+          showToast({
+            title: 'New team joined',
+            body: `${newRow.name} joined the lobby`,
+            avatar: memberAvatar(newRow.owner_id),
+          });
+        },
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'teams', filter: `lobby_id=eq.${id}` },
+        (payload) => {
+          const row = payload.new as { owner_id: string | null; name: string; is_bot: boolean };
+          if (row.is_bot || !row.owner_id || row.owner_id === userId) return;
+          showToast({
+            title: 'New team joined',
+            body: `${row.name} joined the lobby`,
+            avatar: memberAvatar(row.owner_id),
+          });
+        },
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `lobby_id=eq.${id}` },
+        (payload) => {
+          const row = payload.new as { kind: string; user_id: string; body: string };
+          if (row.kind !== 'USER' || row.user_id === userId) return;
+          const myUsername = members.find((m) => m.user_id === userId)?.profiles?.username;
+          if (myUsername && extractMentionedUsernames(row.body, [myUsername]).length > 0) {
+            showToast({
+              title: 'You were mentioned',
+              body: row.body,
+              tone: 'info',
+              avatar: memberAvatar(row.user_id),
+            });
+          }
+        },
+      )
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(ch);
+    };
+  }, [id, userId, showToast, members]);
+
   const isCommish = useMemo(() => {
     if (!userId) return false;
     if (lobby?.commissioner_id === userId) return true;
@@ -166,8 +227,7 @@ export function LobbyRoomPage() {
     const member = members.find((m) => m.user_id === ownerId);
     return member?.profiles?.avatar ?? defaultAvatar(ownerId);
   };
-  const teamAvatar = (team: TeamRow): AvatarData =>
-    team.is_bot ? botAvatar(team.id) : avatarFor(team.owner_id);
+  const teamAvatar = (team: TeamRow): AvatarData => avatarForTeam(team, members);
 
   // Maps for the lobby chat (players load lazily; picks are empty pre-draft).
   const teamsById = useMemo(() => new Map(teams.map((t) => [t.id, t])), [teams]);
@@ -222,10 +282,46 @@ export function LobbyRoomPage() {
       setShowDeleteModal(false);
     }
   }
+  async function confirmLeave() {
+    setLeaving(true);
+    setActionError(null);
+    try {
+      await api(`/lobbies/${id}/leave`, { method: 'POST' });
+      navigate('/home');
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Failed to leave lobby');
+      setLeaving(false);
+      setShowLeaveModal(false);
+    }
+  }
+  async function confirmKick() {
+    if (!kickTarget) return;
+    setKicking(true);
+    setActionError(null);
+    try {
+      await api(`/lobbies/${id}/kick`, { method: 'POST', body: { userId: kickTarget.userId } });
+      setKickTarget(null);
+      refetch();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Failed to remove member');
+    } finally {
+      setKicking(false);
+    }
+  }
 
-  if (loading) return <div className="loading">Loading lobby…</div>;
+  if (loading)
+    return (
+      <div className="loading">
+        <Loader label="Loading lobby…" />
+      </div>
+    );
   if (error || !lobby)
-    return <div className="loading">{error ?? 'Lobby not found'}</div>;
+    return (
+      <ErrorScreen
+        title="Lobby not found"
+        message={error ?? 'This lobby may have been deleted or the link is incorrect.'}
+      />
+    );
 
   const s = lobby.settings;
   const filledSlots = teams.length;
@@ -629,6 +725,23 @@ export function LobbyRoomPage() {
                             <CloseIcon fontSize="small" />
                           </button>
                         )}
+                        {!team.is_bot &&
+                          isCommish &&
+                          !draftLive &&
+                          team.owner_id &&
+                          team.owner_id !== lobby.commissioner_id && (
+                            <button
+                              type="button"
+                              className="team-list__icon"
+                              aria-label={`Remove ${team.name} from the lobby`}
+                              title="Remove from lobby"
+                              onClick={() =>
+                                setKickTarget({ userId: team.owner_id!, name: team.name })
+                              }
+                            >
+                              <PersonRemoveOutlinedIcon fontSize="small" />
+                            </button>
+                          )}
                         {otherUserId && rel === 'incoming' && (
                           <button
                             type="button"
@@ -725,6 +838,16 @@ export function LobbyRoomPage() {
             </button>
           </div>
         )}
+        {lobby.commissioner_id !== userId && !draftLive && (
+          <div className="room__actions">
+            <button
+              className="button button--sm room__delete"
+              onClick={() => setShowLeaveModal(true)}
+            >
+              Leave lobby
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Chat: right sidebar on desktop, bottom drawer on mobile. */}
@@ -809,6 +932,36 @@ export function LobbyRoomPage() {
         >
           This permanently deletes <strong>{lobby.name}</strong> and all of its teams and
           settings. This can’t be undone.
+        </ConfirmModal>
+      )}
+
+      {showLeaveModal && (
+        <ConfirmModal
+          title="Leave this lobby?"
+          confirmLabel="Leave lobby"
+          busyLabel="Leaving…"
+          busy={leaving}
+          danger
+          onConfirm={confirmLeave}
+          onClose={() => setShowLeaveModal(false)}
+        >
+          You’ll give up your draft slot in <strong>{lobby.name}</strong>. You can rejoin
+          later if a slot is still open.
+        </ConfirmModal>
+      )}
+
+      {kickTarget && (
+        <ConfirmModal
+          title={`Remove ${kickTarget.name}?`}
+          confirmLabel="Remove"
+          busyLabel="Removing…"
+          busy={kicking}
+          danger
+          onConfirm={confirmKick}
+          onClose={() => setKickTarget(null)}
+        >
+          <strong>{kickTarget.name}</strong> will lose their draft slot and have to be
+          re-invited to rejoin.
         </ConfirmModal>
       )}
     </main>

@@ -7,9 +7,12 @@ import {
   useLocation,
 } from 'react-router-dom';
 import { AuthProvider, useAuth } from './auth/AuthContext';
+import { ErrorBoundary } from './components/ErrorBoundary/ErrorBoundary';
+import { Loader } from './components/Loader/Loader';
 import { MainLayout } from './components/Navbar/MainLayout';
 import { NotificationsProvider } from './notifications/NotificationsContext';
 import { ThemeProvider } from './theme/ThemeContext';
+import { ToastProvider } from './toast/ToastContext';
 import { AuthPage } from './pages/Auth/AuthPage';
 import { DraftBoardPage } from './pages/DraftBoard/DraftBoardPage';
 import { FriendsPage } from './pages/Friends/FriendsPage';
@@ -26,7 +29,12 @@ import { SplashPage } from './pages/Splash/SplashPage';
 
 function Protected({ children }: { children: React.ReactNode }) {
   const { session, loading } = useAuth();
-  if (loading) return <div className="loading">Loading…</div>;
+  if (loading)
+    return (
+      <div className="loading">
+        <Loader />
+      </div>
+    );
   if (!session) return <Navigate to="/auth" replace />;
   return <>{children}</>;
 }
@@ -43,7 +51,12 @@ function ScrollToTop() {
 /** Splash / auth are for signed-out visitors; send signed-in users home. */
 function PublicOnly({ children }: { children: React.ReactNode }) {
   const { session, loading } = useAuth();
-  if (loading) return <div className="loading">Loading…</div>;
+  if (loading)
+    return (
+      <div className="loading">
+        <Loader />
+      </div>
+    );
   if (session) return <Navigate to="/home" replace />;
   return <>{children}</>;
 }
@@ -53,8 +66,10 @@ export default function App() {
     <ThemeProvider>
       <AuthProvider>
         <NotificationsProvider>
+        <ToastProvider>
         <BrowserRouter>
           <ScrollToTop />
+          <ErrorBoundary>
           <Routes>
           <Route
             path="/"
@@ -105,7 +120,9 @@ export default function App() {
           />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          </ErrorBoundary>
         </BrowserRouter>
+        </ToastProvider>
         </NotificationsProvider>
       </AuthProvider>
     </ThemeProvider>

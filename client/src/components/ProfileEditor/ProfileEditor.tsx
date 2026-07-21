@@ -1,4 +1,10 @@
-import { avatarSchema, defaultAvatar, type Avatar as AvatarData } from '@draft-lobby/shared';
+import {
+  avatarSchema,
+  defaultAvatar,
+  USERNAME_MAX_LEN,
+  USERNAME_MIN_LEN,
+  type Avatar as AvatarData,
+} from '@draft-lobby/shared';
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../auth/AuthContext';
 import { supabase } from '../../supabase';
@@ -38,8 +44,8 @@ export function ProfileEditor() {
     setStatus(null);
 
     const trimmed = username.trim();
-    if (trimmed.length < 3) {
-      setStatus('Username must be at least 3 characters');
+    if (trimmed.length < USERNAME_MIN_LEN) {
+      setStatus(`Username must be at least ${USERNAME_MIN_LEN} characters`);
       return;
     }
 
@@ -77,8 +83,8 @@ export function ProfileEditor() {
         <input
           value={username}
           onChange={(e) => setUsername(e.target.value)}
-          minLength={3}
-          maxLength={20}
+          minLength={USERNAME_MIN_LEN}
+          maxLength={USERNAME_MAX_LEN}
           required
         />
       </label>

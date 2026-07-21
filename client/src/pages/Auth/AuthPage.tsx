@@ -1,3 +1,4 @@
+import { USERNAME_MAX_LEN, USERNAME_MIN_LEN } from '@draft-lobby/shared';
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../supabase';
@@ -58,8 +59,8 @@ export function AuthPage() {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
-              minLength={3}
-              maxLength={24}
+              minLength={USERNAME_MIN_LEN}
+              maxLength={USERNAME_MAX_LEN}
               autoComplete="username"
             />
           </label>

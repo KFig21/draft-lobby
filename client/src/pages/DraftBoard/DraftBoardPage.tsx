@@ -1,8 +1,12 @@
 import {
   CHAT_LOCK_MS,
   POSITIONS,
+  REACTION_LOCK_MS,
+  defaultAvatar,
   draftPositionForOverall,
+  extractMentionedUsernames,
   roundsForSettings,
+  type Avatar as AvatarData,
   type Position,
 } from '@draft-lobby/shared';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlined';
@@ -25,15 +29,17 @@ import TableChartOutlinedIcon from '@mui/icons-material/TableChartOutlined';
 import UndoIcon from '@mui/icons-material/Undo';
 import type { SvgIconComponent } from '@mui/icons-material';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ConfirmModal } from '../../components/ConfirmModal/ConfirmModal';
 import { DraftChat } from '../../components/DraftChat/DraftChat';
 import { DraftGrid, type ReactionEntry } from '../../components/DraftGrid/DraftGrid';
+import { ErrorScreen } from '../../components/ErrorScreen/ErrorScreen';
+import { Loader } from '../../components/Loader/Loader';
 import { LockInModal } from '../../components/LockInModal/LockInModal';
 import { Modal } from '../../components/Modal/Modal';
 import { NavDrawer } from '../../components/Navbar/NavDrawer';
 import { PickClock } from '../../components/PickClock/PickClock';
-import { PickModal } from '../../components/PickModal/PickModal';
+import { PickModal, type PickComment } from '../../components/PickModal/PickModal';
 import { PlayerCard } from '../../components/PlayerCard/PlayerCard';
 import { TeamLineup } from '../../components/TeamLineup/TeamLineup';
 import { ThemeToggle } from '../../components/ThemeToggle/ThemeToggle';
@@ -43,7 +49,8 @@ import { usePlayers } from '../../hooks/usePlayers';
 import { api } from '../../lib/api';
 import { exportDraftCsv, exportDraftExcel } from '../../lib/exportDraft';
 import { supabase } from '../../supabase';
-import type { ChatReactionRow, PickRow, PlayerRow, TeamRow } from '../../lib/types';
+import { useToast } from '../../toast/ToastContext';
+import type { ChatMessageRow, ChatReactionRow, PickRow, PlayerRow, TeamRow } from '../../lib/types';
 import './DraftBoardPage.scss';
 
 type Filter = 'ALL' | Position | 'FLEX' | 'SUPERFLEX';
@@ -74,7 +81,9 @@ const MAX_SIDEBAR = 600;
 export function DraftBoardPage() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { session } = useAuth();
+  const { showToast } = useToast();
   const { lobby, teams, members, picks, loading } = useLobby(id);
   const { players, loading: playersLoading } = usePlayers();
 
@@ -169,8 +178,13 @@ export function DraftBoardPage() {
     return m;
   }, [members]);
 
-  // ── Pick reactions (board hover + pick modal) ──
-  const [pickReactions, setPickReactions] = useState<ChatReactionRow[]>([]);
+  function memberAvatar(uid: string): AvatarData {
+    return members.find((m) => m.user_id === uid)?.profiles?.avatar ?? defaultAvatar(uid);
+  }
+
+  // ── Reactions on picks (board hover + pick modal) and on messages/comments
+  // (pick modal's comment thread) — one fetch, split by target_type. ──
+  const [allReactions, setAllReactions] = useState<ChatReactionRow[]>([]);
   const [pickModal, setPickModal] = useState<PickRow | null>(null);
   useEffect(() => {
     const load = () =>
@@ -178,8 +192,7 @@ export function DraftBoardPage() {
         .from('chat_reactions')
         .select('*')
         .eq('lobby_id', id)
-        .eq('target_type', 'PICK')
-        .then(({ data }) => setPickReactions((data ?? []) as ChatReactionRow[]));
+        .then(({ data }) => setAllReactions((data ?? []) as ChatReactionRow[]));
     void load();
     const ch = supabase
       .channel(`board-react:${id}`)
@@ -194,22 +207,137 @@ export function DraftBoardPage() {
     };
   }, [id]);
 
-  const reactionsByPick = useMemo(() => {
+  function groupReactions(rows: ChatReactionRow[]): Map<string, ReactionEntry> {
     const m = new Map<string, ReactionEntry>();
-    for (const r of pickReactions) {
+    for (const r of rows) {
       const e = m.get(r.target_id) ?? { counts: {}, mine: new Set<string>() };
       e.counts[r.emoji] = (e.counts[r.emoji] ?? 0) + 1;
       if (r.user_id === userId) e.mine.add(r.emoji);
       m.set(r.target_id, e);
     }
     return m;
-  }, [pickReactions, userId]);
+  }
+
+  const reactionsByPick = useMemo(
+    () => groupReactions(allReactions.filter((r) => r.target_type === 'PICK')),
+    [allReactions, userId],
+  );
+  const reactionsByMessage = useMemo(
+    () => groupReactions(allReactions.filter((r) => r.target_type === 'MESSAGE')),
+    [allReactions, userId],
+  );
+
+  // ── Pick comments (board indicator + pick modal thread) ──
+  const [pickComments, setPickComments] = useState<ChatMessageRow[]>([]);
+  const [pickCommentsLoaded, setPickCommentsLoaded] = useState(false);
+  useEffect(() => {
+    void supabase
+      .from('chat_messages')
+      .select('*')
+      .eq('lobby_id', id)
+      .not('reply_to_pick_id', 'is', null)
+      .order('created_at')
+      .then(({ data }) => {
+        setPickComments((data ?? []) as ChatMessageRow[]);
+        setPickCommentsLoaded(true);
+      });
+    const ch = supabase
+      .channel(`board-comments:${id}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `lobby_id=eq.${id}` },
+        (payload) => {
+          const row = payload.new as ChatMessageRow;
+          if (row.reply_to_pick_id) setPickComments((prev) => [...prev, row]);
+        },
+      )
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(ch);
+    };
+  }, [id]);
+
+  const commentsByPick = useMemo(() => {
+    const m = new Map<string, ChatMessageRow[]>();
+    for (const c of pickComments) {
+      if (!c.reply_to_pick_id) continue;
+      const list = m.get(c.reply_to_pick_id) ?? [];
+      list.push(c);
+      m.set(c.reply_to_pick_id, list);
+    }
+    return m;
+  }, [pickComments]);
+
+  // ── Deep link from a notification: open the relevant pick modal, or hand
+  // off to the chat panel to scroll+highlight a plain message/mention. ──
+  const [focusMessageId, setFocusMessageId] = useState<string | null>(null);
+  const focusHandledRef = useRef(false);
+  useEffect(() => {
+    const target = (
+      location.state as {
+        focusTarget?: {
+          targetType: 'PICK' | 'MESSAGE';
+          targetId: string;
+          notifType: string;
+        };
+      } | null
+    )?.focusTarget;
+    if (!target || focusHandledRef.current) return;
+
+    if (target.targetType === 'PICK') {
+      const pick = picks.find((p) => p.id === target.targetId);
+      if (!pick) return; // wait for picks to load
+      setPickModal(pick);
+      focusHandledRef.current = true;
+      navigate(location.pathname, { replace: true, state: null });
+      return;
+    }
+
+    // MESSAGE: a reaction on a pick-reply comment opens that pick's modal;
+    // a mention (or a reaction on a plain message) scrolls the chat to it.
+    if (target.notifType !== 'MENTION') {
+      if (!pickCommentsLoaded) return; // wait for the comment list to load
+      const comment = pickComments.find((c) => c.id === target.targetId);
+      if (comment?.reply_to_pick_id) {
+        const pick = picks.find((p) => p.id === comment.reply_to_pick_id);
+        if (pick) {
+          setPickModal(pick);
+          focusHandledRef.current = true;
+          navigate(location.pathname, { replace: true, state: null });
+          return;
+        }
+      }
+    }
+    setPanelTab('chat');
+    setMobileTab('chat');
+    setFocusMessageId(target.targetId);
+    focusHandledRef.current = true;
+  }, [location.state, location.pathname, picks, pickComments, pickCommentsLoaded, navigate]);
 
   async function reactPick(pickId: string, emoji: string) {
+    if (reactionsLocked) {
+      showToast({ title: 'Reactions are locked', body: 'Reactions closed 24h after the draft ended.', tone: 'warning' });
+      return;
+    }
     try {
       await api(`/lobbies/${id}/chat-react`, {
         method: 'POST',
         body: { targetType: 'PICK', targetId: pickId, emoji },
+      });
+    } catch {
+      /* realtime reconciles */
+    }
+  }
+
+  async function reactMessage(messageId: string, emoji: string) {
+    if (reactionsLocked) {
+      showToast({ title: 'Reactions are locked', body: 'Reactions closed 24h after the draft ended.', tone: 'warning' });
+      return;
+    }
+    try {
+      await api(`/lobbies/${id}/chat-react`, {
+        method: 'POST',
+        body: { targetType: 'MESSAGE', targetId: messageId, emoji },
       });
     } catch {
       /* realtime reconciles */
@@ -249,6 +377,72 @@ export function DraftBoardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoSkipBots, isCommish, lobby?.status, derived?.onClockTeam?.id, derived?.onClockTeam?.is_bot]);
 
+  // Toast alerts for pause requests / pause / resume / rollback — these
+  // already post a system chat message, so detect them off that instead of a
+  // separate notification channel. Skip the actor's own action.
+  useEffect(() => {
+    const ch = supabase
+      .channel(`board-toast:${id}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `lobby_id=eq.${id}` },
+        (payload) => {
+          const row = payload.new as { kind: string; user_id: string; body: string };
+          if (row.user_id === userId) return;
+          if (row.kind === 'USER') {
+            const myUsername = usernameById.get(userId ?? '');
+            if (myUsername && extractMentionedUsernames(row.body, [myUsername]).length > 0) {
+              showToast({
+                title: 'You were mentioned',
+                body: row.body,
+                tone: 'info',
+                avatar: memberAvatar(row.user_id),
+              });
+            }
+            return;
+          }
+          if (row.kind !== 'SYSTEM') return;
+          if (row.body.startsWith('🙋')) {
+            if (isCommish) {
+              showToast({
+                title: 'Pause requested',
+                body: row.body.replace('🙋 ', ''),
+                tone: 'warning',
+                action: { label: 'Pause draft', onClick: () => commishAction('pause') },
+                avatar: memberAvatar(row.user_id),
+              });
+            }
+          } else if (row.body.startsWith('⏸️')) {
+            showToast({
+              title: 'Draft paused',
+              body: row.body.replace('⏸️ ', ''),
+              tone: 'warning',
+              avatar: memberAvatar(row.user_id),
+            });
+          } else if (row.body.startsWith('▶️')) {
+            showToast({
+              title: 'Draft resumed',
+              body: row.body.replace('▶️ ', ''),
+              tone: 'success',
+              avatar: memberAvatar(row.user_id),
+            });
+          } else if (row.body.startsWith('↩️')) {
+            showToast({
+              title: 'Pick rolled back',
+              body: row.body.replace('↩️ ', ''),
+              tone: 'info',
+              avatar: memberAvatar(row.user_id),
+            });
+          }
+        },
+      )
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(ch);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, userId, isCommish]);
+
   const available = useMemo(() => {
     const q = search.trim().toLowerCase();
     return players.filter((p) => {
@@ -265,14 +459,24 @@ export function DraftBoardPage() {
     });
   }, [players, draftedIds, filter, search]);
 
-  if (loading || playersLoading) return <div className="loading">Loading draft…</div>;
-  if (!lobby) return <div className="loading">Lobby not found</div>;
+  if (loading || playersLoading)
+    return (
+      <div className="loading">
+        <Loader label="Loading draft…" />
+      </div>
+    );
+  if (!lobby) return <ErrorScreen title="Draft not found" />;
   if (lobby.status === 'SETUP' || lobby.status === 'SCHEDULED')
     return <Navigate to={`/lobby/${id}`} replace />;
 
   const { round, onClockTeam } = derived!;
   const isComplete = lobby.status === 'COMPLETE';
   const isPaused = lobby.status === 'PAUSED';
+  const endedAt = isComplete ? lobby.completed_at ?? null : null;
+  const chatLocked = !!endedAt && Date.now() >= new Date(endedAt).getTime() + CHAT_LOCK_MS;
+  // Emoji reactions stay open much longer than chat — locked 24h after the draft.
+  const reactionsLocked =
+    !!endedAt && Date.now() >= new Date(endedAt).getTime() + REACTION_LOCK_MS;
   const isMyTurn = !!onClockTeam && onClockTeam.owner_id === userId;
   const canPick = !isComplete && !isPaused && (isMyTurn || isCommish);
   const pickingForTeam = !isMyTurn && onClockTeam ? onClockTeam.name : null;
@@ -362,6 +566,60 @@ export function DraftBoardPage() {
 
   const myTurnHighlight = isMyTurn && !isPaused && !isComplete;
 
+  // Commissioner tools (+ member "Request pause"). Rendered twice — inline in
+  // the desktop top bar, and again in a bar flush above the mobile bottom nav
+  // — with CSS (not this function) deciding which copy is visible per breakpoint.
+  function CommishTools() {
+    return (
+      <>
+        {isCommish && !isComplete && (
+          <>
+            {isPaused ? (
+              <button
+                className="draft__tool-btn"
+                onClick={() => commishAction('resume')}
+                disabled={commishBusy}
+              >
+                <PlayArrowIcon fontSize="small" /> Resume
+              </button>
+            ) : (
+              <button
+                className="draft__tool-btn"
+                onClick={() => commishAction('pause')}
+                disabled={commishBusy}
+              >
+                <PauseIcon fontSize="small" /> Pause
+              </button>
+            )}
+            <button
+              className="draft__tool-btn"
+              onClick={() => setShowRollback(true)}
+              disabled={commishBusy || picks.length === 0}
+            >
+              <UndoIcon fontSize="small" /> Undo
+            </button>
+            <button
+              className={`draft__tool-btn draft__skipbots-btn${
+                autoSkipBots ? ' is-on' : ''
+              }`}
+              onClick={() => setAutoSkipBots((v) => !v)}
+              title="Automatically skip bot picks as they come on the clock"
+            >
+              <FastForwardIcon fontSize="small" /> Skip bots
+              {autoSkipBots ? ' · On' : ''}
+            </button>
+            {commishError && <span className="draft__commish-error">{commishError}</span>}
+          </>
+        )}
+        {!isCommish && !isComplete && !isPaused && (
+          <button className="draft__tool-btn" onClick={requestPause} disabled={reqPauseBusy}>
+            🙋 Request pause
+          </button>
+        )}
+      </>
+    );
+  }
+
   return (
     <div className="draft">
       <header className={`draft__topbar${myTurnHighlight ? ' draft__topbar--myturn' : ''}`}>
@@ -369,62 +627,19 @@ export function DraftBoardPage() {
           <div className="draft__nav-links">
             <button
               type="button"
-              className="button draft__home-btn"
+              className="draft__home-btn"
               onClick={() => navigate('/home')}
             >
               <HomeOutlinedIcon fontSize="small" /> Home
             </button>
-            <Link to={`/lobby/${id}`} className="button draft__room-btn">
+            <Link to={`/lobby/${id}`} className="draft__room-btn">
               <MeetingRoomOutlinedIcon fontSize="small" /> Room
             </Link>
           </div>
-          {isCommish && !isComplete && (
-            <>
-              {isPaused ? (
-                <button
-                  className="draft__tool-btn"
-                  onClick={() => commishAction('resume')}
-                  disabled={commishBusy}
-                >
-                  <PlayArrowIcon fontSize="small" /> Resume
-                </button>
-              ) : (
-                <button
-                  className="draft__tool-btn"
-                  onClick={() => commishAction('pause')}
-                  disabled={commishBusy}
-                >
-                  <PauseIcon fontSize="small" /> Pause
-                </button>
-              )}
-              <button
-                className="draft__tool-btn"
-                onClick={() => setShowRollback(true)}
-                disabled={commishBusy || picks.length === 0}
-              >
-                <UndoIcon fontSize="small" /> Undo
-              </button>
-              <button
-                className={`draft__tool-btn draft__skipbots-btn${
-                  autoSkipBots ? ' is-on' : ''
-                }`}
-                onClick={() => setAutoSkipBots((v) => !v)}
-                title="Automatically skip bot picks as they come on the clock"
-              >
-                <FastForwardIcon fontSize="small" /> Skip bots
-                {autoSkipBots ? ' · On' : ''}
-              </button>
-              {commishError && <span className="draft__commish-error">{commishError}</span>}
-            </>
-          )}
-          {!isCommish && !isComplete && !isPaused && (
-            <button
-              className="draft__tool-btn"
-              onClick={requestPause}
-              disabled={reqPauseBusy}
-            >
-              🙋 Request pause
-            </button>
+          {!isComplete && (
+            <div className="draft__commish-tools">
+              <CommishTools />
+            </div>
           )}
         </div>
         <div className="draft__status">
@@ -447,7 +662,7 @@ export function DraftBoardPage() {
         </div>
         <div className="draft__right">
           {isComplete ? (
-            <button className="button draft__export-btn" onClick={() => setShowExport(true)}>
+            <button className="draft__export-btn" onClick={() => setShowExport(true)}>
               <FileDownloadOutlinedIcon fontSize="small" /> Export
             </button>
           ) : (
@@ -508,6 +723,7 @@ export function DraftBoardPage() {
           )}
           <DraftGrid
             teams={teams}
+            members={members}
             rounds={roundsForSettings(lobby.settings)}
             picks={picks}
             playersById={playersById}
@@ -518,6 +734,7 @@ export function DraftBoardPage() {
             reactionsByPick={reactionsByPick}
             onReactPick={reactPick}
             onPickClick={setPickModal}
+            commentsByPick={commentsByPick}
           />
         </section>
 
@@ -649,10 +866,20 @@ export function DraftBoardPage() {
               teamsById={teamsById}
               playersById={playersById}
               members={members}
+              onOpenPick={setPickModal}
+              focusMessageId={focusMessageId}
+              onFocusHandled={() => setFocusMessageId(null)}
             />
           </div>
         </aside>
       </div>
+
+      {/* Mobile-only: commissioner tools flush above the bottom nav. */}
+      {!isComplete && (
+        <div className="draft__mobile-commish">
+          <CommishTools />
+        </div>
+      )}
 
       {/* Mobile-only section tabs + nav. */}
       <nav className="draft__tabs">
@@ -706,15 +933,28 @@ export function DraftBoardPage() {
         (() => {
           const player = playersById.get(pickModal.player_id);
           if (!player) return null;
-          const endedAt = isComplete ? lobby.completed_at ?? null : null;
-          const chatLocked =
-            !!endedAt && Date.now() >= new Date(endedAt).getTime() + CHAT_LOCK_MS;
           // Usernames that reacted to this pick, grouped by emoji (for tooltips).
           const reactors: Record<string, string[]> = {};
-          for (const r of pickReactions) {
-            if (r.target_id !== pickModal.id) continue;
+          for (const r of allReactions) {
+            if (r.target_type !== 'PICK' || r.target_id !== pickModal.id) continue;
             (reactors[r.emoji] ??= []).push(usernameById.get(r.user_id) ?? 'Someone');
           }
+          const comments: PickComment[] = (commentsByPick.get(pickModal.id) ?? []).map((c) => {
+            const commentReactors: Record<string, string[]> = {};
+            for (const r of allReactions) {
+              if (r.target_type !== 'MESSAGE' || r.target_id !== c.id) continue;
+              (commentReactors[r.emoji] ??= []).push(usernameById.get(r.user_id) ?? 'Someone');
+            }
+            return {
+              id: c.id,
+              author: usernameById.get(c.user_id) ?? 'Player',
+              body: c.body,
+              at: c.created_at,
+              mine: c.user_id === userId,
+              entry: reactionsByMessage.get(c.id),
+              reactors: commentReactors,
+            };
+          });
           return (
             <PickModal
               lobbyId={id}
@@ -724,7 +964,11 @@ export function DraftBoardPage() {
               entry={reactionsByPick.get(pickModal.id)}
               reactors={reactors}
               onReact={(emoji) => reactPick(pickModal.id, emoji)}
+              comments={comments}
+              onReactComment={reactMessage}
+              members={members}
               locked={chatLocked}
+              reactionsLocked={reactionsLocked}
               onClose={() => setPickModal(null)}
             />
           );
