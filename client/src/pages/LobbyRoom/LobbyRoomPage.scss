@@ -155,13 +155,13 @@
     }
   }
 
-  // Chat sidebar — flush to the far right edge on desktop, stacked below on mobile.
+  // Chat sidebar — desktop only; mobile uses the &-chatdrawer bottom sheet instead.
   &__chat {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
+    display: none;
 
     @media (min-width: $bp-lg) {
+      display: flex;
+      flex-direction: column;
       width: 360px;
       flex-shrink: 0;
       align-self: stretch;

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import {
   BrowserRouter,
   Navigate,
@@ -13,19 +13,39 @@ import { MainLayout } from './components/Navbar/MainLayout';
 import { NotificationsProvider } from './notifications/NotificationsContext';
 import { ThemeProvider } from './theme/ThemeContext';
 import { ToastProvider } from './toast/ToastContext';
-import { AuthPage } from './pages/Auth/AuthPage';
-import { DraftBoardPage } from './pages/DraftBoard/DraftBoardPage';
-import { FriendsPage } from './pages/Friends/FriendsPage';
-import { HomePage } from './pages/Home/HomePage';
-import { JoinLobbyPage } from './pages/JoinLobby/JoinLobbyPage';
-import { LeagueWizardPage } from './pages/LeagueWizard/LeagueWizardPage';
-import { LobbyRoomPage } from './pages/LobbyRoom/LobbyRoomPage';
-import { LobbyWizardPage } from './pages/LobbyWizard/LobbyWizardPage';
-import { NotificationsPage } from './pages/Notifications/NotificationsPage';
-import { ProfilePage } from './pages/Profile/ProfilePage';
-import { ScoringFormatCreatorPage } from './pages/ScoringFormatCreator/ScoringFormatCreatorPage';
-import { SettingsPage } from './pages/Settings/SettingsPage';
-import { SplashPage } from './pages/Splash/SplashPage';
+
+// Lazy-loaded per route — each page ships as its own chunk, fetched only when
+// visited, instead of every page's code (DraftBoardPage especially) landing
+// in the single main bundle regardless of which routes a session ever hits.
+const AuthPage = lazy(() => import('./pages/Auth/AuthPage').then((m) => ({ default: m.AuthPage })));
+const DraftBoardPage = lazy(() =>
+  import('./pages/DraftBoard/DraftBoardPage').then((m) => ({ default: m.DraftBoardPage })),
+);
+const FriendsPage = lazy(() => import('./pages/Friends/FriendsPage').then((m) => ({ default: m.FriendsPage })));
+const HomePage = lazy(() => import('./pages/Home/HomePage').then((m) => ({ default: m.HomePage })));
+const JoinLobbyPage = lazy(() =>
+  import('./pages/JoinLobby/JoinLobbyPage').then((m) => ({ default: m.JoinLobbyPage })),
+);
+const LeagueWizardPage = lazy(() =>
+  import('./pages/LeagueWizard/LeagueWizardPage').then((m) => ({ default: m.LeagueWizardPage })),
+);
+const LobbyRoomPage = lazy(() =>
+  import('./pages/LobbyRoom/LobbyRoomPage').then((m) => ({ default: m.LobbyRoomPage })),
+);
+const LobbyWizardPage = lazy(() =>
+  import('./pages/LobbyWizard/LobbyWizardPage').then((m) => ({ default: m.LobbyWizardPage })),
+);
+const NotificationsPage = lazy(() =>
+  import('./pages/Notifications/NotificationsPage').then((m) => ({ default: m.NotificationsPage })),
+);
+const ProfilePage = lazy(() => import('./pages/Profile/ProfilePage').then((m) => ({ default: m.ProfilePage })));
+const ScoringFormatCreatorPage = lazy(() =>
+  import('./pages/ScoringFormatCreator/ScoringFormatCreatorPage').then((m) => ({
+    default: m.ScoringFormatCreatorPage,
+  })),
+);
+const SettingsPage = lazy(() => import('./pages/Settings/SettingsPage').then((m) => ({ default: m.SettingsPage })));
+const SplashPage = lazy(() => import('./pages/Splash/SplashPage').then((m) => ({ default: m.SplashPage })));
 
 function Protected({ children }: { children: React.ReactNode }) {
   const { session, loading } = useAuth();
@@ -70,6 +90,13 @@ export default function App() {
         <BrowserRouter>
           <ScrollToTop />
           <ErrorBoundary>
+          <Suspense
+            fallback={
+              <div className="loading">
+                <Loader />
+              </div>
+            }
+          >
           <Routes>
           <Route
             path="/"
@@ -120,6 +147,7 @@ export default function App() {
           />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          </Suspense>
           </ErrorBoundary>
         </BrowserRouter>
         </ToastProvider>
