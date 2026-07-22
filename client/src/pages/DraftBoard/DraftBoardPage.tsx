@@ -57,7 +57,10 @@ import { PickModal, type PickComment } from '../../components/PickModal/PickModa
 import type { Reactor } from '../../components/ReactorsModal/ReactorsModal';
 import { PlayerCard } from '../../components/PlayerCard/PlayerCard';
 import { TeamLineup } from '../../components/TeamLineup/TeamLineup';
-import { TeamResultsDrawer } from '../../components/TeamResultsDrawer/TeamResultsDrawer';
+import {
+  TeamResultsDrawer,
+  type ResultsDrawerView,
+} from '../../components/TeamResultsDrawer/TeamResultsDrawer';
 import { ThemeToggle } from '../../components/ThemeToggle/ThemeToggle';
 import { useAuth } from '../../auth/AuthContext';
 import { useLobby } from '../../hooks/useLobby';
@@ -139,7 +142,7 @@ export function DraftBoardPage() {
   const [mobileTab, setMobileTab] = useState<MobileTab>('board');
   const [panelTab, setPanelTab] = useState<PanelTab>('players');
   const [rosterTeamSel, setRosterTeamSel] = useState<string | null>(null);
-  const [resultsDrawerOpen, setResultsDrawerOpen] = useState(false);
+  const [resultsDrawerView, setResultsDrawerView] = useState<ResultsDrawerView>('closed');
   const [queue, setQueue] = useState<string[]>([]);
   const [selected, setSelected] = useState<PlayerRow | null>(null);
   const [pickBusy, setPickBusy] = useState(false);
@@ -1240,7 +1243,9 @@ export function DraftBoardPage() {
                       <button
                         type="button"
                         className="draft__results-summary"
-                        onClick={() => setResultsDrawerOpen(true)}
+                        onClick={() =>
+                          setResultsDrawerView((v) => (v === 'closed' ? 'open' : 'closed'))
+                        }
                       >
                         <span className="draft__results-summary-item">
                           <EmojiEventsOutlinedIcon fontSize="small" /> {voteCount} vote
@@ -1314,8 +1319,8 @@ export function DraftBoardPage() {
             members={members}
             crownVotes={crownVotes}
             grades={grades}
-            open={resultsDrawerOpen}
-            onClose={() => setResultsDrawerOpen(false)}
+            view={resultsDrawerView}
+            onViewChange={setResultsDrawerView}
           />
         )}
           </>

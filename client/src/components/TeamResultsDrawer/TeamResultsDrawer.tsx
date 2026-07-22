@@ -1,24 +1,30 @@
 import { DRAFT_GRADES, defaultAvatar } from '@draft-lobby/shared';
 import CloseIcon from '@mui/icons-material/Close';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import { useMemo } from 'react';
 import type { DraftCrownVoteRow, DraftGradeRow, MemberRow, TeamRow } from '../../lib/types';
 import { Avatar } from '../Avatar/Avatar';
 import './TeamResultsDrawer.scss';
+
+export type ResultsDrawerView = 'closed' | 'open' | 'full';
 
 interface Props {
   team: TeamRow | undefined;
   members: MemberRow[];
   crownVotes: DraftCrownVoteRow[];
   grades: DraftGradeRow[];
-  open: boolean;
-  onClose: () => void;
+  view: ResultsDrawerView;
+  onViewChange: (view: ResultsDrawerView) => void;
 }
 
 /** Full crown-vote + grade breakdown for one team. Desktop: slides in beside
  * the roster sidebar so both stay visible and independently scrollable.
- * Mobile: a bottom sheet flush above the tab bar. */
-export function TeamResultsDrawer({ team, members, crownVotes, grades, open, onClose }: Props) {
+ * Mobile: a bottom sheet (mirrors .room-chatdrawer) that opens ~80%, with an
+ * up-chevron to expand full screen and a down-chevron to close. */
+export function TeamResultsDrawer({ team, members, crownVotes, grades, view, onViewChange }: Props) {
+  const open = view !== 'closed';
   const voters = useMemo(
     () => (team ? crownVotes.filter((v) => v.team_id === team.id) : []),
     [crownVotes, team],
@@ -44,22 +50,42 @@ export function TeamResultsDrawer({ team, members, crownVotes, grades, open, onC
     <>
       <div
         className={`team-results-drawer__backdrop${open ? ' is-open' : ''}`}
-        onClick={onClose}
+        onClick={() => onViewChange('closed')}
       />
       <aside
-        className={`team-results-drawer${open ? ' is-open' : ''}`}
+        className={`team-results-drawer${open ? ' is-open' : ''}${view === 'full' ? ' is-full' : ''}`}
         aria-label={`${team.name} results`}
       >
         <div className="team-results-drawer__head">
           <h3>{team.name} — Results</h3>
-          <button
-            type="button"
-            className="team-results-drawer__close"
-            aria-label="Close"
-            onClick={onClose}
-          >
-            <CloseIcon fontSize="small" />
-          </button>
+          <div className="team-results-drawer__ctrls">
+            {view !== 'full' && (
+              <button
+                type="button"
+                className="team-results-drawer__ctrl"
+                aria-label="Expand to full screen"
+                onClick={() => onViewChange('full')}
+              >
+                <KeyboardArrowUpIcon fontSize="small" />
+              </button>
+            )}
+            <button
+              type="button"
+              className="team-results-drawer__ctrl"
+              aria-label="Close"
+              onClick={() => onViewChange('closed')}
+            >
+              <KeyboardArrowDownIcon fontSize="small" />
+            </button>
+            <button
+              type="button"
+              className="team-results-drawer__close"
+              aria-label="Close"
+              onClick={() => onViewChange('closed')}
+            >
+              <CloseIcon fontSize="small" />
+            </button>
+          </div>
         </div>
 
         <div className="team-results-drawer__body">
@@ -86,7 +112,7 @@ export function TeamResultsDrawer({ team, members, crownVotes, grades, open, onC
 
           <section className="team-results-drawer__section">
             <h4 className="team-results-drawer__label">
-              Grades, best to worst ({teamGrades.length})
+              Report Card ({teamGrades.length})
             </h4>
             {teamGrades.length === 0 ? (
               <p className="muted">No grades yet.</p>

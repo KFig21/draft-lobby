@@ -595,10 +595,12 @@
       width: var(--sidebar-w, 380px);
       min-height: 0;
       border-left: 1px solid $border;
-      // Stack above TeamResultsDrawer so the drawer's closed (tucked-under)
-      // position is actually hidden behind this, not just off-canvas.
+      // Stack above TeamResultsDrawer (z-index: 35, itself above the draft
+      // grid's own sticky headers/cells at up to 30) so the drawer's closed
+      // (tucked-under) position is actually hidden behind this, not just
+      // off-canvas.
       position: relative;
-      z-index: 2;
+      z-index: 36;
     }
 
     &__sidebar-tabs {
@@ -628,6 +630,10 @@
     height: 60px;
     border-top: 1px solid $border;
     background: $bg-raised;
+    // Stack above TeamResultsDrawer (z-index: 1) so it wins any overlap —
+    // belt-and-suspenders alongside the drawer sitting flush above it.
+    position: relative;
+    z-index: 2;
 
     @include lg {
       display: none;
