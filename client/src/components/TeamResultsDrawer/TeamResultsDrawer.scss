@@ -135,6 +135,12 @@ $mobile-tabs-h: 60px;
     gap: 4px;
     font-size: 0.85rem;
     color: $accent;
+
+    // Light mode: the bright accent green is low-contrast on a light
+    // background — swap to the darker primary teal instead.
+    :root[data-theme='light'] & {
+      color: $primary;
+    }
   }
 
   &__voters {

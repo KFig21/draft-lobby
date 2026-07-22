@@ -85,12 +85,10 @@ export function NavDrawer({ open, onClose, extraItems, extraContent }: NavDrawer
     };
   }, [open, userId]);
 
-  if (!open) return null;
-
   const isLive = (s: string) => s === 'DRAFTING' || s === 'PAUSED';
 
   return (
-    <div className="navbar-drawer" onClick={onClose}>
+    <div className={`navbar-drawer${open ? ' is-open' : ''}`} onClick={onClose}>
       <div
         className="navbar-drawer__panel"
         onClick={(e) => e.stopPropagation()}

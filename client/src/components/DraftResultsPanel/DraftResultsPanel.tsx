@@ -60,12 +60,11 @@ export function DraftResultsPanel({
     return m;
   }, [members]);
 
+  // Unlike grading, the crown-vote leaderboard includes your own team — you
+  // just can't vote for it — so you can see where you place on the list.
   const sortedByVotes = useMemo(
-    () =>
-      [...otherTeams].sort(
-        (a, b) => (voteCounts.get(b.id) ?? 0) - (voteCounts.get(a.id) ?? 0),
-      ),
-    [otherTeams, voteCounts],
+    () => [...teams].sort((a, b) => (voteCounts.get(b.id) ?? 0) - (voteCounts.get(a.id) ?? 0)),
+    [teams, voteCounts],
   );
 
   return (
@@ -81,17 +80,33 @@ export function DraftResultsPanel({
           {sortedByVotes.map((team) => {
             const count = voteCounts.get(team.id) ?? 0;
             const mine = myVoteTeamId === team.id;
+            const isSelf = team.id === myTeamId;
             return (
               <li key={team.id} className={`draft-results__vote-row${mine ? ' is-mine' : ''}`}>
                 <Avatar avatar={avatarForTeam(team, members)} size={26} />
-                <span className="draft-results__vote-name">{team.name}</span>
+                <span className="draft-results__vote-name">
+                  {team.name}
+                  {isSelf && <span className="muted"> (you)</span>}
+                </span>
                 <span className="draft-results__vote-count">{count}</span>
                 <button
                   type="button"
                   className={`draft-results__crown-btn${mine ? ' is-active' : ''}`}
-                  aria-label={mine ? 'Your pick for best roster' : `Vote for ${team.name}`}
-                  title={mine ? 'Your pick for best roster' : `Vote for ${team.name}`}
-                  disabled={locked}
+                  aria-label={
+                    isSelf
+                      ? "You can't vote for your own roster"
+                      : mine
+                        ? 'Your pick for best roster'
+                        : `Vote for ${team.name}`
+                  }
+                  title={
+                    isSelf
+                      ? "You can't vote for your own roster"
+                      : mine
+                        ? 'Your pick for best roster'
+                        : `Vote for ${team.name}`
+                  }
+                  disabled={locked || isSelf}
                   onClick={() => onVote(team.id)}
                 >
                   {mine ? (

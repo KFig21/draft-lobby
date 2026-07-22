@@ -92,6 +92,34 @@ export function LobbyRoomPage() {
     return members.find((m) => m.user_id === uid)?.profiles?.avatar ?? defaultAvatar(uid);
   }
 
+  // All friendships (any status) + who's already been invited, for the invite/friend UI.
+  const loadInvitables = useCallback(() => {
+    if (!userId) return;
+    void supabase
+      .from('friendships')
+      .select(
+        '*, requester:requester_id ( id, username, avatar ), addressee:addressee_id ( id, username, avatar )',
+      )
+      .then(({ data }) => setFriendships((data ?? []) as unknown as FriendshipRow[]));
+    void supabase
+      .from('lobby_invites')
+      .select('invitee_id, status')
+      .eq('lobby_id', id)
+      .then(({ data }) => {
+        const s = new Set<string>();
+        for (const inv of data ?? []) {
+          if ((inv as { status: string }).status === 'PENDING') {
+            s.add((inv as { invitee_id: string }).invitee_id);
+          }
+        }
+        setInvitedIds(s);
+      });
+  }, [userId, id]);
+
+  useEffect(() => {
+    loadInvitables();
+  }, [loadInvitables]);
+
   // Toast: alert everyone else when a new team joins the lobby — a real user
   // claiming a bot's seat (UPDATE) or the lowest open slot (INSERT).
   useEffect(() => {
@@ -142,11 +170,18 @@ export function LobbyRoomPage() {
           }
         },
       )
+      // An avatar/username edit should refresh the invite/friends list too
+      // (it embeds its own profiles join, separate from useLobby's members).
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'profiles' },
+        () => loadInvitables(),
+      )
       .subscribe();
     return () => {
       void supabase.removeChannel(ch);
     };
-  }, [id, userId, showToast, members]);
+  }, [id, userId, showToast, members, loadInvitables]);
 
   const isCommish = useMemo(() => {
     if (!userId) return false;
@@ -155,34 +190,6 @@ export function LobbyRoomPage() {
       (m) => m.user_id === userId && m.role === 'SUB_COMMISSIONER',
     );
   }, [userId, lobby, members]);
-
-  // All friendships (any status) + who's already been invited, for the invite/friend UI.
-  const loadInvitables = useCallback(() => {
-    if (!userId) return;
-    void supabase
-      .from('friendships')
-      .select(
-        '*, requester:requester_id ( id, username, avatar ), addressee:addressee_id ( id, username, avatar )',
-      )
-      .then(({ data }) => setFriendships((data ?? []) as unknown as FriendshipRow[]));
-    void supabase
-      .from('lobby_invites')
-      .select('invitee_id, status')
-      .eq('lobby_id', id)
-      .then(({ data }) => {
-        const s = new Set<string>();
-        for (const inv of data ?? []) {
-          if ((inv as { status: string }).status === 'PENDING') {
-            s.add((inv as { invitee_id: string }).invitee_id);
-          }
-        }
-        setInvitedIds(s);
-      });
-  }, [userId, id]);
-
-  useEffect(() => {
-    loadInvitables();
-  }, [loadInvitables]);
 
   // Accepted friends (for the invite list).
   const friends = useMemo(

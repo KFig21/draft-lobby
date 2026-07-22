@@ -87,6 +87,14 @@ export function useLobby(lobbyId: string): LobbyState {
         { event: '*', schema: 'public', table: 'lobbies', filter: `id=eq.${lobbyId}` },
         () => void fetchLobby(),
       )
+      // Unfiltered: a profile edit (avatar/username) can belong to any
+      // member, and postgres_changes filters can't match "id in (...)".
+      // profiles is public-readable anyway, so no RLS concern either way.
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'profiles' },
+        () => void fetchMembers(),
+      )
       .subscribe();
 
     return () => {

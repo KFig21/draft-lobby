@@ -17,6 +17,12 @@
     gap: $space * 0.5;
     font-size: 0.95rem;
     color: $accent;
+
+    // Light mode: the bright accent green is low-contrast on a light
+    // background — swap to the darker primary teal instead.
+    :root[data-theme='light'] & {
+      color: $primary;
+    }
   }
 
   &__subtitle {
