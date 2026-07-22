@@ -79,7 +79,10 @@
     min-width: 44px;
     padding: $space * 0.5 $space;
     border-radius: $radius-sm;
-    color: #fff;
+    // Position badges fill with a bright brand color (see POSITION_COLORS) —
+    // dark text reads far better on those than white, same convention as
+    // the chat's pick-position badge.
+    color: #05231a;
     font-weight: 800;
     font-size: 0.9rem;
   }

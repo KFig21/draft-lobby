@@ -637,10 +637,19 @@ $nav-total: calc(#{$nav-h} + env(safe-area-inset-bottom, 0));
     line-height: 1;
   }
 
+  // Collapsed: not just clipped by the parent's height/overflow (Safari can
+  // briefly skip committing that clip on first paint, showing a sliver of
+  // the compose bar above the handle until the next reflow) — actually
+  // removed from layout, so there's nothing to leak regardless.
   &__body {
-    display: flex;
+    display: none;
     flex: 1;
     min-height: 0;
+  }
+
+  &.is-open &__body,
+  &.is-full &__body {
+    display: flex;
   }
 }
 
