@@ -5,6 +5,14 @@
   flex-direction: column;
   gap: $space * 1.5;
 
+  &__label {
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: $text-muted;
+  }
+
   &__select {
     padding: $space * 1.25;
     border: 1px solid $border;

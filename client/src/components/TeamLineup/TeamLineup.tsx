@@ -122,6 +122,7 @@ export function TeamLineup({
 
   return (
     <div className="lineup-view">
+      <span className="lineup-view__label">Team select</span>
       <select
         className="lineup-view__select"
         value={selectedTeamId}

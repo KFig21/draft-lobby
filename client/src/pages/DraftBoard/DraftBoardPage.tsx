@@ -1240,23 +1240,29 @@ export function DraftBoardPage() {
                     const teamGrades = grades.filter((g) => g.team_id === rosterTeamId);
                     const avgGrade = mostCommonGrade(teamGrades);
                     return (
-                      <button
-                        type="button"
-                        className="draft__results-summary"
-                        onClick={() =>
-                          setResultsDrawerView((v) => (v === 'closed' ? 'open' : 'closed'))
-                        }
-                      >
-                        <span className="draft__results-summary-item">
-                          <EmojiEventsOutlinedIcon fontSize="small" /> {voteCount} vote
-                          {voteCount === 1 ? '' : 's'}
-                        </span>
-                        <span className="draft__results-summary-item">
-                          {avgGrade ?? '—'}{' '}
-                          <span className="muted">({teamGrades.length})</span>
-                        </span>
-                        <ChevronRightIcon fontSize="small" className="draft__results-summary-chevron" />
-                      </button>
+                      <>
+                        <span className="lineup-view__label">Report Card</span>
+                        <button
+                          type="button"
+                          className="draft__results-summary"
+                          onClick={() =>
+                            setResultsDrawerView((v) => (v === 'closed' ? 'open' : 'closed'))
+                          }
+                        >
+                          <span className="draft__results-summary-item">
+                            <EmojiEventsOutlinedIcon fontSize="small" /> {voteCount} vote
+                            {voteCount === 1 ? '' : 's'}
+                          </span>
+                          <span className="draft__results-summary-item">
+                            {avgGrade ?? '—'}{' '}
+                            <span className="muted">({teamGrades.length})</span>
+                          </span>
+                          <ChevronRightIcon
+                            fontSize="small"
+                            className="draft__results-summary-chevron"
+                          />
+                        </button>
+                      </>
                     );
                   })()
                 }
