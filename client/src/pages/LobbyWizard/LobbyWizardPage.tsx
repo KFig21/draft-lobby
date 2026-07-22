@@ -49,6 +49,9 @@ export function LobbyWizardPage() {
   const [lobbyName, setLobbyName] = useState('');
   const [password, setPassword] = useState('');
   const [scheduledStart, setScheduledStart] = useState('');
+  const [resultsPublic, setResultsPublic] = useState(false);
+  const [chatPublic, setChatPublic] = useState(false);
+  const [publicVotingAllowed, setPublicVotingAllowed] = useState(false);
   const [showLeagueModal, setShowLeagueModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -87,7 +90,13 @@ export function LobbyWizardPage() {
       rosterComposition: settings.rosterComposition.filter((r) => r.count > 0),
       pickTiers: normalizeTiers(settings.pickTiers, rounds),
     };
-    const parsed = createLobbySchema.safeParse({ settings: finalSettings, password });
+    const parsed = createLobbySchema.safeParse({
+      settings: finalSettings,
+      password,
+      resultsPublic,
+      chatPublic,
+      publicVotingAllowed: resultsPublic && publicVotingAllowed,
+    });
     if (!parsed.success) {
       setError(parsed.error.issues[0]?.message ?? 'Please check your settings');
       return;
@@ -218,6 +227,45 @@ export function LobbyWizardPage() {
                 ? 'Practice run — empty seats fill with bots and results stay off friends’ timelines.'
                 : 'A real league draft. Empty seats fill with bots at start so no pick is missed.'}
             </em>
+          </div>
+          <div className="field">
+            <span>
+              Public after the draft <em className="muted">(optional)</em>
+            </span>
+            <label className="toggle">
+              <input
+                type="checkbox"
+                checked={resultsPublic}
+                onChange={(e) => {
+                  setResultsPublic(e.target.checked);
+                  if (!e.target.checked) setPublicVotingAllowed(false);
+                }}
+              />
+              <span>Make draft results public once complete</span>
+            </label>
+            <em className="muted">
+              Anyone signed in with the lobby link can view final rosters and crown-vote
+              results — chat/reactions stay private unless enabled below.
+            </em>
+            {resultsPublic && (
+              <label className="toggle">
+                <input
+                  type="checkbox"
+                  checked={publicVotingAllowed}
+                  onChange={(e) => setPublicVotingAllowed(e.target.checked)}
+                />
+                <span>Let non-members vote on who won the draft</span>
+              </label>
+            )}
+            <label className="toggle">
+              <input
+                type="checkbox"
+                checked={chatPublic}
+                onChange={(e) => setChatPublic(e.target.checked)}
+              />
+              <span>Make chat + reactions public once complete</span>
+            </label>
+            <em className="muted">Non-members can view chat and reactions, but not post.</em>
           </div>
           {settings.visibility === 'PRIVATE' && (
             <label className="field">

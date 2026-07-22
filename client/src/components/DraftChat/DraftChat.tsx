@@ -51,6 +51,8 @@ interface Props {
   focusMessageId?: string | null;
   /** Called once the requested scroll/highlight has been carried out. */
   onFocusHandled?: () => void;
+  /** A non-member viewing a public draft's chat — read-only, no compose/react. */
+  viewOnly?: boolean;
 }
 
 type TargetType = 'MESSAGE' | 'PICK';
@@ -87,6 +89,7 @@ export function DraftChat({
   onOpenPick,
   focusMessageId,
   onFocusHandled,
+  viewOnly = false,
 }: Props) {
   const { session } = useAuth();
   const userId = session?.user.id;
@@ -254,9 +257,9 @@ export function DraftChat({
   const lastPickAt = picks.reduce((max, p) => (p.picked_at > max ? p.picked_at : max), '');
   const endedAt = status === 'COMPLETE' ? completedAt ?? (lastPickAt || null) : null;
   const lockAtMs = endedAt ? new Date(endedAt).getTime() + CHAT_LOCK_MS : null;
-  const locked = !!lockAtMs && nowMs >= lockAtMs;
+  const locked = viewOnly || (!!lockAtMs && nowMs >= lockAtMs);
   const reactionLockAtMs = endedAt ? new Date(endedAt).getTime() + REACTION_LOCK_MS : null;
-  const reactionsLocked = !!reactionLockAtMs && nowMs >= reactionLockAtMs;
+  const reactionsLocked = viewOnly || (!!reactionLockAtMs && nowMs >= reactionLockAtMs);
   useEffect(() => {
     const nextLockAt = [lockAtMs, reactionLockAtMs]
       .filter((t): t is number => t != null && t > Date.now())
@@ -523,7 +526,9 @@ export function DraftChat({
       {error && <p className="chat__error">{error}</p>}
 
       {locked ? (
-        <div className="chat__locked">🔒 Chat is locked for this draft.</div>
+        <div className="chat__locked">
+          {viewOnly ? '👀 View only — chat is private to lobby members.' : '🔒 Chat is locked for this draft.'}
+        </div>
       ) : (
         <>
           {replyTarget && (

@@ -417,12 +417,15 @@ export function DraftBoardPage() {
   const [showOutro, setShowOutro] = useState(false);
   useEffect(() => {
     if (!lobby || lobby.status !== 'COMPLETE' || !userId) return;
+    // Never for a non-member spectator (a public-results viewer) — they have
+    // no roster of their own for the recap to show.
+    if (!members.some((m) => m.user_id === userId)) return;
     const endedAtMs = lobby.completed_at ? new Date(lobby.completed_at).getTime() : null;
     if (endedAtMs != null && Date.now() >= endedAtMs + DRAFT_RESULTS_LOCK_MS) return;
     const seenKey = `draft-outro-seen:${id}:${userId}`;
     if (localStorage.getItem(seenKey)) return;
     setShowOutro(true);
-  }, [lobby, userId, id]);
+  }, [lobby, userId, id, members]);
 
   function dismissOutro() {
     if (userId) localStorage.setItem(`draft-outro-seen:${id}:${userId}`, '1');
@@ -803,6 +806,11 @@ export function DraftBoardPage() {
   const pickingForTeam = !isMyTurn && onClockTeam ? onClockTeam.name : null;
   const myTeamId = teams.find((t) => t.owner_id === userId)?.id ?? teams[0]?.id ?? null;
   const myTeam = teams.find((t) => t.owner_id === userId) ?? null;
+  // A signed-in visitor with no membership row — only possible at all once
+  // the commissioner has opted into public results and/or public chat.
+  const isMember = members.some((m) => m.user_id === userId);
+  const canVote = isMember || lobby.public_voting_allowed;
+  const canGrade = isMember;
   const rosterTeamId = rosterTeamSel ?? myTeamId ?? teams[0]?.id ?? '';
 
   // How many players the current user has drafted at each position (for filter badges).
@@ -1018,9 +1026,11 @@ export function DraftBoardPage() {
             >
               <HomeOutlinedIcon fontSize="small" /> Home
             </button>
-            <Link to={`/lobby/${id}`} className="draft__room-btn">
-              <MeetingRoomOutlinedIcon fontSize="small" /> Room
-            </Link>
+            {isMember && (
+              <Link to={`/lobby/${id}`} className="draft__room-btn">
+                <MeetingRoomOutlinedIcon fontSize="small" /> Room
+              </Link>
+            )}
           </div>
           {!isComplete && (
             <div className="draft__commish-tools">
@@ -1113,7 +1123,7 @@ export function DraftBoardPage() {
             draftType={lobby.settings.draftType}
             onTeamClick={openTeamRoster}
             reactionsByPick={reactionsByPick}
-            onReactPick={reactPick}
+            onReactPick={isMember ? reactPick : undefined}
             onPickClick={setPickModal}
             commentsByPick={commentsByPick}
             fill={isFullscreen}
@@ -1129,7 +1139,9 @@ export function DraftBoardPage() {
           className={`draft__sidebar ${mobileTab !== 'board' ? 'is-mobile-active' : ''}`}
         >
           <div className="draft__sidebar-tabs">
-            {SIDEBAR_TABS.filter((t) => t.key !== 'results' || isComplete).map(({ key, label, Icon }) => (
+            {SIDEBAR_TABS.filter((t) => t.key !== 'results' || isComplete)
+              .filter((t) => t.key !== 'chat' || isMember || lobby.chat_public)
+              .map(({ key, label, Icon }) => (
               <button
                 key={key}
                 className={`draft__stab ${panelTab === key ? 'is-active' : ''}`}
@@ -1287,6 +1299,7 @@ export function DraftBoardPage() {
               onOpenPick={setPickModal}
               focusMessageId={focusMessageId}
               onFocusHandled={() => setFocusMessageId(null)}
+              viewOnly={!isMember}
             />
           </div>
 
@@ -1311,6 +1324,8 @@ export function DraftBoardPage() {
                   crownVotes={crownVotes}
                   grades={grades}
                   locked={resultsLocked}
+                  canVote={canVote}
+                  canGrade={canGrade}
                   onVote={castCrownVote}
                   onGrade={gradeTeam}
                 />
@@ -1344,7 +1359,9 @@ export function DraftBoardPage() {
 
       {/* Mobile-only section tabs + nav. */}
       <nav className="draft__tabs">
-        {MOBILE_TABS.filter((t) => t.key !== 'results' || isComplete).map(({ key, label, Icon }) => (
+        {MOBILE_TABS.filter((t) => t.key !== 'results' || isComplete)
+          .filter((t) => t.key !== 'chat' || isMember || lobby.chat_public)
+          .map(({ key, label, Icon }) => (
           <button
             key={key}
             className={`draft__tab ${mobileTab === key ? 'is-active' : ''}`}
@@ -1474,8 +1491,8 @@ export function DraftBoardPage() {
               comments={comments}
               onReactComment={reactMessage}
               members={members}
-              locked={chatLocked}
-              reactionsLocked={reactionsLocked}
+              locked={chatLocked || !isMember}
+              reactionsLocked={reactionsLocked || !isMember}
               onClose={() => setPickModal(null)}
               isCommish={isCommish}
               onRollbackTo={

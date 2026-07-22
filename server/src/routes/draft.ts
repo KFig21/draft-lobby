@@ -1379,10 +1379,6 @@ draftRouter.post('/:id/crown-vote', async (req: AuthedRequest, res: Response) =>
   const userId = req.user!.id;
 
   const role = await getRole(lobbyId, userId);
-  if (!role) {
-    res.status(403).json({ error: 'Only members can vote in this lobby' });
-    return;
-  }
   const parsed = crownVoteSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.flatten() });
@@ -1391,11 +1387,16 @@ draftRouter.post('/:id/crown-vote', async (req: AuthedRequest, res: Response) =>
 
   const { data: lobby } = await supabaseAdmin
     .from('lobbies')
-    .select('status')
+    .select('status, public_voting_allowed')
     .eq('id', lobbyId)
     .maybeSingle();
   if (!lobby || lobby.status !== 'COMPLETE') {
     res.status(409).json({ error: 'Voting opens once the draft is complete' });
+    return;
+  }
+  // Members can always vote; non-members only if the commissioner opted in.
+  if (!role && !lobby.public_voting_allowed) {
+    res.status(403).json({ error: 'Only members can vote in this lobby' });
     return;
   }
   if (await isResultsLocked(lobbyId)) {

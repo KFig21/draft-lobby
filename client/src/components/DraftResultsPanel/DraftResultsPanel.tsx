@@ -17,6 +17,10 @@ interface Props {
   grades: DraftGradeRow[];
   /** Post-draft window has closed — read-only from here on. */
   locked: boolean;
+  /** False for a non-member viewing public results, unless the commissioner
+   * opted in to public voting — grading always stays members-only. */
+  canVote?: boolean;
+  canGrade?: boolean;
   onVote: (teamId: string) => void;
   onGrade: (teamId: string, grade: DraftGrade, comment: string) => void;
 }
@@ -31,6 +35,8 @@ export function DraftResultsPanel({
   crownVotes,
   grades,
   locked,
+  canVote = true,
+  canGrade = true,
   onVote,
   onGrade,
 }: Props) {
@@ -95,18 +101,22 @@ export function DraftResultsPanel({
                   aria-label={
                     isSelf
                       ? "You can't vote for your own roster"
-                      : mine
-                        ? 'Your pick for best roster'
-                        : `Vote for ${team.name}`
+                      : !canVote
+                        ? 'Voting is limited to lobby members'
+                        : mine
+                          ? 'Your pick for best roster'
+                          : `Vote for ${team.name}`
                   }
                   title={
                     isSelf
                       ? "You can't vote for your own roster"
-                      : mine
-                        ? 'Your pick for best roster'
-                        : `Vote for ${team.name}`
+                      : !canVote
+                        ? 'Voting is limited to lobby members'
+                        : mine
+                          ? 'Your pick for best roster'
+                          : `Vote for ${team.name}`
                   }
-                  disabled={locked || isSelf}
+                  disabled={locked || isSelf || !canVote}
                   onClick={() => onVote(team.id)}
                 >
                   {mine ? (
@@ -133,6 +143,7 @@ export function DraftResultsPanel({
               myGrade={grades.find((g) => g.team_id === team.id && g.rater_id === myUserId) ?? null}
               usernameById={usernameById}
               locked={locked}
+              canGrade={canGrade}
               onGrade={(grade, comment) => onGrade(team.id, grade, comment)}
             />
           ))}
@@ -149,6 +160,7 @@ function TeamGradeCard({
   myGrade,
   usernameById,
   locked,
+  canGrade,
   onGrade,
 }: {
   team: TeamRow;
@@ -157,6 +169,7 @@ function TeamGradeCard({
   myGrade: DraftGradeRow | null;
   usernameById: Map<string, string>;
   locked: boolean;
+  canGrade: boolean;
   onGrade: (grade: DraftGrade, comment: string) => void;
 }) {
   const [grade, setGrade] = useState<DraftGrade>(myGrade?.grade ?? 'B');
@@ -200,7 +213,7 @@ function TeamGradeCard({
         </ul>
       )}
 
-      {!locked && (
+      {!locked && canGrade && (
         <div className="draft-results__grade-form">
           <div className="draft-results__grade-picker">
             {DRAFT_GRADES.map((g) => (

@@ -143,6 +143,12 @@ export const createLobbySchema = z.object({
   settings: lobbySettingsSchema,
   // Optional: OPEN lobbies don't need a password.
   password: z.string().max(100).optional(),
+  // Commissioner-controlled public visibility, once the draft is COMPLETE —
+  // never while a draft is live. Independent of each other; publicVotingAllowed
+  // additionally requires resultsPublic (enforced by a DB check constraint).
+  resultsPublic: z.boolean().default(false),
+  chatPublic: z.boolean().default(false),
+  publicVotingAllowed: z.boolean().default(false),
 });
 export type CreateLobbyInput = z.infer<typeof createLobbySchema>;
 

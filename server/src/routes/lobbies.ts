@@ -28,7 +28,7 @@ lobbiesRouter.post('/', async (req: AuthedRequest, res: Response) => {
     res.status(400).json({ error: parsed.error.flatten() });
     return;
   }
-  const { settings, password } = parsed.data;
+  const { settings, password, resultsPublic, chatPublic, publicVotingAllowed } = parsed.data;
   const userId = req.user!.id;
 
   const { data: lobby, error } = await supabaseAdmin
@@ -39,6 +39,9 @@ lobbiesRouter.post('/', async (req: AuthedRequest, res: Response) => {
       password_hash: hashPassword(password ?? ''),
       settings,
       status: 'SETUP',
+      results_public: resultsPublic,
+      chat_public: chatPublic,
+      public_voting_allowed: publicVotingAllowed,
     })
     .select()
     .single();

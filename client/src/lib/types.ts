@@ -23,6 +23,9 @@ export interface LobbyRow {
   paused_at: string | null;
   completed_at: string | null;
   created_at: string;
+  results_public: boolean;
+  chat_public: boolean;
+  public_voting_allowed: boolean;
 }
 
 export interface ChatMessageRow {
