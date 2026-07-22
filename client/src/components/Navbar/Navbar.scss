@@ -50,6 +50,7 @@
   background: rgba(0, 0, 0, 0.55);
   display: flex;
   justify-content: flex-end;
+  z-index: 60;
 
   &__panel {
     width: min(280px, 82%);
@@ -206,10 +207,12 @@
 }
 
 @keyframes navbar-live-pulse {
+
   0%,
   100% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.4;
   }
@@ -251,6 +254,7 @@
   from {
     transform: translateX(100%);
   }
+
   to {
     transform: translateX(0);
   }
