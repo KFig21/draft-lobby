@@ -294,4 +294,36 @@
     font-weight: 700;
     font-size: 0.65rem;
   }
+
+  // Fullscreen ("TV mode") — stretch to fill the available space instead of
+  // sitting at the grid's natural fixed size. Width: table-layout: fixed
+  // means only the header row's widths matter, so giving the round column an
+  // explicit width here lets team columns auto-share the rest equally.
+  // Height: driven by --fs-row-h, set from JS (see DraftBoardPage) since
+  // HTML tables don't support percentage row heights reliably.
+  &.draft-grid--fill {
+    width: 100%;
+    table-layout: fixed;
+
+    .draft-grid__corner {
+      width: 30px;
+    }
+
+    .draft-grid__team {
+      width: auto;
+      max-width: none;
+    }
+
+    .draft-grid__cell {
+      width: auto;
+      height: var(--fs-row-h, 52px);
+      // Rows are often taller than the pick content needs in fill mode —
+      // center it instead of leaving the extra space stranded at the top.
+      vertical-align: middle;
+    }
+
+    .draft-grid__round {
+      height: var(--fs-row-h, 52px);
+    }
+  }
 }

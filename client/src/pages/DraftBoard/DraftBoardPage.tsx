@@ -147,6 +147,45 @@ export function DraftBoardPage() {
     else void document.exitFullscreen?.();
   }
 
+  // Fullscreen ("TV mode"): stretch the grid to fill the screen instead of
+  // sitting at its natural fixed size with dead space around it. Width fills
+  // via CSS (table-layout: fixed); height is measured here since HTML tables
+  // don't do percentage row heights reliably, and applied as a CSS variable.
+  const boardSectionRef = useRef<HTMLDivElement>(null);
+  const [fsRowHeight, setFsRowHeight] = useState<number | null>(null);
+  useEffect(() => {
+    if (!isFullscreen || !lobby) {
+      setFsRowHeight(null);
+      return;
+    }
+    const el = boardSectionRef.current;
+    if (!el) return;
+    const rounds = roundsForSettings(lobby.settings);
+
+    const recompute = () => {
+      // Measure the scroll container itself (not the padded section around
+      // it) so we don't have to duplicate its padding here to stay in sync.
+      const scrollEl = el.querySelector<HTMLElement>('.grid-scroll');
+      const headerEl = el.querySelector<HTMLElement>('.draft-grid__team');
+      if (!scrollEl) return;
+      const headerH = headerEl?.offsetHeight ?? 40;
+      // border-spacing (4px, see DraftGrid.scss) puts a gap around and
+      // between every row — account for it or rows overflow by a few px
+      // and force a scrollbar despite there being room to spare.
+      const spacingPerRow = 4;
+      const available = scrollEl.clientHeight - headerH - spacingPerRow * (rounds + 2);
+      const raw = Math.floor(available / rounds);
+      // Only a floor, no ceiling — the point is filling the screen, so a
+      // short draft on a big monitor should get generously tall rows.
+      setFsRowHeight(Math.max(44, raw));
+    };
+
+    recompute();
+    const ro = new ResizeObserver(recompute);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [isFullscreen, lobby]);
+
   // Resizable sidebar (desktop). Persisted across sessions.
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const saved = Number(localStorage.getItem('draftSidebarWidth'));
@@ -577,6 +616,7 @@ export function DraftBoardPage() {
     return <Navigate to={`/lobby/${id}`} replace />;
 
   const { round, onClockTeam } = derived!;
+  const totalRounds = roundsForSettings(lobby.settings);
   const isComplete = lobby.status === 'COMPLETE';
   const isPaused = lobby.status === 'PAUSED';
   const endedAt = isComplete ? lobby.completed_at ?? null : null;
@@ -772,7 +812,7 @@ export function DraftBoardPage() {
   }
 
   return (
-    <div className="draft">
+    <div className="draft" ref={rootRef}>
       <header
         className={`draft__topbar${myTurnHighlight ? ' draft__topbar--myturn' : ''}${
           myTurnUrgency ? ` draft__topbar--${myTurnUrgency}` : ''
@@ -867,24 +907,13 @@ export function DraftBoardPage() {
 
       <div className="draft__body">
         <section
-          ref={rootRef}
-          className={`draft__board ${mobileTab === 'board' ? 'is-mobile-active' : ''}${
-            isFullscreen ? ' draft__board--fs' : ''
-          }`}
+          ref={boardSectionRef}
+          className={`draft__board ${mobileTab === 'board' ? 'is-mobile-active' : ''}`}
         >
-          {isFullscreen && (
-            <button
-              className="draft__fs-exit"
-              onClick={toggleFullscreen}
-              aria-label="Exit full screen"
-            >
-              <FullscreenExitIcon fontSize="small" /> Exit full screen
-            </button>
-          )}
           <DraftGrid
             teams={teams}
             members={members}
-            rounds={roundsForSettings(lobby.settings)}
+            rounds={totalRounds}
             picks={picks}
             playersById={playersById}
             onClockTeamId={isComplete ? null : onClockTeam?.id ?? null}
@@ -896,12 +925,16 @@ export function DraftBoardPage() {
             onReactPick={reactPick}
             onPickClick={setPickModal}
             commentsByPick={commentsByPick}
+            fill={isFullscreen}
+            fillRowHeight={fsRowHeight}
           />
         </section>
 
-        <div className="draft__resizer" onMouseDown={startResize} aria-hidden />
+        {!isFullscreen && (
+          <>
+            <div className="draft__resizer" onMouseDown={startResize} aria-hidden />
 
-        <aside
+            <aside
           className={`draft__sidebar ${mobileTab !== 'board' ? 'is-mobile-active' : ''}`}
           style={{ ['--sidebar-w' as string]: `${sidebarWidth}px` }}
         >
@@ -1009,6 +1042,7 @@ export function DraftBoardPage() {
                 myUserId={userId}
                 isCommish={isCommish}
                 onToggleAuto={isComplete ? undefined : toggleAuto}
+                onPickClick={setPickModal}
               />
             </div>
           </div>
@@ -1033,6 +1067,8 @@ export function DraftBoardPage() {
             />
           </div>
         </aside>
+          </>
+        )}
       </div>
 
       {/* Mobile-only: commissioner tools flush above the bottom nav. Members

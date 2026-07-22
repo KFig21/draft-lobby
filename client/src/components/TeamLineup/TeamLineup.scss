@@ -170,6 +170,28 @@
     .player-card {
       width: 100%;
     }
+
+    // Clickable variant (opens the pick's detail modal) — reset button
+    // chrome so it looks identical to the plain div version, plus a hover cue.
+    &--link {
+      display: block;
+      border: none;
+      background: none;
+      padding: 0;
+      margin: 0;
+      font: inherit;
+      // Buttons don't inherit color by default (only font) — without this
+      // it falls back to the browser's default button text color.
+      color: inherit;
+      text-align: left;
+      cursor: pointer;
+      border-radius: $radius-sm;
+      transition: opacity 120ms ease;
+
+      &:hover {
+        opacity: 0.85;
+      }
+    }
   }
 
   &__empty {

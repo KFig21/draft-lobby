@@ -31,6 +31,10 @@ interface Props {
   onPickClick?: (pick: PickRow) => void;
   /** Comments per pick id (just for the "has comments" board indicator). */
   commentsByPick?: Map<string, ChatMessageRow[]>;
+  /** Fullscreen ("TV mode"): stretch columns to fill the available width. */
+  fill?: boolean;
+  /** Fullscreen: row height (px) computed to fill the available height. */
+  fillRowHeight?: number | null;
 }
 
 /**
@@ -53,6 +57,8 @@ export function DraftGrid({
   onReactPick,
   onPickClick,
   commentsByPick,
+  fill = false,
+  fillRowHeight,
 }: Props) {
   // Index picks by "round:teamId" for O(1) cell lookup.
   const byCell = new Map<string, PickRow>();
@@ -63,7 +69,10 @@ export function DraftGrid({
 
   return (
     <div className="grid-scroll">
-      <table className="draft-grid">
+      <table
+        className={`draft-grid${fill ? ' draft-grid--fill' : ''}`}
+        style={fillRowHeight ? { ['--fs-row-h' as string]: `${fillRowHeight}px` } : undefined}
+      >
         <thead>
           <tr>
             <th className="draft-grid__corner" />

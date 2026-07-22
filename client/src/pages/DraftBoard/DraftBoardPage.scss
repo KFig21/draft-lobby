@@ -361,38 +361,6 @@
     }
   }
 
-  // Fullscreen: only the board fills the screen (TV mode).
-  &__board--fs,
-  &__board:fullscreen {
-    display: block !important;
-    position: relative;
-    background: $bg;
-    padding: $space * 2;
-  }
-
-  &__fs-exit {
-    position: absolute;
-    top: $space;
-    right: $space;
-    z-index: 10;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: $space * 0.5 $space;
-    border: 1px solid $border;
-    border-radius: $radius-sm;
-    background: $bg-overlay;
-    color: $text;
-    font-size: 0.8rem;
-    font-weight: 600;
-    cursor: pointer;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
-
-    &:hover {
-      border-color: $primary;
-    }
-  }
-
   &__status {
     display: flex;
     flex-direction: column;

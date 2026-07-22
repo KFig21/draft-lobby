@@ -23,6 +23,8 @@ interface Props {
   isCommish?: boolean;
   /** When provided, shows an auto-draft toggle for the selected team. */
   onToggleAuto?: (teamId: string, on: boolean) => void;
+  /** Click a drafted player's card to open that pick's detail modal. */
+  onPickClick?: (pick: PickRow) => void;
 }
 
 const FLEX_ELIGIBLE: Position[] = ['RB', 'WR', 'TE'];
@@ -39,6 +41,12 @@ function eligible(slot: RosterSlot, pos: Position): boolean {
 interface Row {
   slot: RosterSlot;
   player?: PlayerRow;
+  pick?: PickRow;
+}
+
+interface PoolEntry {
+  pick: PickRow;
+  player: PlayerRow;
 }
 
 /** Fills a team's roster slots greedily (best projection first), rest to bench. */
@@ -48,29 +56,33 @@ function buildLineup(
   playersById: Map<string, PlayerRow>,
   settings: LobbySettings,
 ): Row[] {
-  const pool = picks
+  const pool: PoolEntry[] = picks
     .filter((p) => p.team_id === teamId)
-    .map((p) => playersById.get(p.player_id))
-    .filter((p): p is PlayerRow => !!p)
-    .sort((a, b) => (b.proj_points ?? 0) - (a.proj_points ?? 0));
+    .map((p) => {
+      const player = playersById.get(p.player_id);
+      return player ? { pick: p, player } : null;
+    })
+    .filter((e): e is PoolEntry => !!e)
+    .sort((a, b) => (b.player.proj_points ?? 0) - (a.player.proj_points ?? 0));
 
   const assigned = new Set<string>();
   const rows: Row[] = [];
   for (const rc of settings.rosterComposition) {
     if (rc.slot === 'BENCH') continue;
     for (let i = 0; i < rc.count; i++) {
-      const pick = pool.find(
-        (pl) => !assigned.has(pl.id) && eligible(rc.slot, pl.position as Position),
+      const entry = pool.find(
+        (e) => !assigned.has(e.player.id) && eligible(rc.slot, e.player.position as Position),
       );
-      if (pick) assigned.add(pick.id);
-      rows.push({ slot: rc.slot, player: pick });
+      if (entry) assigned.add(entry.player.id);
+      rows.push({ slot: rc.slot, player: entry?.player, pick: entry?.pick });
     }
   }
 
   const benchCount = settings.rosterComposition.find((r) => r.slot === 'BENCH')?.count ?? 0;
-  const leftover = pool.filter((pl) => !assigned.has(pl.id));
+  const leftover = pool.filter((e) => !assigned.has(e.player.id));
   for (let i = 0; i < Math.max(benchCount, leftover.length); i++) {
-    rows.push({ slot: 'BENCH', player: leftover[i] });
+    const entry = leftover[i] as PoolEntry | undefined;
+    rows.push({ slot: 'BENCH', player: entry?.player, pick: entry?.pick });
   }
   return rows;
 }
@@ -85,6 +97,7 @@ export function TeamLineup({
   myUserId,
   isCommish,
   onToggleAuto,
+  onPickClick,
 }: Props) {
   const rows = buildLineup(selectedTeamId, picks, playersById, settings);
   const starters = rows.filter((r) => r.slot !== 'BENCH');
@@ -164,7 +177,7 @@ export function TeamLineup({
         </h4>
         <ul className="lineup-view__rows">
           {starters.map((r, i) => (
-            <LineupSlot key={`s${i}`} row={r} />
+            <LineupSlot key={`s${i}`} row={r} onPickClick={onPickClick} />
           ))}
         </ul>
       </section>
@@ -177,7 +190,7 @@ export function TeamLineup({
           </h4>
           <ul className="lineup-view__rows">
             {bench.map((r, i) => (
-              <LineupSlot key={`b${i}`} row={r} />
+              <LineupSlot key={`b${i}`} row={r} onPickClick={onPickClick} />
             ))}
           </ul>
         </section>
@@ -186,15 +199,31 @@ export function TeamLineup({
   );
 }
 
-function LineupSlot({ row }: { row: Row }) {
-  const { slot, player } = row;
+function LineupSlot({
+  row,
+  onPickClick,
+}: {
+  row: Row;
+  onPickClick?: (pick: PickRow) => void;
+}) {
+  const { slot, player, pick } = row;
   return (
     <li className="lineup-slot">
       <span className="lineup-slot__label">{SLOT_LABELS[slot]}</span>
       {player ? (
-        <div className="lineup-slot__card">
-          <PlayerCard player={player} />
-        </div>
+        pick && onPickClick ? (
+          <button
+            type="button"
+            className="lineup-slot__card lineup-slot__card--link"
+            onClick={() => onPickClick(pick)}
+          >
+            <PlayerCard player={player} />
+          </button>
+        ) : (
+          <div className="lineup-slot__card">
+            <PlayerCard player={player} />
+          </div>
+        )
       ) : (
         <div className="lineup-slot__empty muted">Empty</div>
       )}
