@@ -113,6 +113,28 @@
     color: $text-muted;
   }
 
+  // Commissioner-only: dangerous action, styled distinctly from the rest of
+  // the modal's chrome so it doesn't read as a routine button.
+  &__rollback {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: $space;
+    padding: $space * 0.5 $space;
+    border: 1px solid rgba($danger, 0.4);
+    border-radius: $radius-sm;
+    background: none;
+    color: $danger;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+
+    &:hover {
+      background: rgba($danger, 0.12);
+      border-color: $danger;
+    }
+  }
+
   &__stats {
     margin-top: $space * 2;
     display: grid;

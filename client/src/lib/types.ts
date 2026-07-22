@@ -18,6 +18,8 @@ export interface LobbyRow {
   status: LobbyStatus;
   current_overall: number;
   pick_deadline: string | null;
+  pick_deadline_remaining_ms: number | null;
+  paused_at: string | null;
   completed_at: string | null;
   created_at: string;
 }

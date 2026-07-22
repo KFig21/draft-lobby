@@ -43,6 +43,13 @@ export const makePickSchema = z.object({
 });
 export type MakePickInput = z.infer<typeof makePickSchema>;
 
+/** Commissioner rolls the draft back to (and including) a specific pick —
+ * deletes it and every pick after it, putting that slot back on the clock. */
+export const rollbackToSchema = z.object({
+  overall: z.number().int().min(1),
+});
+export type RollbackToInput = z.infer<typeof rollbackToSchema>;
+
 export const renameTeamSchema = z.object({
   /** Omit to rename your own team; a commissioner may target any team. */
   teamId: z.string().uuid().optional(),

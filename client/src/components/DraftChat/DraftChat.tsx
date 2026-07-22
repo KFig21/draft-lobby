@@ -334,7 +334,10 @@ export function DraftChat({
         {items.map((it) => {
           if (it.type === 'sys') {
             return (
-              <div key={it.id} className="chat__system">
+              <div
+                key={it.id}
+                className={`chat__system${it.body.startsWith('↩️') ? ' chat__system--danger' : ''}`}
+              >
                 {it.body}
               </div>
             );

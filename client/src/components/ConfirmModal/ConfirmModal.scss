@@ -28,6 +28,35 @@
     font-size: 0.9rem;
     line-height: 1.5;
     margin-bottom: $space * 2.5;
+
+    p + p {
+      margin-top: $space * 1.5;
+    }
+
+    label {
+      display: block;
+      margin-top: $space * 1.5;
+      color: $text;
+      font-weight: 600;
+      font-size: 0.85rem;
+    }
+  }
+
+  // Optional "type X to confirm" input for higher-stakes confirmations.
+  &__confirm-input {
+    width: 100%;
+    margin-top: $space;
+    padding: $space * 0.9 $space * 1.1;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: $bg;
+    color: $text;
+    font-size: 0.9rem;
+
+    &:focus {
+      outline: 2px solid $primary;
+      outline-offset: -1px;
+    }
   }
 
   &__actions {

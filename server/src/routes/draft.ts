@@ -9,6 +9,7 @@ import {
   pickCommentSchema,
   postChatSchema,
   renameTeamSchema,
+  rollbackToSchema,
   setAutoDraftSchema,
   setDraftOrderSchema,
   type LobbySettings,
@@ -50,6 +51,19 @@ async function usernameOf(userId: string): Promise<string> {
     .eq('id', userId)
     .maybeSingle();
   return data?.username ?? 'Someone';
+}
+
+/** "2m 14s" / "1h 5m 3s" — for the "paused for …" note on the resume message. */
+function formatPauseDuration(ms: number): string {
+  const totalSeconds = Math.max(0, Math.round(ms / 1000));
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+  const parts: string[] = [];
+  if (h > 0) parts.push(`${h}h`);
+  if (h > 0 || m > 0) parts.push(`${m}m`);
+  parts.push(`${s}s`);
+  return parts.join(' ');
 }
 
 /** Post a system message (pause/resume/rollback/etc.) into the lobby chat. */
@@ -442,7 +456,7 @@ draftRouter.post('/:id/pause', async (req: AuthedRequest, res: Response) => {
 
   const { data: lobby } = await supabaseAdmin
     .from('lobbies')
-    .select('status')
+    .select('status, pick_deadline')
     .eq('id', lobbyId)
     .single();
   if (!lobby) {
@@ -454,9 +468,20 @@ draftRouter.post('/:id/pause', async (req: AuthedRequest, res: Response) => {
     return;
   }
 
+  // Save whatever time was left on the clock so resume can restore it,
+  // instead of the on-the-clock team getting a fresh full turn for free.
+  const remainingMs = lobby.pick_deadline
+    ? Math.max(0, new Date(lobby.pick_deadline as string).getTime() - Date.now())
+    : null;
+
   const { error } = await supabaseAdmin
     .from('lobbies')
-    .update({ status: 'PAUSED', pick_deadline: null })
+    .update({
+      status: 'PAUSED',
+      pick_deadline: null,
+      pick_deadline_remaining_ms: remainingMs,
+      paused_at: new Date().toISOString(),
+    })
     .eq('id', lobbyId);
   if (error) {
     res.status(500).json({ error: error.message });
@@ -466,7 +491,7 @@ draftRouter.post('/:id/pause', async (req: AuthedRequest, res: Response) => {
   res.json({ ok: true, status: 'PAUSED' });
 });
 
-/** POST /api/lobbies/:id/resume — commissioner restarts a paused draft with a fresh clock. */
+/** POST /api/lobbies/:id/resume — commissioner resumes a paused draft, restoring whatever time was left on the clock. */
 draftRouter.post('/:id/resume', async (req: AuthedRequest, res: Response) => {
   const lobbyId = req.params.id;
   const role = await getRole(lobbyId, req.user!.id);
@@ -477,7 +502,7 @@ draftRouter.post('/:id/resume', async (req: AuthedRequest, res: Response) => {
 
   const { data: lobby } = await supabaseAdmin
     .from('lobbies')
-    .select('status, settings, current_overall')
+    .select('status, settings, current_overall, pick_deadline_remaining_ms, paused_at')
     .eq('id', lobbyId)
     .single();
   if (!lobby) {
@@ -490,28 +515,53 @@ draftRouter.post('/:id/resume', async (req: AuthedRequest, res: Response) => {
   }
 
   const settings = lobby.settings as LobbySettings;
-  const deadline = await computeDeadline(lobbyId, settings, lobby.current_overall as number);
+  const remainingMs = lobby.pick_deadline_remaining_ms as number | null;
+  const pausedAt = lobby.paused_at as string | null;
+  const pausedForText = pausedAt
+    ? ` (paused for ${formatPauseDuration(Date.now() - new Date(pausedAt).getTime())})`
+    : '';
+  const deadline =
+    remainingMs != null
+      ? new Date(Date.now() + remainingMs).toISOString()
+      : await computeDeadline(lobbyId, settings, lobby.current_overall as number);
 
   const { error } = await supabaseAdmin
     .from('lobbies')
-    .update({ status: 'DRAFTING', pick_deadline: deadline })
+    .update({
+      status: 'DRAFTING',
+      pick_deadline: deadline,
+      pick_deadline_remaining_ms: null,
+      paused_at: null,
+    })
     .eq('id', lobbyId);
   if (error) {
     res.status(500).json({ error: error.message });
     return;
   }
-  await postSystemMessage(lobbyId, req.user!.id, `▶️ ${await usernameOf(req.user!.id)} resumed the draft`);
+  await postSystemMessage(
+    lobbyId,
+    req.user!.id,
+    `▶️ ${await usernameOf(req.user!.id)} resumed the draft${pausedForText}`,
+  );
   res.json({ ok: true, status: 'DRAFTING' });
 });
 
-/** POST /api/lobbies/:id/rollback — commissioner undoes the most recent pick. */
-draftRouter.post('/:id/rollback', async (req: AuthedRequest, res: Response) => {
+/** POST /api/lobbies/:id/rollback-to — commissioner rolls the draft back to
+ * (and including) a specific pick, deleting it and every pick after it. */
+draftRouter.post('/:id/rollback-to', async (req: AuthedRequest, res: Response) => {
   const lobbyId = req.params.id;
   const role = await getRole(lobbyId, req.user!.id);
   if (!isCommish(role)) {
     res.status(403).json({ error: 'Only the commissioner can roll back picks' });
     return;
   }
+
+  const parsed = rollbackToSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.flatten() });
+    return;
+  }
+  const targetOverall = parsed.data.overall;
 
   const { data: lobby } = await supabaseAdmin
     .from('lobbies')
@@ -523,28 +573,29 @@ draftRouter.post('/:id/rollback', async (req: AuthedRequest, res: Response) => {
     return;
   }
 
-  const { data: lastPick } = await supabaseAdmin
+  const { data: targetPick } = await supabaseAdmin
     .from('picks')
-    .select('id, overall, round, player_id')
+    .select('id, player_id')
     .eq('lobby_id', lobbyId)
-    .order('overall', { ascending: false })
-    .limit(1)
+    .eq('overall', targetOverall)
     .maybeSingle();
-  if (!lastPick) {
-    res.status(409).json({ error: 'There are no picks to roll back' });
+  if (!targetPick) {
+    res.status(409).json({ error: 'That pick no longer exists' });
     return;
   }
 
   const { data: rolledPlayer } = await supabaseAdmin
     .from('players')
     .select('name')
-    .eq('id', lastPick.player_id)
+    .eq('id', targetPick.player_id)
     .maybeSingle();
 
-  const { error: delError } = await supabaseAdmin
+  const { data: removed, error: delError } = await supabaseAdmin
     .from('picks')
     .delete()
-    .eq('id', lastPick.id);
+    .eq('lobby_id', lobbyId)
+    .gte('overall', targetOverall)
+    .select('id');
   if (delError) {
     res.status(500).json({ error: delError.message });
     return;
@@ -553,14 +604,12 @@ draftRouter.post('/:id/rollback', async (req: AuthedRequest, res: Response) => {
   // The rolled-back slot is now on the clock again; reopen the draft if it had ended.
   const settings = lobby.settings as LobbySettings;
   const wasPaused = lobby.status === 'PAUSED';
-  const deadline = wasPaused
-    ? null
-    : await computeDeadline(lobbyId, settings, lastPick.overall as number);
+  const deadline = wasPaused ? null : await computeDeadline(lobbyId, settings, targetOverall);
 
   const { error: updateError } = await supabaseAdmin
     .from('lobbies')
     .update({
-      current_overall: lastPick.overall,
+      current_overall: targetOverall,
       status: wasPaused ? 'PAUSED' : 'DRAFTING',
       pick_deadline: deadline,
     })
@@ -570,13 +619,16 @@ draftRouter.post('/:id/rollback', async (req: AuthedRequest, res: Response) => {
     return;
   }
   const who = await usernameOf(req.user!.id);
+  const count = removed?.length ?? 1;
   const what = rolledPlayer?.name ? ` (${rolledPlayer.name})` : '';
   await postSystemMessage(
     lobbyId,
     req.user!.id,
-    `↩️ ${who} rolled back pick ${lastPick.overall}${what}`,
+    count === 1
+      ? `↩️ ${who} rolled back pick ${targetOverall}${what}`
+      : `↩️ ${who} rolled back ${count} picks to pick ${targetOverall}${what}`,
   );
-  res.json({ ok: true, rolledBackOverall: lastPick.overall });
+  res.json({ ok: true, rolledBackOverall: targetOverall, count });
 });
 
 /** POST /api/lobbies/:id/invite — invite a user to this lobby (members only). */
@@ -1113,20 +1165,25 @@ draftRouter.post('/:id/auto-draft', async (req: AuthedRequest, res: Response) =>
     return;
   }
 
-  // If this team is on the clock right now, snap the deadline so the engine
-  // picks on the short auto clock (or, when turning off, restores the full one).
-  const { data: lobby } = await supabaseAdmin
-    .from('lobbies')
-    .select('status, settings, current_overall')
-    .eq('id', lobbyId)
-    .maybeSingle();
-  if (lobby && lobby.status === 'DRAFTING') {
-    const settings = lobby.settings as LobbySettings;
-    const overall = lobby.current_overall as number;
-    const current = await onClockTeam(lobbyId, settings, overall);
-    if (current?.id === team.id) {
-      const deadline = await computeDeadline(lobbyId, settings, overall);
-      await supabaseAdmin.from('lobbies').update({ pick_deadline: deadline }).eq('id', lobbyId);
+  // Turning auto-draft ON while this team is on the clock snaps to the short
+  // auto clock, so the engine picks for them promptly. Turning it OFF
+  // deliberately leaves the deadline untouched — restoring a fresh full
+  // clock there would let someone repeatedly toggle auto-draft to keep
+  // resetting their timer for free.
+  if (on) {
+    const { data: lobby } = await supabaseAdmin
+      .from('lobbies')
+      .select('status, settings, current_overall')
+      .eq('id', lobbyId)
+      .maybeSingle();
+    if (lobby && lobby.status === 'DRAFTING') {
+      const settings = lobby.settings as LobbySettings;
+      const overall = lobby.current_overall as number;
+      const current = await onClockTeam(lobbyId, settings, overall);
+      if (current?.id === team.id) {
+        const deadline = await computeDeadline(lobbyId, settings, overall);
+        await supabaseAdmin.from('lobbies').update({ pick_deadline: deadline }).eq('id', lobbyId);
+      }
     }
   }
   res.json({ ok: true, autoDraft: on });

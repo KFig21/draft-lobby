@@ -1,8 +1,16 @@
 import { useEffect, useState } from 'react';
 import './PickClock.scss';
 
-/** Counts down to `deadline`, ticking every second. Shows mm:ss (or hh:mm:ss). */
-export function PickClock({ deadline }: { deadline: string | null }) {
+/** Counts down to `deadline`, ticking every second. Shows mm:ss (or hh:mm:ss).
+ * While paused there's no deadline — `frozenMs` (the time that was left when
+ * paused) keeps the clock showing that value instead of going blank. */
+export function PickClock({
+  deadline,
+  frozenMs,
+}: {
+  deadline: string | null;
+  frozenMs?: number | null;
+}) {
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -10,7 +18,12 @@ export function PickClock({ deadline }: { deadline: string | null }) {
     return () => clearInterval(t);
   }, []);
 
-  if (!deadline) return <span className="clock clock--idle">—</span>;
+  if (!deadline) {
+    if (frozenMs != null) {
+      return <span className="clock clock--paused">{formatDuration(Math.max(0, Math.floor(frozenMs / 1000)))}</span>;
+    }
+    return <span className="clock clock--idle">—</span>;
+  }
 
   const remainingMs = new Date(deadline).getTime() - now;
   const remaining = Math.max(0, Math.floor(remainingMs / 1000));

@@ -126,6 +126,22 @@
     margin-top: auto;
   }
 
+  // A toggle row (e.g. auto-draft) that otherwise looks like a &__link.
+  &__toggle-pill {
+    margin-left: auto;
+    padding: 2px 9px;
+    border-radius: 999px;
+    background: $bg-overlay;
+    color: $text-muted;
+    font-size: 0.72rem;
+    font-weight: 800;
+
+    &.is-on {
+      background: rgba($accent, 0.18);
+      color: $accent;
+    }
+  }
+
   &__signout {
     color: $danger;
   }

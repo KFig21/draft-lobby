@@ -11,6 +11,8 @@ interface Props {
   onClose: () => void;
   busy?: boolean;
   danger?: boolean;
+  /** Extra gate on the confirm button beyond `busy` — e.g. a "type X to confirm" input. */
+  confirmDisabled?: boolean;
 }
 
 /** A small centered confirm dialog with enter/exit animations. */
@@ -23,6 +25,7 @@ export function ConfirmModal({
   onClose,
   busy = false,
   danger = false,
+  confirmDisabled = false,
 }: Props) {
   const { closing, requestClose } = useModalClose(onClose);
   return (
@@ -45,7 +48,7 @@ export function ConfirmModal({
           <button
             className={`button ${danger ? 'confirm-modal__danger' : 'button--primary'}`}
             onClick={onConfirm}
-            disabled={busy}
+            disabled={busy || confirmDisabled}
           >
             {busy ? busyLabel ?? 'Working…' : confirmLabel}
           </button>

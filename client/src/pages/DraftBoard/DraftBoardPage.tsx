@@ -78,6 +78,24 @@ const MOBILE_TABS: { key: MobileTab; label: string; Icon: SvgIconComponent }[] =
 const MIN_SIDEBAR = 300;
 const MAX_SIDEBAR = 600;
 
+/** Counts up from `since`, ticking every second — how long a pause has lasted. */
+function PausedDuration({ since }: { since: string }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const elapsed = Math.max(0, Math.floor((now - new Date(since).getTime()) / 1000));
+  const h = Math.floor(elapsed / 3600);
+  const m = Math.floor((elapsed % 3600) / 60);
+  const s = elapsed % 60;
+  const text =
+    h > 0
+      ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+      : `${m}:${String(s).padStart(2, '0')}`;
+  return <span className="draft__paused-duration">Paused for {text}</span>;
+}
+
 export function DraftBoardPage() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
@@ -100,9 +118,19 @@ export function DraftBoardPage() {
   const [commishBusy, setCommishBusy] = useState(false);
   const [commishError, setCommishError] = useState<string | null>(null);
   const [reqPauseBusy, setReqPauseBusy] = useState(false);
-  const [showRollback, setShowRollback] = useState(false);
+  // The pick to roll back to (inclusive) — set from the toolbar's "Undo" (the
+  // last pick) or from a pick modal's "Roll back to this pick" (any earlier one).
+  const [rollbackTarget, setRollbackTarget] = useState<PickRow | null>(null);
+  const [rollbackConfirmText, setRollbackConfirmText] = useState('');
   const [showExport, setShowExport] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  // Ticks every second so the top bar can flip yellow/red as the pick clock
+  // runs low, not just the clock text itself.
+  const [clockNow, setClockNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setClockNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
   // Commissioner toggle: auto-skip bot picks as they come on the clock,
   // instead of clicking "Skip bots" every time.
   const [autoSkipBots, setAutoSkipBots] = useState(false);
@@ -165,6 +193,11 @@ export function DraftBoardPage() {
   }, [players]);
 
   const draftedIds = useMemo(() => new Set(picks.map((p) => p.player_id)), [picks]);
+
+  const lastPick = useMemo(
+    () => picks.reduce<PickRow | null>((latest, p) => (!latest || p.overall > latest.overall ? p : latest), null),
+    [picks],
+  );
 
   const teamsById = useMemo(() => {
     const m = new Map<string, TeamRow>();
@@ -434,15 +467,24 @@ export function DraftBoardPage() {
           const row = payload.new as ChatMessageRow;
           if (row.user_id === userId) return;
           if (row.kind === 'USER') {
-            const pick = row.reply_to_pick_id ? myPick(row.reply_to_pick_id) : null;
-            if (pick) {
-              const player = playersByIdRef.current.get(pick.player_id);
+            // The pick this message replies to, if any — regardless of whose
+            // pick it is (myPick() only matches the current user's own picks,
+            // which is too narrow for "where was I mentioned").
+            const repliedPick = row.reply_to_pick_id
+              ? (picksRef.current.find((p) => p.id === row.reply_to_pick_id) ?? null)
+              : null;
+            const isMyPick =
+              !!repliedPick &&
+              teamsRef.current.find((t) => t.id === repliedPick.team_id)?.owner_id === userId;
+
+            if (isMyPick && repliedPick) {
+              const player = playersByIdRef.current.get(repliedPick.player_id);
               showToast({
                 title: `${memberUsername(row.user_id)} commented on your pick`,
                 body: player ? `${player.name}: “${row.body}”` : row.body,
                 tone: 'info',
                 avatar: memberAvatar(row.user_id),
-                onClick: () => setPickModal(pick),
+                onClick: () => setPickModal(repliedPick),
               });
               return;
             }
@@ -454,6 +496,13 @@ export function DraftBoardPage() {
                 body: row.body,
                 tone: 'info',
                 avatar: memberAvatar(row.user_id),
+                onClick: repliedPick
+                  ? () => setPickModal(repliedPick)
+                  : () => {
+                      setPanelTab('chat');
+                      setMobileTab('chat');
+                      setFocusMessageId(row.id);
+                    },
               });
             }
             return;
@@ -482,6 +531,7 @@ export function DraftBoardPage() {
               body: row.body.replace('▶️ ', ''),
               tone: 'success',
               avatar: memberAvatar(row.user_id),
+              durationMs: 2000,
             });
           } else if (row.body.startsWith('↩️')) {
             showToast({
@@ -577,7 +627,7 @@ export function DraftBoardPage() {
     }
   }
 
-  async function commishAction(path: 'pause' | 'resume' | 'rollback') {
+  async function commishAction(path: 'pause' | 'resume') {
     setCommishError(null);
     setCommishBusy(true);
     try {
@@ -586,7 +636,20 @@ export function DraftBoardPage() {
       setCommishError(err instanceof Error ? err.message : 'Action failed');
     } finally {
       setCommishBusy(false);
-      setShowRollback(false);
+    }
+  }
+
+  async function rollbackTo(overall: number) {
+    setCommishError(null);
+    setCommishBusy(true);
+    try {
+      await api(`/lobbies/${id}/rollback-to`, { method: 'POST', body: { overall } });
+    } catch (err) {
+      setCommishError(err instanceof Error ? err.message : 'Rollback failed');
+    } finally {
+      setCommishBusy(false);
+      setRollbackTarget(null);
+      setRollbackConfirmText('');
     }
   }
 
@@ -598,6 +661,7 @@ export function DraftBoardPage() {
         title: 'Pause requested',
         body: "The commissioner's been notified.",
         tone: 'info',
+        durationMs: 2000,
       });
     } catch {
       showToast({ title: "Couldn't request a pause", tone: 'danger' });
@@ -627,6 +691,18 @@ export function DraftBoardPage() {
   }
 
   const myTurnHighlight = isMyTurn && !isPaused && !isComplete;
+  const myTurnSecondsLeft = myTurnHighlight && lobby.pick_deadline
+    ? Math.max(0, Math.floor((new Date(lobby.pick_deadline).getTime() - clockNow) / 1000))
+    : null;
+  const myTurnUrgency =
+    myTurnSecondsLeft == null
+      ? null
+      : myTurnSecondsLeft <= 10
+        ? 'danger'
+        : myTurnSecondsLeft <= 25
+          ? 'warning'
+          : null;
+  const myTurnFlashing = myTurnSecondsLeft != null && myTurnSecondsLeft <= 5;
 
   // Commissioner-only tools. Rendered twice — inline in the desktop top bar,
   // and again in a bar flush above the mobile bottom nav — with CSS (not this
@@ -654,8 +730,8 @@ export function DraftBoardPage() {
         )}
         <button
           className="draft__tool-btn"
-          onClick={() => setShowRollback(true)}
-          disabled={commishBusy || picks.length === 0}
+          onClick={() => lastPick && setRollbackTarget(lastPick)}
+          disabled={commishBusy || !lastPick}
         >
           <UndoIcon fontSize="small" /> Undo
         </button>
@@ -684,14 +760,24 @@ export function DraftBoardPage() {
         aria-label="Request pause"
         title="Ask the commissioner to pause the draft"
       >
-        {compact ? <span aria-hidden>🙋</span> : <>🙋 Request pause</>}
+        {compact ? (
+          <PauseIcon fontSize="small" />
+        ) : (
+          <>
+            <PauseIcon fontSize="small" /> Request pause
+          </>
+        )}
       </button>
     );
   }
 
   return (
     <div className="draft">
-      <header className={`draft__topbar${myTurnHighlight ? ' draft__topbar--myturn' : ''}`}>
+      <header
+        className={`draft__topbar${myTurnHighlight ? ' draft__topbar--myturn' : ''}${
+          myTurnUrgency ? ` draft__topbar--${myTurnUrgency}` : ''
+        }${myTurnFlashing ? ' draft__topbar--flash' : ''}`}
+      >
         <div className="draft__left">
           <div className="draft__nav-links">
             <button
@@ -736,7 +822,7 @@ export function DraftBoardPage() {
               <FileDownloadOutlinedIcon fontSize="small" /> Export
             </button>
           ) : (
-            <PickClock deadline={lobby.pick_deadline} />
+            <PickClock deadline={lobby.pick_deadline} frozenMs={lobby.pick_deadline_remaining_ms} />
           )}
           {!isComplete && <RequestPauseButton compact />}
           {myTeam && !myTeam.is_bot && !isComplete && (
@@ -771,8 +857,11 @@ export function DraftBoardPage() {
 
       {isPaused && (
         <div className="draft__paused-banner">
-          The draft is paused
-          {isCommish ? '.' : ' by the commissioner.'}
+          <span>
+            The draft is paused
+            {isCommish ? '.' : ' by the commissioner.'}
+          </span>
+          {lobby.paused_at && <PausedDuration since={lobby.paused_at} />}
         </div>
       )}
 
@@ -1001,6 +1090,27 @@ export function DraftBoardPage() {
         extraItems={[
           { to: `/lobby/${id}`, label: 'Lobby room', Icon: MeetingRoomOutlinedIcon },
         ]}
+        extraContent={
+          myTeam && !myTeam.is_bot && !isComplete ? (
+            <button
+              type="button"
+              className="navbar-drawer__link"
+              onClick={() => toggleAuto(myTeam.id, !myTeam.auto_draft)}
+            >
+              {myTeam.auto_draft ? (
+                <SmartToyIcon fontSize="small" />
+              ) : (
+                <SmartToyOutlinedIcon fontSize="small" />
+              )}
+              Auto-draft
+              <span
+                className={`navbar-drawer__toggle-pill${myTeam.auto_draft ? ' is-on' : ''}`}
+              >
+                {myTeam.auto_draft ? 'On' : 'Off'}
+              </span>
+            </button>
+          ) : undefined
+        }
       />
 
       {pickModal &&
@@ -1044,22 +1154,69 @@ export function DraftBoardPage() {
               locked={chatLocked}
               reactionsLocked={reactionsLocked}
               onClose={() => setPickModal(null)}
+              isCommish={isCommish}
+              onRollbackTo={() => {
+                setRollbackTarget(pickModal);
+                setPickModal(null);
+              }}
             />
           );
         })()}
 
-      {showRollback && (
-        <ConfirmModal
-          title="Undo the last pick?"
-          confirmLabel="Undo pick"
-          busyLabel="Undoing…"
-          busy={commishBusy}
-          onConfirm={() => commishAction('rollback')}
-          onClose={() => setShowRollback(false)}
-        >
-          This removes the most recent pick and puts that team back on the clock.
-        </ConfirmModal>
-      )}
+      {rollbackTarget &&
+        (() => {
+          const target = rollbackTarget;
+          const player = playersById.get(target.player_id);
+          const team = teamsById.get(target.team_id);
+          const count = picks.filter((p) => p.overall >= target.overall).length;
+          const multi = count > 1;
+          const confirmWord = 'ROLLBACK';
+          return (
+            <ConfirmModal
+              title={multi ? `Roll back ${count} picks?` : 'Undo this pick?'}
+              confirmLabel={multi ? 'Roll back' : 'Undo pick'}
+              busyLabel={multi ? 'Rolling back…' : 'Undoing…'}
+              busy={commishBusy}
+              danger={multi}
+              confirmDisabled={multi && rollbackConfirmText.trim().toUpperCase() !== confirmWord}
+              onConfirm={() => rollbackTo(target.overall)}
+              onClose={() => {
+                setRollbackTarget(null);
+                setRollbackConfirmText('');
+              }}
+            >
+              <div className="rollback-summary">
+                <span className="rollback-summary__player">
+                  {player?.name ?? 'Unknown player'}
+                </span>
+                <span className="rollback-summary__meta">
+                  {team?.name ?? 'A team'} · Round {target.round} · Pick {target.overall} overall
+                </span>
+              </div>
+              {multi ? (
+                <>
+                  <p>
+                    This permanently deletes the last <strong>{count}</strong> picks (from pick{' '}
+                    {target.overall} onward) and puts {team?.name ?? 'that team'} back on the
+                    clock. This can’t be undone.
+                  </p>
+                  <label>
+                    Type <strong>{confirmWord}</strong> to confirm
+                    <input
+                      className="confirm-modal__confirm-input"
+                      value={rollbackConfirmText}
+                      onChange={(e) => setRollbackConfirmText(e.target.value)}
+                      autoFocus
+                      autoComplete="off"
+                    />
+                  </label>
+                </>
+              ) : (
+                <p>This removes the pick and puts that team back on the clock.</p>
+              )}
+            </ConfirmModal>
+          );
+        })()}
 
       {showExport && (
         <Modal title="Export draft" onClose={() => setShowExport(false)}>

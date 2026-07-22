@@ -6,6 +6,7 @@ import {
   type Position,
   type RosterSlot,
 } from '@draft-lobby/shared';
+import SmartToyIcon from '@mui/icons-material/SmartToy';
 import { PlayerCard } from '../PlayerCard/PlayerCard';
 import type { PickRow, PlayerRow, TeamRow } from '../../lib/types';
 import './TeamLineup.scss';
@@ -120,7 +121,9 @@ export function TeamLineup({
       {selectedTeam && (
         <div className="lineup-view__auto">
           {selectedTeam.is_bot ? (
-            <span className="muted">🤖 Bot — drafts automatically</span>
+            <span className="bot-badge">
+              <SmartToyIcon fontSize="inherit" /> Bot — drafts automatically
+            </span>
           ) : canToggleAuto ? (
             <label className="auto-toggle">
               <input
@@ -134,7 +137,9 @@ export function TeamLineup({
               </span>
             </label>
           ) : onToggleAuto && selectedTeam.auto_draft ? (
-            <span className="muted">🤖 Auto-drafting</span>
+            <span className="bot-badge">
+              <SmartToyIcon fontSize="inherit" /> Auto-drafting
+            </span>
           ) : null}
         </div>
       )}

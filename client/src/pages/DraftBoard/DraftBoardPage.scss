@@ -1,6 +1,16 @@
 @use 'variables' as *;
 @use 'mixins' as *;
 
+@keyframes draft-topbar-flash {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.35);
+  }
+}
+
 // Shared look for the top-bar chip buttons (Home, Room, Pause, Undo, Skip
 // bots, Export…). Blends the theme's text color into the raised bar
 // background via color-mix so they read clearly against it in both themes,
@@ -100,6 +110,96 @@
         background: rgba(#05231a, 0.14);
         color: #05231a;
       }
+
+      // The auto-draft toggle's "on" state is normally green — invisible
+      // against this bar's own green background. Flip to white-on-red so
+      // it's still legible while it's your turn.
+      .draft__auto-btn.is-on {
+        color: #fff;
+        background: $danger;
+
+        &:hover {
+          background: color-mix(in srgb, black 12%, $danger);
+        }
+      }
+
+      // Same problem, same fix, for the commissioner's "Skip bots" toggle.
+      .draft__skipbots-btn.is-on {
+        color: #fff;
+        background: $danger;
+        border-color: transparent;
+
+        &:hover {
+          background: color-mix(in srgb, black 12%, $danger);
+        }
+      }
+    }
+
+    // Your turn, clock running low: bar shifts from green → yellow → red.
+    // Text/icon colors from &--myturn (dark) already read fine on yellow;
+    // red needs everything flipped to white for contrast.
+    &--myturn.draft__topbar--warning {
+      background: $warning;
+    }
+
+    &--myturn.draft__topbar--danger {
+      background: $danger;
+      border-bottom-color: rgba(255, 255, 255, 0.35);
+      color: #fff;
+
+      .draft__onclock-team,
+      .draft__home-btn,
+      .draft__room-btn,
+      .draft__icon-btn,
+      .clock {
+        color: #fff;
+      }
+
+      .draft__home-btn,
+      .draft__room-btn,
+      .draft__tool-btn,
+      .draft__reqpause-btn {
+        border-color: rgba(255, 255, 255, 0.35);
+        background: rgba(255, 255, 255, 0.14);
+        color: #fff;
+
+        &:hover:not(:disabled) {
+          background: rgba(255, 255, 255, 0.24);
+        }
+      }
+
+      .muted {
+        color: rgba(255, 255, 255, 0.75);
+      }
+
+      .draft__yourturn {
+        background: #fff;
+        color: $danger;
+      }
+
+      .draft__icon-btn:hover {
+        background: rgba(255, 255, 255, 0.18);
+        color: #fff;
+      }
+
+      // Red-on-red would vanish — invert to white-on-transparent instead of
+      // the white-on-red used against the green/yellow bar states.
+      .draft__auto-btn.is-on,
+      .draft__skipbots-btn.is-on {
+        color: $danger;
+        background: #fff;
+        border-color: transparent;
+
+        &:hover {
+          background: rgba(255, 255, 255, 0.85);
+        }
+      }
+    }
+
+    // Last 5 seconds: pulse once per second on top of whatever urgency color
+    // (always red in practice, since danger kicks in at 10s).
+    &--flash {
+      animation: draft-topbar-flash 1s ease-in-out infinite;
     }
   }
 
@@ -235,8 +335,15 @@
   }
 
   // Auto-draft toggle: faded robot when off, filled + accent when on.
+  // Desktop-only in the top bar — mobile gets it as a toggle row in the nav
+  // drawer instead (more room, and frees up the cramped mobile top bar).
   &__auto-btn {
+    display: none;
     opacity: 0.5;
+
+    @include lg {
+      display: grid;
+    }
 
     &:hover {
       opacity: 1;
@@ -333,12 +440,26 @@
 
   &__paused-banner {
     flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: $space;
     padding: $space $space * 2;
     text-align: center;
     font-size: 0.85rem;
     font-weight: 700;
     background: rgba($warning, 0.15);
     color: $warning;
+  }
+
+  &__paused-duration {
+    padding: 1px $space;
+    border-radius: 999px;
+    background: rgba($warning, 0.2);
+    font-variant-numeric: tabular-nums;
+    font-weight: 800;
+    font-size: 0.78rem;
   }
 
   &__body {
@@ -582,6 +703,30 @@
   &__empty {
     padding: $space * 2;
     text-align: center;
+  }
+}
+
+// Pick summary card inside the rollback/undo confirm modal — a proper card
+// instead of small muted paragraph text, so the pick being touched stands out.
+.rollback-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: $space $space * 1.25;
+  margin-bottom: $space * 1.5;
+  background: $bg;
+  border: 1px solid $border;
+  border-radius: $radius-sm;
+
+  &__player {
+    color: $text;
+    font-weight: 800;
+    font-size: 1rem;
+  }
+
+  &__meta {
+    color: $text-muted;
+    font-size: 0.82rem;
   }
 }
 

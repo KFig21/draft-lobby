@@ -2,6 +2,7 @@ import { POSITION_COLORS, REACTION_EMOJIS, type Position } from '@draft-lobby/sh
 import AddReactionOutlinedIcon from '@mui/icons-material/AddReactionOutlined';
 import CloseIcon from '@mui/icons-material/Close';
 import SendIcon from '@mui/icons-material/Send';
+import UndoIcon from '@mui/icons-material/Undo';
 import { useMemo, useRef, useState, type FormEvent } from 'react';
 import { api } from '../../lib/api';
 import { renderMentionText } from '../../lib/renderMentions';
@@ -39,6 +40,9 @@ interface Props {
   /** Emoji reactions lock much later than chat (REACTION_LOCK_MS post-draft). */
   reactionsLocked?: boolean;
   onClose: () => void;
+  /** Commissioner-only: offers "Roll back to this pick" when provided. */
+  isCommish?: boolean;
+  onRollbackTo?: () => void;
 }
 
 function formatTime(iso: string): string {
@@ -59,6 +63,8 @@ export function PickModal({
   locked,
   reactionsLocked = false,
   onClose,
+  isCommish = false,
+  onRollbackTo,
 }: Props) {
   const { closing, requestClose } = useModalClose(onClose);
   const [comment, setComment] = useState('');
@@ -136,6 +142,16 @@ export function PickModal({
             {pick.overall} overall
             {pick.is_auto_pick && <span className="pick-modal__auto"> · auto</span>}
           </div>
+
+          {isCommish && onRollbackTo && (
+            <button
+              type="button"
+              className="pick-modal__rollback"
+              onClick={onRollbackTo}
+            >
+              <UndoIcon fontSize="small" /> Roll back to this pick
+            </button>
+          )}
 
           {/* Stats */}
           <div className="pick-modal__stats">

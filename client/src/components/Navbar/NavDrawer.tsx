@@ -11,7 +11,7 @@ import DarkModeIcon from '@mui/icons-material/DarkMode';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import type { SvgIconComponent } from '@mui/icons-material';
 // (sign-out lives in Settings only)
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
 import { useNotifications } from '../../notifications/NotificationsContext';
@@ -40,6 +40,8 @@ interface NavDrawerProps {
   onClose: () => void;
   /** Context-specific links rendered above the standard nav (e.g. "Lobby room"). */
   extraItems?: NavItem[];
+  /** Extra custom content (e.g. a toggle) rendered right after extraItems. */
+  extraContent?: ReactNode;
 }
 
 interface LiveDraft {
@@ -49,7 +51,7 @@ interface LiveDraft {
 }
 
 /** Slide-in menu used by the mobile bottom bar and the draft board. */
-export function NavDrawer({ open, onClose, extraItems }: NavDrawerProps) {
+export function NavDrawer({ open, onClose, extraItems, extraContent }: NavDrawerProps) {
   const { session } = useAuth();
   const { unreadCount } = useNotifications();
   const { theme, toggle } = useTheme();
@@ -138,9 +140,9 @@ export function NavDrawer({ open, onClose, extraItems }: NavDrawerProps) {
             <div className="navbar-drawer__divider" />
           </>
         )}
-        {extraItems && extraItems.length > 0 && (
+        {((extraItems && extraItems.length > 0) || extraContent) && (
           <>
-            {extraItems.map(({ to, label, Icon, end }) => (
+            {extraItems?.map(({ to, label, Icon, end }) => (
               <NavLink
                 key={to}
                 to={to}
@@ -154,6 +156,7 @@ export function NavDrawer({ open, onClose, extraItems }: NavDrawerProps) {
                 {label}
               </NavLink>
             ))}
+            {extraContent}
             <div className="navbar-drawer__divider" />
           </>
         )}

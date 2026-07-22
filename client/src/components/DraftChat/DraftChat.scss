@@ -54,6 +54,12 @@
     color: $warning;
     font-size: 0.8rem;
     font-weight: 600;
+
+    // Rollbacks are destructive — red instead of the usual amber notice.
+    &--danger {
+      background: rgba($danger, 0.14);
+      color: $danger;
+    }
   }
 
   // ── Pick line ──

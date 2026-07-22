@@ -160,16 +160,29 @@
     &--pick {
       cursor: pointer;
       transition:
-        transform 120ms ease,
-        box-shadow 120ms ease,
-        border-color 120ms ease;
+        transform 190ms ease,
+        box-shadow 190ms ease,
+        border-color 190ms ease;
 
       @media (hover: hover) {
         &:hover {
           transform: translateY(-2px);
-          border-color: $accent;
-          box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
           z-index: 4;
+
+          // Light mode: the original plain lift shadow.
+          :root[data-theme='light'] & {
+            border-color: $primary;
+            box-shadow: 3px 3px 0 0 $primary;
+            background-color: rgba($accent, 0.17);
+          }
+
+          // Dark mode: solid green shadow — no blur/spread, so it reads as
+          // a crisp offset shape rather than a soft glow.
+          :root[data-theme='dark'] & {
+            border-color: $accent;
+            background-color: rgba($accent, 0.12);
+            box-shadow: 3px 3px 0 0 $accent;
+          }
         }
       }
     }
