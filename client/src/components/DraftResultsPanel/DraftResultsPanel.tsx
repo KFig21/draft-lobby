@@ -231,16 +231,17 @@ function TeamGradeCard({
             <input
               value={comment}
               onChange={(e) => setComment(e.target.value.slice(0, 140))}
-              placeholder="Say something about this roster…"
+              placeholder="Say something about this roster… (optional)"
               maxLength={140}
             />
             <span className="draft-results__grade-count">{comment.length}/140</span>
           </div>
           <button
             type="button"
-            className="button button--sm button--primary draft-results__grade-save"
-            disabled={!comment.trim()}
-            onClick={() => onGrade(grade, comment.trim())}
+            className={`button button--sm draft-results__grade-save${
+              myGrade ? ' draft-results__grade-save--update' : ' button--primary'
+            }`}
+            onClick={() => onGrade(grade, comment.trim() || 'No notes')}
           >
             {myGrade ? 'Update grade' : 'Submit grade'}
           </button>

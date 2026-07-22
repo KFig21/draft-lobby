@@ -442,9 +442,18 @@ draftRouter.post('/:id/fast-forward', async (req: AuthedRequest, res: Response) 
     return;
   }
 
+  // The commissioner can toggle "skip bots" off mid-stream on the client,
+  // which aborts this request — without this, the loop below has no way to
+  // notice and just keeps burning through every remaining bot regardless.
+  let aborted = false;
+  req.on('close', () => {
+    aborted = true;
+  });
+
   let made = 0;
   // Cap the loop so a bug can never spin forever.
   for (let i = 0; i < 1000; i++) {
+    if (aborted) break;
     const { data: lobby } = await supabaseAdmin
       .from('lobbies')
       .select('status, settings, current_overall')
@@ -464,6 +473,7 @@ draftRouter.post('/:id/fast-forward', async (req: AuthedRequest, res: Response) 
     made++;
     if (result.complete) break;
   }
+  if (aborted) return; // connection's gone — nothing to respond to
   res.json({ ok: true, picks: made });
 });
 

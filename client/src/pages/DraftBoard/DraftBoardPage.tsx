@@ -167,6 +167,10 @@ export function DraftBoardPage() {
   // Commissioner toggle: auto-skip bot picks as they come on the clock,
   // instead of clicking "Skip bots" every time.
   const [autoSkipBots, setAutoSkipBots] = useState(false);
+  // The fast-forward request can be mid-flight (server loops through every
+  // consecutive bot in one call) when the commissioner turns the toggle back
+  // off — abort it, or the server just keeps drafting bots regardless.
+  const fastForwardAbortRef = useRef<AbortController | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -927,12 +931,16 @@ export function DraftBoardPage() {
   async function fastForward() {
     setCommishError(null);
     setCommishBusy(true);
+    const controller = new AbortController();
+    fastForwardAbortRef.current = controller;
     try {
-      await api(`/lobbies/${id}/fast-forward`, { method: 'POST' });
+      await api(`/lobbies/${id}/fast-forward`, { method: 'POST', signal: controller.signal });
     } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return;
       setCommishError(err instanceof Error ? err.message : 'Fast-forward failed');
     } finally {
       setCommishBusy(false);
+      fastForwardAbortRef.current = null;
     }
   }
 
@@ -1000,7 +1008,12 @@ export function DraftBoardPage() {
         </button>
         <button
           className={`draft__tool-btn draft__skipbots-btn${autoSkipBots ? ' is-on' : ''}`}
-          onClick={() => setAutoSkipBots((v) => !v)}
+          onClick={() =>
+            setAutoSkipBots((v) => {
+              if (v) fastForwardAbortRef.current?.abort();
+              return !v;
+            })
+          }
           title="Automatically skip bot picks as they come on the clock"
         >
           <FastForwardIcon fontSize="small" /> Skip bots

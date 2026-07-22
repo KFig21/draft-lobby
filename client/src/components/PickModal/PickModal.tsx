@@ -1,6 +1,7 @@
 import { POSITION_COLORS, REACTION_EMOJIS, containsSlur, type Position } from '@draft-lobby/shared';
 import AddReactionOutlinedIcon from '@mui/icons-material/AddReactionOutlined';
 import CloseIcon from '@mui/icons-material/Close';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
 import SendIcon from '@mui/icons-material/Send';
 import UndoIcon from '@mui/icons-material/Undo';
@@ -237,7 +238,9 @@ export function PickModal({
             )}
           </div>
           {reactionsLocked && (
-            <p className="pick-modal__note muted">🔒 Reactions are locked for this draft.</p>
+            <span className="bot-badge">
+              <LockOutlinedIcon fontSize="inherit" /> Reactions are locked for this draft
+            </span>
           )}
         </div>
 

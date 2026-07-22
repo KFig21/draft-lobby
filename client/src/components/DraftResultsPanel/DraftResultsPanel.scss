@@ -243,5 +243,17 @@
 
   &__grade-save {
     align-self: flex-start;
+
+    // Once you've already graded this roster, "Update grade" reads as a
+    // distinct (green, not the initial teal) action from "Submit grade".
+    &--update {
+      background: $accent;
+      border-color: $accent;
+      color: #05231a;
+
+      &:hover {
+        background: color-mix(in srgb, black 8%, $accent);
+      }
+    }
   }
 }

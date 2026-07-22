@@ -519,7 +519,8 @@ export function LobbyRoomPage() {
             <button
               className="button button--primary button--lg room__start"
               onClick={startDraft}
-              disabled={starting}
+              disabled={starting || orderMode}
+              title={orderMode ? 'Save or cancel the draft order first' : undefined}
             >
               {starting ? 'Starting…' : 'Start draft'}
             </button>
@@ -568,6 +569,22 @@ export function LobbyRoomPage() {
               <p className="muted room__order-hint">
                 Drag teams into any slot — leave slots open for players to fill later.
               </p>
+              <div className="room__order-actions">
+                <button type="button" className="button" onClick={randomizeOrder}>
+                  <ShuffleIcon fontSize="small" /> Randomize
+                </button>
+                <button type="button" className="button" onClick={() => setOrderMode(false)}>
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="button button--primary"
+                  onClick={saveOrder}
+                  disabled={savingOrder}
+                >
+                  {savingOrder ? 'Saving…' : 'Save order'}
+                </button>
+              </div>
               <ol className="team-list">
                 {slotOccupants.map((occId, i) => {
                   const team = occId ? teamById.get(occId) : null;
@@ -629,22 +646,6 @@ export function LobbyRoomPage() {
                   );
                 })}
               </ol>
-              <div className="room__order-actions">
-                <button type="button" className="button" onClick={randomizeOrder}>
-                  <ShuffleIcon fontSize="small" /> Randomize
-                </button>
-                <button type="button" className="button" onClick={() => setOrderMode(false)}>
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  className="button button--primary"
-                  onClick={saveOrder}
-                  disabled={savingOrder}
-                >
-                  {savingOrder ? 'Saving…' : 'Save order'}
-                </button>
-              </div>
             </>
           ) : (
             <ol className="team-list">

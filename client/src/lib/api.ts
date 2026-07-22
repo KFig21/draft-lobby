@@ -11,7 +11,7 @@ const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? '';
  */
 export async function api<T = unknown>(
   path: string,
-  options: { method?: string; body?: unknown } = {},
+  options: { method?: string; body?: unknown; signal?: AbortSignal } = {},
 ): Promise<T> {
   const {
     data: { session },
@@ -24,6 +24,7 @@ export async function api<T = unknown>(
       ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
     },
     body: options.body ? JSON.stringify(options.body) : undefined,
+    signal: options.signal,
   });
 
   const text = await res.text();
