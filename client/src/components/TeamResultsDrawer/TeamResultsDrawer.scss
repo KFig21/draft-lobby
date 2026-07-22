@@ -28,7 +28,9 @@ $mobile-tabs-h: 60px;
   will-change: height;
 
   &.is-open {
-    height: calc(80dvh - #{$mobile-tabs-h});
+    @media (max-width: $bp-md) {
+      height: calc(80dvh - #{$mobile-tabs-h});
+    }
   }
 
   &.is-full {

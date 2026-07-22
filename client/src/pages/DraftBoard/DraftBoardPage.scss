@@ -2,10 +2,12 @@
 @use 'mixins' as *;
 
 @keyframes draft-topbar-flash {
+
   0%,
   100% {
     filter: brightness(1);
   }
+
   50% {
     filter: brightness(1.35);
   }
@@ -69,6 +71,7 @@
     border-bottom: 1px solid $border;
     flex-shrink: 0;
     transition: background 150ms ease;
+    z-index: 100;
 
     // Your turn: whole bar goes green with dark text for contrast.
     &--myturn {
