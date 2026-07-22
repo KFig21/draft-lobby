@@ -322,6 +322,11 @@
   &.draft-grid--fill {
     width: 100%;
     table-layout: fixed;
+    // 52px is the normal (non-fill) row height that the base font sizes
+    // above were tuned for — scale everything relative to that, clamped so
+    // a huge TV doesn't blow text up past legibility.
+    --fs-scale: clamp(1, calc(var(--fs-row-h, 52px) / 52px), 2.5);
+    font-size: calc(0.75rem * var(--fs-scale));
 
     .draft-grid__corner {
       width: 30px;
@@ -330,6 +335,7 @@
     .draft-grid__team {
       width: auto;
       max-width: none;
+      font-size: calc(0.7rem * var(--fs-scale));
     }
 
     .draft-grid__cell {
@@ -342,6 +348,30 @@
 
     .draft-grid__round {
       height: var(--fs-row-h, 52px);
+    }
+
+    .draft-grid__round-dir {
+      font-size: calc(0.7rem * var(--fs-scale));
+    }
+
+    .draft-grid__react-flag {
+      font-size: calc(0.6rem * var(--fs-scale));
+    }
+
+    .draft-grid__rchip {
+      font-size: calc(0.72rem * var(--fs-scale));
+    }
+
+    .draft-grid__pos {
+      font-size: calc(0.65rem * var(--fs-scale));
+    }
+
+    .draft-grid__meta {
+      font-size: calc(0.65rem * var(--fs-scale));
+    }
+
+    .draft-grid__onclock-label {
+      font-size: calc(0.65rem * var(--fs-scale));
     }
   }
 }

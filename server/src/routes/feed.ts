@@ -186,6 +186,38 @@ feedRouter.get('/', async (req: AuthedRequest, res: Response) => {
   res.json({ activeLobbies, items, nextCursor, hasMore });
 });
 
+/** GET /api/feed/:activityId/reactors — who reacted, grouped by emoji. */
+feedRouter.get('/:activityId/reactors', async (req: AuthedRequest, res: Response) => {
+  const activityId = req.params.activityId;
+  const { data: reactions } = await supabaseAdmin
+    .from('activity_reactions')
+    .select('user_id, emoji')
+    .eq('activity_id', activityId);
+
+  const userIds = [...new Set((reactions ?? []).map((r) => r.user_id as string))];
+  const profileMap = new Map<string, { username: string; avatar: unknown }>();
+  if (userIds.length > 0) {
+    const { data: profiles } = await supabaseAdmin
+      .from('profiles')
+      .select('id, username, avatar')
+      .in('id', userIds);
+    for (const p of profiles ?? []) profileMap.set(p.id as string, p);
+  }
+
+  const reactors: Record<string, { userId: string; username: string; avatar: unknown }[]> = {};
+  for (const r of reactions ?? []) {
+    const profile = profileMap.get(r.user_id as string);
+    const list = reactors[r.emoji as string] ?? [];
+    list.push({
+      userId: r.user_id as string,
+      username: profile?.username ?? 'Player',
+      avatar: profile?.avatar ?? null,
+    });
+    reactors[r.emoji as string] = list;
+  }
+  res.json({ reactors });
+});
+
 /** POST /api/feed/:activityId/react — toggle an emoji reaction. */
 feedRouter.post('/:activityId/react', async (req: AuthedRequest, res: Response) => {
   const me = req.user!.id;

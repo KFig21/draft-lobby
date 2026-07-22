@@ -8,11 +8,13 @@ import {
 } from '@draft-lobby/shared';
 import AddReactionIcon from '@mui/icons-material/AddReaction';
 import HandshakeIcon from '@mui/icons-material/Handshake';
+import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
 import SportsFootballIcon from '@mui/icons-material/SportsFootball';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Avatar } from '../../components/Avatar/Avatar';
 import { Loader } from '../../components/Loader/Loader';
+import { ReactorsModal, type Reactor } from '../../components/ReactorsModal/ReactorsModal';
 import { api } from '../../lib/api';
 import { useInfiniteScroll } from '../../lib/useInfiniteScroll';
 import './HomePage.scss';
@@ -262,7 +264,19 @@ function FeedReactions({
   onReact: (id: string, emoji: string) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [reactorsModal, setReactorsModal] = useState<Record<string, Reactor[]> | null>(null);
   const active = REACTION_EMOJIS.filter((e) => (item.reactions[e] ?? 0) > 0);
+
+  async function showReactors() {
+    try {
+      const { reactors } = await api<{ reactors: Record<string, Reactor[]> }>(
+        `/feed/${item.id}/reactors`,
+      );
+      setReactorsModal(reactors);
+    } catch {
+      // Ignore — reactions still show as counts either way.
+    }
+  }
 
   return (
     <div className="feed-card__reactions">
@@ -280,6 +294,17 @@ function FeedReactions({
           </button>
         );
       })}
+      {active.length > 0 && (
+        <button
+          type="button"
+          className="reaction reaction--who"
+          aria-label="See who reacted"
+          title="See who reacted"
+          onClick={showReactors}
+        >
+          <PeopleAltOutlinedIcon sx={{ fontSize: 15 }} />
+        </button>
+      )}
       <button
         className="reaction reaction--add"
         aria-label="Add reaction"
@@ -301,6 +326,9 @@ function FeedReactions({
             </button>
           ))}
         </div>
+      )}
+      {reactorsModal && (
+        <ReactorsModal reactors={reactorsModal} onClose={() => setReactorsModal(null)} />
       )}
     </div>
   );

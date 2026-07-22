@@ -234,4 +234,17 @@
       color: $text;
     }
   }
+
+  // "See who reacted" — no background/border, just an icon.
+  &--who {
+    opacity: 1;
+    border: none;
+    background: none;
+    color: $text-muted;
+
+    &:hover {
+      color: $text;
+      background: none;
+    }
+  }
 }

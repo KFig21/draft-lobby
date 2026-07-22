@@ -300,6 +300,12 @@ export function DraftBoardPage() {
     return team?.owner_id === userId ? pick : null;
   }
 
+  /** A reply (pick comment) of mine, if it exists — for realtime toasts. */
+  function myReply(messageId: string): ChatMessageRow | null {
+    const comment = pickCommentsRef.current.find((c) => c.id === messageId);
+    return comment && comment.user_id === userId ? comment : null;
+  }
+
   const usernameById = useMemo(() => {
     const m = new Map<string, string>();
     for (const mem of members) m.set(mem.user_id, mem.profiles?.username ?? 'Player');
@@ -336,16 +342,32 @@ export function DraftBoardPage() {
           void load();
           if (payload.eventType !== 'INSERT') return;
           const row = payload.new as ChatReactionRow;
-          if (row.user_id === userId || row.target_type !== 'PICK') return;
-          const pick = myPick(row.target_id);
-          if (!pick) return;
-          const player = playersByIdRef.current.get(pick.player_id);
+          if (row.user_id === userId) return;
+          if (row.target_type === 'PICK') {
+            const pick = myPick(row.target_id);
+            if (!pick) return;
+            const player = playersByIdRef.current.get(pick.player_id);
+            showToast({
+              title: `${memberUsername(row.user_id)} reacted ${row.emoji} to your pick`,
+              body: player?.name,
+              tone: 'info',
+              avatar: memberAvatar(row.user_id),
+              onClick: () => setPickModal(pick),
+            });
+            return;
+          }
+          // MESSAGE: only toast for reactions on your own reply (pick comment)
+          // — a plain chat message reaction still lands as a notification,
+          // just not a live toast (the chat tab isn't otherwise tracked here).
+          const comment = myReply(row.target_id);
+          if (!comment) return;
+          const pick = picksRef.current.find((p) => p.id === comment.reply_to_pick_id) ?? null;
           showToast({
-            title: `${memberUsername(row.user_id)} reacted ${row.emoji} to your pick`,
-            body: player?.name,
+            title: `${memberUsername(row.user_id)} reacted ${row.emoji} to your reply`,
+            body: comment.body,
             tone: 'info',
             avatar: memberAvatar(row.user_id),
-            onClick: () => setPickModal(pick),
+            onClick: pick ? () => setPickModal(pick) : undefined,
           });
         },
       )
@@ -497,6 +519,8 @@ export function DraftBoardPage() {
     }
     return m;
   }, [pickComments]);
+  const pickCommentsRef = useRef(pickComments);
+  pickCommentsRef.current = pickComments;
 
   // ── Deep link from a notification: open the relevant pick modal, or hand
   // off to the chat panel to scroll+highlight a plain message/mention. ──
