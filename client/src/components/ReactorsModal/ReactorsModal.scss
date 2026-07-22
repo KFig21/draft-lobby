@@ -1,0 +1,96 @@
+@use 'variables' as *;
+
+.reactors-modal {
+  width: min(320px, 92vw);
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  background: $bg-raised;
+  border: 1px solid $border;
+  border-radius: $radius;
+  padding: $space * 2;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+
+  &__backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: grid;
+    place-items: center;
+    padding: $space * 2;
+    background: rgba(0, 0, 0, 0.55);
+  }
+
+  &__title {
+    margin-bottom: $space * 1.25;
+    font-size: 1rem;
+  }
+
+  &__filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-bottom: $space * 1.5;
+    padding-bottom: $space * 1.25;
+    border-bottom: 1px solid $border;
+  }
+
+  &__filter {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    border: 1px solid $border;
+    border-radius: 999px;
+    background: $bg;
+    color: $text-muted;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+
+    span {
+      font-size: 0.72rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    &:hover {
+      background: $bg-overlay;
+      color: $text;
+    }
+
+    &.is-active {
+      border-color: $primary;
+      background: rgba($primary, 0.18);
+      color: $text;
+    }
+  }
+
+  &__list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: $space;
+    overflow-y: auto;
+  }
+
+  &__row {
+    display: flex;
+    align-items: center;
+    gap: $space;
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+
+  &__row-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__row-emoji {
+    flex-shrink: 0;
+    font-size: 1.05rem;
+  }
+}

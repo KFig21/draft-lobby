@@ -1,0 +1,118 @@
+@use 'variables' as *;
+
+.draft-outro {
+  position: relative;
+  width: min(480px, 94vw);
+  max-height: 90dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: $bg-raised;
+  border: 1px solid $border;
+  border-radius: $radius;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
+
+  &__backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: grid;
+    place-items: center;
+    padding: $space * 2;
+    background: rgba(0, 0, 0, 0.6);
+  }
+
+  &__close {
+    position: absolute;
+    top: $space * 1.5;
+    right: $space * 1.5;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: $radius-sm;
+    background: $bg-overlay;
+    color: $text-muted;
+    cursor: pointer;
+
+    &:hover {
+      color: $text;
+    }
+  }
+
+  &__body {
+    overflow-y: auto;
+    padding: $space * 3;
+  }
+
+  &__heading {
+    font-size: 1.3rem;
+    margin-bottom: $space;
+    padding-right: $space * 3;
+  }
+
+  &__intro {
+    margin-bottom: $space * 2;
+    font-size: 0.85rem;
+    line-height: 1.4;
+  }
+
+  &__grade {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: $space;
+    margin-bottom: $space * 2;
+    padding: $space * 1.25;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: $bg;
+  }
+
+  &__grade-label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: $text-muted;
+  }
+
+  &__grade-badge {
+    display: inline-grid;
+    place-items: center;
+    min-width: 48px;
+    padding: $space * 0.4 $space * 0.75;
+    border-radius: $radius-sm;
+    background: $accent;
+    color: #05231a;
+    font-size: 1.1rem;
+    font-weight: 800;
+  }
+
+  &__grade-note {
+    flex-basis: 100%;
+    font-size: 0.75rem;
+  }
+
+  &__section-label {
+    margin-bottom: $space;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: $text-muted;
+  }
+
+  &__roster {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: $space * 0.75;
+    margin-bottom: $space * 2;
+  }
+
+  &__continue {
+    width: 100%;
+    margin-top: $space * 2;
+  }
+}

@@ -3,6 +3,7 @@ import {
   POSITION_COLORS,
   REACTION_EMOJIS,
   REACTION_LOCK_MS,
+  containsSlur,
   defaultAvatar,
   type Avatar as AvatarData,
   type LobbyStatus,
@@ -10,6 +11,7 @@ import {
 } from '@draft-lobby/shared';
 import AddReactionOutlinedIcon from '@mui/icons-material/AddReactionOutlined';
 import CloseIcon from '@mui/icons-material/Close';
+import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
 import ReplyIcon from '@mui/icons-material/Reply';
 import SendIcon from '@mui/icons-material/Send';
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
@@ -28,6 +30,7 @@ import type {
 } from '../../lib/types';
 import { Avatar } from '../Avatar/Avatar';
 import { MentionInput } from '../MentionInput/MentionInput';
+import { ReactorsModal, type Reactor } from '../ReactorsModal/ReactorsModal';
 import './DraftChat.scss';
 
 interface Props {
@@ -54,8 +57,8 @@ type TargetType = 'MESSAGE' | 'PICK';
 interface ReactionEntry {
   counts: Record<string, number>;
   mine: Set<string>;
-  /** Usernames that used each emoji (for the Discord-style hover tooltip). */
-  reactors: Record<string, string[]>;
+  /** Who used each emoji (for the hover tooltip + the full reactions modal). */
+  reactors: Record<string, Reactor[]>;
 }
 
 type Item =
@@ -210,6 +213,8 @@ export function DraftChat({
   }, [messages, picks, reactions]);
 
   const [highlightId, setHighlightId] = useState<string | null>(null);
+  // Set when the "who reacted" icon is clicked — shows the full reactions modal.
+  const [reactorsModal, setReactorsModal] = useState<Record<string, Reactor[]> | null>(null);
 
   // Deep-link from a notification: once the target message has loaded, scroll
   // to it and flash-highlight it (mentions, or a reaction on a plain message).
@@ -235,7 +240,11 @@ export function DraftChat({
       const entry = m.get(key) ?? { counts: {}, mine: new Set<string>(), reactors: {} };
       entry.counts[r.emoji] = (entry.counts[r.emoji] ?? 0) + 1;
       if (r.user_id === userId) entry.mine.add(r.emoji);
-      (entry.reactors[r.emoji] ??= []).push(userMap.get(r.user_id)?.username ?? 'Someone');
+      (entry.reactors[r.emoji] ??= []).push({
+        userId: r.user_id,
+        username: userMap.get(r.user_id)?.username ?? 'Someone',
+        avatar: userMap.get(r.user_id)?.avatar ?? null,
+      });
       m.set(key, entry);
     }
     return m;
@@ -293,6 +302,10 @@ export function DraftChat({
     e.preventDefault();
     const body = draft.trim();
     if (!body || locked) return;
+    if (containsSlur(body)) {
+      setError('That message contains language that isn’t allowed here');
+      return;
+    }
     setSending(true);
     setError(null);
     try {
@@ -378,33 +391,49 @@ export function DraftChat({
             const { pick } = it;
             const team = teamsById.get(pick.team_id);
             const player = playersById.get(pick.player_id);
-            return (
-              <div key={it.id} className="chat__pick">
-                <div className="chat__pick-main">
-                  {team && (
-                    <span className="chat__pick-avatar">
-                      <Avatar avatar={avatarForTeam(team, members)} size={20} />
+            const pickMainContent = (
+              <>
+                {team && (
+                  <span className="chat__pick-avatar">
+                    <Avatar avatar={avatarForTeam(team, members)} size={20} />
+                  </span>
+                )}
+                <span className="chat__pick-text">
+                  <strong>{team?.name ?? 'A team'}</strong>
+                  <span>drafted</span>
+                  {player && (
+                    <span
+                      className="chat__pick-pos"
+                      style={{ background: POSITION_COLORS[player.position as Position] }}
+                    >
+                      {player.position}
                     </span>
                   )}
-                  <span className="chat__pick-text">
-                    <strong>{team?.name ?? 'A team'}</strong>
-                    <span>drafted</span>
-                    {player && (
-                      <span
-                        className="chat__pick-pos"
-                        style={{ background: POSITION_COLORS[player.position as Position] }}
-                      >
-                        {player.position}
-                      </span>
-                    )}
-                    <strong>{player?.name ?? 'a player'}</strong>
-                    <span className="muted">· Pick {pick.overall}</span>
-                  </span>
-                </div>
+                  <strong>{player?.name ?? 'a player'}</strong>
+                  <span className="muted">· Pick {pick.overall}</span>
+                </span>
+              </>
+            );
+            return (
+              <div key={it.id} className="chat__pick">
+                {onOpenPick ? (
+                  <button
+                    type="button"
+                    className="chat__pick-main chat__pick-main--link"
+                    onClick={() => onOpenPick(pick)}
+                  >
+                    {pickMainContent}
+                  </button>
+                ) : (
+                  <div className="chat__pick-main">{pickMainContent}</div>
+                )}
                 <div className="chat__pick-actions">
                   <ReactionBar
                     entry={reactionsByTarget.get(`PICK:${pick.id}`)}
                     onReact={(emoji) => react('PICK', pick.id, emoji)}
+                    onShowAllReactions={() =>
+                      setReactorsModal(reactionsByTarget.get(`PICK:${pick.id}`)?.reactors ?? {})
+                    }
                     disabled={reactionsLocked}
                   />
                   {!locked && (
@@ -473,6 +502,9 @@ export function DraftChat({
                 <ReactionBar
                   entry={reactionsByTarget.get(`MESSAGE:${it.id}`)}
                   onReact={(emoji) => react('MESSAGE', it.id, emoji)}
+                  onShowAllReactions={() =>
+                    setReactorsModal(reactionsByTarget.get(`MESSAGE:${it.id}`)?.reactors ?? {})
+                  }
                   disabled={reactionsLocked}
                 />
               </div>
@@ -532,6 +564,10 @@ export function DraftChat({
           </form>
         </>
       )}
+
+      {reactorsModal && (
+        <ReactorsModal reactors={reactorsModal} onClose={() => setReactorsModal(null)} />
+      )}
     </div>
   );
 }
@@ -539,10 +575,12 @@ export function DraftChat({
 function ReactionBar({
   entry,
   onReact,
+  onShowAllReactions,
   disabled = false,
 }: {
   entry: ReactionEntry | undefined;
   onReact: (emoji: string) => void;
+  onShowAllReactions: () => void;
   disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
@@ -551,7 +589,7 @@ function ReactionBar({
   return (
     <div className="chat-react">
       {active.map((e) => {
-        const names = entry?.reactors[e] ?? [];
+        const names = (entry?.reactors[e] ?? []).map((r) => r.username);
         return (
           <button
             key={e}
@@ -563,12 +601,23 @@ function ReactionBar({
             <span className="chat-react__count">{entry?.counts[e]}</span>
             {names.length > 0 && (
               <span className="chat-react__tip" role="tooltip">
-                {names.join(', ')}
+                {tipText(names)}
               </span>
             )}
           </button>
         );
       })}
+      {active.length > 0 && (
+        <button
+          type="button"
+          className="chat-react__viewall"
+          aria-label="See who reacted"
+          title="See who reacted"
+          onClick={onShowAllReactions}
+        >
+          <PeopleAltOutlinedIcon sx={{ fontSize: 15 }} />
+        </button>
+      )}
       {!disabled && (
         <button
           className="chat-react__add"
@@ -595,6 +644,15 @@ function ReactionBar({
       )}
     </div>
   );
+}
+
+// Cap the hover tooltip's name list — a draft with dozens of reactors would
+// otherwise blow it up into an unreadable block. The "see who reacted" icon
+// still opens the full scrollable list, filterable by emoji.
+const TIP_CAP = 8;
+function tipText(names: string[]): string {
+  if (names.length <= TIP_CAP) return names.join(', ');
+  return `${names.slice(0, TIP_CAP).join(', ')} +${names.length - TIP_CAP} more`;
 }
 
 function formatTime(iso: string): string {

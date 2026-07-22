@@ -25,6 +25,8 @@ interface Props {
   onToggleAuto?: (teamId: string, on: boolean) => void;
   /** Click a drafted player's card to open that pick's detail modal. */
   onPickClick?: (pick: PickRow) => void;
+  /** Rendered directly beneath the team dropdown (and its bot/auto status row). */
+  belowSelect?: React.ReactNode;
 }
 
 const FLEX_ELIGIBLE: Position[] = ['RB', 'WR', 'TE'];
@@ -98,6 +100,7 @@ export function TeamLineup({
   isCommish,
   onToggleAuto,
   onPickClick,
+  belowSelect,
 }: Props) {
   const rows = buildLineup(selectedTeamId, picks, playersById, settings);
   const starters = rows.filter((r) => r.slot !== 'BENCH');
@@ -156,6 +159,8 @@ export function TeamLineup({
           ) : null}
         </div>
       )}
+
+      {belowSelect}
 
       <div className="lineup-view__composition">
         {POSITIONS.map((pos) => (

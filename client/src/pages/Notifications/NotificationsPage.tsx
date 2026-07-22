@@ -103,7 +103,8 @@ export function NotificationsPage() {
       (n.type === 'PICK_REACTION' ||
         n.type === 'MESSAGE_REACTION' ||
         n.type === 'PICK_REPLY' ||
-        n.type === 'MENTION') &&
+        n.type === 'MENTION' ||
+        n.type === 'DRAFT_GRADE') &&
       !!n.lobby_id;
     return (
       <li
@@ -180,6 +181,13 @@ export function NotificationsPage() {
               <>
                 <strong>{name}</strong> mentioned you
                 {n.snippet ? <>: “{n.snippet}”</> : ''} in{' '}
+                <strong>{n.lobby_name ?? 'a draft'}</strong>
+              </>
+            )}
+            {n.type === 'DRAFT_GRADE' && (
+              <>
+                {withGroup(name, n.count)} graded your roster
+                {n.snippet ? <>: {n.snippet}</> : ''} in{' '}
                 <strong>{n.lobby_name ?? 'a draft'}</strong>
               </>
             )}

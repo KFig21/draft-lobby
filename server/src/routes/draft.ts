@@ -1,9 +1,14 @@
 import { Router, type Response } from 'express';
 import {
   CHAT_LOCK_MS,
+  DRAFT_RESULTS_LOCK_MS,
   REACTION_LOCK_MS,
+  ROLLBACK_LOCK_MS,
   chatReactSchema,
+  containsSlur,
+  crownVoteSchema,
   extractMentionedUsernames,
+  gradeTeamSchema,
   inviteToLobbySchema,
   makePickSchema,
   pickCommentSchema,
@@ -88,7 +93,12 @@ async function resolveInviteNotification(
     .is('status', null);
 }
 
-type GroupableNotification = 'PICK_REACTION' | 'MESSAGE_REACTION' | 'PICK_REPLY' | 'MENTION';
+type GroupableNotification =
+  | 'PICK_REACTION'
+  | 'MESSAGE_REACTION'
+  | 'PICK_REPLY'
+  | 'MENTION'
+  | 'DRAFT_GRADE';
 
 /**
  * Create a notification, or — if the recipient already has an unread one for
@@ -101,7 +111,7 @@ async function notifyGrouped(params: {
   type: GroupableNotification;
   lobbyId: string;
   lobbyName: string;
-  targetType: 'PICK' | 'MESSAGE';
+  targetType: 'PICK' | 'MESSAGE' | 'TEAM';
   targetId: string;
   snippet: string;
 }): Promise<void> {
@@ -272,6 +282,18 @@ async function isChatLocked(lobbyId: string): Promise<boolean> {
 async function isReactionsLocked(lobbyId: string): Promise<boolean> {
   const endedAt = await draftEndedAt(lobbyId);
   return !!endedAt && Date.now() > new Date(endedAt).getTime() + REACTION_LOCK_MS;
+}
+
+/** The rollback feature disappears ROLLBACK_LOCK_MS after the draft ends. */
+async function isRollbackLocked(lobbyId: string): Promise<boolean> {
+  const endedAt = await draftEndedAt(lobbyId);
+  return !!endedAt && Date.now() > new Date(endedAt).getTime() + ROLLBACK_LOCK_MS;
+}
+
+/** The crown vote / peer grading close DRAFT_RESULTS_LOCK_MS after the draft ends. */
+async function isResultsLocked(lobbyId: string): Promise<boolean> {
+  const endedAt = await draftEndedAt(lobbyId);
+  return !!endedAt && Date.now() > new Date(endedAt).getTime() + DRAFT_RESULTS_LOCK_MS;
 }
 
 /** POST /api/lobbies/:id/start — commissioner kicks off the draft. */
@@ -555,6 +577,10 @@ draftRouter.post('/:id/rollback-to', async (req: AuthedRequest, res: Response) =
     res.status(403).json({ error: 'Only the commissioner can roll back picks' });
     return;
   }
+  if (await isRollbackLocked(lobbyId)) {
+    res.status(403).json({ error: 'The rollback window has closed for this draft' });
+    return;
+  }
 
   const parsed = rollbackToSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -804,6 +830,10 @@ draftRouter.post('/:id/chat', async (req: AuthedRequest, res: Response) => {
     res.status(400).json({ error: parsed.error.flatten() });
     return;
   }
+  if (containsSlur(parsed.data.body)) {
+    res.status(400).json({ error: 'That message contains language that isn’t allowed here' });
+    return;
+  }
   if (await isChatLocked(lobbyId)) {
     res.status(409).json({ error: 'Chat is locked for this draft' });
     return;
@@ -835,6 +865,10 @@ draftRouter.post('/:id/pick-comment', async (req: AuthedRequest, res: Response) 
   const parsed = pickCommentSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.flatten() });
+    return;
+  }
+  if (containsSlur(parsed.data.body)) {
+    res.status(400).json({ error: 'That message contains language that isn’t allowed here' });
     return;
   }
   if (await isChatLocked(lobbyId)) {
@@ -1325,5 +1359,154 @@ draftRouter.post('/:id/kick', async (req: AuthedRequest, res: Response) => {
 
   await supabaseAdmin.from('teams').delete().eq('lobby_id', lobbyId).eq('owner_id', targetId);
   await supabaseAdmin.from('lobby_members').delete().eq('lobby_id', lobbyId).eq('user_id', targetId);
+  res.json({ ok: true });
+});
+
+/** The signed-in user's own team in a lobby, if they have one. */
+async function myTeamId(lobbyId: string, userId: string): Promise<string | null> {
+  const { data } = await supabaseAdmin
+    .from('teams')
+    .select('id')
+    .eq('lobby_id', lobbyId)
+    .eq('owner_id', userId)
+    .maybeSingle();
+  return (data?.id as string | undefined) ?? null;
+}
+
+/** POST /api/lobbies/:id/crown-vote — cast/change your vote for the best OTHER roster. */
+draftRouter.post('/:id/crown-vote', async (req: AuthedRequest, res: Response) => {
+  const lobbyId = req.params.id;
+  const userId = req.user!.id;
+
+  const role = await getRole(lobbyId, userId);
+  if (!role) {
+    res.status(403).json({ error: 'Only members can vote in this lobby' });
+    return;
+  }
+  const parsed = crownVoteSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.flatten() });
+    return;
+  }
+
+  const { data: lobby } = await supabaseAdmin
+    .from('lobbies')
+    .select('status')
+    .eq('id', lobbyId)
+    .maybeSingle();
+  if (!lobby || lobby.status !== 'COMPLETE') {
+    res.status(409).json({ error: 'Voting opens once the draft is complete' });
+    return;
+  }
+  if (await isResultsLocked(lobbyId)) {
+    res.status(409).json({ error: 'Voting closed 24h after the draft ended' });
+    return;
+  }
+
+  if ((await myTeamId(lobbyId, userId)) === parsed.data.teamId) {
+    res.status(400).json({ error: 'You can’t vote for your own roster' });
+    return;
+  }
+  const { data: targetTeam } = await supabaseAdmin
+    .from('teams')
+    .select('id')
+    .eq('id', parsed.data.teamId)
+    .eq('lobby_id', lobbyId)
+    .maybeSingle();
+  if (!targetTeam) {
+    res.status(404).json({ error: 'Team not found' });
+    return;
+  }
+
+  const { error } = await supabaseAdmin
+    .from('draft_crown_votes')
+    .upsert(
+      { lobby_id: lobbyId, voter_id: userId, team_id: parsed.data.teamId },
+      { onConflict: 'lobby_id,voter_id' },
+    );
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
+  res.json({ ok: true });
+});
+
+/** POST /api/lobbies/:id/grade-team — leave/update a grade + 140-char comment on an OTHER team's roster. */
+draftRouter.post('/:id/grade-team', async (req: AuthedRequest, res: Response) => {
+  const lobbyId = req.params.id;
+  const userId = req.user!.id;
+
+  const role = await getRole(lobbyId, userId);
+  if (!role) {
+    res.status(403).json({ error: 'Only members can grade rosters in this lobby' });
+    return;
+  }
+  const parsed = gradeTeamSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.flatten() });
+    return;
+  }
+  if (containsSlur(parsed.data.comment)) {
+    res.status(400).json({ error: 'That comment contains language that isn’t allowed here' });
+    return;
+  }
+
+  const { data: lobby } = await supabaseAdmin
+    .from('lobbies')
+    .select('status, name')
+    .eq('id', lobbyId)
+    .maybeSingle();
+  if (!lobby || lobby.status !== 'COMPLETE') {
+    res.status(409).json({ error: 'Grading opens once the draft is complete' });
+    return;
+  }
+  if (await isResultsLocked(lobbyId)) {
+    res.status(409).json({ error: 'Grading closed 24h after the draft ended' });
+    return;
+  }
+
+  if ((await myTeamId(lobbyId, userId)) === parsed.data.teamId) {
+    res.status(400).json({ error: 'You can’t grade your own roster' });
+    return;
+  }
+  const { data: targetTeam } = await supabaseAdmin
+    .from('teams')
+    .select('id, owner_id')
+    .eq('id', parsed.data.teamId)
+    .eq('lobby_id', lobbyId)
+    .maybeSingle();
+  if (!targetTeam) {
+    res.status(404).json({ error: 'Team not found' });
+    return;
+  }
+
+  const { error } = await supabaseAdmin.from('draft_grades').upsert(
+    {
+      lobby_id: lobbyId,
+      rater_id: userId,
+      team_id: parsed.data.teamId,
+      grade: parsed.data.grade,
+      comment: parsed.data.comment,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'lobby_id,rater_id,team_id' },
+  );
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
+
+  if (targetTeam.owner_id) {
+    await notifyGrouped({
+      userId: targetTeam.owner_id as string,
+      actorId: userId,
+      type: 'DRAFT_GRADE',
+      lobbyId,
+      lobbyName: (lobby.name as string | undefined) ?? 'a draft',
+      targetType: 'TEAM',
+      targetId: parsed.data.teamId,
+      snippet: `${parsed.data.grade} — ${parsed.data.comment}`,
+    });
+  }
   res.json({ ok: true });
 });

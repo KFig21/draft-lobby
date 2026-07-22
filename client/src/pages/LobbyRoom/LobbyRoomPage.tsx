@@ -36,7 +36,7 @@ import { api } from '../../lib/api';
 import { avatarForTeam } from '../../lib/teamAvatar';
 import { supabase } from '../../supabase';
 import { useToast } from '../../toast/ToastContext';
-import type { FriendshipRow, PlayerRow, ProfileMini, TeamRow } from '../../lib/types';
+import type { FriendshipRow, PickRow, PlayerRow, ProfileMini, TeamRow } from '../../lib/types';
 import './LobbyRoomPage.scss';
 
 const OPEN_AVATAR = { bgColor: '#2e3347', shape: 'circle', emoji: '➕' } as const;
@@ -236,6 +236,19 @@ export function LobbyRoomPage() {
     for (const p of players) m.set(p.id, p);
     return m;
   }, [players]);
+
+  // The lobby chat has no pick modal / draft board of its own — clicking a
+  // pick, a "replied to" reference, or a pick reaction line instead hops over
+  // to the draft room and opens that pick there. Uses a plain `?pick=` query
+  // param rather than router `state` — state doesn't survive a refresh or a
+  // link opened in a new tab, and is otherwise harder to verify was actually
+  // attached; a query param is visible in the URL and unambiguous.
+  const openPickInDraftRoom = useCallback(
+    (pick: PickRow) => {
+      navigate(`/lobby/${id}/draft?pick=${pick.id}`);
+    },
+    [id, navigate],
+  );
 
   async function addBot() {
     setBotBusy(true);
@@ -863,6 +876,7 @@ export function LobbyRoomPage() {
               teamsById={teamsById}
               playersById={playersById}
               members={members}
+              onOpenPick={openPickInDraftRoom}
             />
           </div>
         </aside>
@@ -915,6 +929,7 @@ export function LobbyRoomPage() {
               members={members}
               active={chatActive}
               onUnread={setChatUnread}
+              onOpenPick={openPickInDraftRoom}
             />
           </div>
         </div>

@@ -1,5 +1,6 @@
 import type {
   Avatar,
+  DraftGrade,
   FriendshipStatus,
   LobbySettings,
   LobbyStatus,
@@ -72,6 +73,25 @@ export interface PickRow {
   is_keeper: boolean;
   is_auto_pick: boolean;
   picked_at: string;
+}
+
+/** A vote for which OTHER team had the best draft (one per voter per lobby). */
+export interface DraftCrownVoteRow {
+  lobby_id: string;
+  voter_id: string;
+  team_id: string;
+  created_at: string;
+}
+
+/** A letter grade + short comment left on an OTHER team's roster. */
+export interface DraftGradeRow {
+  lobby_id: string;
+  rater_id: string;
+  team_id: string;
+  grade: DraftGrade;
+  comment: string;
+  created_at: string;
+  updated_at: string;
 }
 
 /** Minimal profile shape as embedded in social queries. */

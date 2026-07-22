@@ -8,11 +8,12 @@ export const NOTIFICATION_TYPES = [
   'MESSAGE_REACTION',
   'PICK_REPLY',
   'MENTION',
+  'DRAFT_GRADE',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
-/** Notification target for the pick/message-scoped types (for grouping). */
-export const NOTIFICATION_TARGET_TYPES = ['PICK', 'MESSAGE'] as const;
+/** Notification target for the pick/message/team-scoped types (for grouping). */
+export const NOTIFICATION_TARGET_TYPES = ['PICK', 'MESSAGE', 'TEAM'] as const;
 export type NotificationTargetType = (typeof NOTIFICATION_TARGET_TYPES)[number];
 
 export const FRIENDSHIP_STATUSES = ['PENDING', 'ACCEPTED'] as const;
@@ -85,6 +86,37 @@ export const CHAT_LOCK_MS = 24 * 60 * 60 * 1000;
 
 /** How long after a draft ends emoji reactions (on picks and messages) lock. */
 export const REACTION_LOCK_MS = 24 * 60 * 60 * 1000;
+
+/** How long after a draft ends the commissioner can still roll back picks. */
+export const ROLLBACK_LOCK_MS = 5 * 60 * 1000;
+
+// ── Post-draft results: crown vote + peer grades ─────────────────────
+/** Letter-grade scale for both the auto-computed grade and peer grades. */
+export const DRAFT_GRADES = [
+  'A+', 'A', 'A-',
+  'B+', 'B', 'B-',
+  'C+', 'C', 'C-',
+  'D+', 'D', 'D-',
+  'F',
+] as const;
+export type DraftGrade = (typeof DRAFT_GRADES)[number];
+
+/** Cast (or change) your vote for which OTHER team had the best draft. */
+export const crownVoteSchema = z.object({
+  teamId: z.string().uuid(),
+});
+export type CrownVoteInput = z.infer<typeof crownVoteSchema>;
+
+/** Leave (or update) a grade + short comment on an OTHER team's roster. */
+export const gradeTeamSchema = z.object({
+  teamId: z.string().uuid(),
+  grade: z.enum(DRAFT_GRADES),
+  comment: z.string().trim().min(1).max(140),
+});
+export type GradeTeamInput = z.infer<typeof gradeTeamSchema>;
+
+/** How long after a draft ends the crown vote / peer grading stays open. */
+export const DRAFT_RESULTS_LOCK_MS = 24 * 60 * 60 * 1000;
 
 /** Keep usernames short enough to fit in the draft board's team columns,
  * chat author names, etc. without truncation looking cramped. */

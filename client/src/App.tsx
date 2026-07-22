@@ -68,6 +68,19 @@ function ScrollToTop() {
   return null;
 }
 
+/**
+ * ErrorBoundary sits above <Routes> and, once tripped, substitutes
+ * ErrorScreen for the entire tree — including Routes itself — so navigating
+ * away (e.g. "Back to home") changes the URL but never actually renders the
+ * new page; only a hard refresh clears it. Keying on `location.key` (unique
+ * per navigation, even to the same path) forces a fresh ErrorBoundary
+ * instance on every navigation, discarding the caught error along with it.
+ */
+function RoutedErrorBoundary({ children }: { children: React.ReactNode }) {
+  const location = useLocation();
+  return <ErrorBoundary key={location.key}>{children}</ErrorBoundary>;
+}
+
 /** Splash / auth are for signed-out visitors; send signed-in users home. */
 function PublicOnly({ children }: { children: React.ReactNode }) {
   const { session, loading } = useAuth();
@@ -89,7 +102,7 @@ export default function App() {
         <ToastProvider>
         <BrowserRouter>
           <ScrollToTop />
-          <ErrorBoundary>
+          <RoutedErrorBoundary>
           <Suspense
             fallback={
               <div className="loading">
@@ -148,7 +161,7 @@ export default function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
           </Suspense>
-          </ErrorBoundary>
+          </RoutedErrorBoundary>
         </BrowserRouter>
         </ToastProvider>
         </NotificationsProvider>

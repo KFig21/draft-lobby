@@ -1,0 +1,241 @@
+@use 'variables' as *;
+
+.draft-results {
+  display: flex;
+  flex-direction: column;
+  gap: $space * 2.5;
+
+  &__section {
+    display: flex;
+    flex-direction: column;
+    gap: $space;
+  }
+
+  &__title {
+    display: flex;
+    align-items: center;
+    gap: $space * 0.5;
+    font-size: 0.95rem;
+    color: $accent;
+  }
+
+  &__subtitle {
+    margin-top: -$space * 0.5;
+    font-size: 0.8rem;
+  }
+
+  &__votes {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: $space * 0.5;
+  }
+
+  &__vote-row {
+    display: flex;
+    align-items: center;
+    gap: $space;
+    padding: $space * 0.75 $space;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: $bg;
+
+    &.is-mine {
+      border-color: $accent;
+      background: rgba($accent, 0.1);
+    }
+  }
+
+  &__vote-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 700;
+    font-size: 0.9rem;
+  }
+
+  &__vote-count {
+    color: $text-muted;
+    font-size: 0.8rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__crown-btn {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    border: 1px solid $border;
+    border-radius: 999px;
+    background: $bg-overlay;
+    color: $text-muted;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      background: $bg-hover;
+      color: $text;
+    }
+    &:disabled {
+      cursor: not-allowed;
+    }
+    &.is-active {
+      border-color: $accent;
+      background: $accent;
+      color: #05231a;
+    }
+  }
+
+  &__grades {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: $space;
+  }
+
+  &__grade-card {
+    padding: $space * 1.25;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: $bg;
+  }
+
+  &__grade-head {
+    display: flex;
+    align-items: center;
+    gap: $space;
+  }
+
+  &__grade-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 700;
+    font-size: 0.9rem;
+  }
+
+  &__grade-avg {
+    font-weight: 800;
+    font-size: 0.9rem;
+    color: $accent;
+  }
+
+  &__grade-toggle {
+    border: none;
+    background: none;
+    color: $primary-hover;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    flex-shrink: 0;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  &__comments {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: $space * 0.5;
+    margin-top: $space;
+    padding-top: $space;
+    border-top: 1px solid $border;
+  }
+
+  &__comment {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px;
+    font-size: 0.82rem;
+  }
+
+  &__comment-grade {
+    font-weight: 800;
+    color: $accent;
+  }
+
+  &__comment-author {
+    font-weight: 700;
+  }
+
+  &__comment-body {
+    color: $text-muted;
+    flex-basis: 100%;
+  }
+
+  &__grade-form {
+    display: flex;
+    flex-direction: column;
+    gap: $space * 0.75;
+    margin-top: $space;
+    padding-top: $space;
+    border-top: 1px solid $border;
+  }
+
+  &__grade-picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  &__grade-pill {
+    padding: 3px 9px;
+    border: 1px solid $border;
+    border-radius: 999px;
+    background: $bg-overlay;
+    color: $text;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+
+    &:hover {
+      background: $bg-hover;
+    }
+    &.is-active {
+      border-color: $accent;
+      background: $accent;
+      color: #05231a;
+    }
+  }
+
+  &__grade-comment {
+    position: relative;
+    display: flex;
+    align-items: center;
+
+    input {
+      width: 100%;
+      padding: $space * 0.75 48px $space * 0.75 $space;
+      border: 1px solid $border;
+      border-radius: $radius-sm;
+      background: $bg;
+      color: $text;
+      font-size: 0.85rem;
+
+      &:focus {
+        outline: 2px solid $primary;
+        outline-offset: -1px;
+      }
+    }
+  }
+
+  &__grade-count {
+    position: absolute;
+    right: $space;
+    color: $text-muted;
+    font-size: 0.68rem;
+    font-variant-numeric: tabular-nums;
+    pointer-events: none;
+  }
+
+  &__grade-save {
+    align-self: flex-start;
+  }
+}

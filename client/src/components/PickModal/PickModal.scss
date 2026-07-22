@@ -208,8 +208,9 @@
       background: $bg-overlay;
     }
 
+    // Locked reaction chips still show real (historical) data, so they stay
+    // fully legible — only the cursor signals they're no longer actionable.
     &:disabled {
-      opacity: 0.5;
       cursor: not-allowed;
 
       &:hover {
@@ -233,6 +234,24 @@
     font-size: 0.8rem;
     font-weight: 800;
     font-variant-numeric: tabular-nums;
+  }
+
+  // "See who reacted" — opens the full, filterable reactions list.
+  &__react-viewall {
+    display: inline-grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    border: none;
+    border-radius: 999px;
+    background: none;
+    color: $text-muted;
+    cursor: pointer;
+
+    &:hover {
+      background: $bg-overlay;
+      color: $text;
+    }
   }
 
   &__react-tip {
@@ -342,7 +361,6 @@
     cursor: pointer;
 
     &:disabled {
-      opacity: 0.6;
       cursor: not-allowed;
     }
 
@@ -355,6 +373,24 @@
     &:hover .pick-modal__comment-tip {
       opacity: 1;
       transform: translateX(-50%) translateY(0);
+    }
+  }
+
+  // "See who reacted" for a comment's reaction row.
+  &__comment-viewall {
+    display: inline-grid;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    border: none;
+    border-radius: 999px;
+    background: none;
+    color: $text-muted;
+    cursor: pointer;
+
+    &:hover {
+      background: $bg-overlay;
+      color: $text;
     }
   }
 

@@ -73,8 +73,29 @@
 
   &__pick-main {
     display: flex;
-    align-items: center;
+    // Top-aligned rather than centered — the text wraps onto a second line
+    // ("· Pick N") and centering pulled the avatar down between the two
+    // lines instead of sitting level with the username/team line.
+    align-items: flex-start;
     gap: $space;
+
+    &--link {
+      width: 100%;
+      border: none;
+      background: none;
+      padding: 0;
+      margin: 0;
+      font: inherit;
+      color: inherit;
+      text-align: left;
+      cursor: pointer;
+      border-radius: $radius-sm;
+      transition: opacity 120ms ease;
+
+      &:hover {
+        opacity: 0.8;
+      }
+    }
   }
 
   &__pick-avatar {
@@ -357,8 +378,9 @@
     font-size: 0.8rem;
     cursor: pointer;
 
+    // Locked reaction chips still show real (historical) data, so they stay
+    // fully legible — only the cursor signals they're no longer actionable.
     &:disabled {
-      opacity: 0.6;
       cursor: not-allowed;
     }
 
@@ -412,6 +434,23 @@
       transform: translateX(-50%);
       border: 5px solid transparent;
       border-top-color: var(--tooltip-bg, #0b0d14);
+    }
+  }
+
+  &__viewall {
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border: none;
+    border-radius: 999px;
+    background: none;
+    color: $text-muted;
+    cursor: pointer;
+
+    &:hover {
+      background: $bg-overlay;
+      color: $text;
     }
   }
 

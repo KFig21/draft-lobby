@@ -431,6 +431,7 @@
   }
 
   &__body {
+    position: relative; // anchor for the desktop team-results drawer
     display: flex;
     flex: 1;
     min-height: 0;
@@ -480,6 +481,51 @@
     min-height: 0;
     overflow: auto;
     padding: $space * 1.5;
+  }
+
+  // Crown-vote + grade summary beneath the team dropdown — click to open
+  // TeamResultsDrawer for the currently-selected roster team.
+  &__results-summary {
+    display: flex;
+    align-items: center;
+    gap: $space * 1.5;
+    width: 100%;
+    padding: $space * 0.9 $space * 1.25;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: $bg-overlay;
+    color: $text;
+    cursor: pointer;
+    text-align: left;
+
+    &:hover {
+      background: $bg-hover;
+    }
+  }
+
+  &__results-summary-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.85rem;
+    font-weight: 700;
+  }
+
+  &__results-summary-chevron {
+    margin-left: auto;
+    color: $text-muted;
+  }
+
+  &__results {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding: $space * 1.5;
+  }
+
+  &__results-locked {
+    margin-bottom: $space * 1.5;
+    font-size: 0.82rem;
   }
 
   &__chat {
@@ -549,6 +595,10 @@
       width: var(--sidebar-w, 380px);
       min-height: 0;
       border-left: 1px solid $border;
+      // Stack above TeamResultsDrawer so the drawer's closed (tucked-under)
+      // position is actually hidden behind this, not just off-canvas.
+      position: relative;
+      z-index: 2;
     }
 
     &__sidebar-tabs {
@@ -573,6 +623,9 @@
   &__tabs {
     display: flex;
     flex-shrink: 0;
+    // Fixed height so TeamResultsDrawer.scss's $mobile-tabs-h can sit the
+    // results drawer flush above it — keep the two in sync.
+    height: 60px;
     border-top: 1px solid $border;
     background: $bg-raised;
 

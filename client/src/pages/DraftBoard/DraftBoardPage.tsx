@@ -1,15 +1,20 @@
 import {
   CHAT_LOCK_MS,
+  DRAFT_RESULTS_LOCK_MS,
   POSITIONS,
   REACTION_LOCK_MS,
+  ROLLBACK_LOCK_MS,
   defaultAvatar,
   draftPositionForOverall,
   extractMentionedUsernames,
   roundsForSettings,
   type Avatar as AvatarData,
+  type DraftGrade,
   type Position,
 } from '@draft-lobby/shared';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlined';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import EmojiEventsOutlinedIcon from '@mui/icons-material/EmojiEventsOutlined';
 import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
 import FastForwardIcon from '@mui/icons-material/FastForward';
 import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
@@ -29,10 +34,19 @@ import TableChartOutlinedIcon from '@mui/icons-material/TableChartOutlined';
 import UndoIcon from '@mui/icons-material/Undo';
 import type { SvgIconComponent } from '@mui/icons-material';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
+import {
+  Link,
+  Navigate,
+  useLocation,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from 'react-router-dom';
 import { ConfirmModal } from '../../components/ConfirmModal/ConfirmModal';
 import { DraftChat } from '../../components/DraftChat/DraftChat';
 import { DraftGrid, type ReactionEntry } from '../../components/DraftGrid/DraftGrid';
+import { DraftOutroModal } from '../../components/DraftOutroModal/DraftOutroModal';
+import { DraftResultsPanel } from '../../components/DraftResultsPanel/DraftResultsPanel';
 import { ErrorScreen } from '../../components/ErrorScreen/ErrorScreen';
 import { Loader } from '../../components/Loader/Loader';
 import { LockInModal } from '../../components/LockInModal/LockInModal';
@@ -40,39 +54,53 @@ import { Modal } from '../../components/Modal/Modal';
 import { NavDrawer } from '../../components/Navbar/NavDrawer';
 import { PickClock } from '../../components/PickClock/PickClock';
 import { PickModal, type PickComment } from '../../components/PickModal/PickModal';
+import type { Reactor } from '../../components/ReactorsModal/ReactorsModal';
 import { PlayerCard } from '../../components/PlayerCard/PlayerCard';
 import { TeamLineup } from '../../components/TeamLineup/TeamLineup';
+import { TeamResultsDrawer } from '../../components/TeamResultsDrawer/TeamResultsDrawer';
 import { ThemeToggle } from '../../components/ThemeToggle/ThemeToggle';
 import { useAuth } from '../../auth/AuthContext';
 import { useLobby } from '../../hooks/useLobby';
 import { usePlayers } from '../../hooks/usePlayers';
 import { api } from '../../lib/api';
+import { mostCommonGrade } from '../../lib/draftGrade';
 import { exportDraftCsv, exportDraftExcel } from '../../lib/exportDraft';
 import { supabase } from '../../supabase';
 import { useToast } from '../../toast/ToastContext';
-import type { ChatMessageRow, ChatReactionRow, PickRow, PlayerRow, TeamRow } from '../../lib/types';
+import type {
+  ChatMessageRow,
+  ChatReactionRow,
+  DraftCrownVoteRow,
+  DraftGradeRow,
+  PickRow,
+  PlayerRow,
+  TeamRow,
+} from '../../lib/types';
 import './DraftBoardPage.scss';
 
 type Filter = 'ALL' | Position | 'FLEX' | 'SUPERFLEX';
-type PanelTab = 'players' | 'roster' | 'chat';
+type PanelTab = 'players' | 'roster' | 'chat' | 'results';
 type MobileTab = 'board' | PanelTab;
 
 // Multi-position filters (no pick counts shown next to these).
 const FLEX_POS: Position[] = ['RB', 'WR', 'TE'];
 const SUPERFLEX_POS: Position[] = ['QB', 'RB', 'WR', 'TE'];
 
-// The right sidebar's tabs (desktop) — labels shown in the tab strip.
+// The right sidebar's tabs (desktop) — labels shown in the tab strip. "Results"
+// only makes sense once the draft is complete, so it's filtered out until then.
 const SIDEBAR_TABS: { key: PanelTab; label: string; Icon: SvgIconComponent }[] = [
   { key: 'players', label: 'Players', Icon: SportsFootballIcon },
   { key: 'roster', label: 'Roster', Icon: FormatListBulletedIcon },
   { key: 'chat', label: 'Chat', Icon: ChatBubbleOutlineIcon },
+  { key: 'results', label: 'Results', Icon: EmojiEventsOutlinedIcon },
 ];
-// Bottom-bar sections (mobile) — Board plus the three sidebar tabs.
+// Bottom-bar sections (mobile) — Board plus the sidebar tabs.
 const MOBILE_TABS: { key: MobileTab; label: string; Icon: SvgIconComponent }[] = [
   { key: 'board', label: 'Board', Icon: GridViewOutlinedIcon },
   { key: 'players', label: 'Players', Icon: SportsFootballIcon },
   { key: 'roster', label: 'Roster', Icon: FormatListBulletedIcon },
   { key: 'chat', label: 'Chat', Icon: ChatBubbleOutlineIcon },
+  { key: 'results', label: 'Results', Icon: EmojiEventsOutlinedIcon },
 ];
 
 const MIN_SIDEBAR = 300;
@@ -100,6 +128,7 @@ export function DraftBoardPage() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { session } = useAuth();
   const { showToast } = useToast();
   const { lobby, teams, members, picks, loading } = useLobby(id);
@@ -110,6 +139,7 @@ export function DraftBoardPage() {
   const [mobileTab, setMobileTab] = useState<MobileTab>('board');
   const [panelTab, setPanelTab] = useState<PanelTab>('players');
   const [rosterTeamSel, setRosterTeamSel] = useState<string | null>(null);
+  const [resultsDrawerOpen, setResultsDrawerOpen] = useState(false);
   const [queue, setQueue] = useState<string[]>([]);
   const [selected, setSelected] = useState<PlayerRow | null>(null);
   const [pickBusy, setPickBusy] = useState(false);
@@ -323,12 +353,90 @@ export function DraftBoardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, userId]);
 
+  // ── Post-draft crown vote + peer grades — plain fetch + realtime refresh. ──
+  const [crownVotes, setCrownVotes] = useState<DraftCrownVoteRow[]>([]);
+  const [grades, setGrades] = useState<DraftGradeRow[]>([]);
+  useEffect(() => {
+    const loadVotes = () =>
+      supabase
+        .from('draft_crown_votes')
+        .select('*')
+        .eq('lobby_id', id)
+        .then(({ data }) => setCrownVotes((data ?? []) as DraftCrownVoteRow[]));
+    const loadGrades = () =>
+      supabase
+        .from('draft_grades')
+        .select('*')
+        .eq('lobby_id', id)
+        .then(({ data }) => setGrades((data ?? []) as DraftGradeRow[]));
+    void loadVotes();
+    void loadGrades();
+    const ch = supabase
+      .channel(`draft-results:${id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'draft_crown_votes', filter: `lobby_id=eq.${id}` },
+        () => void loadVotes(),
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'draft_grades', filter: `lobby_id=eq.${id}` },
+        (payload) => {
+          void loadGrades();
+          if (payload.eventType === 'DELETE') return;
+          const row = payload.new as DraftGradeRow;
+          if (row.rater_id === userId) return;
+          const myTeam = teamsRef.current.find((t) => t.owner_id === userId);
+          if (!myTeam || row.team_id !== myTeam.id) return;
+          showToast({
+            title: `${memberUsername(row.rater_id)} graded your roster: ${row.grade}`,
+            body: row.comment,
+            tone: 'info',
+            avatar: memberAvatar(row.rater_id),
+            onClick: () => {
+              setRosterTeamSel(myTeam.id);
+              setPanelTab('roster');
+              setMobileTab('roster');
+            },
+          });
+        },
+      )
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(ch);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, userId]);
+
+  // Show the outro once per user per lobby, right after the draft finishes —
+  // skip it entirely once the results window has already closed, so it never
+  // nags with a vote/grade prompt that can no longer be acted on.
+  const [showOutro, setShowOutro] = useState(false);
+  useEffect(() => {
+    if (!lobby || lobby.status !== 'COMPLETE' || !userId) return;
+    const endedAtMs = lobby.completed_at ? new Date(lobby.completed_at).getTime() : null;
+    if (endedAtMs != null && Date.now() >= endedAtMs + DRAFT_RESULTS_LOCK_MS) return;
+    const seenKey = `draft-outro-seen:${id}:${userId}`;
+    if (localStorage.getItem(seenKey)) return;
+    setShowOutro(true);
+  }, [lobby, userId, id]);
+
+  function dismissOutro() {
+    if (userId) localStorage.setItem(`draft-outro-seen:${id}:${userId}`, '1');
+    setShowOutro(false);
+  }
+
   function groupReactions(rows: ChatReactionRow[]): Map<string, ReactionEntry> {
     const m = new Map<string, ReactionEntry>();
     for (const r of rows) {
-      const e = m.get(r.target_id) ?? { counts: {}, mine: new Set<string>() };
+      const e = m.get(r.target_id) ?? { counts: {}, mine: new Set<string>(), reactors: {} };
       e.counts[r.emoji] = (e.counts[r.emoji] ?? 0) + 1;
       if (r.user_id === userId) e.mine.add(r.emoji);
+      (e.reactors![r.emoji] ??= []).push({
+        userId: r.user_id,
+        username: usernameById.get(r.user_id) ?? 'Someone',
+        avatar: memberAvatar(r.user_id),
+      });
       m.set(r.target_id, e);
     }
     return m;
@@ -392,7 +500,7 @@ export function DraftBoardPage() {
     const target = (
       location.state as {
         focusTarget?: {
-          targetType: 'PICK' | 'MESSAGE';
+          targetType: 'PICK' | 'MESSAGE' | 'TEAM';
           targetId: string;
           notifType: string;
         };
@@ -404,6 +512,17 @@ export function DraftBoardPage() {
       const pick = picks.find((p) => p.id === target.targetId);
       if (!pick) return; // wait for picks to load
       setPickModal(pick);
+      focusHandledRef.current = true;
+      navigate(location.pathname, { replace: true, state: null });
+      return;
+    }
+
+    // TEAM: a grade left on your roster — jump to the Roster tab with that
+    // team selected, where the crown-votes/grades summary now lives.
+    if (target.targetType === 'TEAM') {
+      setRosterTeamSel(target.targetId);
+      setPanelTab('roster');
+      setMobileTab('roster');
       focusHandledRef.current = true;
       navigate(location.pathname, { replace: true, state: null });
       return;
@@ -429,6 +548,25 @@ export function DraftBoardPage() {
     setFocusMessageId(target.targetId);
     focusHandledRef.current = true;
   }, [location.state, location.pathname, picks, pickComments, pickCommentsLoaded, navigate]);
+
+  // ── Deep link from the lobby chat: `?pick=<id>` opens that pick's modal.
+  // A plain query param rather than router state — it survives a refresh or
+  // a link opened in a new tab, and is visible in the URL for easy debugging. ──
+  const queryPickId = searchParams.get('pick');
+  useEffect(() => {
+    if (!queryPickId) return;
+    const pick = picks.find((p) => p.id === queryPickId);
+    if (!pick) return; // wait for picks to load
+    setPickModal(pick);
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete('pick');
+        return next;
+      },
+      { replace: true },
+    );
+  }, [queryPickId, picks, setSearchParams]);
 
   async function reactPick(pickId: string, emoji: string) {
     if (reactionsLocked) {
@@ -457,6 +595,32 @@ export function DraftBoardPage() {
       });
     } catch {
       /* realtime reconciles */
+    }
+  }
+
+  async function castCrownVote(teamId: string) {
+    if (resultsLocked) return;
+    try {
+      await api(`/lobbies/${id}/crown-vote`, { method: 'POST', body: { teamId } });
+    } catch (err) {
+      showToast({
+        title: 'Vote failed',
+        body: err instanceof Error ? err.message : undefined,
+        tone: 'warning',
+      });
+    }
+  }
+
+  async function gradeTeam(teamId: string, grade: DraftGrade, comment: string) {
+    if (resultsLocked) return;
+    try {
+      await api(`/lobbies/${id}/grade-team`, { method: 'POST', body: { teamId, grade, comment } });
+    } catch (err) {
+      showToast({
+        title: 'Grade failed',
+        body: err instanceof Error ? err.message : undefined,
+        tone: 'warning',
+      });
     }
   }
 
@@ -624,6 +788,13 @@ export function DraftBoardPage() {
   // Emoji reactions stay open much longer than chat — locked 24h after the draft.
   const reactionsLocked =
     !!endedAt && Date.now() >= new Date(endedAt).getTime() + REACTION_LOCK_MS;
+  // Commissioners can still fix a mistake right after the draft ends, but the
+  // rollback feature disappears for good a few minutes later.
+  const rollbackLocked =
+    !!endedAt && Date.now() >= new Date(endedAt).getTime() + ROLLBACK_LOCK_MS;
+  // Crown vote + peer grading stay open 24h after the draft, same as reactions.
+  const resultsLocked =
+    !!endedAt && Date.now() >= new Date(endedAt).getTime() + DRAFT_RESULTS_LOCK_MS;
   const isMyTurn = !!onClockTeam && onClockTeam.owner_id === userId;
   const canPick = !isComplete && !isPaused && (isMyTurn || isCommish);
   const pickingForTeam = !isMyTurn && onClockTeam ? onClockTeam.name : null;
@@ -748,7 +919,24 @@ export function DraftBoardPage() {
   // and again in a bar flush above the mobile bottom nav — with CSS (not this
   // function) deciding which copy is visible per breakpoint.
   function CommishTools() {
-    if (!isCommish || isComplete) return null;
+    if (!isCommish) return null;
+    // After the draft ends, only a short-lived "Undo" survives (so the
+    // commissioner can fix a last-second mistake) — everything else goes away.
+    if (isComplete) {
+      if (rollbackLocked || !lastPick) return null;
+      return (
+        <>
+          <button
+            className="draft__tool-btn"
+            onClick={() => setRollbackTarget(lastPick)}
+            disabled={commishBusy}
+          >
+            <UndoIcon fontSize="small" /> Undo
+          </button>
+          {commishError && <span className="draft__commish-error">{commishError}</span>}
+        </>
+      );
+    }
     return (
       <>
         {isPaused ? (
@@ -905,7 +1093,7 @@ export function DraftBoardPage() {
         </div>
       )}
 
-      <div className="draft__body">
+      <div className="draft__body" style={{ ['--sidebar-w' as string]: `${sidebarWidth}px` }}>
         <section
           ref={boardSectionRef}
           className={`draft__board ${mobileTab === 'board' ? 'is-mobile-active' : ''}`}
@@ -936,10 +1124,9 @@ export function DraftBoardPage() {
 
             <aside
           className={`draft__sidebar ${mobileTab !== 'board' ? 'is-mobile-active' : ''}`}
-          style={{ ['--sidebar-w' as string]: `${sidebarWidth}px` }}
         >
           <div className="draft__sidebar-tabs">
-            {SIDEBAR_TABS.map(({ key, label, Icon }) => (
+            {SIDEBAR_TABS.filter((t) => t.key !== 'results' || isComplete).map(({ key, label, Icon }) => (
               <button
                 key={key}
                 className={`draft__stab ${panelTab === key ? 'is-active' : ''}`}
@@ -1043,6 +1230,31 @@ export function DraftBoardPage() {
                 isCommish={isCommish}
                 onToggleAuto={isComplete ? undefined : toggleAuto}
                 onPickClick={setPickModal}
+                belowSelect={
+                  isComplete &&
+                  (() => {
+                    const voteCount = crownVotes.filter((v) => v.team_id === rosterTeamId).length;
+                    const teamGrades = grades.filter((g) => g.team_id === rosterTeamId);
+                    const avgGrade = mostCommonGrade(teamGrades);
+                    return (
+                      <button
+                        type="button"
+                        className="draft__results-summary"
+                        onClick={() => setResultsDrawerOpen(true)}
+                      >
+                        <span className="draft__results-summary-item">
+                          <EmojiEventsOutlinedIcon fontSize="small" /> {voteCount} vote
+                          {voteCount === 1 ? '' : 's'}
+                        </span>
+                        <span className="draft__results-summary-item">
+                          {avgGrade ?? '—'}{' '}
+                          <span className="muted">({teamGrades.length})</span>
+                        </span>
+                        <ChevronRightIcon fontSize="small" className="draft__results-summary-chevron" />
+                      </button>
+                    );
+                  })()
+                }
               />
             </div>
           </div>
@@ -1066,7 +1278,46 @@ export function DraftBoardPage() {
               onFocusHandled={() => setFocusMessageId(null)}
             />
           </div>
+
+          {/* Results — crown vote + peer grading, only relevant post-draft. */}
+          {isComplete && (
+            <div
+              className={`draft__panel-body ${panelTab === 'results' ? 'is-desktop-active' : ''} ${
+                mobileTab === 'results' ? 'is-mobile-active' : ''
+              }`}
+            >
+              <div className="draft__results">
+                {resultsLocked && (
+                  <p className="muted draft__results-locked">
+                    🔒 Voting and grading closed 24h after the draft ended — showing final results.
+                  </p>
+                )}
+                <DraftResultsPanel
+                  teams={teams}
+                  members={members}
+                  myTeamId={myTeam?.id ?? null}
+                  myUserId={userId}
+                  crownVotes={crownVotes}
+                  grades={grades}
+                  locked={resultsLocked}
+                  onVote={castCrownVote}
+                  onGrade={gradeTeam}
+                />
+              </div>
+            </div>
+          )}
         </aside>
+
+        {isComplete && (
+          <TeamResultsDrawer
+            team={teams.find((t) => t.id === rosterTeamId)}
+            members={members}
+            crownVotes={crownVotes}
+            grades={grades}
+            open={resultsDrawerOpen}
+            onClose={() => setResultsDrawerOpen(false)}
+          />
+        )}
           </>
         )}
       </div>
@@ -1082,7 +1333,7 @@ export function DraftBoardPage() {
 
       {/* Mobile-only section tabs + nav. */}
       <nav className="draft__tabs">
-        {MOBILE_TABS.map(({ key, label, Icon }) => (
+        {MOBILE_TABS.filter((t) => t.key !== 'results' || isComplete).map(({ key, label, Icon }) => (
           <button
             key={key}
             className={`draft__tab ${mobileTab === key ? 'is-active' : ''}`}
@@ -1149,21 +1400,46 @@ export function DraftBoardPage() {
         }
       />
 
+      {showOutro && (
+        <DraftOutroModal
+          myTeam={myTeam ?? undefined}
+          teams={teams}
+          members={members}
+          myUserId={userId}
+          picks={picks}
+          playersById={playersById}
+          crownVotes={crownVotes}
+          grades={grades}
+          locked={resultsLocked}
+          onVote={castCrownVote}
+          onGrade={gradeTeam}
+          onClose={dismissOutro}
+        />
+      )}
+
       {pickModal &&
         (() => {
           const player = playersById.get(pickModal.player_id);
           if (!player) return null;
-          // Usernames that reacted to this pick, grouped by emoji (for tooltips).
-          const reactors: Record<string, string[]> = {};
+          // Who reacted to this pick, grouped by emoji (for tooltips + the full-list modal).
+          const reactors: Record<string, Reactor[]> = {};
           for (const r of allReactions) {
             if (r.target_type !== 'PICK' || r.target_id !== pickModal.id) continue;
-            (reactors[r.emoji] ??= []).push(usernameById.get(r.user_id) ?? 'Someone');
+            (reactors[r.emoji] ??= []).push({
+              userId: r.user_id,
+              username: usernameById.get(r.user_id) ?? 'Someone',
+              avatar: memberAvatar(r.user_id),
+            });
           }
           const comments: PickComment[] = (commentsByPick.get(pickModal.id) ?? []).map((c) => {
-            const commentReactors: Record<string, string[]> = {};
+            const commentReactors: Record<string, Reactor[]> = {};
             for (const r of allReactions) {
               if (r.target_type !== 'MESSAGE' || r.target_id !== c.id) continue;
-              (commentReactors[r.emoji] ??= []).push(usernameById.get(r.user_id) ?? 'Someone');
+              (commentReactors[r.emoji] ??= []).push({
+                userId: r.user_id,
+                username: usernameById.get(r.user_id) ?? 'Someone',
+                avatar: memberAvatar(r.user_id),
+              });
             }
             return {
               id: c.id,
@@ -1191,10 +1467,14 @@ export function DraftBoardPage() {
               reactionsLocked={reactionsLocked}
               onClose={() => setPickModal(null)}
               isCommish={isCommish}
-              onRollbackTo={() => {
-                setRollbackTarget(pickModal);
-                setPickModal(null);
-              }}
+              onRollbackTo={
+                rollbackLocked
+                  ? undefined
+                  : () => {
+                      setRollbackTarget(pickModal);
+                      setPickModal(null);
+                    }
+              }
             />
           );
         })()}

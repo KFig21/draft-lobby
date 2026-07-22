@@ -1,6 +1,7 @@
-import { POSITION_COLORS, REACTION_EMOJIS, type Position } from '@draft-lobby/shared';
+import { POSITION_COLORS, REACTION_EMOJIS, containsSlur, type Position } from '@draft-lobby/shared';
 import AddReactionOutlinedIcon from '@mui/icons-material/AddReactionOutlined';
 import CloseIcon from '@mui/icons-material/Close';
+import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
 import SendIcon from '@mui/icons-material/Send';
 import UndoIcon from '@mui/icons-material/Undo';
 import { useMemo, useRef, useState, type FormEvent } from 'react';
@@ -10,6 +11,7 @@ import { useModalClose } from '../../lib/useModalClose';
 import type { MemberRow, PickRow, PlayerRow, TeamRow } from '../../lib/types';
 import type { ReactionEntry } from '../DraftGrid/DraftGrid';
 import { MentionInput } from '../MentionInput/MentionInput';
+import { ReactorsModal, type Reactor } from '../ReactorsModal/ReactorsModal';
 import './PickModal.scss';
 
 export interface PickComment {
@@ -19,8 +21,18 @@ export interface PickComment {
   at: string;
   mine: boolean;
   entry: ReactionEntry | undefined;
-  /** Usernames that reacted, keyed by emoji (for the hover tooltip). */
-  reactors: Record<string, string[]>;
+  /** Who reacted, keyed by emoji (for the hover tooltip + the full-list modal). */
+  reactors: Record<string, Reactor[]>;
+}
+
+/** Cap the hover tooltip's name list — a draft with dozens of reactors would
+ * otherwise blow the tooltip up into an unreadable block. Long-press (or
+ * click-and-hold on desktop) still opens the full scrollable list. */
+const TIP_CAP = 8;
+function tipText(reactors: Reactor[]): string {
+  const names = reactors.map((r) => r.username);
+  if (names.length <= TIP_CAP) return names.join(', ');
+  return `${names.slice(0, TIP_CAP).join(', ')} +${names.length - TIP_CAP} more`;
 }
 
 interface Props {
@@ -29,8 +41,8 @@ interface Props {
   player: PlayerRow;
   team: TeamRow | undefined;
   entry: ReactionEntry | undefined;
-  /** Usernames that reacted, keyed by emoji (for the Discord-style tooltip). */
-  reactors?: Record<string, string[]>;
+  /** Who reacted, keyed by emoji (for the Discord-style tooltip + full-list modal). */
+  reactors?: Record<string, Reactor[]>;
   onReact: (emoji: string) => void;
   /** Existing comments on this pick, oldest first. */
   comments: PickComment[];
@@ -70,6 +82,8 @@ export function PickModal({
   const [comment, setComment] = useState('');
   const [posting, setPosting] = useState(false);
   const [sent, setSent] = useState(false);
+  // Set when the "who reacted" icon is clicked — shows the full reactions modal.
+  const [reactorsModal, setReactorsModal] = useState<Record<string, Reactor[]> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const commentInputRef = useRef<HTMLInputElement>(null);
 
@@ -83,6 +97,10 @@ export function PickModal({
     e.preventDefault();
     const body = comment.trim();
     if (!body || locked) return;
+    if (containsSlur(body)) {
+      setError('That message contains language that isn’t allowed here');
+      return;
+    }
     setPosting(true);
     setError(null);
     try {
@@ -194,22 +212,29 @@ export function PickModal({
               const mine = entry?.mine.has(emoji) ?? false;
               const names = reactors?.[emoji] ?? [];
               return (
-                <button
+                <ReactionChip
                   key={emoji}
-                  className={`pick-modal__react${mine ? ' is-mine' : ''}`}
-                  onClick={() => onReact(emoji)}
+                  className="pick-modal__react"
+                  emoji={emoji}
+                  count={count}
+                  mine={mine}
+                  reactors={names}
                   disabled={reactionsLocked}
-                >
-                  <span>{emoji}</span>
-                  {count > 0 && <span className="pick-modal__react-count">{count}</span>}
-                  {names.length > 0 && (
-                    <span className="pick-modal__react-tip" role="tooltip">
-                      {names.join(', ')}
-                    </span>
-                  )}
-                </button>
+                  onReact={() => onReact(emoji)}
+                />
               );
             })}
+            {entry && Object.keys(entry.counts).length > 0 && (
+              <button
+                type="button"
+                className="pick-modal__react-viewall"
+                aria-label="See who reacted"
+                title="See who reacted"
+                onClick={() => setReactorsModal(reactors ?? {})}
+              >
+                <PeopleAltOutlinedIcon sx={{ fontSize: 16 }} />
+              </button>
+            )}
           </div>
           {reactionsLocked && (
             <p className="pick-modal__note muted">🔒 Reactions are locked for this draft.</p>
@@ -238,6 +263,7 @@ export function PickModal({
                   reactors={c.reactors}
                   disabled={reactionsLocked}
                   onReact={(emoji) => onReactComment(c.id, emoji)}
+                  onShowAllReactions={() => setReactorsModal(c.reactors)}
                 />
               </div>
             ))
@@ -274,6 +300,15 @@ export function PickModal({
           {error && <p className="pick-modal__error">{error}</p>}
         </div>
       </div>
+
+      {/* Rendered as a sibling of the card, not a descendant — the card's
+          entrance animation leaves a persistent `transform` on it (still
+          `translateY(0)` at rest), which would turn it into a containing
+          block for this modal's `position: fixed` backdrop and trap it
+          inside the card's box instead of covering the viewport. */}
+      {reactorsModal && (
+        <ReactorsModal reactors={reactorsModal} onClose={() => setReactorsModal(null)} />
+      )}
     </div>
   );
 }
@@ -283,11 +318,13 @@ function CommentReactions({
   entry,
   reactors,
   onReact,
+  onShowAllReactions,
   disabled,
 }: {
   entry: ReactionEntry | undefined;
-  reactors: Record<string, string[]>;
+  reactors: Record<string, Reactor[]>;
   onReact: (emoji: string) => void;
+  onShowAllReactions: () => void;
   disabled: boolean;
 }) {
   const [open, setOpen] = useState(false);
@@ -295,26 +332,28 @@ function CommentReactions({
 
   return (
     <div className="pick-modal__comment-react">
-      {active.map((e) => {
-        const names = reactors[e] ?? [];
-        return (
-          <button
-            key={e}
-            type="button"
-            className={`pick-modal__comment-chip${entry?.mine.has(e) ? ' is-mine' : ''}`}
-            onClick={() => onReact(e)}
-            disabled={disabled}
-          >
-            <span>{e}</span>
-            <span>{entry?.counts[e]}</span>
-            {names.length > 0 && (
-              <span className="pick-modal__comment-tip" role="tooltip">
-                {names.join(', ')}
-              </span>
-            )}
-          </button>
-        );
-      })}
+      {active.map((e) => (
+        <CommentReactionChip
+          key={e}
+          emoji={e}
+          count={entry?.counts[e] ?? 0}
+          mine={entry?.mine.has(e) ?? false}
+          reactors={reactors[e] ?? []}
+          disabled={disabled}
+          onReact={() => onReact(e)}
+        />
+      ))}
+      {active.length > 0 && (
+        <button
+          type="button"
+          className="pick-modal__comment-viewall"
+          aria-label="See who reacted"
+          title="See who reacted"
+          onClick={onShowAllReactions}
+        >
+          <PeopleAltOutlinedIcon sx={{ fontSize: 14 }} />
+        </button>
+      )}
       {!disabled && (
         <div className="pick-modal__comment-add">
           <button
@@ -344,5 +383,77 @@ function CommentReactions({
         </div>
       )}
     </div>
+  );
+}
+
+/** A single "Reactions" row chip — tap to toggle your own reaction. Hover
+ * shows a quick preview of who reacted; the "people" icon alongside the row
+ * opens the full, filterable list (see PickModal's `pick-modal__react-viewall`). */
+function ReactionChip({
+  className,
+  emoji,
+  count,
+  mine,
+  reactors,
+  disabled,
+  onReact,
+}: {
+  className: string;
+  emoji: string;
+  count: number;
+  mine: boolean;
+  reactors: Reactor[];
+  disabled: boolean;
+  onReact: () => void;
+}) {
+  return (
+    <button
+      className={`${className}${mine ? ' is-mine' : ''}`}
+      onClick={onReact}
+      disabled={disabled}
+    >
+      <span>{emoji}</span>
+      {count > 0 && <span className={`${className}-count`}>{count}</span>}
+      {reactors.length > 0 && (
+        <span className={`${className}-tip`} role="tooltip">
+          {tipText(reactors)}
+        </span>
+      )}
+    </button>
+  );
+}
+
+/** Same as ReactionChip, for the compact per-comment reaction row (which
+ * always shows a count and has no dedicated count/tip classes). */
+function CommentReactionChip({
+  emoji,
+  count,
+  mine,
+  reactors,
+  disabled,
+  onReact,
+}: {
+  emoji: string;
+  count: number;
+  mine: boolean;
+  reactors: Reactor[];
+  disabled: boolean;
+  onReact: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className={`pick-modal__comment-chip${mine ? ' is-mine' : ''}`}
+      onClick={onReact}
+      disabled={disabled}
+    >
+      <span>{emoji}</span>
+      <span>{count}</span>
+      {reactors.length > 0 && (
+        <span className="pick-modal__comment-tip" role="tooltip">
+          {tipText(reactors)}
+        </span>
+      )}
+    </button>
   );
 }
