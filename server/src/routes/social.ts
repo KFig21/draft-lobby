@@ -91,6 +91,14 @@ socialRouter.post('/request', async (req: AuthedRequest, res: Response) => {
         actor_id: me,
         type: 'FRIEND_ACCEPTED',
       });
+      // Resolve the request notification target originally received (theirs, from me).
+      await supabaseAdmin
+        .from('notifications')
+        .update({ status: 'ACCEPTED' })
+        .eq('user_id', me)
+        .eq('actor_id', target)
+        .eq('type', 'FRIEND_REQUEST')
+        .is('status', null);
       await recordFriendAccepted(me, target);
       res.json({ ok: true, status: 'ACCEPTED' });
       return;
@@ -136,6 +144,18 @@ socialRouter.post('/respond', async (req: AuthedRequest, res: Response) => {
     return;
   }
 
+  // Resolve the original FRIEND_REQUEST notification regardless of accept/decline,
+  // so it's not shown as still-actionable if it was answered elsewhere (e.g. Friends page).
+  async function resolveRequestNotification(resolvedStatus: 'ACCEPTED' | 'DECLINED') {
+    await supabaseAdmin
+      .from('notifications')
+      .update({ status: resolvedStatus })
+      .eq('user_id', me)
+      .eq('actor_id', requesterId)
+      .eq('type', 'FRIEND_REQUEST')
+      .is('status', null);
+  }
+
   if (accept) {
     const { error } = await supabaseAdmin
       .from('friendships')
@@ -150,12 +170,14 @@ socialRouter.post('/respond', async (req: AuthedRequest, res: Response) => {
       actor_id: me,
       type: 'FRIEND_ACCEPTED',
     });
+    await resolveRequestNotification('ACCEPTED');
     await recordFriendAccepted(me, requesterId);
     res.json({ ok: true, status: 'ACCEPTED' });
     return;
   }
 
   await supabaseAdmin.from('friendships').delete().eq('id', friendship.id);
+  await resolveRequestNotification('DECLINED');
   res.json({ ok: true, status: 'DECLINED' });
 });
 

@@ -31,6 +31,15 @@
     }
   }
 
+  &__section-title {
+    margin-bottom: $space;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: $text-muted;
+  }
+
   &__list {
     list-style: none;
     display: flex;

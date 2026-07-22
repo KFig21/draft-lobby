@@ -172,6 +172,29 @@ export function DraftBoardPage() {
     return m;
   }, [teams]);
 
+  // Realtime handlers below live in effects that only re-subscribe on
+  // [id, userId, isCommish] — refs keep them reading fresh picks/teams/
+  // members/players without resubscribing every time any of that changes
+  // (in particular, members/players can still be loading — [] — the first
+  // time these effects run, which otherwise permanently stales the toasts'
+  // usernames/avatars into "Someone" + the default avatar).
+  const picksRef = useRef(picks);
+  picksRef.current = picks;
+  const teamsRef = useRef(teams);
+  teamsRef.current = teams;
+  const membersRef = useRef(members);
+  membersRef.current = members;
+  const playersByIdRef = useRef(playersById);
+  playersByIdRef.current = playersById;
+
+  /** The pick, if it exists and belongs to my team — for realtime toasts. */
+  function myPick(pickId: string): PickRow | null {
+    const pick = picksRef.current.find((p) => p.id === pickId);
+    if (!pick) return null;
+    const team = teamsRef.current.find((t) => t.id === pick.team_id);
+    return team?.owner_id === userId ? pick : null;
+  }
+
   const usernameById = useMemo(() => {
     const m = new Map<string, string>();
     for (const mem of members) m.set(mem.user_id, mem.profiles?.username ?? 'Player');
@@ -179,7 +202,12 @@ export function DraftBoardPage() {
   }, [members]);
 
   function memberAvatar(uid: string): AvatarData {
-    return members.find((m) => m.user_id === uid)?.profiles?.avatar ?? defaultAvatar(uid);
+    return membersRef.current.find((m) => m.user_id === uid)?.profiles?.avatar ?? defaultAvatar(uid);
+  }
+
+  /** Ref-backed so realtime toast handlers never read a stale "Someone". */
+  function memberUsername(uid: string): string {
+    return membersRef.current.find((m) => m.user_id === uid)?.profiles?.username ?? 'Someone';
   }
 
   // ── Reactions on picks (board hover + pick modal) and on messages/comments
@@ -199,13 +227,29 @@ export function DraftBoardPage() {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'chat_reactions', filter: `lobby_id=eq.${id}` },
-        () => void load(),
+        (payload) => {
+          void load();
+          if (payload.eventType !== 'INSERT') return;
+          const row = payload.new as ChatReactionRow;
+          if (row.user_id === userId || row.target_type !== 'PICK') return;
+          const pick = myPick(row.target_id);
+          if (!pick) return;
+          const player = playersByIdRef.current.get(pick.player_id);
+          showToast({
+            title: `${memberUsername(row.user_id)} reacted ${row.emoji} to your pick`,
+            body: player?.name,
+            tone: 'info',
+            avatar: memberAvatar(row.user_id),
+            onClick: () => setPickModal(pick),
+          });
+        },
       )
       .subscribe();
     return () => {
       void supabase.removeChannel(ch);
     };
-  }, [id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, userId]);
 
   function groupReactions(rows: ChatReactionRow[]): Map<string, ReactionEntry> {
     const m = new Map<string, ReactionEntry>();
@@ -387,10 +431,23 @@ export function DraftBoardPage() {
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `lobby_id=eq.${id}` },
         (payload) => {
-          const row = payload.new as { kind: string; user_id: string; body: string };
+          const row = payload.new as ChatMessageRow;
           if (row.user_id === userId) return;
           if (row.kind === 'USER') {
-            const myUsername = usernameById.get(userId ?? '');
+            const pick = row.reply_to_pick_id ? myPick(row.reply_to_pick_id) : null;
+            if (pick) {
+              const player = playersByIdRef.current.get(pick.player_id);
+              showToast({
+                title: `${memberUsername(row.user_id)} commented on your pick`,
+                body: player ? `${player.name}: “${row.body}”` : row.body,
+                tone: 'info',
+                avatar: memberAvatar(row.user_id),
+                onClick: () => setPickModal(pick),
+              });
+              return;
+            }
+            const myUsername = membersRef.current.find((m) => m.user_id === userId)?.profiles
+              ?.username;
             if (myUsername && extractMentionedUsernames(row.body, [myUsername]).length > 0) {
               showToast({
                 title: 'You were mentioned',
@@ -537,8 +594,13 @@ export function DraftBoardPage() {
     setReqPauseBusy(true);
     try {
       await api(`/lobbies/${id}/request-pause`, { method: 'POST' });
+      showToast({
+        title: 'Pause requested',
+        body: "The commissioner's been notified.",
+        tone: 'info',
+      });
     } catch {
-      /* the alert is best-effort */
+      showToast({ title: "Couldn't request a pause", tone: 'danger' });
     } finally {
       setReqPauseBusy(false);
     }
@@ -566,57 +628,64 @@ export function DraftBoardPage() {
 
   const myTurnHighlight = isMyTurn && !isPaused && !isComplete;
 
-  // Commissioner tools (+ member "Request pause"). Rendered twice — inline in
-  // the desktop top bar, and again in a bar flush above the mobile bottom nav
-  // — with CSS (not this function) deciding which copy is visible per breakpoint.
+  // Commissioner-only tools. Rendered twice — inline in the desktop top bar,
+  // and again in a bar flush above the mobile bottom nav — with CSS (not this
+  // function) deciding which copy is visible per breakpoint.
   function CommishTools() {
+    if (!isCommish || isComplete) return null;
     return (
       <>
-        {isCommish && !isComplete && (
-          <>
-            {isPaused ? (
-              <button
-                className="draft__tool-btn"
-                onClick={() => commishAction('resume')}
-                disabled={commishBusy}
-              >
-                <PlayArrowIcon fontSize="small" /> Resume
-              </button>
-            ) : (
-              <button
-                className="draft__tool-btn"
-                onClick={() => commishAction('pause')}
-                disabled={commishBusy}
-              >
-                <PauseIcon fontSize="small" /> Pause
-              </button>
-            )}
-            <button
-              className="draft__tool-btn"
-              onClick={() => setShowRollback(true)}
-              disabled={commishBusy || picks.length === 0}
-            >
-              <UndoIcon fontSize="small" /> Undo
-            </button>
-            <button
-              className={`draft__tool-btn draft__skipbots-btn${
-                autoSkipBots ? ' is-on' : ''
-              }`}
-              onClick={() => setAutoSkipBots((v) => !v)}
-              title="Automatically skip bot picks as they come on the clock"
-            >
-              <FastForwardIcon fontSize="small" /> Skip bots
-              {autoSkipBots ? ' · On' : ''}
-            </button>
-            {commishError && <span className="draft__commish-error">{commishError}</span>}
-          </>
-        )}
-        {!isCommish && !isComplete && !isPaused && (
-          <button className="draft__tool-btn" onClick={requestPause} disabled={reqPauseBusy}>
-            🙋 Request pause
+        {isPaused ? (
+          <button
+            className="draft__tool-btn"
+            onClick={() => commishAction('resume')}
+            disabled={commishBusy}
+          >
+            <PlayArrowIcon fontSize="small" /> Resume
+          </button>
+        ) : (
+          <button
+            className="draft__tool-btn"
+            onClick={() => commishAction('pause')}
+            disabled={commishBusy}
+          >
+            <PauseIcon fontSize="small" /> Pause
           </button>
         )}
+        <button
+          className="draft__tool-btn"
+          onClick={() => setShowRollback(true)}
+          disabled={commishBusy || picks.length === 0}
+        >
+          <UndoIcon fontSize="small" /> Undo
+        </button>
+        <button
+          className={`draft__tool-btn draft__skipbots-btn${autoSkipBots ? ' is-on' : ''}`}
+          onClick={() => setAutoSkipBots((v) => !v)}
+          title="Automatically skip bot picks as they come on the clock"
+        >
+          <FastForwardIcon fontSize="small" /> Skip bots
+          {autoSkipBots ? ' · On' : ''}
+        </button>
+        {commishError && <span className="draft__commish-error">{commishError}</span>}
       </>
+    );
+  }
+
+  // Member-only "Request pause". `compact` renders an icon-only button for
+  // the mobile top bar; the full text version stays in the desktop top bar.
+  function RequestPauseButton({ compact }: { compact?: boolean }) {
+    if (isCommish || isComplete || isPaused) return null;
+    return (
+      <button
+        className={compact ? 'draft__icon-btn draft__reqpause-btn' : 'draft__tool-btn'}
+        onClick={requestPause}
+        disabled={reqPauseBusy}
+        aria-label="Request pause"
+        title="Ask the commissioner to pause the draft"
+      >
+        {compact ? <span aria-hidden>🙋</span> : <>🙋 Request pause</>}
+      </button>
     );
   }
 
@@ -639,6 +708,7 @@ export function DraftBoardPage() {
           {!isComplete && (
             <div className="draft__commish-tools">
               <CommishTools />
+              <RequestPauseButton />
             </div>
           )}
         </div>
@@ -668,6 +738,7 @@ export function DraftBoardPage() {
           ) : (
             <PickClock deadline={lobby.pick_deadline} />
           )}
+          {!isComplete && <RequestPauseButton compact />}
           {myTeam && !myTeam.is_bot && !isComplete && (
             <button
               className={`draft__icon-btn draft__auto-btn${myTeam.auto_draft ? ' is-on' : ''}`}
@@ -727,7 +798,8 @@ export function DraftBoardPage() {
             rounds={roundsForSettings(lobby.settings)}
             picks={picks}
             playersById={playersById}
-            onClockTeamId={onClockTeam?.id ?? null}
+            onClockTeamId={isComplete ? null : onClockTeam?.id ?? null}
+            myTeamId={myTeam?.id ?? null}
             currentRound={round}
             draftType={lobby.settings.draftType}
             onTeamClick={openTeamRoster}
@@ -874,8 +946,10 @@ export function DraftBoardPage() {
         </aside>
       </div>
 
-      {/* Mobile-only: commissioner tools flush above the bottom nav. */}
-      {!isComplete && (
+      {/* Mobile-only: commissioner tools flush above the bottom nav. Members
+          only ever had "Request pause" here, which now lives as an icon
+          button in the top bar instead, so this bar is commissioner-only. */}
+      {isCommish && !isComplete && (
         <div className="draft__mobile-commish">
           <CommishTools />
         </div>

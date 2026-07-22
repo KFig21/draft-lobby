@@ -101,6 +101,7 @@ export interface NotificationRow {
   count: number;
   snippet: string | null;
   read: boolean;
+  status: 'ACCEPTED' | 'DECLINED' | null;
   created_at: string;
   actor?: ProfileMini | null;
 }

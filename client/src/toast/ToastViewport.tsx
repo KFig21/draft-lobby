@@ -32,12 +32,31 @@ function ToastCard({
   onClose: () => void;
   onTogglePause: () => void;
 }) {
-  const { title, body, tone, action, avatar, durationMs, paused, closing } = toast;
+  const { title, body, tone, action, avatar, onClick, durationMs, paused, closing } = toast;
+
+  function activate() {
+    if (!onClick) return;
+    onClick();
+    onClose();
+  }
+
   return (
     <div
-      className={`toast toast--${tone}${closing ? ' is-closing' : ''}`}
+      className={`toast toast--${tone}${closing ? ' is-closing' : ''}${onClick ? ' is-clickable' : ''}`}
       role="status"
       aria-live="polite"
+      onClick={onClick ? activate : undefined}
+      onKeyDown={
+        onClick
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                activate();
+              }
+            }
+          : undefined
+      }
+      tabIndex={onClick ? 0 : undefined}
     >
       {avatar && (
         <span className="toast__avatar">
@@ -53,7 +72,8 @@ function ToastCard({
           <button
             type="button"
             className="toast__action"
-            onClick={() => {
+            onClick={(e) => {
+              e.stopPropagation();
               action.onClick();
               onClose();
             }}
@@ -66,7 +86,10 @@ function ToastCard({
           className="toast__icon-btn"
           aria-label={paused ? 'Resume auto-dismiss' : 'Pause auto-dismiss'}
           title={paused ? 'Resume' : 'Pause'}
-          onClick={onTogglePause}
+          onClick={(e) => {
+            e.stopPropagation();
+            onTogglePause();
+          }}
         >
           {paused ? <PlayArrowIcon fontSize="small" /> : <PauseIcon fontSize="small" />}
         </button>
@@ -74,7 +97,10 @@ function ToastCard({
           type="button"
           className="toast__icon-btn"
           aria-label="Dismiss"
-          onClick={onClose}
+          onClick={(e) => {
+            e.stopPropagation();
+            onClose();
+          }}
         >
           <CloseIcon fontSize="small" />
         </button>

@@ -1,6 +1,47 @@
 @use 'variables' as *;
 @use 'mixins' as *;
 
+// Shared look for the top-bar chip buttons (Home, Room, Pause, Undo, Skip
+// bots, Export…). Blends the theme's text color into the raised bar
+// background via color-mix so they read clearly against it in both themes,
+// instead of the near-invisible bg-overlay-on-bg-raised contrast they had.
+%draft-chip-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: $space * 0.5 $space * 1;
+  border: 1px solid color-mix(in srgb, $text 16%, transparent);
+  border-radius: $radius-sm;
+  background: color-mix(in srgb, $bg-raised 78%, $text 12%);
+  color: $text;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease,
+    transform 80ms ease;
+
+  &:hover:not(:disabled) {
+    border-color: $primary;
+    background: color-mix(in srgb, $bg-raised 66%, $text 18%);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  svg {
+    font-size: 1rem;
+  }
+}
+
 .draft {
   display: flex;
   flex-direction: column;
@@ -34,11 +75,15 @@
       }
 
       .draft__home-btn,
-      .draft__room-btn {
+      .draft__room-btn,
+      .draft__tool-btn,
+      .draft__reqpause-btn {
         border-color: rgba(#05231a, 0.35);
+        background: rgba(#05231a, 0.12);
+        color: #05231a;
 
-        &:hover {
-          background: rgba(#05231a, 0.14);
+        &:hover:not(:disabled) {
+          background: rgba(#05231a, 0.2);
         }
       }
 
@@ -78,30 +123,9 @@
     }
   }
 
-  // Self-contained (not `.button`) so the compact padding here always wins —
-  // reduce padding/font-size on the line below to resize these two buttons.
   &__home-btn,
   &__room-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: $space * 0.4 $space * 0.9;
-    border: 1px solid $border;
-    border-radius: $radius-sm;
-    background: $bg-overlay;
-    color: $text;
-    font-size: 0.8rem;
-    font-weight: 600;
-    text-decoration: none;
-    cursor: pointer;
-
-    &:hover {
-      border-color: $primary;
-    }
-
-    svg {
-      font-size: 1rem;
-    }
+    @extend %draft-chip-btn;
   }
 
   // Wraps the commissioner/member tools in the desktop top bar — on mobile
@@ -136,30 +160,8 @@
 
   // Compact commissioner / member tools that live in the top bar.
   &__tool-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 3px;
-    padding: $space * 0.4 $space * 0.9;
-    border: 1px solid $border;
-    border-radius: $radius-sm;
-    background: $bg-overlay;
-    color: $text;
+    @extend %draft-chip-btn;
     font-size: 0.78rem;
-    font-weight: 600;
-    cursor: pointer;
-
-    &:hover:not(:disabled) {
-      border-color: $primary;
-    }
-
-    &:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    svg {
-      font-size: 1rem;
-    }
   }
 
   // "Skip bots" toggle: same tool-btn look, accented when on.
@@ -167,6 +169,16 @@
     border-color: $accent;
     background: rgba($accent, 0.16);
     color: $accent;
+  }
+
+  // Mobile-only icon button in the top bar — members' "request pause". The
+  // desktop top bar shows the full text button (in &__commish-tools) instead.
+  &__reqpause-btn {
+    font-size: 1.05rem;
+
+    @include lg {
+      display: none;
+    }
   }
 
   &__right {
@@ -212,24 +224,10 @@
     }
   }
 
-  // Self-contained (not `.button`) — hidden on mobile, shown desktop-only.
-  // Reduce padding/font-size on the line below to resize this button.
+  // Hidden on mobile, shown desktop-only.
   &__export-btn {
+    @extend %draft-chip-btn;
     display: none;
-    align-items: center;
-    gap: 4px;
-    padding: $space * 0.4 $space * 0.9;
-    border: 1px solid $border;
-    border-radius: $radius-sm;
-    background: $bg-overlay;
-    color: $text;
-    font-size: 0.8rem;
-    font-weight: 600;
-    cursor: pointer;
-
-    &:hover {
-      border-color: $primary;
-    }
 
     @include lg {
       display: inline-flex;

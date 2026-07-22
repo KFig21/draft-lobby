@@ -68,7 +68,8 @@ type Item =
       replyToPickId: string | null;
     }
   | { type: 'sys'; id: string; at: string; body: string }
-  | { type: 'pick'; id: string; at: string; pick: PickRow };
+  | { type: 'pick'; id: string; at: string; pick: PickRow }
+  | { type: 'reaction'; id: string; at: string; userId: string; emoji: string; pickId: string };
 
 export function DraftChat({
   lobbyId,
@@ -191,9 +192,22 @@ export function DraftChat({
       );
     }
     for (const p of picks) out.push({ type: 'pick', id: p.id, at: p.picked_at, pick: p });
+    // A small "so-and-so reacted to that pick" line — like a reply, but for
+    // reactions on picks specifically (not messages/comments).
+    for (const r of reactions) {
+      if (r.target_type !== 'PICK') continue;
+      out.push({
+        type: 'reaction',
+        id: r.id,
+        at: r.created_at,
+        userId: r.user_id,
+        emoji: r.emoji,
+        pickId: r.target_id,
+      });
+    }
     out.sort((a, b) => a.at.localeCompare(b.at));
     return out;
-  }, [messages, picks]);
+  }, [messages, picks, reactions]);
 
   const [highlightId, setHighlightId] = useState<string | null>(null);
 
@@ -322,6 +336,38 @@ export function DraftChat({
             return (
               <div key={it.id} className="chat__system">
                 {it.body}
+              </div>
+            );
+          }
+          if (it.type === 'reaction') {
+            const pick = picksById.get(it.pickId);
+            if (!pick) return null; // pick not loaded yet
+            const team = teamsById.get(pick.team_id);
+            const player = playersById.get(pick.player_id);
+            const u = userMap.get(it.userId);
+            const label = (
+              <>
+                <strong>{u?.username ?? 'Someone'}</strong> {it.emoji}&rsquo;d to{' '}
+                <strong>{team?.name ?? 'a team'}</strong>
+                {player ? ` — ${player.name}` : ''}
+                <span className="muted"> · Pick {pick.overall}</span>
+              </>
+            );
+            return (
+              <div key={it.id} className="chat__reaction">
+                <Avatar avatar={u?.avatar ?? defaultAvatar(it.userId)} size={20} />
+                {onOpenPick ? (
+                  <button
+                    type="button"
+                    className="chat__reaction-text chat__reaction-text--link"
+                    onClick={() => onOpenPick(pick)}
+                  >
+                    {label}
+                  </button>
+                ) : (
+                  <span className="chat__reaction-text">{label}</span>
+                )}
+                <span className="chat__msg-time">{formatTime(it.at)}</span>
               </div>
             );
           }

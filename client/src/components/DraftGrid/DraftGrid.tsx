@@ -18,6 +18,8 @@ interface Props {
   picks: PickRow[];
   playersById: Map<string, PlayerRow>;
   onClockTeamId: string | null;
+  /** The signed-in user's own team, if they have one — highlighted in the header. */
+  myTeamId?: string | null;
   currentRound: number;
   draftType: DraftType;
   /** Click a team header to view that team's lineup. */
@@ -43,6 +45,7 @@ export function DraftGrid({
   picks,
   playersById,
   onClockTeamId,
+  myTeamId,
   currentRound,
   draftType,
   onTeamClick,
@@ -68,8 +71,10 @@ export function DraftGrid({
               <th
                 key={team.id}
                 className={`draft-grid__team${
-                  team.id === onClockTeamId ? ' draft-grid__team--onclock' : ''
-                }${hover?.teamId === team.id ? ' draft-grid__team--hi' : ''}`}
+                  team.id === myTeamId ? ' draft-grid__team--mine' : ''
+                }${team.id === onClockTeamId ? ' draft-grid__team--onclock' : ''}${
+                  hover?.teamId === team.id ? ' draft-grid__team--hi' : ''
+                }`}
               >
                 <button
                   type="button"

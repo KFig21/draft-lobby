@@ -153,6 +153,45 @@
     }
   }
 
+  // ── Pick reaction activity line — same pill treatment as &__reply below ──
+  &__reaction {
+    display: flex;
+    align-items: center;
+    gap: $space * 0.75;
+
+    .avatar {
+      flex-shrink: 0;
+    }
+  }
+
+  &__reaction-text {
+    flex: 1;
+    min-width: 0;
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin: 2px 0 3px;
+    padding: 2px 8px;
+    border: none;
+    border-left: 2px solid $accent;
+    border-radius: 3px;
+    background: rgba($accent, 0.1);
+    color: $text-muted;
+    font-size: 0.72rem;
+    font-family: inherit;
+    text-align: left;
+
+    &--link {
+      cursor: pointer;
+
+      &:hover {
+        background: rgba($accent, 0.18);
+        color: $text;
+      }
+    }
+  }
+
   // ── User message ──
   &__msg {
     display: flex;

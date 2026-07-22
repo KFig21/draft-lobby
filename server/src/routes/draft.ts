@@ -59,6 +59,21 @@ async function postSystemMessage(lobbyId: string, userId: string, body: string):
     .insert({ lobby_id: lobbyId, user_id: userId, kind: 'SYSTEM', body });
 }
 
+/** Resolve a LOBBY_INVITE notification so it stops showing Join/Decline once handled. */
+async function resolveInviteNotification(
+  lobbyId: string,
+  userId: string,
+  resolvedStatus: 'ACCEPTED' | 'DECLINED',
+): Promise<void> {
+  await supabaseAdmin
+    .from('notifications')
+    .update({ status: resolvedStatus })
+    .eq('user_id', userId)
+    .eq('lobby_id', lobbyId)
+    .eq('type', 'LOBBY_INVITE')
+    .is('status', null);
+}
+
 type GroupableNotification = 'PICK_REACTION' | 'MESSAGE_REACTION' | 'PICK_REPLY' | 'MENTION';
 
 /**
@@ -642,6 +657,7 @@ draftRouter.post('/:id/accept-invite', async (req: AuthedRequest, res: Response)
       .from('lobby_invites')
       .update({ status: 'ACCEPTED' })
       .eq('id', invite.id);
+    await resolveInviteNotification(lobbyId, me, 'ACCEPTED');
     res.json({ ok: true, joined: true, alreadyMember: true });
     return;
   }
@@ -680,6 +696,7 @@ draftRouter.post('/:id/accept-invite', async (req: AuthedRequest, res: Response)
     .from('lobby_invites')
     .update({ status: 'ACCEPTED' })
     .eq('id', invite.id);
+  await resolveInviteNotification(lobbyId, me, 'ACCEPTED');
   res.json({ ok: true, joined: true });
 });
 
@@ -692,6 +709,7 @@ draftRouter.post('/:id/decline-invite', async (req: AuthedRequest, res: Response
     .update({ status: 'DECLINED' })
     .eq('lobby_id', lobbyId)
     .eq('invitee_id', me);
+  await resolveInviteNotification(lobbyId, me, 'DECLINED');
   res.json({ ok: true });
 });
 

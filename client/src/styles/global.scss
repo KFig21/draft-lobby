@@ -417,6 +417,11 @@ input[type='checkbox'] {
   display: flex;
   justify-content: center;
   padding: $space * 3 0;
+
+  // Smaller "loading more…" footer under an already-populated list.
+  &--inline {
+    padding: $space * 1.5 0;
+  }
 }
 
 // "@username" tokens inside chat messages / pick comments.

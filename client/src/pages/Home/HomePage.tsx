@@ -6,15 +6,18 @@ import {
   type LobbySettings,
   type LobbyStatus,
 } from '@draft-lobby/shared';
-import AddReactionOutlinedIcon from '@mui/icons-material/AddReactionOutlined';
-import HandshakeOutlinedIcon from '@mui/icons-material/HandshakeOutlined';
-import SportsFootballOutlinedIcon from '@mui/icons-material/SportsFootballOutlined';
-import { useEffect, useState } from 'react';
+import AddReactionIcon from '@mui/icons-material/AddReaction';
+import HandshakeIcon from '@mui/icons-material/Handshake';
+import SportsFootballIcon from '@mui/icons-material/SportsFootball';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Avatar } from '../../components/Avatar/Avatar';
 import { Loader } from '../../components/Loader/Loader';
 import { api } from '../../lib/api';
+import { useInfiniteScroll } from '../../lib/useInfiniteScroll';
 import './HomePage.scss';
+
+const PAGE_SIZE = 25;
 
 interface FeedActor {
   id: string;
@@ -57,16 +60,43 @@ export function HomePage() {
   const [items, setItems] = useState<FeedItem[]>([]);
   const [activeLobbies, setActiveLobbies] = useState<ActiveLobby[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const cursorRef = useRef<string | null>(null);
 
   useEffect(() => {
-    void api<{ activeLobbies: ActiveLobby[]; items: FeedItem[] }>('/feed')
-      .then(({ activeLobbies, items }) => {
+    void api<{
+      activeLobbies: ActiveLobby[];
+      items: FeedItem[];
+      nextCursor: string | null;
+      hasMore: boolean;
+    }>(`/feed?limit=${PAGE_SIZE}`)
+      .then(({ activeLobbies, items, nextCursor, hasMore }) => {
         setActiveLobbies(activeLobbies);
         setItems(items);
+        cursorRef.current = nextCursor;
+        setHasMore(hasMore);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  const loadMore = useCallback(() => {
+    if (!cursorRef.current) return;
+    setLoadingMore(true);
+    void api<{ items: FeedItem[]; nextCursor: string | null; hasMore: boolean }>(
+      `/feed?limit=${PAGE_SIZE}&before=${encodeURIComponent(cursorRef.current)}`,
+    )
+      .then(({ items: more, nextCursor, hasMore }) => {
+        setItems((prev) => [...prev, ...more]);
+        cursorRef.current = nextCursor;
+        setHasMore(hasMore);
+      })
+      .catch(() => {})
+      .finally(() => setLoadingMore(false));
+  }, []);
+
+  const sentinelRef = useInfiniteScroll(loadMore, { hasMore, loading: loadingMore });
 
   function toggleReaction(itemId: string, emoji: string) {
     setItems((prev) =>
@@ -124,7 +154,8 @@ export function HomePage() {
 
       {/* Timeline */}
       <section className="home__feed">
-        <h2 className="home__section-title">Timeline</h2>
+        {/* @ claude - please delete this and the associated SCSS to remove bloat */}
+        {/* <h2 className="home__section-title">Timeline</h2> */}
         {loading ? (
           <div className="section-loading">
             <Loader label="Loading your feed…" />
@@ -135,11 +166,19 @@ export function HomePage() {
             and your friends shows up here.
           </p>
         ) : (
-          <ul className="feed">
-            {items.map((it) => (
-              <FeedCard key={it.id} item={it} onReact={toggleReaction} />
-            ))}
-          </ul>
+          <>
+            <ul className="feed">
+              {items.map((it) => (
+                <FeedCard key={it.id} item={it} onReact={toggleReaction} />
+              ))}
+            </ul>
+            <div ref={sentinelRef} />
+            {loadingMore && (
+              <div className="section-loading section-loading--inline">
+                <Loader label="Loading more…" />
+              </div>
+            )}
+          </>
         )}
       </section>
     </main>
@@ -170,14 +209,14 @@ function FeedCard({
               <strong>{lead?.username ?? 'Someone'}</strong>
               {extra > 0 && ` & ${extra} other${extra > 1 ? 's' : ''}`} completed{' '}
               {item.lobbyName ? <strong>{item.lobbyName}</strong> : 'a draft'}{' '}
-              <SportsFootballOutlinedIcon className="feed-card__icon" sx={{ fontSize: 17 }} />
+              <SportsFootballIcon className="feed-card__icon" sx={{ fontSize: 17 }} />
             </>
           )}
           {item.type === 'FRIEND_ACCEPTED' && (
             <>
               <strong>{lead?.username ?? 'Someone'}</strong> and{' '}
               <strong>{item.subject?.username ?? 'someone'}</strong> are now friends{' '}
-              <HandshakeOutlinedIcon className="feed-card__icon" sx={{ fontSize: 17 }} />
+              <HandshakeIcon className="feed-card__icon" sx={{ fontSize: 17 }} />
             </>
           )}
           {item.type === 'OPEN_LOBBY_CREATED' && (
@@ -246,7 +285,7 @@ function FeedReactions({
         aria-label="Add reaction"
         onClick={() => setOpen((o) => !o)}
       >
-        <AddReactionOutlinedIcon sx={{ fontSize: 18 }} />
+        <AddReactionIcon sx={{ fontSize: 18 }} />
       </button>
       {open && (
         <div className="feed-card__palette">

@@ -34,6 +34,14 @@
       box-shadow 120ms ease,
       background 120ms ease;
 
+    // The signed-in user's own team — a persistent ring so it's easy to spot
+    // at a glance. Declared before &--hi/&--onclock so their backgrounds
+    // still take over on top of it; only the ring itself always survives.
+    &--mine {
+      background: color-mix(in srgb, $primary 15%, $bg-overlay);
+      box-shadow: inset 0 0 0 1px $primary;
+    }
+
     // Cross-highlight when hovering one of this team's picks. Opaque (not
     // rgba) — these cells are sticky and sit over scrolling content, so a
     // translucent background lets scrolled-past text show through underneath.

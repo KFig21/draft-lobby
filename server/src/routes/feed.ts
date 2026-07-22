@@ -36,31 +36,41 @@ feedRouter.get('/', async (req: AuthedRequest, res: Response) => {
   const friends = await friendIds(me);
   const actors = [me, ...friends];
 
-  // ── Pinned: my own in-progress lobbies (not archived) ──
-  const { data: myMemberships } = await supabaseAdmin
-    .from('lobby_members')
-    .select('lobby_id')
-    .eq('user_id', me)
-    .eq('archived', false);
-  const myLobbyIds = (myMemberships ?? []).map((m) => m.lobby_id);
+  const limit = Math.min(Math.max(Number(req.query.limit) || 25, 1), 50);
+  const before = typeof req.query.before === 'string' ? req.query.before : null;
+
+  // ── Pinned: my own in-progress lobbies (not archived) — first page only. ──
   let activeLobbies: unknown[] = [];
-  if (myLobbyIds.length > 0) {
-    const { data } = await supabaseAdmin
-      .from('lobbies')
-      .select('id, name, status, settings')
-      .in('id', myLobbyIds)
-      .in('status', ['SETUP', 'SCHEDULED', 'DRAFTING', 'PAUSED'])
-      .order('created_at', { ascending: false });
-    activeLobbies = data ?? [];
+  if (!before) {
+    const { data: myMemberships } = await supabaseAdmin
+      .from('lobby_members')
+      .select('lobby_id')
+      .eq('user_id', me)
+      .eq('archived', false);
+    const myLobbyIds = (myMemberships ?? []).map((m) => m.lobby_id);
+    if (myLobbyIds.length > 0) {
+      const { data } = await supabaseAdmin
+        .from('lobbies')
+        .select('id, name, status, settings')
+        .in('id', myLobbyIds)
+        .in('status', ['SETUP', 'SCHEDULED', 'DRAFTING', 'PAUSED'])
+        .order('created_at', { ascending: false });
+      activeLobbies = data ?? [];
+    }
   }
 
   // ── Timeline events from me + friends ──
-  const { data: rawEvents } = await supabaseAdmin
+  // Fetch extra raw events per page since grouping (see below) can collapse
+  // several rows into one feed item.
+  const rawLimit = Math.min(limit * 3, 200);
+  let eventsQuery = supabaseAdmin
     .from('activity_events')
     .select('*')
     .in('actor_id', actors)
     .order('created_at', { ascending: false })
-    .limit(80);
+    .limit(rawLimit);
+  if (before) eventsQuery = eventsQuery.lt('created_at', before);
+  const { data: rawEvents } = await eventsQuery;
   const events = (rawEvents ?? []) as EventRow[];
 
   // Group completed drafts by lobby ("bob & 3 others completed a draft").
@@ -102,12 +112,11 @@ feedRouter.get('/', async (req: AuthedRequest, res: Response) => {
     });
   }
   feedGroups.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const page = feedGroups.slice(0, limit);
 
   // Lobby status + my membership for lobby-related items (drives "join up" vs
   // "view draft" links in the timeline).
-  const lobbyIds = [
-    ...new Set(feedGroups.map((g) => g.lobbyId).filter((x): x is string => !!x)),
-  ];
+  const lobbyIds = [...new Set(page.map((g) => g.lobbyId).filter((x): x is string => !!x))];
   const lobbyStatusMap = new Map<string, string>();
   const myLobbySet = new Set<string>();
   if (lobbyIds.length > 0) {
@@ -125,7 +134,7 @@ feedRouter.get('/', async (req: AuthedRequest, res: Response) => {
   }
 
   // Actor profiles.
-  const allActorIds = [...new Set(feedGroups.flatMap((g) => g.actorIds))];
+  const allActorIds = [...new Set(page.flatMap((g) => g.actorIds))];
   const profileMap = new Map<string, { id: string; username: string; avatar: unknown }>();
   if (allActorIds.length > 0) {
     const { data: profiles } = await supabaseAdmin
@@ -136,7 +145,7 @@ feedRouter.get('/', async (req: AuthedRequest, res: Response) => {
   }
 
   // Reactions on the canonical ids.
-  const feedIds = feedGroups.map((g) => g.id);
+  const feedIds = page.map((g) => g.id);
   const reactionCounts = new Map<string, Record<string, number>>();
   const myReactions = new Map<string, string[]>();
   if (feedIds.length > 0) {
@@ -154,7 +163,7 @@ feedRouter.get('/', async (req: AuthedRequest, res: Response) => {
     }
   }
 
-  const items = feedGroups.map((g) => ({
+  const items = page.map((g) => ({
     id: g.id,
     type: g.type,
     createdAt: g.createdAt,
@@ -168,7 +177,13 @@ feedRouter.get('/', async (req: AuthedRequest, res: Response) => {
     myReactions: myReactions.get(g.id) ?? [],
   }));
 
-  res.json({ activeLobbies, items });
+  // Cursor for the next page is the oldest raw event we fetched this time —
+  // not the oldest item — so a group split across the page boundary can't
+  // silently drop events.
+  const nextCursor = events.length > 0 ? events[events.length - 1].created_at : null;
+  const hasMore = events.length === rawLimit;
+
+  res.json({ activeLobbies, items, nextCursor, hasMore });
 });
 
 /** POST /api/feed/:activityId/react — toggle an emoji reaction. */

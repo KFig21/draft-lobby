@@ -44,6 +44,34 @@
     }
   }
 
+  &__pager {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: $space * 1.5;
+    margin-top: $space * 1.5;
+  }
+
+  &__pager-btn {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: $bg-raised;
+    color: $text;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      background: $bg-overlay;
+    }
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+  }
+
   &__archived-toggle {
     background: none;
     border: none;

@@ -190,5 +190,19 @@ lobbiesRouter.post('/join', async (req: AuthedRequest, res: Response) => {
     res.status(500).json({ error: memberError.message });
     return;
   }
+  // Joining directly (e.g. via a shared link) also resolves any pending invite
+  // notification, so it stops showing stale Join/Decline actions.
+  await supabaseAdmin
+    .from('lobby_invites')
+    .update({ status: 'ACCEPTED' })
+    .eq('lobby_id', lobbyId)
+    .eq('invitee_id', userId);
+  await supabaseAdmin
+    .from('notifications')
+    .update({ status: 'ACCEPTED' })
+    .eq('user_id', userId)
+    .eq('lobby_id', lobbyId)
+    .eq('type', 'LOBBY_INVITE')
+    .is('status', null);
   res.json({ joined: true });
 });

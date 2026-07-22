@@ -3,7 +3,12 @@ import { z } from 'zod';
 
 const envSchema = z.object({
   PORT: z.coerce.number().default(4100),
-  CLIENT_ORIGIN: z.string().default('http://localhost:5183'),
+  // Comma-separated if you need more than one (e.g. a Vercel prod domain plus
+  // a preview deployment), matching cors()'s array-of-origins support.
+  CLIENT_ORIGIN: z
+    .string()
+    .default('http://localhost:5183')
+    .transform((s) => s.split(',').map((o) => o.trim()).filter(Boolean)),
   SUPABASE_URL: z.string().url(),
   // Service-role key: server-only, never exposed to the client.
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),

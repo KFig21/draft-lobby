@@ -1,64 +1,128 @@
 import { defaultAvatar } from '@draft-lobby/shared';
 import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Avatar } from '../../components/Avatar/Avatar';
+import { Loader } from '../../components/Loader/Loader';
 import { useAuth } from '../../auth/AuthContext';
 import { api } from '../../lib/api';
 import { supabase } from '../../supabase';
+import { useInfiniteScroll } from '../../lib/useInfiniteScroll';
 import type { FriendshipRow, ProfileMini } from '../../lib/types';
 import './FriendsPage.scss';
 
 type Relation = 'none' | 'friends' | 'incoming' | 'outgoing';
 
+const PAGE_SIZE = 25;
+
+const FRIENDS_SELECT =
+  '*, requester:requester_id ( id, username, avatar ), addressee:addressee_id ( id, username, avatar )';
+
 export function FriendsPage() {
   const { session } = useAuth();
   const me = session?.user.id ?? '';
 
-  const [friendships, setFriendships] = useState<FriendshipRow[]>([]);
+  // "Your friends" — the only list that can realistically grow large, so it's
+  // the one that's paginated.
+  const [friends, setFriends] = useState<FriendshipRow[]>([]);
+  const [friendsLoading, setFriendsLoading] = useState(true);
+  const [friendsLoadingMore, setFriendsLoadingMore] = useState(false);
+  const [friendsHasMore, setFriendsHasMore] = useState(true);
+  const friendsCursorRef = useRef<string | null>(null);
+
+  // Incoming pending requests — bounded/actionable, loaded in full.
+  const [incoming, setIncoming] = useState<FriendshipRow[]>([]);
+
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<ProfileMini[]>([]);
+  const [resultRelations, setResultRelations] = useState<Map<string, Relation>>(new Map());
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadFriendships = useCallback(() => {
+  const fetchFriendsPage = useCallback(
+    async (before?: string | null) => {
+      if (!me) return [] as FriendshipRow[];
+      let q = supabase
+        .from('friendships')
+        .select(FRIENDS_SELECT)
+        .eq('status', 'ACCEPTED')
+        .or(`requester_id.eq.${me},addressee_id.eq.${me}`)
+        .order('created_at', { ascending: false })
+        .limit(PAGE_SIZE);
+      if (before) q = q.lt('created_at', before);
+      const { data } = await q;
+      return (data ?? []) as unknown as FriendshipRow[];
+    },
+    [me],
+  );
+
+  const loadFirstFriendsPage = useCallback(() => {
+    setFriendsLoading(true);
+    void fetchFriendsPage().then((rows) => {
+      setFriends(rows);
+      friendsCursorRef.current = rows.length > 0 ? rows[rows.length - 1].created_at : null;
+      setFriendsHasMore(rows.length === PAGE_SIZE);
+      setFriendsLoading(false);
+    });
+  }, [fetchFriendsPage]);
+
+  const loadMoreFriends = useCallback(() => {
+    if (!friendsCursorRef.current) return;
+    setFriendsLoadingMore(true);
+    void fetchFriendsPage(friendsCursorRef.current).then((rows) => {
+      setFriends((prev) => [...prev, ...rows]);
+      friendsCursorRef.current = rows.length > 0 ? rows[rows.length - 1].created_at : null;
+      setFriendsHasMore(rows.length === PAGE_SIZE);
+      setFriendsLoadingMore(false);
+    });
+  }, [fetchFriendsPage]);
+
+  const friendsSentinelRef = useInfiniteScroll(loadMoreFriends, {
+    hasMore: friendsHasMore,
+    loading: friendsLoadingMore,
+  });
+
+  const loadIncoming = useCallback(() => {
+    if (!me) {
+      setIncoming([]);
+      return;
+    }
     void supabase
       .from('friendships')
-      .select(
-        '*, requester:requester_id ( id, username, avatar ), addressee:addressee_id ( id, username, avatar )',
-      )
-      .then(({ data }) => setFriendships((data ?? []) as unknown as FriendshipRow[]));
-  }, []);
+      .select('*, requester:requester_id ( id, username, avatar )')
+      .eq('status', 'PENDING')
+      .eq('addressee_id', me)
+      .order('created_at', { ascending: false })
+      .then(({ data }) => setIncoming((data ?? []) as unknown as FriendshipRow[]));
+  }, [me]);
 
   useEffect(() => {
-    loadFriendships();
-  }, [loadFriendships]);
+    loadFirstFriendsPage();
+    loadIncoming();
+  }, [loadFirstFriendsPage, loadIncoming]);
 
-  // Relationship + counterpart profile keyed by the other user's id.
-  const relations = useMemo(() => {
-    const map = new Map<string, { relation: Relation; profile: ProfileMini | null }>();
-    for (const f of friendships) {
-      const iAmRequester = f.requester_id === me;
-      const otherId = iAmRequester ? f.addressee_id : f.requester_id;
-      const profile = (iAmRequester ? f.addressee : f.requester) ?? null;
-      const relation: Relation =
-        f.status === 'ACCEPTED' ? 'friends' : iAmRequester ? 'outgoing' : 'incoming';
-      map.set(otherId, { relation, profile });
-    }
-    return map;
-  }, [friendships, me]);
-
-  const friends = useMemo(
-    () =>
-      friendships
-        .filter((f) => f.status === 'ACCEPTED')
-        .map((f) => (f.requester_id === me ? f.addressee : f.requester))
-        .filter((p): p is ProfileMini => !!p),
-    [friendships, me],
-  );
-  const incoming = useMemo(
-    () =>
-      friendships.filter((f) => f.status === 'PENDING' && f.addressee_id === me),
-    [friendships, me],
+  // Relation of `me` to a specific set of other users — used only for search
+  // results, so it never needs to load the (potentially large) full friend list.
+  const loadRelationsFor = useCallback(
+    async (ids: string[]) => {
+      if (!me || ids.length === 0) return new Map<string, Relation>();
+      const idList = ids.join(',');
+      const { data } = await supabase
+        .from('friendships')
+        .select('requester_id, addressee_id, status')
+        .or(
+          `and(requester_id.eq.${me},addressee_id.in.(${idList})),and(addressee_id.eq.${me},requester_id.in.(${idList}))`,
+        );
+      const map = new Map<string, Relation>();
+      for (const f of (data ?? []) as { requester_id: string; addressee_id: string; status: string }[]) {
+        const iAmRequester = f.requester_id === me;
+        const otherId = iAmRequester ? f.addressee_id : f.requester_id;
+        const relation: Relation =
+          f.status === 'ACCEPTED' ? 'friends' : iAmRequester ? 'outgoing' : 'incoming';
+        map.set(otherId, relation);
+      }
+      return map;
+    },
+    [me],
   );
 
   async function runSearch(e: React.FormEvent) {
@@ -73,7 +137,9 @@ export function FriendsPage() {
       .ilike('username', `%${q}%`)
       .neq('id', me)
       .limit(12);
-    setResults((data ?? []) as ProfileMini[]);
+    const found = (data ?? []) as ProfileMini[];
+    setResults(found);
+    setResultRelations(await loadRelationsFor(found.map((p) => p.id)));
     setSearching(false);
   }
 
@@ -81,14 +147,15 @@ export function FriendsPage() {
     setError(null);
     try {
       await api(`/friends/${path}`, { method: 'POST', body });
-      loadFriendships();
+      loadIncoming();
+      if (path === 'respond' || path === 'remove') loadFirstFriendsPage();
+      if (results.length > 0) setResultRelations(await loadRelationsFor(results.map((p) => p.id)));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong');
     }
   }
 
-  const relationOf = (userId: string): Relation =>
-    relations.get(userId)?.relation ?? 'none';
+  const relationOf = (userId: string): Relation => resultRelations.get(userId) ?? 'none';
 
   return (
     <main className="friends">
@@ -176,24 +243,40 @@ export function FriendsPage() {
 
       {/* Friends */}
       <section className="friends__section">
-        <h2>Your friends ({friends.length})</h2>
-        {friends.length === 0 ? (
+        <h2>Your friends</h2>
+        {friendsLoading ? (
+          <div className="section-loading">
+            <Loader label="Loading your friends…" />
+          </div>
+        ) : friends.length === 0 ? (
           <p className="muted">No friends yet. Search above to add some.</p>
         ) : (
-          <ul className="friends__list">
-            {friends.map((p) => (
-              <li key={p.id} className="friends__row">
-                <Avatar avatar={p.avatar ?? defaultAvatar(p.id)} size={36} />
-                <span className="friends__name">{p.username}</span>
-                <button
-                  className="button friends__btn"
-                  onClick={() => act('remove', { userId: p.id })}
-                >
-                  Remove
-                </button>
-              </li>
-            ))}
-          </ul>
+          <>
+            <ul className="friends__list">
+              {friends.map((f) => {
+                const p = (f.requester_id === me ? f.addressee : f.requester) ?? null;
+                if (!p) return null;
+                return (
+                  <li key={f.id} className="friends__row">
+                    <Avatar avatar={p.avatar ?? defaultAvatar(p.id)} size={36} />
+                    <span className="friends__name">{p.username}</span>
+                    <button
+                      className="button friends__btn"
+                      onClick={() => act('remove', { userId: p.id })}
+                    >
+                      Remove
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+            <div ref={friendsSentinelRef} />
+            {friendsLoadingMore && (
+              <div className="section-loading section-loading--inline">
+                <Loader label="Loading more…" />
+              </div>
+            )}
+          </>
         )}
       </section>
     </main>

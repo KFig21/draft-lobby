@@ -27,6 +27,9 @@ export interface ToastInput {
   action?: ToastAction;
   /** Shown next to the title when the toast is about a specific person. */
   avatar?: AvatarData | null;
+  /** Makes the whole card clickable (e.g. jump to the pick that was reacted
+   * to) — like clicking a notification. Dismisses the toast when clicked. */
+  onClick?: () => void;
 }
 
 export interface ToastItem extends Required<Pick<ToastInput, 'title' | 'tone' | 'durationMs'>> {
@@ -34,6 +37,7 @@ export interface ToastItem extends Required<Pick<ToastInput, 'title' | 'tone' | 
   body?: string;
   action?: ToastAction;
   avatar?: AvatarData | null;
+  onClick?: () => void;
   paused: boolean;
   closing: boolean;
 }
@@ -84,6 +88,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         tone: input.tone ?? 'info',
         action: input.action,
         avatar: input.avatar,
+        onClick: input.onClick,
         durationMs,
         paused: false,
         closing: false,
