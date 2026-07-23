@@ -188,6 +188,18 @@
     gap: $space * 0.5;
   }
 
+  &__locked-badge {
+    margin-top: $space;
+  }
+
+  // Centers the "chat is locked" badge in the compose area now that it's
+  // the only thing there (no input/send button to align it against).
+  &__locked-notice {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
   &__react {
     position: relative;
     display: inline-flex;

@@ -421,6 +421,13 @@ input[type='checkbox'] {
   svg {
     font-size: 1rem;
   }
+
+  // "This is locked/unavailable" reads as a caution, not a routine status —
+  // distinguish it from the default teal (bot / automated) meaning.
+  &--warn {
+    background: rgba($warning, 0.16);
+    color: $warning;
+  }
 }
 
 .loading {

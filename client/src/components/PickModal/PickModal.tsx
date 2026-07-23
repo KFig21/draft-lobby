@@ -238,7 +238,7 @@ export function PickModal({
             )}
           </div>
           {reactionsLocked && (
-            <span className="bot-badge">
+            <span className="bot-badge bot-badge--warn pick-modal__locked-badge">
               <LockOutlinedIcon fontSize="inherit" /> Reactions are locked for this draft
             </span>
           )}
@@ -276,7 +276,11 @@ export function PickModal({
         {/* Compose — pinned at the bottom, outside the scrolling comments. */}
         <div className="pick-modal__compose-area">
           {locked ? (
-            <p className="muted">🔒 Chat is locked for this draft.</p>
+            <div className="pick-modal__locked-notice">
+              <span className="bot-badge bot-badge--warn">
+                <LockOutlinedIcon fontSize="inherit" /> Chat is locked for this draft
+              </span>
+            </div>
           ) : (
             <form className="pick-modal__comment-form" onSubmit={submitComment}>
               <MentionInput
