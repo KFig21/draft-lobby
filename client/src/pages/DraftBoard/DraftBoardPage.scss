@@ -419,7 +419,7 @@
   &__center {
     display: flex;
     align-items: center;
-    gap: $space * 2;
+    gap: $space * 3;
     min-width: 0;
 
     @include lg {
