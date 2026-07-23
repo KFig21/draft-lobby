@@ -59,6 +59,12 @@
   flex-direction: column;
   height: 100vh;
   height: 100dvh; // account for mobile browser chrome
+  // Every scrollable region in here (board, sidebar panels, chat) already
+  // manages its own overflow-y — the page itself should never scroll. Guards
+  // against a stray page-level scrollbar from a sub-pixel rounding gap
+  // between 100dvh and the real viewport (varies by OS display scaling/zoom,
+  // which is why this can show up on one machine and not an identical one).
+  overflow: hidden;
   background: $bg; // fills correctly in fullscreen (TV mode)
 
   &__topbar {
