@@ -41,6 +41,22 @@ function toMyLobbies(rows: RawRow[]): MyLobby[] {
     .filter((r): r is MyLobby => r !== null);
 }
 
+// PostgREST's order-by-embedded-resource (`.order(col, { foreignTable })`)
+// doesn't actually reorder the parent `lobby_members` rows against this
+// project's Supabase instance — confirmed empirically, rows came back in
+// roughly insertion order regardless of what was requested. Sorting here
+// client-side, on the already-fetched `lobbies` data, sidesteps it entirely.
+function sortMyLobbies(rows: MyLobby[], order: SortOrder): MyLobby[] {
+  const sorted = [...rows];
+  sorted.sort((a, b) => {
+    if (order === 'NAME') return a.lobby.name.localeCompare(b.lobby.name);
+    const diff =
+      new Date(a.lobby.created_at).getTime() - new Date(b.lobby.created_at).getTime();
+    return order === 'OLDEST' ? diff : -diff;
+  });
+  return sorted;
+}
+
 export function ProfilePage() {
   const { session } = useAuth();
   const [active, setActive] = useState<MyLobby[]>([]);
@@ -85,13 +101,11 @@ export function ProfilePage() {
       activeQ = activeQ.eq('lobbies.settings->>visibility', visibilityFilter);
       archivedQ = archivedQ.eq('lobbies.settings->>visibility', visibilityFilter);
     }
-    const orderCol = sortOrder === 'NAME' ? 'name' : 'created_at';
-    const ascending = sortOrder === 'NAME' ? true : sortOrder === 'OLDEST';
-    activeQ = activeQ.order(orderCol, { foreignTable: 'lobbies', ascending });
-    archivedQ = archivedQ.order(orderCol, { foreignTable: 'lobbies', ascending });
     Promise.all([activeQ, archivedQ]).then(([activeRes, archivedRes]) => {
-      setActive(toMyLobbies((activeRes.data ?? []) as unknown as RawRow[]));
-      setArchived(toMyLobbies((archivedRes.data ?? []) as unknown as RawRow[]));
+      setActive(sortMyLobbies(toMyLobbies((activeRes.data ?? []) as unknown as RawRow[]), sortOrder));
+      setArchived(
+        sortMyLobbies(toMyLobbies((archivedRes.data ?? []) as unknown as RawRow[]), sortOrder),
+      );
       setSectionsLoading(false);
     });
   }, [userId, draftModeFilter, visibilityFilter, sortOrder]);
@@ -102,24 +116,21 @@ export function ProfilePage() {
       setPastLoading(true);
       let q = supabase
         .from('lobby_members')
-        .select('role, archived, lobbies!inner ( id, name, status, settings, created_at )', {
-          count: 'exact',
-        })
+        .select('role, archived, lobbies!inner ( id, name, status, settings, created_at )')
         .eq('user_id', userId)
         .eq('archived', false)
         .eq('lobbies.status', 'COMPLETE');
       if (draftModeFilter !== 'ALL') q = q.eq('lobbies.settings->>draftMode', draftModeFilter);
       if (visibilityFilter !== 'ALL') q = q.eq('lobbies.settings->>visibility', visibilityFilter);
-      const orderCol = sortOrder === 'NAME' ? 'name' : 'created_at';
-      const ascending = sortOrder === 'NAME' ? true : sortOrder === 'OLDEST';
-      void q
-        .order(orderCol, { foreignTable: 'lobbies', ascending })
-        .range(page * PAST_PAGE_SIZE, page * PAST_PAGE_SIZE + PAST_PAGE_SIZE - 1)
-        .then(({ data, count }) => {
-          setPast(toMyLobbies((data ?? []) as unknown as RawRow[]));
-          setPastTotal(count ?? 0);
-          setPastLoading(false);
-        });
+      // No server-side range/order here — see sortMyLobbies for why. The full
+      // set of a single user's past drafts is small, so fetching it all and
+      // paginating the (correctly) sorted array client-side is cheap.
+      void q.then(({ data }) => {
+        const sorted = sortMyLobbies(toMyLobbies((data ?? []) as unknown as RawRow[]), sortOrder);
+        setPastTotal(sorted.length);
+        setPast(sorted.slice(page * PAST_PAGE_SIZE, page * PAST_PAGE_SIZE + PAST_PAGE_SIZE));
+        setPastLoading(false);
+      });
     },
     [userId, draftModeFilter, visibilityFilter, sortOrder],
   );
