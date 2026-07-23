@@ -70,6 +70,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { useLobby } from '../../hooks/useLobby';
 import { usePlayers } from '../../hooks/usePlayers';
 import { api } from '../../lib/api';
+import { getDraftCellStyle } from '../../lib/draftCellStyle';
 import { mostCommonGrade } from '../../lib/draftGrade';
 import { exportDraftCsv, exportDraftExcel } from '../../lib/exportDraft';
 import { avatarForTeam } from '../../lib/teamAvatar';
@@ -142,6 +143,9 @@ export function DraftBoardPage() {
   const { lobby, teams, members, picks, loading } = useLobby(id);
   const { players, loading: playersLoading } = usePlayers();
 
+  // Personal display preference (Settings > Draft board), not per-lobby —
+  // read once on mount, same as toastPrefs.
+  const [cellStyle] = useState(() => getDraftCellStyle());
   const [filter, setFilter] = useState<Filter>('ALL');
   const [search, setSearch] = useState('');
   const [mobileTab, setMobileTab] = useState<MobileTab>('board');
@@ -1497,6 +1501,7 @@ export function DraftBoardPage() {
             onReactPick={isMember ? reactPick : undefined}
             onPickClick={setPickModal}
             commentsByPick={commentsByPick}
+            cellStyle={cellStyle}
             fill={isFullscreen}
             fillRowHeight={fsRowHeight}
             onMyClockCellClick={() => {

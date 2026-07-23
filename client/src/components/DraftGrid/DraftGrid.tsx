@@ -3,6 +3,7 @@ import TimerOutlinedIcon from '@mui/icons-material/TimerOutlined';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlined';
 import TouchAppIcon from '@mui/icons-material/TouchApp';
 import { useState } from 'react';
+import type { DraftCellStyle } from '../../lib/draftCellStyle';
 import { avatarForTeam } from '../../lib/teamAvatar';
 import type { ChatMessageRow, MemberRow, PickRow, PlayerRow, TeamRow } from '../../lib/types';
 import { Avatar } from '../Avatar/Avatar';
@@ -39,6 +40,10 @@ interface Props {
   commentsByPick?: Map<string, ChatMessageRow[]>;
   /** Fullscreen ("TV mode"): stretch columns to fill the available width. */
   fill?: boolean;
+  /** How a drafted pick's cell renders — a user preference (Settings), not
+   * per-lobby. 'bold' fills the whole cell with the position color and shows
+   * just the player's name, big — meant to be readable from across a room. */
+  cellStyle?: DraftCellStyle;
   /** Fullscreen: row height (px) computed to fill the available height. */
   fillRowHeight?: number | null;
   /** The viewer's own on-the-clock cell was clicked — switches to the
@@ -75,6 +80,7 @@ export function DraftGrid({
   onPickClick,
   commentsByPick,
   fill = false,
+  cellStyle = 'default',
   fillRowHeight,
   onMyClockCellClick,
   onClockUrgency,
@@ -160,6 +166,7 @@ export function DraftGrid({
                         player={player}
                         entry={reactionsByPick?.get(pick.id)}
                         hasComment={(commentsByPick?.get(pick.id)?.length ?? 0) > 0}
+                        bold={cellStyle === 'bold'}
                         onReact={onReactPick}
                         onClick={onPickClick}
                         onEnter={() => setHover({ round, teamId: team.id })}
@@ -233,6 +240,7 @@ function PickCell({
   player,
   entry,
   hasComment,
+  bold,
   onReact,
   onClick,
   onEnter,
@@ -242,12 +250,29 @@ function PickCell({
   player: PlayerRow;
   entry: ReactionEntry | undefined;
   hasComment: boolean;
+  bold: boolean;
   onReact?: (pickId: string, emoji: string) => void;
   onClick?: (pick: PickRow) => void;
   onEnter: () => void;
   onLeave: () => void;
 }) {
   const active = entry ? Object.keys(entry.counts) : [];
+  const posColor = POSITION_COLORS[player.position as Position];
+
+  if (bold) {
+    // "Big screen" style: the whole cell is the position color, showing only
+    // the player's name, large — nothing else is legible from across a room
+    // anyway, so reactions/comments/meta are dropped rather than shrunk.
+    return (
+      <td
+        className="draft-grid__cell draft-grid__cell--pick draft-grid__cell--bold"
+        style={{ background: posColor }}
+        onClick={() => onClick?.(pick)}
+      >
+        <span className="draft-grid__player draft-grid__player--bold">{player.name}</span>
+      </td>
+    );
+  }
 
   return (
     <td
@@ -257,10 +282,7 @@ function PickCell({
       onClick={() => onClick?.(pick)}
     >
       <div className="draft-grid__pick">
-        <span
-          className="draft-grid__pos"
-          style={{ color: POSITION_COLORS[player.position as Position] }}
-        >
+        <span className="draft-grid__pos" style={{ color: posColor }}>
           {player.position}
         </span>
         <span className="draft-grid__player">{player.name}</span>

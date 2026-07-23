@@ -254,6 +254,19 @@
           }
         }
       }
+
+      // "Big screen" cell style (user preference, Settings > Draft board):
+      // the position color set inline (see DraftGrid.tsx) fills the whole
+      // cell — nothing here overrides it, hover's background-color tint
+      // above included, since inline styles always win regardless.
+      &.draft-grid__cell--bold {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: $space * 0.5;
+        text-align: center;
+        overflow: hidden;
+      }
     }
   }
 
@@ -351,6 +364,23 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+
+    // "Big screen" style — see &__cell--bold. White + a dark shadow reads
+    // clearly against every position color (some, like RB's teal, are too
+    // bright for reliable contrast with a single fixed text color alone).
+    &--bold {
+      white-space: normal;
+      font-weight: 800;
+      font-size: 0.95rem;
+      line-height: 1.15;
+      color: #fff;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      line-clamp: 3;
+      -webkit-box-orient: vertical;
+      word-break: break-word;
+    }
   }
 
   &__meta {
@@ -501,6 +531,12 @@
 
     .draft-grid__meta {
       font-size: calc(0.65rem * var(--fs-scale));
+    }
+
+    // The whole point of the "big screen" cell style — grows well past the
+    // other labels above as the row height (and so --fs-scale) grows.
+    .draft-grid__player--bold {
+      font-size: calc(1.3rem * var(--fs-scale));
     }
 
     // Deliberately NOT scaled by --fs-scale like everything else above —

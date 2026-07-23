@@ -68,6 +68,12 @@
     flex-shrink: 0;
   }
 
+  // A .segmented control used directly under a &__row (e.g. draft cell
+  // style) — some breathing room instead of butting right against it.
+  .segmented {
+    margin-top: $space;
+  }
+
   &__icon {
     display: grid;
     place-items: center;

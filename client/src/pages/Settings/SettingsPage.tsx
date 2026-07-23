@@ -12,6 +12,11 @@ import { useAuth } from '../../auth/AuthContext';
 import { ProfileEditor } from '../../components/ProfileEditor/ProfileEditor';
 import { ThemeToggle } from '../../components/ThemeToggle/ThemeToggle';
 import { ToggleSwitch } from '../../components/ToggleSwitch/ToggleSwitch';
+import {
+  getDraftCellStyle,
+  setDraftCellStyle,
+  type DraftCellStyle,
+} from '../../lib/draftCellStyle';
 import { useTheme } from '../../theme/ThemeContext';
 import { supabase } from '../../supabase';
 import {
@@ -45,6 +50,12 @@ export function SettingsPage() {
   const [formats, setFormats] = useState<ScoringFormatRow[]>([]);
   const [leagues, setLeagues] = useState<LeagueRow[]>([]);
   const [toastPrefs, setToastPrefsState] = useState(() => getToastPrefs());
+  const [cellStyle, setCellStyleState] = useState<DraftCellStyle>(() => getDraftCellStyle());
+
+  function updateCellStyle(style: DraftCellStyle) {
+    setDraftCellStyle(style);
+    setCellStyleState(style);
+  }
 
   function updateToastsEnabled(enabled: boolean) {
     setToastsEnabled(enabled);
@@ -94,6 +105,33 @@ export function SettingsPage() {
             <span className="muted">{theme === 'dark' ? 'Dark' : 'Light'}</span>
           </div>
           <ThemeToggle className="settings__icon" />
+        </div>
+      </section>
+
+      {/* Draft board */}
+      <section className="settings__section">
+        <h2>Draft board</h2>
+        <div className="settings__row">
+          <div className="settings__row-main">
+            <span className="settings__row-name">Cell style</span>
+            <span className="muted">
+              {cellStyle === 'bold'
+                ? 'Big screen: solid position color, just the player name — built to read from across the room'
+                : 'Default: position, player name, team & bye week'}
+            </span>
+          </div>
+        </div>
+        <div className="segmented">
+          {(['default', 'bold'] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              className={`segmented__opt${cellStyle === v ? ' segmented__opt--on' : ''}`}
+              onClick={() => updateCellStyle(v)}
+            >
+              {v === 'default' ? 'Default' : 'Big screen'}
+            </button>
+          ))}
         </div>
       </section>
 
