@@ -176,6 +176,11 @@
     &--onclock-mine {
       background: $accent;
       border-color: $accent;
+      // The base &--onclock rule's inset ring is always accent-green — drop
+      // it here since this cell is a full solid fill anyway, otherwise it'd
+      // stay green even once the border/background below shift to warning/
+      // danger colors.
+      box-shadow: none;
       cursor: pointer;
       text-align: center;
       vertical-align: middle;
@@ -448,8 +453,12 @@
       font-size: calc(0.65rem * var(--fs-scale));
     }
 
+    // Deliberately NOT scaled by --fs-scale like everything else above — the
+    // "your turn" label is a multi-line block (icon + bold title + subtext),
+    // so scaling it by the same factor as single-line labels compounded into
+    // comically large text on a big screen. It reads fine at its normal size.
     .draft-grid__onclock-label {
-      font-size: calc(0.65rem * var(--fs-scale));
+      font-size: 0.65rem;
     }
   }
 }

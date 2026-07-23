@@ -154,6 +154,11 @@ export function DraftBoardPage() {
   const [pickError, setPickError] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [commishBusy, setCommishBusy] = useState(false);
+  // Pause/resume get their own busy flag, separate from commishBusy (which
+  // fast-forward also sets) — otherwise, while "Skip bots" is auto-advancing
+  // through a streak of bot picks, commishBusy stays true almost
+  // continuously and the Pause button goes disabled right when it's needed.
+  const [pauseBusy, setPauseBusy] = useState(false);
   const [commishError, setCommishError] = useState<string | null>(null);
   const [reqPauseBusy, setReqPauseBusy] = useState(false);
   // The pick to roll back to (inclusive) — set from the toolbar's "Undo" (the
@@ -905,13 +910,13 @@ export function DraftBoardPage() {
 
   async function commishAction(path: 'pause' | 'resume') {
     setCommishError(null);
-    setCommishBusy(true);
+    setPauseBusy(true);
     try {
       await api(`/lobbies/${id}/${path}`, { method: 'POST' });
     } catch (err) {
       setCommishError(err instanceof Error ? err.message : 'Action failed');
     } finally {
-      setCommishBusy(false);
+      setPauseBusy(false);
     }
   }
 
@@ -1012,7 +1017,7 @@ export function DraftBoardPage() {
           <button
             className="draft__tool-btn"
             onClick={() => commishAction('resume')}
-            disabled={commishBusy}
+            disabled={pauseBusy}
           >
             <PlayArrowIcon fontSize="small" /> Resume
           </button>
@@ -1020,7 +1025,7 @@ export function DraftBoardPage() {
           <button
             className="draft__tool-btn"
             onClick={() => commishAction('pause')}
-            disabled={commishBusy}
+            disabled={pauseBusy}
           >
             <PauseIcon fontSize="small" /> Pause
           </button>
