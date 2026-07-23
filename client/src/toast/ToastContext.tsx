@@ -1,4 +1,4 @@
-import type { Avatar as AvatarData } from '@draft-lobby/shared';
+import type { Avatar as AvatarData, DraftGrade } from '@draft-lobby/shared';
 import {
   createContext,
   useCallback,
@@ -27,6 +27,8 @@ export interface ToastInput {
   action?: ToastAction;
   /** Shown next to the title when the toast is about a specific person. */
   avatar?: AvatarData | null;
+  /** Shown as a colored badge in the title — for grade notifications. */
+  grade?: DraftGrade | null;
   /** Makes the whole card clickable (e.g. jump to the pick that was reacted
    * to) — like clicking a notification. Dismisses the toast when clicked. */
   onClick?: () => void;
@@ -37,6 +39,7 @@ export interface ToastItem extends Required<Pick<ToastInput, 'title' | 'tone' | 
   body?: string;
   action?: ToastAction;
   avatar?: AvatarData | null;
+  grade?: DraftGrade | null;
   onClick?: () => void;
   paused: boolean;
   closing: boolean;
@@ -88,6 +91,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         tone: input.tone ?? 'info',
         action: input.action,
         avatar: input.avatar,
+        grade: input.grade,
         onClick: input.onClick,
         durationMs,
         paused: false,

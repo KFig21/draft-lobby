@@ -1,7 +1,8 @@
-import { defaultAvatar } from '@draft-lobby/shared';
+import { defaultAvatar, type DraftGrade } from '@draft-lobby/shared';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Avatar } from '../../components/Avatar/Avatar';
+import { GradeBadge } from '../../components/GradeBadge/GradeBadge';
 import { Loader } from '../../components/Loader/Loader';
 import { useNotifications } from '../../notifications/NotificationsContext';
 import { api } from '../../lib/api';
@@ -186,8 +187,9 @@ export function NotificationsPage() {
             )}
             {n.type === 'DRAFT_GRADE' && (
               <>
-                {withGroup(name, n.count)} graded your roster
-                {n.snippet ? <>: {n.snippet}</> : ''} in{' '}
+                {withGroup(name, n.count)} graded your roster{' '}
+                {n.grade && <GradeBadge grade={n.grade as DraftGrade} size={18} />}
+                {n.snippet ? <> — {n.snippet}</> : ''} in{' '}
                 <strong>{n.lobby_name ?? 'a draft'}</strong>
               </>
             )}

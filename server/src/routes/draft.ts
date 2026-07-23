@@ -116,6 +116,8 @@ async function notifyGrouped(params: {
   snippet: string;
   /** Which emoji triggered this — PICK_REACTION/MESSAGE_REACTION only. */
   emoji?: string;
+  /** The letter grade — DRAFT_GRADE only. */
+  grade?: string;
 }): Promise<void> {
   if (params.userId === params.actorId) return; // never notify yourself
   const { data: existing } = await supabaseAdmin
@@ -134,6 +136,7 @@ async function notifyGrouped(params: {
         count: (existing.count as number) + 1,
         snippet: params.snippet,
         emoji: params.emoji,
+        grade: params.grade,
         created_at: new Date().toISOString(),
       })
       .eq('id', existing.id);
@@ -149,6 +152,7 @@ async function notifyGrouped(params: {
     target_id: params.targetId,
     snippet: params.snippet,
     emoji: params.emoji,
+    grade: params.grade,
   });
 }
 
@@ -1523,7 +1527,8 @@ draftRouter.post('/:id/grade-team', async (req: AuthedRequest, res: Response) =>
       lobbyName: (lobby.name as string | undefined) ?? 'a draft',
       targetType: 'TEAM',
       targetId: parsed.data.teamId,
-      snippet: `${parsed.data.grade} — ${parsed.data.comment}`,
+      snippet: parsed.data.comment,
+      grade: parsed.data.grade,
     });
   }
   res.json({ ok: true });

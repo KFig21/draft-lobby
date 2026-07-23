@@ -2,6 +2,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import PauseIcon from '@mui/icons-material/Pause';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import { Avatar } from '../components/Avatar/Avatar';
+import { GradeBadge } from '../components/GradeBadge/GradeBadge';
 import { useToastInternal, type ToastItem } from './ToastContext';
 import './ToastViewport.scss';
 
@@ -32,7 +33,8 @@ function ToastCard({
   onClose: () => void;
   onTogglePause: () => void;
 }) {
-  const { title, body, tone, action, avatar, onClick, durationMs, paused, closing } = toast;
+  const { title, body, tone, action, avatar, grade, onClick, durationMs, paused, closing } =
+    toast;
 
   function activate() {
     if (!onClick) return;
@@ -64,7 +66,10 @@ function ToastCard({
         </span>
       )}
       <div className="toast__content">
-        <p className="toast__title">{title}</p>
+        <p className="toast__title">
+          {title}
+          {grade && <GradeBadge grade={grade} size={18} />}
+        </p>
         {body && <p className="toast__body">{body}</p>}
       </div>
       <div className="toast__controls">

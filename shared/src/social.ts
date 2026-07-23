@@ -101,6 +101,24 @@ export const DRAFT_GRADES = [
 ] as const;
 export type DraftGrade = (typeof DRAFT_GRADES)[number];
 
+/** Consistent color coding for grade badges, used across the UI — a
+ * green-to-red gradient by letter, +/- variants share their letter's color. */
+export const DRAFT_GRADE_COLORS: Record<DraftGrade, string> = {
+  'A+': '#3fd6a5',
+  A: '#3fd6a5',
+  'A-': '#3fd6a5',
+  'B+': '#8bd23f',
+  B: '#8bd23f',
+  'B-': '#8bd23f',
+  'C+': '#f6a642',
+  C: '#f6a642',
+  'C-': '#f6a642',
+  'D+': '#f2793a',
+  D: '#f2793a',
+  'D-': '#f2793a',
+  F: '#f8577d',
+};
+
 /** Cast (or change) your vote for which OTHER team had the best draft. */
 export const crownVoteSchema = z.object({
   teamId: z.string().uuid(),

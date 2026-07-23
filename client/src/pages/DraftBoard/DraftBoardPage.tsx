@@ -418,10 +418,11 @@ export function DraftBoardPage() {
           const myTeam = teamsRef.current.find((t) => t.owner_id === userId);
           if (!myTeam || row.team_id !== myTeam.id) return;
           showToast({
-            title: `${memberUsername(row.rater_id)} graded your roster: ${row.grade}`,
+            title: `${memberUsername(row.rater_id)} graded your roster`,
             body: row.comment,
             tone: 'info',
             avatar: memberAvatar(row.rater_id),
+            grade: row.grade,
             onClick: () => {
               setRosterTeamSel(myTeam.id);
               setPanelTab('roster');
