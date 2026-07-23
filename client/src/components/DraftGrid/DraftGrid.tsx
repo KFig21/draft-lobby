@@ -1,5 +1,6 @@
 import { POSITION_COLORS, type DraftType, type Position } from '@draft-lobby/shared';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlined';
+import TouchAppIcon from '@mui/icons-material/TouchApp';
 import { useState } from 'react';
 import { avatarForTeam } from '../../lib/teamAvatar';
 import type { ChatMessageRow, MemberRow, PickRow, PlayerRow, TeamRow } from '../../lib/types';
@@ -177,11 +178,19 @@ export function DraftGrid({
                           : undefined
                       }
                     >
-                      {isOnClock && (
-                        <span className="draft-grid__onclock-label">
-                          {isMyClock ? 'On the clock — click here to view players' : 'On the clock'}
-                        </span>
-                      )}
+                      {isOnClock &&
+                        (isMyClock ? (
+                          <span className="draft-grid__onclock-label draft-grid__onclock-label--mine">
+                            <span className="draft-grid__onclock-title">
+                              <TouchAppIcon fontSize="inherit" /> On the clock
+                            </span>
+                            <span className="draft-grid__onclock-sub">
+                              Click here to view players
+                            </span>
+                          </span>
+                        ) : (
+                          <span className="draft-grid__onclock-label">On the clock</span>
+                        ))}
                     </td>
                   );
                 })}

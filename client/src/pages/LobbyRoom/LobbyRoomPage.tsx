@@ -463,7 +463,11 @@ export function LobbyRoomPage() {
     }
   }
 
-  const draftLive = lobby.status === 'DRAFTING' || lobby.status === 'COMPLETE';
+  // Also true while PAUSED — a paused draft has already started, so the
+  // primary action should still be "Go to draft board", not "Start draft"
+  // (which would hit the start endpoint and resume it).
+  const draftLive =
+    lobby.status === 'DRAFTING' || lobby.status === 'PAUSED' || lobby.status === 'COMPLETE';
   // Team names lock for everyone but the commissioner once the draft is
   // complete — keeps rosters stable while the commissioner reviews.
   const isComplete = lobby.status === 'COMPLETE';
