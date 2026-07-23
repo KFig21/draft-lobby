@@ -28,7 +28,6 @@ export interface PickComment {
   avatar: AvatarData;
   body: string;
   at: string;
-  mine: boolean;
   entry: ReactionEntry | undefined;
   /** Who reacted, keyed by emoji (for the hover tooltip + the full-list modal). */
   reactors: Record<string, Reactor[]>;
@@ -261,7 +260,7 @@ export function PickModal({
             <p className="muted pick-modal__no-comments">No comments yet.</p>
           ) : (
             comments.map((c) => (
-              <div key={c.id} className={`pick-modal__comment${c.mine ? ' is-mine' : ''}`}>
+              <div key={c.id} className="pick-modal__comment">
                 <Avatar avatar={c.avatar} size={26} />
                 <div className="pick-modal__comment-main">
                   <div className="pick-modal__comment-head">

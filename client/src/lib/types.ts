@@ -125,6 +125,7 @@ export interface NotificationRow {
   target_id: string | null;
   count: number;
   snippet: string | null;
+  emoji: string | null;
   read: boolean;
   status: 'ACCEPTED' | 'DECLINED' | null;
   created_at: string;

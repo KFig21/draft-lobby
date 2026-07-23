@@ -151,7 +151,7 @@ export function NotificationsPage() {
             )}
             {n.type === 'PICK_REACTION' && (
               <>
-                {withGroup(name, n.count)} reacted to your pick
+                {withGroup(name, n.count)} reacted {n.emoji ?? ''} to your pick
                 {n.snippet ? (
                   <>
                     {' '}
@@ -165,7 +165,7 @@ export function NotificationsPage() {
             )}
             {n.type === 'MESSAGE_REACTION' && (
               <>
-                {withGroup(name, n.count)} reacted to your message
+                {withGroup(name, n.count)} reacted {n.emoji ?? ''} to your message
                 {n.snippet ? <>: “{n.snippet}”</> : ''} in{' '}
                 <strong>{n.lobby_name ?? 'a draft'}</strong>
               </>

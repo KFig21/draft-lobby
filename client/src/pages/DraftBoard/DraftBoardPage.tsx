@@ -1517,7 +1517,6 @@ export function DraftBoardPage() {
               avatar: memberAvatar(c.user_id),
               body: c.body,
               at: c.created_at,
-              mine: c.user_id === userId,
               entry: reactionsByMessage.get(c.id),
               reactors: commentReactors,
             };

@@ -114,6 +114,8 @@ async function notifyGrouped(params: {
   targetType: 'PICK' | 'MESSAGE' | 'TEAM';
   targetId: string;
   snippet: string;
+  /** Which emoji triggered this — PICK_REACTION/MESSAGE_REACTION only. */
+  emoji?: string;
 }): Promise<void> {
   if (params.userId === params.actorId) return; // never notify yourself
   const { data: existing } = await supabaseAdmin
@@ -131,6 +133,7 @@ async function notifyGrouped(params: {
         actor_id: params.actorId,
         count: (existing.count as number) + 1,
         snippet: params.snippet,
+        emoji: params.emoji,
         created_at: new Date().toISOString(),
       })
       .eq('id', existing.id);
@@ -145,6 +148,7 @@ async function notifyGrouped(params: {
     target_type: params.targetType,
     target_id: params.targetId,
     snippet: params.snippet,
+    emoji: params.emoji,
   });
 }
 
@@ -154,6 +158,7 @@ async function notifyReactionTarget(
   targetType: 'MESSAGE' | 'PICK',
   targetId: string,
   actorId: string,
+  emoji: string,
 ): Promise<void> {
   const { data: lobbyRow } = await supabaseAdmin
     .from('lobbies')
@@ -183,6 +188,7 @@ async function notifyReactionTarget(
       targetType: 'PICK',
       targetId,
       snippet: (player?.name as string | undefined) ?? 'a player',
+      emoji,
     });
     return;
   }
@@ -203,6 +209,7 @@ async function notifyReactionTarget(
     targetType: 'MESSAGE',
     targetId,
     snippet: body.length > 80 ? `${body.slice(0, 80)}…` : body,
+    emoji,
   });
 }
 
@@ -982,7 +989,7 @@ draftRouter.post('/:id/chat-react', async (req: AuthedRequest, res: Response) =>
     res.status(500).json({ error: error.message });
     return;
   }
-  await notifyReactionTarget(lobbyId, targetType, targetId, userId);
+  await notifyReactionTarget(lobbyId, targetType, targetId, userId, emoji);
   res.json({ ok: true, reacted: true });
 });
 

@@ -316,11 +316,6 @@
     border-radius: $radius-sm;
     background: $bg;
 
-    &.is-mine {
-      border-color: $primary;
-      background: rgba($primary, 0.1);
-    }
-
     &:last-child {
       margin-bottom: 0;
     }
