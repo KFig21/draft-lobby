@@ -274,9 +274,7 @@ export function PickModal({
         </div>
 
         {/* Compose — pinned at the bottom, outside the scrolling comments. */}
-        <div
-          className={`pick-modal__compose-area${locked ? ' pick-modal__compose-area--locked' : ''}`}
-        >
+        <div className="pick-modal__compose-area">
           {locked ? (
             <div className="pick-modal__locked-notice">
               <span className="bot-badge bot-badge--warn">
