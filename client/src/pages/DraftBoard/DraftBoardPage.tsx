@@ -158,9 +158,9 @@ export function DraftBoardPage() {
   const [rollbackConfirmText, setRollbackConfirmText] = useState('');
   const [showExport, setShowExport] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  // Only meaningful in full screen (the sidebar tabs aren't mounted there) —
+  // Only meaningful in full screen (the sidebar isn't mounted there) —
   // force-closed the moment full screen exits, since the sidebar comes back.
-  const [showFsPlayers, setShowFsPlayers] = useState(false);
+  const [showFsMenu, setShowFsMenu] = useState(false);
   // Ticks every second so the top bar can flip yellow/red as the pick clock
   // runs low, not just the clock text itself.
   const [clockNow, setClockNow] = useState(() => Date.now());
@@ -180,7 +180,7 @@ export function DraftBoardPage() {
   useEffect(() => {
     const onFsChange = () => {
       setIsFullscreen(!!document.fullscreenElement);
-      if (!document.fullscreenElement) setShowFsPlayers(false);
+      if (!document.fullscreenElement) setShowFsMenu(false);
     };
     document.addEventListener('fullscreenchange', onFsChange);
     return () => document.removeEventListener('fullscreenchange', onFsChange);
@@ -1080,7 +1080,7 @@ export function DraftBoardPage() {
     // paint on top and hide the pick-confirm dialog behind it.
     function pick(p: PlayerRow) {
       setSelected(p);
-      setShowFsPlayers(false);
+      setShowFsMenu(false);
     }
     return (
       <>
@@ -1148,6 +1148,161 @@ export function DraftBoardPage() {
           ))}
           {available.length === 0 && <p className="muted pool__empty">No players match.</p>}
         </div>
+      </>
+    );
+  }
+
+  // Shared between the actual sidebar (hidden in full screen) and the
+  // fullscreen "Menu" modal — same tab bar, same four panels. All of
+  // .draft__sidebar-tabs/.draft__panel-body/etc. are styled as standalone
+  // BEM-ish classes (not scoped to .draft__sidebar specifically), so this
+  // markup renders identically wherever it's dropped in.
+  function renderSidebarPanels() {
+    if (!lobby) return null; // already guaranteed by the guard above — narrows for TS
+    return (
+      <>
+        <div className="draft__sidebar-tabs">
+          {SIDEBAR_TABS.filter((t) => t.key !== 'results' || isComplete)
+            .filter((t) => t.key !== 'chat' || isMember || lobby.chat_public)
+            .map(({ key, label, Icon }) => (
+              <button
+                key={key}
+                className={`draft__stab ${panelTab === key ? 'is-active' : ''}`}
+                onClick={() => {
+                  // Kept in sync so this tab strip also works inside the
+                  // fullscreen modal on a narrow viewport, where panel
+                  // visibility is driven by mobileTab, not panelTab.
+                  setPanelTab(key);
+                  setMobileTab(key);
+                }}
+              >
+                <Icon fontSize="small" />
+                {label}
+              </button>
+            ))}
+        </div>
+
+        {/* Players & queue */}
+        <div
+          className={`draft__panel-body ${panelTab === 'players' ? 'is-desktop-active' : ''} ${
+            mobileTab === 'players' ? 'is-mobile-active' : ''
+          }`}
+        >
+          {renderPlayersPool()}
+        </div>
+
+        {/* Roster */}
+        <div
+          className={`draft__panel-body ${panelTab === 'roster' ? 'is-desktop-active' : ''} ${
+            mobileTab === 'roster' ? 'is-mobile-active' : ''
+          }`}
+        >
+          <div className="draft__roster">
+            <TeamLineup
+              teams={teams}
+              selectedTeamId={rosterTeamId}
+              onSelectTeam={setRosterTeamSel}
+              picks={picks}
+              playersById={playersById}
+              settings={lobby.settings}
+              myUserId={userId}
+              isCommish={isCommish}
+              onToggleAuto={isComplete ? undefined : toggleAuto}
+              onPickClick={setPickModal}
+              belowSelect={
+                isComplete &&
+                (() => {
+                  const voteCount = crownVotes.filter((v) => v.team_id === rosterTeamId).length;
+                  const teamGrades = grades.filter((g) => g.team_id === rosterTeamId);
+                  const avgGrade = mostCommonGrade(teamGrades);
+                  return (
+                    <>
+                      <span className="lineup-view__label">Report Card</span>
+                      <button
+                        type="button"
+                        className="draft__results-summary"
+                        onClick={() => {
+                          // The fullscreen modal has no room for a second
+                          // slide-in drawer on top of itself — jump to the
+                          // Results tab (already right there) instead.
+                          if (isFullscreen) setPanelTab('results');
+                          else setResultsDrawerView((v) => (v === 'closed' ? 'open' : 'closed'));
+                        }}
+                      >
+                        <GradeBadge grade={avgGrade} size={44} />
+                        <div className="draft__results-summary-main">
+                          <span className="draft__results-summary-item">
+                            <EmojiEventsOutlinedIcon fontSize="small" /> {voteCount} vote
+                            {voteCount === 1 ? '' : 's'}
+                          </span>
+                          <span className="draft__results-summary-item muted">
+                            {teamGrades.length} grade
+                            {teamGrades.length === 1 ? '' : 's'}
+                          </span>
+                        </div>
+                        <ChevronRightIcon
+                          fontSize="small"
+                          className="draft__results-summary-chevron"
+                        />
+                      </button>
+                    </>
+                  );
+                })()
+              }
+            />
+          </div>
+        </div>
+
+        {/* Chat */}
+        <div
+          className={`draft__panel-body ${panelTab === 'chat' ? 'is-desktop-active' : ''} ${
+            mobileTab === 'chat' ? 'is-mobile-active' : ''
+          }`}
+        >
+          <DraftChat
+            lobbyId={id}
+            status={lobby.status}
+            completedAt={lobby.completed_at}
+            picks={picks}
+            teamsById={teamsById}
+            playersById={playersById}
+            members={members}
+            onOpenPick={setPickModal}
+            focusMessageId={focusMessageId}
+            onFocusHandled={() => setFocusMessageId(null)}
+            viewOnly={!isMember}
+          />
+        </div>
+
+        {/* Results — crown vote + peer grading, only relevant post-draft. */}
+        {isComplete && (
+          <div
+            className={`draft__panel-body ${panelTab === 'results' ? 'is-desktop-active' : ''} ${
+              mobileTab === 'results' ? 'is-mobile-active' : ''
+            }`}
+          >
+            <div className="draft__results">
+              {resultsLocked && (
+                <p className="muted draft__results-locked">
+                  🔒 Voting and grading closed 24h after the draft ended — showing final results.
+                </p>
+              )}
+              <DraftResultsPanel
+                teams={teams}
+                members={members}
+                myTeamId={myTeam?.id ?? null}
+                myUserId={userId}
+                crownVotes={crownVotes}
+                grades={grades}
+                locked={resultsLocked}
+                canVote={canVote}
+                canGrade={canGrade}
+                onVote={castCrownVote}
+                onGrade={gradeTeam}
+              />
+            </div>
+          </div>
+        )}
       </>
     );
   }
@@ -1224,12 +1379,12 @@ export function DraftBoardPage() {
           )}
           {isFullscreen && (
             <button
-              className="draft__fs-players-btn"
-              onClick={() => setShowFsPlayers(true)}
-              aria-label="Players"
-              title="Players"
+              className="draft__fs-menu-btn"
+              onClick={() => setShowFsMenu(true)}
+              aria-label="Menu"
+              title="Players, roster, chat & results"
             >
-              <SportsFootballIcon fontSize="small" /> Players
+              <MenuIcon fontSize="small" /> Menu
             </button>
           )}
           <button
@@ -1290,138 +1445,7 @@ export function DraftBoardPage() {
             <aside
           className={`draft__sidebar ${mobileTab !== 'board' ? 'is-mobile-active' : ''}`}
         >
-          <div className="draft__sidebar-tabs">
-            {SIDEBAR_TABS.filter((t) => t.key !== 'results' || isComplete)
-              .filter((t) => t.key !== 'chat' || isMember || lobby.chat_public)
-              .map(({ key, label, Icon }) => (
-              <button
-                key={key}
-                className={`draft__stab ${panelTab === key ? 'is-active' : ''}`}
-                onClick={() => setPanelTab(key)}
-              >
-                <Icon fontSize="small" />
-                {label}
-              </button>
-            ))}
-          </div>
-
-          {/* Players & queue */}
-          <div
-            className={`draft__panel-body ${panelTab === 'players' ? 'is-desktop-active' : ''} ${
-              mobileTab === 'players' ? 'is-mobile-active' : ''
-            }`}
-          >
-            {renderPlayersPool()}
-          </div>
-
-          {/* Roster */}
-          <div
-            className={`draft__panel-body ${panelTab === 'roster' ? 'is-desktop-active' : ''} ${
-              mobileTab === 'roster' ? 'is-mobile-active' : ''
-            }`}
-          >
-            <div className="draft__roster">
-              <TeamLineup
-                teams={teams}
-                selectedTeamId={rosterTeamId}
-                onSelectTeam={setRosterTeamSel}
-                picks={picks}
-                playersById={playersById}
-                settings={lobby.settings}
-                myUserId={userId}
-                isCommish={isCommish}
-                onToggleAuto={isComplete ? undefined : toggleAuto}
-                onPickClick={setPickModal}
-                belowSelect={
-                  isComplete &&
-                  (() => {
-                    const voteCount = crownVotes.filter((v) => v.team_id === rosterTeamId).length;
-                    const teamGrades = grades.filter((g) => g.team_id === rosterTeamId);
-                    const avgGrade = mostCommonGrade(teamGrades);
-                    return (
-                      <>
-                        <span className="lineup-view__label">Report Card</span>
-                        <button
-                          type="button"
-                          className="draft__results-summary"
-                          onClick={() =>
-                            setResultsDrawerView((v) => (v === 'closed' ? 'open' : 'closed'))
-                          }
-                        >
-                          <GradeBadge grade={avgGrade} size={44} />
-                          <div className="draft__results-summary-main">
-                            <span className="draft__results-summary-item">
-                              <EmojiEventsOutlinedIcon fontSize="small" /> {voteCount} vote
-                              {voteCount === 1 ? '' : 's'}
-                            </span>
-                            <span className="draft__results-summary-item muted">
-                              {teamGrades.length} grade
-                              {teamGrades.length === 1 ? '' : 's'}
-                            </span>
-                          </div>
-                          <ChevronRightIcon
-                            fontSize="small"
-                            className="draft__results-summary-chevron"
-                          />
-                        </button>
-                      </>
-                    );
-                  })()
-                }
-              />
-            </div>
-          </div>
-
-          {/* Chat */}
-          <div
-            className={`draft__panel-body ${panelTab === 'chat' ? 'is-desktop-active' : ''} ${
-              mobileTab === 'chat' ? 'is-mobile-active' : ''
-            }`}
-          >
-            <DraftChat
-              lobbyId={id}
-              status={lobby.status}
-              completedAt={lobby.completed_at}
-              picks={picks}
-              teamsById={teamsById}
-              playersById={playersById}
-              members={members}
-              onOpenPick={setPickModal}
-              focusMessageId={focusMessageId}
-              onFocusHandled={() => setFocusMessageId(null)}
-              viewOnly={!isMember}
-            />
-          </div>
-
-          {/* Results — crown vote + peer grading, only relevant post-draft. */}
-          {isComplete && (
-            <div
-              className={`draft__panel-body ${panelTab === 'results' ? 'is-desktop-active' : ''} ${
-                mobileTab === 'results' ? 'is-mobile-active' : ''
-              }`}
-            >
-              <div className="draft__results">
-                {resultsLocked && (
-                  <p className="muted draft__results-locked">
-                    🔒 Voting and grading closed 24h after the draft ended — showing final results.
-                  </p>
-                )}
-                <DraftResultsPanel
-                  teams={teams}
-                  members={members}
-                  myTeamId={myTeam?.id ?? null}
-                  myUserId={userId}
-                  crownVotes={crownVotes}
-                  grades={grades}
-                  locked={resultsLocked}
-                  canVote={canVote}
-                  canGrade={canGrade}
-                  onVote={castCrownVote}
-                  onGrade={gradeTeam}
-                />
-              </div>
-            </div>
-          )}
+          {renderSidebarPanels()}
         </aside>
 
         {isComplete && (
@@ -1685,9 +1709,13 @@ export function DraftBoardPage() {
         </Modal>
       )}
 
-      {isFullscreen && showFsPlayers && (
-        <Modal title="Players" onClose={() => setShowFsPlayers(false)} wide>
-          <div className="draft__fs-players">{renderPlayersPool()}</div>
+      {isFullscreen && showFsMenu && (
+        <Modal
+          title={SIDEBAR_TABS.find((t) => t.key === panelTab)?.label ?? 'Menu'}
+          onClose={() => setShowFsMenu(false)}
+          wide
+        >
+          <div className="draft__fs-sidebar">{renderSidebarPanels()}</div>
         </Modal>
       )}
     </div>

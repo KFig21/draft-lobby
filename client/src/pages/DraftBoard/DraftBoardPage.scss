@@ -337,21 +337,29 @@
     }
   }
 
-  // Full screen only — the sidebar (and its Players tab) isn't mounted
-  // there, so this is the only way to queue/draft while in TV mode.
-  &__fs-players-btn {
+  // Full screen only — the sidebar isn't mounted there, so this is the only
+  // way to reach Players/Roster/Chat/Results while in TV mode.
+  &__fs-menu-btn {
     @extend %draft-chip-btn;
     flex-shrink: 0;
   }
 
-  // Fullscreen "Players" modal body — same pool__* pieces as the sidebar's
-  // Players tab, given their own bounded flex column so the player list
-  // scrolls internally while the queue/filters stay pinned above it.
-  &__fs-players {
+  // Fullscreen "Menu" modal body — the same sidebar tab bar + panel-body
+  // pieces, given their own bounded flex column so the active panel scrolls
+  // internally (queue/filters, or the tab bar itself) instead of the whole
+  // modal growing past a sane height.
+  &__fs-sidebar {
     display: flex;
     flex-direction: column;
-    height: min(70vh, 640px);
+    height: min(75vh, 680px);
     margin: -$space * 2.5;
+
+    // The tab strip is desktop-only (display: none) at the base breakpoint
+    // since mobile normally switches tabs via the bottom nav instead — but
+    // there's no bottom nav reachable from inside this modal, so force it.
+    .draft__sidebar-tabs {
+      display: flex !important;
+    }
   }
 
   // Auto-draft toggle: faded robot when off, filled + accent when on.
@@ -747,8 +755,7 @@
     font-size: 0.9rem;
 
     &:focus {
-      outline: 2px solid $primary;
-      outline-offset: -1px;
+      border-color: $primary;
     }
   }
 

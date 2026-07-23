@@ -229,8 +229,7 @@
       font-size: 0.85rem;
 
       &:focus {
-        outline: 2px solid $primary;
-        outline-offset: -1px;
+        border-color: $primary;
       }
     }
   }
