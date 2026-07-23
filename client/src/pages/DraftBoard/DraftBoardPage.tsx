@@ -6,6 +6,7 @@ import {
   draftPositionForOverall,
   extractMentionedUsernames,
   roundsForSettings,
+  secondsForRound,
   type Avatar as AvatarData,
   type DraftGrade,
   type Position,
@@ -988,6 +989,15 @@ export function DraftBoardPage() {
           ? 'warning'
           : null;
   const myTurnFlashing = myTurnSecondsLeft != null && myTurnSecondsLeft <= 5;
+  // How much of this pick's clock has elapsed (0-1) — grows the on-clock
+  // cell's progress fill left to right as myTurnSecondsLeft counts down.
+  const myTurnTotalSeconds = myTurnHighlight
+    ? secondsForRound(round, lobby.settings.pickTiers)
+    : null;
+  const myTurnElapsedPct =
+    myTurnSecondsLeft != null && myTurnTotalSeconds
+      ? Math.min(1, Math.max(0, (myTurnTotalSeconds - myTurnSecondsLeft) / myTurnTotalSeconds))
+      : null;
 
   // Commissioner-only tools. Rendered twice — inline in the desktop top bar,
   // and again in a bar flush above the mobile bottom nav — with CSS (not this
@@ -1458,6 +1468,7 @@ export function DraftBoardPage() {
             }}
             onClockUrgency={myTurnUrgency}
             onClockFlashing={myTurnFlashing}
+            onClockElapsedPct={myTurnElapsedPct}
           />
         </section>
 

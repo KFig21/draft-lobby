@@ -1,5 +1,5 @@
 import { POSITION_COLORS, type DraftType, type Position } from '@draft-lobby/shared';
-import AccessTimeOutlinedIcon from '@mui/icons-material/AccessTimeOutlined';
+import TimerOutlinedIcon from '@mui/icons-material/TimerOutlined';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlined';
 import TouchAppIcon from '@mui/icons-material/TouchApp';
 import { useState } from 'react';
@@ -49,6 +49,9 @@ interface Props {
   onClockUrgency?: 'warning' | 'danger' | null;
   /** Same "last 5 seconds" pulse as the top bar's pick clock. */
   onClockFlashing?: boolean;
+  /** 0-1: how much of the pick clock has elapsed — grows the progress fill
+   * on the viewer's own on-the-clock cell left to right. */
+  onClockElapsedPct?: number | null;
 }
 
 /**
@@ -76,6 +79,7 @@ export function DraftGrid({
   onMyClockCellClick,
   onClockUrgency,
   onClockFlashing,
+  onClockElapsedPct,
 }: Props) {
   // Index picks by "round:teamId" for O(1) cell lookup.
   const byCell = new Map<string, PickRow>();
@@ -189,11 +193,18 @@ export function DraftGrid({
                           : undefined
                       }
                     >
+                      {isMyClock && onClockElapsedPct != null && (
+                        <span
+                          className="draft-grid__onclock-fill"
+                          style={{ width: `${Math.min(1, Math.max(0, onClockElapsedPct)) * 100}%` }}
+                          aria-hidden
+                        />
+                      )}
                       {isOnClock &&
                         (isMyClock ? (
                           <span className="draft-grid__onclock-label">
                             <span className="draft-grid__onclock-title">
-                              <TouchAppIcon fontSize="inherit" /> On the clock
+                              <TouchAppIcon fontSize="inherit" /> On the clock!
                             </span>
                             <span className="draft-grid__onclock-sub">
                               Click here to view players
@@ -201,7 +212,7 @@ export function DraftGrid({
                           </span>
                         ) : (
                           <span className="draft-grid__onclock-label draft-grid__onclock-label--waiting">
-                            <AccessTimeOutlinedIcon className="draft-grid__onclock-icon" />
+                            <TimerOutlinedIcon className="draft-grid__onclock-icon" />
                             On the clock
                           </span>
                         ))}

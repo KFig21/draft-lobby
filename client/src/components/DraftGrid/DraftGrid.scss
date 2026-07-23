@@ -171,55 +171,51 @@
       vertical-align: middle;
     }
 
-    // The viewer's own on-the-clock cell — a full accent-green fill so it's
-    // unmissable, with dark text for contrast (same convention as the top
-    // bar's "your turn" state). Same everywhere: board, sidebar, mobile tabs,
-    // fullscreen.
+    // The viewer's own on-the-clock cell — a neutral surface (like any other
+    // cell) with a progress fill (see &__onclock-fill) growing left-to-right
+    // as the pick clock runs down, plus a border/text color that switches
+    // green -> yellow -> red on the same schedule as the top bar's clock.
+    // These brand colors already double as text color elsewhere in the app
+    // (PickClock, badges) without a per-theme override, so no light/dark
+    // split needed here either.
     &--onclock-mine {
-      background: $accent;
+      background: $bg;
       border-color: $accent;
-      // The base &--onclock rule's inset ring is always accent-green — drop
-      // it here since this cell is a full solid fill anyway, otherwise it'd
-      // stay green even once the border/background below shift to warning/
-      // danger colors.
+      // The base &--onclock rule's inset ring is always accent-green —
+      // drop it so it can't stay green once the border above shifts to
+      // warning/danger colors (the border itself is enough of a ring).
       box-shadow: none;
       cursor: pointer;
+      // Clips &__onclock-fill to the cell's own rounded corners.
+      overflow: hidden;
 
       .draft-grid__onclock-label {
-        color: #05231a;
+        position: relative;
+        z-index: 1;
+        color: $accent;
       }
 
       @media (hover: hover) {
         &:hover {
-          background: color-mix(in srgb, $accent 85%, black);
+          background: $bg-hover;
         }
       }
 
       // Same thresholds as the top bar's pick clock: yellow at 25s left,
-      // red at 10s (dark text still reads fine on yellow; red needs white).
+      // red at 10s.
       &.draft-grid__cell--warning {
-        background: $warning;
         border-color: $warning;
 
-        @media (hover: hover) {
-          &:hover {
-            background: color-mix(in srgb, $warning 85%, black);
-          }
+        .draft-grid__onclock-label {
+          color: $warning;
         }
       }
 
       &.draft-grid__cell--danger {
-        background: $danger;
         border-color: $danger;
 
         .draft-grid__onclock-label {
-          color: #fff;
-        }
-
-        @media (hover: hover) {
-          &:hover {
-            background: color-mix(in srgb, $danger 85%, black);
-          }
+          color: $danger;
         }
       }
 
@@ -362,6 +358,29 @@
     font-size: 0.65rem;
   }
 
+  // Grows left-to-right as the pick clock counts down (percentage width set
+  // inline from JS) — same "reveal more color as time passes" idea as the
+  // toast progress bar, just growing instead of shrinking since there's no
+  // single fixed CSS animation duration (the per-round pick clock length is
+  // dynamic). Low opacity so it reads as a wash, not a solid fill.
+  &__onclock-fill {
+    position: absolute;
+    inset: 0 auto 0 0;
+    z-index: 0;
+    background: rgba($accent, 0.2);
+    transition:
+      width 1s linear,
+      background 300ms ease;
+
+    .draft-grid__cell--warning & {
+      background: rgba($warning, 0.2);
+    }
+
+    .draft-grid__cell--danger & {
+      background: rgba($danger, 0.2);
+    }
+  }
+
   &__onclock-label {
     display: inline-flex;
     flex-direction: column;
@@ -391,12 +410,12 @@
     align-items: center;
     gap: 0.3em;
     font-weight: 800;
-    font-size: 1.05em;
+    font-size: 1.1em;
     letter-spacing: 0.02em;
     white-space: nowrap;
 
     svg {
-      font-size: 1.1em;
+      font-size: 1.15em;
     }
   }
 
