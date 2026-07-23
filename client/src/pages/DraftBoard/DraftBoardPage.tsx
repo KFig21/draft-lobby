@@ -12,6 +12,7 @@ import {
 } from '@draft-lobby/shared';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlined';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import EmojiEventsOutlinedIcon from '@mui/icons-material/EmojiEventsOutlined';
 import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
 import FastForwardIcon from '@mui/icons-material/FastForward';
@@ -1346,7 +1347,9 @@ export function DraftBoardPage() {
         </div>
         <div className="draft__status">
           {isComplete ? (
-            <strong className="draft__complete">🏆 Draft complete</strong>
+            <strong className="draft__complete">
+              <EmojiEventsIcon fontSize="small" /> Draft complete
+            </strong>
           ) : (
             <>
               <span className="draft__onclock-team">
