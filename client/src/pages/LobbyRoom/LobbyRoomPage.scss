@@ -506,6 +506,7 @@
   &__edit {
     flex: 1;
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: $space * 0.5;
 
@@ -520,6 +521,16 @@
       font-size: 0.95rem;
       font-weight: 600;
     }
+  }
+
+  // Owner chip + confirm/cancel — forced onto their own line below the input
+  // (flex-basis: 100% in a wrapping flex parent), so the input isn't
+  // squeezed down to nothing next to them on a narrow phone screen.
+  &__edit-meta {
+    flex-basis: 100%;
+    display: flex;
+    align-items: center;
+    gap: $space * 0.5;
   }
 
   &__icon {

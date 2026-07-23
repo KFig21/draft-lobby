@@ -753,9 +753,6 @@ export function LobbyRoomPage() {
                   <li key={team.id} className="team-list__row">
                     <span className="team-list__pos">{team.draft_position}</span>
                     <Avatar avatar={teamAvatar(team)} size={32} />
-                    {/* Shown whether or not the name is being edited — the
-                        whole point is to help the commissioner tell whose
-                        team is whose while they're mid-rename. */}
                     {editing ? (
                       <form
                         className="team-list__edit"
@@ -770,33 +767,37 @@ export function LobbyRoomPage() {
                           maxLength={40}
                           onChange={(e) => setEditName(e.target.value)}
                         />
-                        <button
-                          type="submit"
-                          className="team-list__icon"
-                          aria-label="Save team name"
-                          disabled={savingName || !editName.trim()}
-                        >
-                          <CheckIcon fontSize="small" />
-                        </button>
-                        <button
-                          type="button"
-                          className="team-list__icon"
-                          aria-label="Cancel"
-                          onClick={() => setEditingTeamId(null)}
-                        >
-                          <CloseIcon fontSize="small" />
-                        </button>
+                        {/* Own line below the input — keeps the input full-width
+                            and uncramped on mobile. The owner's username only
+                            needs to be visible here, while renaming, to help
+                            the commissioner tell whose team is whose. */}
+                        <div className="team-list__edit-meta">
+                          {!team.is_bot && ownerUsername(team.owner_id) && (
+                            <span className="team-list__chip team-list__chip--owner">
+                              {ownerUsername(team.owner_id)}
+                            </span>
+                          )}
+                          <span className="team-list__spacer" />
+                          <button
+                            type="submit"
+                            className="team-list__icon"
+                            aria-label="Save team name"
+                            disabled={savingName || !editName.trim()}
+                          >
+                            <CheckIcon fontSize="small" />
+                          </button>
+                          <button
+                            type="button"
+                            className="team-list__icon"
+                            aria-label="Cancel"
+                            onClick={() => setEditingTeamId(null)}
+                          >
+                            <CloseIcon fontSize="small" />
+                          </button>
+                        </div>
                       </form>
                     ) : (
                       <span className="team-list__name">{team.name}</span>
-                    )}
-                    {/* Shown whether or not the name is being edited — the
-                        whole point is to help the commissioner tell whose
-                        team is whose while they're mid-rename. */}
-                    {!team.is_bot && ownerUsername(team.owner_id) && (
-                      <span className="team-list__chip team-list__chip--owner">
-                        {ownerUsername(team.owner_id)}
-                      </span>
                     )}
                     {!editing && (
                       <>
@@ -805,9 +806,12 @@ export function LobbyRoomPage() {
                           <span className="team-list__you">you</span>
                         )}
                         {rel === 'friends' && (
-                          <span className="team-list__chip team-list__chip--friend">
+                          <span
+                            className="team-list__chip team-list__chip--friend"
+                            title="Friends"
+                            aria-label="Friends"
+                          >
                             <HowToRegOutlinedIcon sx={{ fontSize: 15 }} />
-                            Friends
                           </span>
                         )}
                         {rel === 'outgoing' && (
