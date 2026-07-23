@@ -818,17 +818,22 @@ export function DraftBoardPage() {
   const isComplete = lobby.status === 'COMPLETE';
   const isPaused = lobby.status === 'PAUSED';
   const endedAt = isComplete ? lobby.completed_at ?? null : null;
-  const chatLocked = !!endedAt && Date.now() >= new Date(endedAt).getTime() + CHAT_LOCK_MS;
+  // clockNow (ticks every second — see above), not Date.now(): these gate
+  // interactive UI (chat box, grading form, etc.), so they need to flip the
+  // moment their window closes, not just whenever something else happens to
+  // trigger a re-render — otherwise a tab left open straddles the deadline
+  // showing an already-locked form as if it were still open.
+  const chatLocked = !!endedAt && clockNow >= new Date(endedAt).getTime() + CHAT_LOCK_MS;
   // Emoji reactions stay open much longer than chat — locked 24h after the draft.
   const reactionsLocked =
-    !!endedAt && Date.now() >= new Date(endedAt).getTime() + REACTION_LOCK_MS;
+    !!endedAt && clockNow >= new Date(endedAt).getTime() + REACTION_LOCK_MS;
   // Commissioners can still fix a mistake right after the draft ends, but the
   // rollback feature disappears for good a few minutes later.
   const rollbackLocked =
-    !!endedAt && Date.now() >= new Date(endedAt).getTime() + ROLLBACK_LOCK_MS;
+    !!endedAt && clockNow >= new Date(endedAt).getTime() + ROLLBACK_LOCK_MS;
   // Crown vote + peer grading stay open 24h after the draft, same as reactions.
   const resultsLocked =
-    !!endedAt && Date.now() >= new Date(endedAt).getTime() + DRAFT_RESULTS_LOCK_MS;
+    !!endedAt && clockNow >= new Date(endedAt).getTime() + DRAFT_RESULTS_LOCK_MS;
   const isMyTurn = !!onClockTeam && onClockTeam.owner_id === userId;
   const canPick = !isComplete && !isPaused && (isMyTurn || isCommish);
   const pickingForTeam = !isMyTurn && onClockTeam ? onClockTeam.name : null;

@@ -245,14 +245,14 @@
     align-self: flex-start;
 
     // Once you've already graded this roster, "Update grade" reads as a
-    // distinct (green, not the initial teal) action from "Submit grade".
+    // distinct (blue, not the initial teal) action from "Submit grade".
     &--update {
-      background: $accent;
-      border-color: $accent;
-      color: #05231a;
+      background: $pos-wr;
+      border-color: $pos-wr;
+      color: #fff;
 
       &:hover {
-        background: color-mix(in srgb, black 8%, $accent);
+        background: color-mix(in srgb, black 12%, $pos-wr);
       }
     }
   }
