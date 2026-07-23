@@ -412,6 +412,30 @@ textarea {
   font-size: 0.85em;
 }
 
+// Injury designation letter (Q/D/O/IR/SUS) — color communicates severity,
+// not just the letter (see lib/injuryStatus.ts for the QUESTIONABLE/etc. map).
+.injury-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.6rem;
+  font-weight: 800;
+  line-height: 1.4;
+  border-radius: 3px;
+  padding: 0 4px;
+
+  &--warn {
+    color: $warning;
+    border: 1px solid $warning;
+    background: rgba($warning, 0.12);
+  }
+
+  &--danger {
+    color: $danger;
+    border: 1px solid $danger;
+    background: rgba($danger, 0.12);
+  }
+}
+
 .scoring-badge {
   display: inline-flex;
   align-items: center;

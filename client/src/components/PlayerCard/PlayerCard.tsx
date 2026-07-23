@@ -1,6 +1,7 @@
 import { POSITION_COLORS, type Position } from '@draft-lobby/shared';
 import BookmarkIcon from '@mui/icons-material/Bookmark';
 import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder';
+import { INJURY_ABBR, INJURY_SEVERITY } from '../../lib/injuryStatus';
 import type { PlayerRow } from '../../lib/types';
 import './PlayerCard.scss';
 
@@ -14,14 +15,6 @@ interface Props {
    * themselves doesn't trigger it (they stopPropagation). */
   onOpenDetail?: () => void;
 }
-
-const INJURY_ABBR: Record<string, string> = {
-  QUESTIONABLE: 'Q',
-  DOUBTFUL: 'D',
-  OUT: 'O',
-  IR: 'IR',
-  SUSPENDED: 'SUS',
-};
 
 const PREV_YEAR = String(new Date().getFullYear() - 1).slice(-2);
 
@@ -54,7 +47,10 @@ export function PlayerCard({ player, onPick, disabled, onQueue, queued, onOpenDe
         <div className="player-card__name">
           {player.name}
           {injury && (
-            <span className="player-card__injury" title={player.injury_status}>
+            <span
+              className={`injury-badge injury-badge--${INJURY_SEVERITY[player.injury_status] ?? 'danger'}`}
+              title={player.injury_status}
+            >
               {injury}
             </span>
           )}

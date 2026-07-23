@@ -2,6 +2,7 @@ import { POSITION_COLORS, type Position } from '@draft-lobby/shared';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import TrendingFlatIcon from '@mui/icons-material/TrendingFlat';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import { INJURY_ABBR, INJURY_SEVERITY } from '../../lib/injuryStatus';
 import type { PlayerRow } from '../../lib/types';
 import './PlayerStatBlock.scss';
 
@@ -15,6 +16,7 @@ interface Props {
  * renders them back-to-back since there's no pick yet to describe. */
 export function PlayerHeader({ player }: Props) {
   const pos = player.position as Position;
+  const injury = INJURY_ABBR[player.injury_status];
   return (
     <header className="player-stat-block__head">
       <span className="player-stat-block__pos" style={{ background: POSITION_COLORS[pos] }}>
@@ -22,13 +24,20 @@ export function PlayerHeader({ player }: Props) {
       </span>
       <div className="player-stat-block__title">
         <h3>{player.name}</h3>
-        <span className="muted">
-          {player.nfl_team}
-          {player.bye_week ? ` · Bye ${player.bye_week}` : ''}
-          {player.injury_status && player.injury_status !== 'ACTIVE'
-            ? ` · ${player.injury_status}`
-            : ''}
-        </span>
+        <div className="player-stat-block__subtitle">
+          <span className="muted">
+            {player.nfl_team}
+            {player.bye_week ? ` · Bye ${player.bye_week}` : ''}
+          </span>
+          {injury && (
+            <span
+              className={`injury-badge injury-badge--${INJURY_SEVERITY[player.injury_status] ?? 'danger'}`}
+              title={player.injury_status}
+            >
+              {injury}
+            </span>
+          )}
+        </div>
       </div>
     </header>
   );
@@ -80,7 +89,7 @@ export function PlayerStatGrid({ player }: Props) {
       </div>
 
       <div className="player-stat-block__totals">
-        <div className="player-stat-block__total">
+        <div className="player-stat-block__total player-stat-block__total--projected">
           <div className="player-stat-block__total-head">
             <span className="player-stat-block__stat-label">Projected</span>
             <span className="player-stat-block__stat-value">
@@ -91,7 +100,7 @@ export function PlayerStatGrid({ player }: Props) {
             <span className="player-stat-block__stat-line">{player.proj_stat_line}</span>
           )}
         </div>
-        <div className="player-stat-block__total">
+        <div className="player-stat-block__total player-stat-block__total--prev">
           <div className="player-stat-block__total-head">
             <span className="player-stat-block__stat-label">Last year</span>
             <span className="player-stat-block__stat-value">

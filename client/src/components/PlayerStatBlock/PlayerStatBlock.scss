@@ -3,7 +3,7 @@
 .player-stat-block {
   &__head {
     display: flex;
-    align-items: stretch;
+    align-items: center;
     gap: $space * 1.25;
     padding-right: $space * 4;
   }
@@ -11,14 +11,19 @@
   &__pos {
     display: grid;
     place-items: center;
-    align-self: stretch;
-    aspect-ratio: 1;
+    flex-shrink: 0;
+    // Fixed square — big enough to feel like a real badge next to the name,
+    // but not dependent on matching the title block's height exactly (that
+    // was fragile: aspect-ratio doesn't reliably win out over the badge's
+    // own text content when stretched inside a flex row).
+    width: 64px;
+    height: 64px;
     border-radius: $radius-sm;
     // Position badges fill with a bright brand color (see POSITION_COLORS) —
     // dark text reads far better on those than white.
     color: #05231a;
     font-weight: 800;
-    font-size: 1.3rem;
+    font-size: 1.4rem;
   }
 
   &__title {
@@ -26,6 +31,7 @@
     display: flex;
     flex-direction: column;
     justify-content: center;
+    gap: 3px;
 
     h3 {
       font-size: 1.3rem;
@@ -35,6 +41,12 @@
     .muted {
       font-size: 0.85rem;
     }
+  }
+
+  &__subtitle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
   }
 
   &__row {
@@ -98,7 +110,15 @@
     padding: $space $space * 1.25;
     background: $bg;
     border: 1px solid $border;
+    border-left: 3px solid $border;
     border-radius: $radius-sm;
+
+    // Projected (forward-looking) gets the brand teal; Last year (already
+    // happened) stays neutral — same left-border-stripe convention as the
+    // draft chat's pick/reaction/reply/grade items.
+    &--projected {
+      border-left-color: $primary;
+    }
   }
 
   &__total-head {
