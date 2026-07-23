@@ -1514,6 +1514,7 @@ export function DraftBoardPage() {
             return {
               id: c.id,
               author: usernameById.get(c.user_id) ?? 'Player',
+              avatar: memberAvatar(c.user_id),
               body: c.body,
               at: c.created_at,
               mine: c.user_id === userId,

@@ -1,4 +1,10 @@
-import { POSITION_COLORS, REACTION_EMOJIS, containsSlur, type Position } from '@draft-lobby/shared';
+import {
+  POSITION_COLORS,
+  REACTION_EMOJIS,
+  containsSlur,
+  type Avatar as AvatarData,
+  type Position,
+} from '@draft-lobby/shared';
 import AddReactionOutlinedIcon from '@mui/icons-material/AddReactionOutlined';
 import CloseIcon from '@mui/icons-material/Close';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
@@ -10,6 +16,7 @@ import { api } from '../../lib/api';
 import { renderMentionText } from '../../lib/renderMentions';
 import { useModalClose } from '../../lib/useModalClose';
 import type { MemberRow, PickRow, PlayerRow, TeamRow } from '../../lib/types';
+import { Avatar } from '../Avatar/Avatar';
 import type { ReactionEntry } from '../DraftGrid/DraftGrid';
 import { MentionInput } from '../MentionInput/MentionInput';
 import { ReactorsModal, type Reactor } from '../ReactorsModal/ReactorsModal';
@@ -18,6 +25,7 @@ import './PickModal.scss';
 export interface PickComment {
   id: string;
   author: string;
+  avatar: AvatarData;
   body: string;
   at: string;
   mine: boolean;
@@ -254,20 +262,23 @@ export function PickModal({
           ) : (
             comments.map((c) => (
               <div key={c.id} className={`pick-modal__comment${c.mine ? ' is-mine' : ''}`}>
-                <div className="pick-modal__comment-head">
-                  <span className="pick-modal__comment-author">{c.author}</span>
-                  <span className="pick-modal__comment-time">{formatTime(c.at)}</span>
+                <Avatar avatar={c.avatar} size={26} />
+                <div className="pick-modal__comment-main">
+                  <div className="pick-modal__comment-head">
+                    <span className="pick-modal__comment-author">{c.author}</span>
+                    <span className="pick-modal__comment-time">{formatTime(c.at)}</span>
+                  </div>
+                  <p className="pick-modal__comment-body">
+                    {renderMentionText(c.body, memberUsernames)}
+                  </p>
+                  <CommentReactions
+                    entry={c.entry}
+                    reactors={c.reactors}
+                    disabled={reactionsLocked}
+                    onReact={(emoji) => onReactComment(c.id, emoji)}
+                    onShowAllReactions={() => setReactorsModal(c.reactors)}
+                  />
                 </div>
-                <p className="pick-modal__comment-body">
-                  {renderMentionText(c.body, memberUsernames)}
-                </p>
-                <CommentReactions
-                  entry={c.entry}
-                  reactors={c.reactors}
-                  disabled={reactionsLocked}
-                  onReact={(emoji) => onReactComment(c.id, emoji)}
-                  onShowAllReactions={() => setReactorsModal(c.reactors)}
-                />
               </div>
             ))
           )}
