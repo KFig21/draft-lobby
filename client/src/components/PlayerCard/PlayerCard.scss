@@ -9,6 +9,14 @@
   border: 1px solid $border;
   border-radius: $radius-sm;
 
+  &--clickable {
+    cursor: pointer;
+
+    &:hover {
+      border-color: $primary;
+    }
+  }
+
   &__pos {
     flex-shrink: 0;
     width: 34px;

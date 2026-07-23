@@ -2,7 +2,8 @@
  * Imports a real NFL player pool:
  *   • Fantasy Football Calculator ADP  → real names, positions, teams, ADP, bye weeks
  *   • Sleeper /players/nfl             → injury status + depth players beyond the ADP list
- *   • Projections are ESTIMATED from ADP rank (placeholder until a real feed is wired in)
+ *   • Sleeper /stats/.../{lastSeason}  → real prev_points (PPR) + prev_rank (positional, PPR)
+ *   • Sleeper /projections/.../{season} → real proj_points (PPR); ADP-rank estimate fills any gaps
  *
  * Usage: npm run db:seed  (reads server/.env for Supabase credentials)
  */
@@ -72,8 +73,9 @@ function ffcPosition(p: string): Pos | null {
   return null;
 }
 
-// ── Sleeper (injuries + depth) ──────────────────────────────────────
+// ── Sleeper (injuries + depth + the id map stats/projections key off) ──
 interface SleeperPlayer {
+  player_id?: string;
   full_name?: string;
   first_name?: string;
   last_name?: string;
@@ -107,7 +109,28 @@ async function fetchSleeper(): Promise<SleeperPlayer[] | null> {
   }
 }
 
-// ── Projection estimate (placeholder until a real feed) ─────────────
+// Sleeper's own PPR fantasy points + positional PPR rank — no need to hand-roll
+// a stats→points calculator, they already compute it the same way we score by default.
+interface SleeperStatLine {
+  pts_ppr?: number;
+  pos_rank_ppr?: number;
+}
+
+async function fetchSleeperStatsOrProjections(
+  kind: 'stats' | 'projections',
+  season: number,
+): Promise<Record<string, SleeperStatLine> | null> {
+  try {
+    const res = await fetch(`https://api.sleeper.app/v1/${kind}/nfl/regular/${season}`);
+    if (!res.ok) throw new Error(`Sleeper ${kind} responded ${res.status}`);
+    return (await res.json()) as Record<string, SleeperStatLine>;
+  } catch (err) {
+    console.warn(`⚠️  Sleeper ${kind} (${season}) unavailable:`, String(err));
+    return null;
+  }
+}
+
+// ── Projection estimate — fallback for anyone Sleeper has no real projection for ──
 const POS_BASE: Record<Pos, number> = {
   QB: 380, RB: 285, WR: 275, TE: 205, K: 155, DEF: 135,
 };
@@ -164,8 +187,11 @@ async function main() {
     });
   }
 
-  // 2) Sleeper enrichment: injuries for known players + depth beyond ADP.
+  // 2) Sleeper enrichment: injuries for known players, depth beyond ADP, and
+  // a normalized-name → sleeper player_id map for the stats/projections join
+  // below (those endpoints are keyed by Sleeper's own player_id, not name).
   const sleeper = await fetchSleeper();
+  const sleeperIdByKey = new Map<string, string>();
   if (sleeper) {
     const injuryByKey = new Map<string, string>();
     let depthAdded = 0;
@@ -175,6 +201,7 @@ async function main() {
       const full = sp.full_name ?? `${sp.first_name ?? ''} ${sp.last_name ?? ''}`.trim();
       if (!full) continue;
       const keyStr = `${normalize(full)}|${pos}`;
+      if (sp.player_id) sleeperIdByKey.set(keyStr, sp.player_id);
       if (sp.active && sp.injury_status) {
         injuryByKey.set(keyStr, mapInjury(sp.injury_status));
       }
@@ -203,25 +230,54 @@ async function main() {
     console.log(`Sleeper: enriched injuries, added ${depthAdded} depth players`);
   }
 
-  // 3) Estimated projections.
+  // 3) Baseline estimated projections for everyone, then overwrite with real
+  // Sleeper data wherever it's available (real always wins over the estimate).
   estimateProjections(pool);
 
-  // 4) Replace the table.
-  console.log(`Clearing existing players…`);
-  const { error: delError } = await supabase
-    .from('players')
-    .delete()
-    .neq('id', '00000000-0000-0000-0000-000000000000');
-  if (delError) throw new Error(delError.message);
+  const prevSeason = SEASON - 1;
+  const [prevStats, projections] = await Promise.all([
+    fetchSleeperStatsOrProjections('stats', prevSeason),
+    fetchSleeperStatsOrProjections('projections', SEASON),
+  ]);
+  let realPrevCount = 0;
+  let realProjCount = 0;
+  if (prevStats || projections) {
+    for (const p of pool) {
+      if (p.position === 'DEF') continue; // Sleeper keys DST stats differently — skip for now.
+      const sleeperId = sleeperIdByKey.get(`${normalize(p.name)}|${p.position}`);
+      if (!sleeperId) continue;
+      const prev = prevStats?.[sleeperId];
+      if (prev?.pts_ppr != null) {
+        p.prev_points = Math.round(prev.pts_ppr * 10) / 10;
+        p.prev_rank = prev.pos_rank_ppr ?? null;
+        realPrevCount++;
+      }
+      const proj = projections?.[sleeperId];
+      if (proj?.pts_ppr != null) {
+        p.proj_points = Math.round(proj.pts_ppr * 10) / 10;
+        realProjCount++;
+      }
+    }
+  }
+  console.log(
+    `Sleeper stats/projections: ${realPrevCount} players got real ${prevSeason} results, ` +
+      `${realProjCount} got real ${SEASON} projections (rest use the ADP-rank estimate)`,
+  );
 
-  console.log(`Inserting ${pool.length} players…`);
+  // 4) Upsert (never delete+reinsert) — picks.player_id has no cascade, so
+  // generating a new id for a player who's already been drafted somewhere
+  // would silently orphan that pick's history. Matching on (name, position)
+  // keeps existing ids stable across re-runs and just refreshes their stats.
+  console.log(`Upserting ${pool.length} players…`);
   for (let i = 0; i < pool.length; i += 500) {
     const chunk = pool.slice(i, i + 500);
-    const { error } = await supabase.from('players').insert(chunk);
+    const { error } = await supabase
+      .from('players')
+      .upsert(chunk, { onConflict: 'name,position' });
     if (error) throw new Error(error.message);
   }
 
-  console.log(`✅ Imported ${pool.length} real players (projections estimated from ADP)`);
+  console.log(`✅ Imported ${pool.length} real players`);
 }
 
 main().catch((err) => {

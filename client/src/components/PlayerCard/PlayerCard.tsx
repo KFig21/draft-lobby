@@ -10,6 +10,9 @@ interface Props {
   disabled?: boolean;
   onQueue?: () => void;
   queued?: boolean;
+  /** Opens the full player-detail modal. Clicking the queue/draft buttons
+   * themselves doesn't trigger it (they stopPropagation). */
+  onOpenDetail?: () => void;
 }
 
 const INJURY_ABBR: Record<string, string> = {
@@ -20,13 +23,30 @@ const INJURY_ABBR: Record<string, string> = {
   SUSPENDED: 'SUS',
 };
 
+const PREV_YEAR = String(new Date().getFullYear() - 1).slice(-2);
+
 /** A row in the player pool: color-coded position, bye, injury, projection, prev rank. */
-export function PlayerCard({ player, onPick, disabled, onQueue, queued }: Props) {
+export function PlayerCard({ player, onPick, disabled, onQueue, queued, onOpenDetail }: Props) {
   const color = POSITION_COLORS[player.position as Position];
   const injury = INJURY_ABBR[player.injury_status];
 
   return (
-    <div className="player-card">
+    <div
+      className={`player-card${onOpenDetail ? ' player-card--clickable' : ''}`}
+      onClick={onOpenDetail}
+      onKeyDown={
+        onOpenDetail
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onOpenDetail();
+              }
+            }
+          : undefined
+      }
+      role={onOpenDetail ? 'button' : undefined}
+      tabIndex={onOpenDetail ? 0 : undefined}
+    >
       <span className="player-card__pos" style={{ background: color }}>
         {player.position}
       </span>
@@ -42,7 +62,7 @@ export function PlayerCard({ player, onPick, disabled, onQueue, queued }: Props)
         <div className="player-card__sub">
           {player.nfl_team}
           {player.bye_week ? ` · Bye ${player.bye_week}` : ''}
-          {player.prev_rank ? ` · '25 #${player.prev_rank}` : ''}
+          {player.prev_rank ? ` · '${PREV_YEAR} #${player.prev_rank}` : ''}
         </div>
       </div>
       <div className="player-card__stats">
@@ -56,7 +76,10 @@ export function PlayerCard({ player, onPick, disabled, onQueue, queued }: Props)
       {onQueue && (
         <button
           className={`player-card__queue${queued ? ' player-card__queue--on' : ''}`}
-          onClick={onQueue}
+          onClick={(e) => {
+            e.stopPropagation();
+            onQueue();
+          }}
           aria-label={queued ? 'Remove from queue' : 'Add to queue'}
           title={queued ? 'Remove from queue' : 'Add to queue'}
         >
@@ -70,7 +93,10 @@ export function PlayerCard({ player, onPick, disabled, onQueue, queued }: Props)
       {onPick && (
         <button
           className="button button--primary player-card__draft"
-          onClick={onPick}
+          onClick={(e) => {
+            e.stopPropagation();
+            onPick();
+          }}
           disabled={disabled}
         >
           Draft

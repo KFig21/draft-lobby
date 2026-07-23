@@ -56,6 +56,7 @@ import { PickClock } from '../../components/PickClock/PickClock';
 import { PickModal, type PickComment } from '../../components/PickModal/PickModal';
 import type { Reactor } from '../../components/ReactorsModal/ReactorsModal';
 import { PlayerCard } from '../../components/PlayerCard/PlayerCard';
+import { PlayerDetailModal } from '../../components/PlayerDetailModal/PlayerDetailModal';
 import { TeamLineup } from '../../components/TeamLineup/TeamLineup';
 import {
   TeamResultsDrawer,
@@ -145,6 +146,9 @@ export function DraftBoardPage() {
   const [resultsDrawerView, setResultsDrawerView] = useState<ResultsDrawerView>('closed');
   const [queue, setQueue] = useState<string[]>([]);
   const [selected, setSelected] = useState<PlayerRow | null>(null);
+  // Set when a player row is clicked in the pool — a closer look before
+  // deciding to draft/queue, separate from the pick-confirm flow (`selected`).
+  const [detailPlayer, setDetailPlayer] = useState<PlayerRow | null>(null);
   const [pickBusy, setPickBusy] = useState(false);
   const [pickError, setPickError] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -1094,6 +1098,7 @@ export function DraftBoardPage() {
                 onQueue={() => toggleQueue(p.id)}
                 onPick={canPick ? () => pick(p) : undefined}
                 disabled={!canPick}
+                onOpenDetail={() => setDetailPlayer(p)}
               />
             ))}
           </div>
@@ -1143,6 +1148,7 @@ export function DraftBoardPage() {
               disabled={!canPick}
               onQueue={() => toggleQueue(p.id)}
               queued={queue.includes(p.id)}
+              onOpenDetail={() => setDetailPlayer(p)}
             />
           ))}
           {available.length === 0 && <p className="muted pool__empty">No players match.</p>}
@@ -1512,6 +1518,25 @@ export function DraftBoardPage() {
           busy={pickBusy}
           error={pickError}
           onBehalfOfTeam={pickingForTeam}
+        />
+      )}
+
+      {detailPlayer && (
+        <PlayerDetailModal
+          player={detailPlayer}
+          onClose={() => setDetailPlayer(null)}
+          onPick={
+            canPick
+              ? () => {
+                  setDetailPlayer(null);
+                  setSelected(detailPlayer);
+                  setShowFsMenu(false);
+                }
+              : undefined
+          }
+          disabled={!canPick}
+          onQueue={() => toggleQueue(detailPlayer.id)}
+          queued={queue.includes(detailPlayer.id)}
         />
       )}
 

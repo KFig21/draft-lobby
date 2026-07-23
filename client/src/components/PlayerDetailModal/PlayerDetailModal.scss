@@ -1,0 +1,80 @@
+@use 'variables' as *;
+
+.player-detail {
+  display: flex;
+  flex-direction: column;
+  gap: $space * 2;
+
+  &__head {
+    display: flex;
+    align-items: center;
+    gap: $space * 1.25;
+  }
+
+  &__pos {
+    display: inline-grid;
+    place-items: center;
+    min-width: 44px;
+    padding: $space * 0.5 $space;
+    border-radius: $radius-sm;
+    // Position badges fill with a bright brand color — dark text reads far
+    // better on those than white (same convention as PickModal/PlayerCard).
+    color: #05231a;
+    font-weight: 800;
+    font-size: 0.9rem;
+  }
+
+  &__stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: $space;
+  }
+
+  &__stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: $space;
+    background: $bg;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    text-align: center;
+  }
+
+  &__stat-label {
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: $text-muted;
+    font-weight: 700;
+  }
+
+  &__stat-value {
+    font-size: 1.05rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__note {
+    margin-top: -$space;
+    font-size: 0.8rem;
+  }
+
+  &__actions {
+    display: flex;
+    gap: $space;
+  }
+
+  &__queue {
+    flex-shrink: 0;
+
+    &.is-on {
+      border-color: $accent;
+      color: $accent;
+    }
+  }
+
+  &__draft {
+    flex: 1;
+  }
+}
