@@ -328,8 +328,9 @@
     align-items: center;
     gap: 0.3em;
     font-weight: 800;
-    font-size: 1.25em;
+    font-size: 1.05em;
     letter-spacing: 0.02em;
+    white-space: nowrap;
 
     svg {
       font-size: 1.1em;
@@ -338,8 +339,8 @@
 
   &__onclock-sub {
     font-weight: 600;
-    font-size: 0.85em;
-    opacity: 0.85;
+    font-size: 0.8em;
+    opacity: 0.8;
   }
 
   // Fullscreen ("TV mode") — stretch to fill the available space instead of
