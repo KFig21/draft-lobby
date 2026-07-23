@@ -78,6 +78,17 @@ export type SetAutoDraftInput = z.infer<typeof setAutoDraftSchema>;
 /** Seconds a bot / auto-draft team gets on the clock before the engine picks. */
 export const AUTO_PICK_SECONDS = 5;
 
+/** Pool for the commissioner's "randomize bot names" action — plain "Bot N"
+ * placeholders swapped for something with a little personality. */
+export const RANDOM_BOT_TEAM_NAMES = [
+  'Gridiron Gurus', 'Blitz Krewe', 'End Zone Elites', 'Fumble Bunch', 'Hail Mary Heroes',
+  'Pigskin Pirates', 'Turf Titans', 'Red Zone Raiders', 'Sideline Savages', 'Fourth Down Fanatics',
+  'Broken Tackles', 'Waiver Wire Warriors', 'Pocket Passers', 'Blocked Punts', 'Two Point Takers',
+  'Screen Pass Squad', 'Audible Assassins', 'Chain Gang', 'Onside Kickers', 'Play Action Posse',
+  'Goal Line Grinders', 'Deep Threats', 'Trick Play Troupe', 'Backfield Bandits', 'Snap Count Squad',
+  'Bootleg Brigade', 'Cover Two Crew', 'Flea Flicker Fanclub', 'Punt Return Party', 'Draft Day Dynasty',
+];
+
 export const chatMessageSchema = z.object({
   id: z.string().uuid(),
   lobbyId: z.string().uuid(),

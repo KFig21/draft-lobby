@@ -343,6 +343,19 @@
     opacity: 0.6;
     cursor: not-allowed;
   }
+
+  // Team names are currently locked — a caution state, not a routine one.
+  &--on {
+    border-color: $warning;
+    color: $warning;
+    background: rgba($warning, 0.12);
+
+    &:hover:not(:disabled) {
+      border-color: $warning;
+      color: $warning;
+      background: rgba($warning, 0.2);
+    }
+  }
 }
 
 .room__order-actions {
@@ -482,6 +495,7 @@
 
   &__you {
     font-size: 0.7rem;
+    font-weight: 800;
     text-transform: uppercase;
     background: $primary;
     color: #fff;

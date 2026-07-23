@@ -2,6 +2,7 @@ import { Router, type Response } from 'express';
 import {
   CHAT_LOCK_MS,
   DRAFT_RESULTS_LOCK_MS,
+  RANDOM_BOT_TEAM_NAMES,
   ROLLBACK_LOCK_MS,
   chatReactSchema,
   containsSlur,
@@ -1192,17 +1193,24 @@ draftRouter.post('/:id/team-name', async (req: AuthedRequest, res: Response) => 
     res.status(403).json({ error: 'You can only rename your own team' });
     return;
   }
-  // Once the draft is complete, team names lock for everyone but the
-  // commissioner — keeps rosters stable while the commissioner reviews.
+  // Once the draft is complete — or whenever the commissioner has switched
+  // on team_names_locked — team names lock for everyone but the
+  // commissioner.
   if (!isCommish(role)) {
     const { data: lobby } = await supabaseAdmin
       .from('lobbies')
-      .select('status')
+      .select('status, team_names_locked')
       .eq('id', lobbyId)
       .maybeSingle();
     if (lobby?.status === 'COMPLETE') {
       res.status(409).json({
         error: 'Team names are locked once the draft is complete — ask the commissioner',
+      });
+      return;
+    }
+    if (lobby?.team_names_locked) {
+      res.status(409).json({
+        error: 'The commissioner has locked team names — ask them to rename your team',
       });
       return;
     }
@@ -1217,6 +1225,31 @@ draftRouter.post('/:id/team-name', async (req: AuthedRequest, res: Response) => 
     return;
   }
   res.json({ ok: true, name });
+});
+
+/** POST /api/lobbies/:id/team-names-locked — commissioner locks/unlocks
+ * everyone else's ability to rename their own team. */
+draftRouter.post('/:id/team-names-locked', async (req: AuthedRequest, res: Response) => {
+  const lobbyId = req.params.id;
+  const role = await getRole(lobbyId, req.user!.id);
+  if (!isCommish(role)) {
+    res.status(403).json({ error: 'Only the commissioner can lock team names' });
+    return;
+  }
+  const locked = req.body?.locked;
+  if (typeof locked !== 'boolean') {
+    res.status(400).json({ error: 'locked must be a boolean' });
+    return;
+  }
+  const { error } = await supabaseAdmin
+    .from('lobbies')
+    .update({ team_names_locked: locked })
+    .eq('id', lobbyId);
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
+  res.json({ ok: true, locked });
 });
 
 /** POST /api/lobbies/:id/auto-draft — toggle auto-draft (own team, or any team if commissioner). */
@@ -1351,6 +1384,55 @@ draftRouter.post('/:id/remove-bot', async (req: AuthedRequest, res: Response) =>
   }
   await supabaseAdmin.from('teams').delete().eq('id', team.id);
   res.json({ ok: true });
+});
+
+/** POST /api/lobbies/:id/randomize-bot-names — commissioner gives every bot
+ * a fresh random name, e.g. swapping out the plain "Bot 3" placeholders
+ * (pre-draft only, same window as add/fill/remove-bot). */
+draftRouter.post('/:id/randomize-bot-names', async (req: AuthedRequest, res: Response) => {
+  const lobbyId = req.params.id;
+  const role = await getRole(lobbyId, req.user!.id);
+  if (!isCommish(role)) {
+    res.status(403).json({ error: 'Only the commissioner can rename bots' });
+    return;
+  }
+
+  const { data: lobby } = await supabaseAdmin
+    .from('lobbies')
+    .select('status')
+    .eq('id', lobbyId)
+    .single();
+  if (!lobby) {
+    res.status(404).json({ error: 'Lobby not found' });
+    return;
+  }
+  if (lobby.status !== 'SETUP' && lobby.status !== 'SCHEDULED') {
+    res.status(409).json({ error: 'Bots can only be renamed before the draft starts' });
+    return;
+  }
+
+  const { data: bots } = await supabaseAdmin
+    .from('teams')
+    .select('id')
+    .eq('lobby_id', lobbyId)
+    .eq('is_bot', true);
+  if (!bots || bots.length === 0) {
+    res.json({ ok: true, renamed: 0 });
+    return;
+  }
+
+  // Shuffled, so repeat runs don't hand out names in the same order — falls
+  // back to "Name 2", "Name 3"… past the pool if there are more bots than
+  // names (rare — the pool has 30).
+  const pool = [...RANDOM_BOT_TEAM_NAMES].sort(() => Math.random() - 0.5);
+  await Promise.all(
+    bots.map((bot, i) => {
+      const base = pool[i % pool.length];
+      const name = i >= pool.length ? `${base} ${Math.floor(i / pool.length) + 1}` : base;
+      return supabaseAdmin.from('teams').update({ name }).eq('id', bot.id);
+    }),
+  );
+  res.json({ ok: true, renamed: bots.length });
 });
 
 /** POST /api/lobbies/:id/leave — a member leaves the lobby (pre-draft only). */

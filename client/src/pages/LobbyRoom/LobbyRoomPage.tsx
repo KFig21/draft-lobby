@@ -9,6 +9,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlined';
+import CasinoIcon from '@mui/icons-material/Casino';
 import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
@@ -17,6 +18,8 @@ import FormatListNumberedIcon from '@mui/icons-material/FormatListNumbered';
 import HowToRegOutlinedIcon from '@mui/icons-material/HowToRegOutlined';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
+import LockIcon from '@mui/icons-material/Lock';
+import LockOpenOutlinedIcon from '@mui/icons-material/LockOpenOutlined';
 import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
 import PersonRemoveOutlinedIcon from '@mui/icons-material/PersonRemoveOutlined';
 import ShuffleIcon from '@mui/icons-material/Shuffle';
@@ -50,6 +53,7 @@ export function LobbyRoomPage() {
   const { players } = usePlayers();
   const [starting, setStarting] = useState(false);
   const [botBusy, setBotBusy] = useState(false);
+  const [namesLockBusy, setNamesLockBusy] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [leaving, setLeaving] = useState(false);
@@ -285,6 +289,30 @@ export function LobbyRoomPage() {
       setActionError(err instanceof Error ? err.message : 'Failed to add bots');
     } finally {
       setBotBusy(false);
+    }
+  }
+  async function randomizeBotNames() {
+    setBotBusy(true);
+    setActionError(null);
+    try {
+      await api(`/lobbies/${id}/randomize-bot-names`, { method: 'POST' });
+      refetch();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Failed to rename bots');
+    } finally {
+      setBotBusy(false);
+    }
+  }
+  async function toggleNamesLocked(locked: boolean) {
+    setNamesLockBusy(true);
+    setActionError(null);
+    try {
+      await api(`/lobbies/${id}/team-names-locked`, { method: 'POST', body: { locked } });
+      refetch();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Failed to update team name lock');
+    } finally {
+      setNamesLockBusy(false);
     }
   }
   async function removeBot(teamId: string) {
@@ -545,34 +573,68 @@ export function LobbyRoomPage() {
         <section className="room__teams">
           <div className="room__teams-head">
             <h2>Draft order</h2>
-            {isCommish && !draftLive && !orderMode && (
+            {isCommish && !isComplete && !orderMode && (
               <div className="room__teams-actions">
-                {emptySlots > 0 && (
+                <button
+                  type="button"
+                  className={`room__order-btn${lobby.team_names_locked ? ' room__order-btn--on' : ''}`}
+                  onClick={() => toggleNamesLocked(!lobby.team_names_locked)}
+                  disabled={namesLockBusy}
+                  title={
+                    lobby.team_names_locked
+                      ? 'Only you can rename teams — click to let owners rename their own again'
+                      : 'Lock team names so only you can rename them'
+                  }
+                >
+                  {lobby.team_names_locked ? (
+                    <LockIcon fontSize="small" />
+                  ) : (
+                    <LockOpenOutlinedIcon fontSize="small" />
+                  )}
+                  {lobby.team_names_locked ? 'Names locked' : 'Lock names'}
+                </button>
+                {!draftLive && (
                   <>
-                    <button
-                      type="button"
-                      className="room__order-btn"
-                      onClick={addBot}
-                      disabled={botBusy}
-                    >
-                      <AddIcon fontSize="small" />
-                      Add bot
-                    </button>
-                    <button
-                      type="button"
-                      className="room__order-btn"
-                      onClick={fillBots}
-                      disabled={botBusy}
-                    >
-                      <SmartToyOutlinedIcon fontSize="small" />
-                      {botBusy ? 'Working…' : `Fill ${emptySlots} with bots`}
+                    {emptySlots > 0 && (
+                      <>
+                        <button
+                          type="button"
+                          className="room__order-btn"
+                          onClick={addBot}
+                          disabled={botBusy}
+                        >
+                          <AddIcon fontSize="small" />
+                          Add bot
+                        </button>
+                        <button
+                          type="button"
+                          className="room__order-btn"
+                          onClick={fillBots}
+                          disabled={botBusy}
+                        >
+                          <SmartToyOutlinedIcon fontSize="small" />
+                          {botBusy ? 'Working…' : `Fill ${emptySlots} with bots`}
+                        </button>
+                      </>
+                    )}
+                    {teams.some((t) => t.is_bot) && (
+                      <button
+                        type="button"
+                        className="room__order-btn"
+                        onClick={randomizeBotNames}
+                        disabled={botBusy}
+                        title="Give every bot a fresh random team name"
+                      >
+                        <CasinoIcon fontSize="small" />
+                        Randomize bot names
+                      </button>
+                    )}
+                    <button type="button" className="room__order-btn" onClick={startOrderEdit}>
+                      <FormatListNumberedIcon fontSize="small" />
+                      Set draft order
                     </button>
                   </>
                 )}
-                <button type="button" className="room__order-btn" onClick={startOrderEdit}>
-                  <FormatListNumberedIcon fontSize="small" />
-                  Set draft order
-                </button>
               </div>
             )}
           </div>
@@ -680,7 +742,9 @@ export function LobbyRoomPage() {
                     </li>
                   );
                 }
-                const canEdit = isCommish || (team.owner_id === userId && !isComplete);
+                const canEdit =
+                  isCommish ||
+                  (team.owner_id === userId && !isComplete && !lobby.team_names_locked);
                 const editing = editingTeamId === team.id;
                 const otherUserId =
                   team.owner_id && team.owner_id !== userId ? team.owner_id : null;
