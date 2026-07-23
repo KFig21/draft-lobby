@@ -2,8 +2,9 @@
  * Imports a real NFL player pool:
  *   • Fantasy Football Calculator ADP  → real names, positions, teams, ADP, bye weeks
  *   • Sleeper /players/nfl             → injury status + depth players beyond the ADP list
- *   • Sleeper /stats/.../{lastSeason}  → real prev_points (PPR) + prev_rank (positional, PPR)
- *   • Sleeper /projections/.../{season} → real proj_points (PPR); ADP-rank estimate fills any gaps
+ *   • Sleeper /stats/.../{lastSeason}  → real prev_points/prev_rank (PPR) + prev_stat_line
+ *   • Sleeper /projections/.../{season} → real proj_points + proj_stat_line; proj_rank computed
+ *     from final proj_points; ADP-rank estimate fills any proj_points gaps
  *
  * Usage: npm run db:seed  (reads server/.env for Supabase credentials)
  */
@@ -33,9 +34,12 @@ interface PoolPlayer {
   bye_week: number | null;
   injury_status: string;
   proj_points: number | null;
+  proj_rank: number | null;
+  proj_stat_line: string | null;
   adp: number | null;
   prev_points: number | null;
   prev_rank: number | null;
+  prev_stat_line: string | null;
 }
 
 const normalize = (s: string) =>
@@ -110,10 +114,21 @@ async function fetchSleeper(): Promise<SleeperPlayer[] | null> {
 }
 
 // Sleeper's own PPR fantasy points + positional PPR rank — no need to hand-roll
-// a stats→points calculator, they already compute it the same way we score by default.
+// a stats→points calculator, they already compute it the same way we score by
+// default. The raw counting stats are only used for the compact stat-line text.
 interface SleeperStatLine {
   pts_ppr?: number;
   pos_rank_ppr?: number;
+  pass_yd?: number;
+  pass_td?: number;
+  pass_int?: number;
+  rush_yd?: number;
+  rush_td?: number;
+  rec?: number;
+  rec_yd?: number;
+  rec_td?: number;
+  fgm?: number;
+  xpm?: number;
 }
 
 async function fetchSleeperStatsOrProjections(
@@ -127,6 +142,28 @@ async function fetchSleeperStatsOrProjections(
   } catch (err) {
     console.warn(`⚠️  Sleeper ${kind} (${season}) unavailable:`, String(err));
     return null;
+  }
+}
+
+// A compact, position-appropriate summary of a stat line (real or projected).
+function formatStatLine(pos: Pos, s: SleeperStatLine): string | null {
+  const n = (x: number | undefined) => Math.round(x ?? 0).toLocaleString('en-US');
+  switch (pos) {
+    case 'QB':
+      if (s.pass_yd == null) return null;
+      return `${n(s.pass_yd)} YDS · ${n(s.pass_td)} TD · ${n(s.pass_int)} INT`;
+    case 'RB':
+      if (s.rush_yd == null) return null;
+      return `${n(s.rush_yd)} YDS · ${n(s.rush_td)} TD · ${n(s.rec)} REC`;
+    case 'WR':
+    case 'TE':
+      if (s.rec == null) return null;
+      return `${n(s.rec)} REC · ${n(s.rec_yd)} YDS · ${n(s.rec_td)} TD`;
+    case 'K':
+      if (s.fgm == null) return null;
+      return `${n(s.fgm)} FG · ${n(s.xpm)} XP`;
+    case 'DEF':
+      return null; // Sleeper keys DST stats differently — skip for now.
   }
 }
 
@@ -181,9 +218,12 @@ async function main() {
       bye_week: p.bye ?? null,
       injury_status: 'ACTIVE',
       proj_points: null,
+      proj_rank: null,
+      proj_stat_line: null,
       adp: p.adp,
       prev_points: null,
       prev_rank: null,
+      prev_stat_line: null,
     });
   }
 
@@ -215,9 +255,12 @@ async function main() {
           bye_week: teamByeMap.get(sp.team) ?? null,
           injury_status: mapInjury(sp.injury_status),
           proj_points: null,
+          proj_rank: null,
+          proj_stat_line: null,
           adp: null,
           prev_points: null,
           prev_rank: null,
+          prev_stat_line: null,
         });
         depthAdded++;
       }
@@ -250,11 +293,13 @@ async function main() {
       if (prev?.pts_ppr != null) {
         p.prev_points = Math.round(prev.pts_ppr * 10) / 10;
         p.prev_rank = prev.pos_rank_ppr ?? null;
+        p.prev_stat_line = formatStatLine(p.position, prev);
         realPrevCount++;
       }
       const proj = projections?.[sleeperId];
       if (proj?.pts_ppr != null) {
         p.proj_points = Math.round(proj.pts_ppr * 10) / 10;
+        p.proj_stat_line = formatStatLine(p.position, proj);
         realProjCount++;
       }
     }
@@ -263,6 +308,21 @@ async function main() {
     `Sleeper stats/projections: ${realPrevCount} players got real ${prevSeason} results, ` +
       `${realProjCount} got real ${SEASON} projections (rest use the ADP-rank estimate)`,
   );
+
+  // Positional rank by final proj_points (after the estimate/real merge above),
+  // same convention as prev_rank — lets the UI show "projected to move up/down".
+  const byPos = new Map<Pos, PoolPlayer[]>();
+  for (const p of pool) {
+    (byPos.get(p.position) ?? byPos.set(p.position, []).get(p.position)!).push(p);
+  }
+  for (const group of byPos.values()) {
+    group
+      .filter((p) => p.proj_points != null)
+      .sort((a, b) => (b.proj_points ?? 0) - (a.proj_points ?? 0))
+      .forEach((p, i) => {
+        p.proj_rank = i + 1;
+      });
+  }
 
   // 4) Upsert (never delete+reinsert) — picks.player_id has no cascade, so
   // generating a new id for a player who's already been drafted somewhere

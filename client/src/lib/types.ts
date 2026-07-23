@@ -142,7 +142,10 @@ export interface PlayerRow {
   bye_week: number | null;
   injury_status: string;
   proj_points: number | null;
+  proj_rank: number | null;
+  proj_stat_line: string | null;
   adp: number | null;
   prev_points: number | null;
   prev_rank: number | null;
+  prev_stat_line: string | null;
 }

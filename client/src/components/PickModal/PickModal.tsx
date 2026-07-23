@@ -13,7 +13,7 @@ import type { MemberRow, PickRow, PlayerRow, TeamRow } from '../../lib/types';
 import { Avatar } from '../Avatar/Avatar';
 import type { ReactionEntry } from '../DraftGrid/DraftGrid';
 import { MentionInput } from '../MentionInput/MentionInput';
-import { PlayerStatBlock } from '../PlayerStatBlock/PlayerStatBlock';
+import { PlayerHeader, PlayerStatGrid } from '../PlayerStatBlock/PlayerStatBlock';
 import { ReactorsModal, type Reactor } from '../ReactorsModal/ReactorsModal';
 import './PickModal.scss';
 
@@ -136,7 +136,7 @@ export function PickModal({
 
         {/* Player data + reactions stay pinned; only the comments below scroll. */}
         <div className="pick-modal__top">
-          <PlayerStatBlock player={player} />
+          <PlayerHeader player={player} />
 
           <div className="pick-modal__drafted">
             <strong>{team?.name ?? 'A team'}</strong> · Round {pick.round} · Pick{' '}
@@ -153,6 +153,8 @@ export function PickModal({
               <UndoIcon fontSize="small" /> Roll back to this pick
             </button>
           )}
+
+          <PlayerStatGrid player={player} />
 
           {/* Reactions */}
           <div className="pick-modal__section-label">Reactions</div>

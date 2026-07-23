@@ -3,7 +3,7 @@ import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder';
 import CloseIcon from '@mui/icons-material/Close';
 import { useModalClose } from '../../lib/useModalClose';
 import type { PlayerRow } from '../../lib/types';
-import { PlayerStatBlock } from '../PlayerStatBlock/PlayerStatBlock';
+import { PlayerHeader, PlayerStatGrid } from '../PlayerStatBlock/PlayerStatBlock';
 import './PlayerDetailModal.scss';
 
 interface Props {
@@ -45,7 +45,8 @@ export function PlayerDetailModal({
           <CloseIcon fontSize="small" />
         </button>
 
-        <PlayerStatBlock player={player} />
+        <PlayerHeader player={player} />
+        <PlayerStatGrid player={player} />
 
         {(onQueue || onPick) && (
           <div className="player-detail__actions">

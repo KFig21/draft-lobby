@@ -3,26 +3,29 @@
 .player-stat-block {
   &__head {
     display: flex;
-    align-items: center;
-    gap: $space * 1.5;
+    align-items: stretch;
+    gap: $space * 1.25;
     padding-right: $space * 4;
   }
 
   &__pos {
-    display: inline-grid;
+    display: grid;
     place-items: center;
-    min-width: 44px;
-    padding: $space * 0.5 $space;
+    align-self: stretch;
+    aspect-ratio: 1;
     border-radius: $radius-sm;
     // Position badges fill with a bright brand color (see POSITION_COLORS) —
     // dark text reads far better on those than white.
     color: #05231a;
     font-weight: 800;
-    font-size: 0.9rem;
+    font-size: 1.3rem;
   }
 
   &__title {
     min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 
     h3 {
       font-size: 1.3rem;
@@ -34,10 +37,10 @@
     }
   }
 
-  &__stats {
+  &__row {
     margin-top: $space * 2;
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: $space;
   }
 
@@ -61,8 +64,59 @@
   }
 
   &__stat-value {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
     font-size: 1.05rem;
     font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__trend {
+    font-size: 1.1rem !important; // override MUI's inline default sizing
+
+    &--up {
+      color: $accent;
+    }
+    &--down {
+      color: $danger;
+    }
+    &--flat {
+      color: $text-muted;
+    }
+  }
+
+  &__totals {
+    margin-top: $space;
+    display: flex;
+    flex-direction: column;
+    gap: $space;
+  }
+
+  &__total {
+    padding: $space $space * 1.25;
+    background: $bg;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+  }
+
+  &__total-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    .player-stat-block__stat-value {
+      justify-content: flex-end;
+      font-size: 1.15rem;
+    }
+  }
+
+  &__stat-line {
+    display: block;
+    margin-top: 2px;
+    color: $text-muted;
+    font-size: 0.8rem;
     font-variant-numeric: tabular-nums;
   }
 

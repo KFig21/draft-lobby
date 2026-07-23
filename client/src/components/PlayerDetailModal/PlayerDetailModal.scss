@@ -6,7 +6,10 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: $space * 2;
+  // No `gap` here — PlayerHeader/PlayerStatGrid each return a Fragment, so
+  // their pieces flatten directly into this flex container; spacing is
+  // handled per-child via margin-top (see PlayerStatBlock.scss) instead, same
+  // as .pick-modal__top, to avoid doubling up with those existing margins.
   width: min(440px, 94vw);
   max-height: 90dvh;
   overflow-y: auto;
@@ -46,6 +49,7 @@
   }
 
   &__actions {
+    margin-top: $space * 2;
     display: flex;
     gap: $space;
   }
