@@ -1,5 +1,18 @@
 @use 'variables' as *;
 
+// Last 5 seconds of the viewer's own pick — same pulse as the top bar's clock.
+@keyframes draft-grid-onclock-flash {
+
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+
+  50% {
+    filter: brightness(1.35);
+  }
+}
+
 .grid-scroll {
   // Own the scroll so the sticky header row / round column freeze against it.
   height: 100%;
@@ -156,14 +169,16 @@
       box-shadow: 0 0 0 1px $accent inset;
     }
 
-    // Fullscreen ("TV mode") only: the viewer's own on-the-clock cell — a
-    // full accent-green fill so it's unmissable from across the room, with
-    // dark text for contrast (same convention as the current-round chevron).
+    // The viewer's own on-the-clock cell — a full accent-green fill so it's
+    // unmissable, with dark text for contrast (same convention as the top
+    // bar's "your turn" state). Same everywhere: board, sidebar, mobile tabs,
+    // fullscreen.
     &--onclock-mine {
       background: $accent;
       border-color: $accent;
       cursor: pointer;
       text-align: center;
+      vertical-align: middle;
 
       .draft-grid__onclock-label {
         color: #05231a;
@@ -173,6 +188,39 @@
         &:hover {
           background: color-mix(in srgb, $accent 85%, black);
         }
+      }
+
+      // Same thresholds as the top bar's pick clock: yellow at 25s left,
+      // red at 10s (dark text still reads fine on yellow; red needs white).
+      &.draft-grid__cell--warning {
+        background: $warning;
+        border-color: $warning;
+
+        @media (hover: hover) {
+          &:hover {
+            background: color-mix(in srgb, $warning 85%, black);
+          }
+        }
+      }
+
+      &.draft-grid__cell--danger {
+        background: $danger;
+        border-color: $danger;
+
+        .draft-grid__onclock-label {
+          color: #fff;
+        }
+
+        @media (hover: hover) {
+          &:hover {
+            background: color-mix(in srgb, $danger 85%, black);
+          }
+        }
+      }
+
+      // Last 5 seconds — pulses on top of whatever urgency color is active.
+      &.draft-grid__cell--flash {
+        animation: draft-grid-onclock-flash 1s ease-in-out infinite;
       }
     }
 

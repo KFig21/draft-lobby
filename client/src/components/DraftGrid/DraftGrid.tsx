@@ -40,9 +40,14 @@ interface Props {
   fill?: boolean;
   /** Fullscreen: row height (px) computed to fill the available height. */
   fillRowHeight?: number | null;
-  /** Fullscreen only: the viewer's own on-the-clock cell was clicked — opens
-   * the Menu modal on the Players tab. */
+  /** The viewer's own on-the-clock cell was clicked — switches to the
+   * Players tab (and, in fullscreen, opens the Menu modal onto it). */
   onMyClockCellClick?: () => void;
+  /** Same thresholds as the top bar's pick clock — colors the viewer's own
+   * on-the-clock cell yellow at 25s left, red at 10s. */
+  onClockUrgency?: 'warning' | 'danger' | null;
+  /** Same "last 5 seconds" pulse as the top bar's pick clock. */
+  onClockFlashing?: boolean;
 }
 
 /**
@@ -68,6 +73,8 @@ export function DraftGrid({
   fill = false,
   fillRowHeight,
   onMyClockCellClick,
+  onClockUrgency,
+  onClockFlashing,
 }: Props) {
   // Index picks by "round:teamId" for O(1) cell lookup.
   const byCell = new Map<string, PickRow>();
@@ -136,9 +143,10 @@ export function DraftGrid({
                   const player = pick ? playersById.get(pick.player_id) : undefined;
                   const isOnClock =
                     !pick && round === currentRound && team.id === onClockTeamId;
-                  // Only in fullscreen ("TV mode") does the viewer's own
-                  // on-the-clock cell double as a shortcut into the Players tab.
-                  const isMyClock = isOnClock && fill && team.id === myTeamId;
+                  // The viewer's own on-the-clock cell doubles as a shortcut
+                  // into the Players tab, in every layout (board, sidebar,
+                  // mobile tabs, fullscreen).
+                  const isMyClock = isOnClock && team.id === myTeamId;
                   if (pick && player) {
                     return (
                       <PickCell
@@ -163,7 +171,9 @@ export function DraftGrid({
                       key={team.id}
                       className={`draft-grid__cell ${
                         isOnClock ? 'draft-grid__cell--onclock' : ''
-                      }${isMyClock ? ' draft-grid__cell--onclock-mine' : ''}`}
+                      }${isMyClock ? ' draft-grid__cell--onclock-mine' : ''}${
+                        isMyClock && onClockUrgency ? ` draft-grid__cell--${onClockUrgency}` : ''
+                      }${isMyClock && onClockFlashing ? ' draft-grid__cell--flash' : ''}`}
                       onClick={isMyClock ? onMyClockCellClick : undefined}
                       role={isMyClock ? 'button' : undefined}
                       tabIndex={isMyClock ? 0 : undefined}

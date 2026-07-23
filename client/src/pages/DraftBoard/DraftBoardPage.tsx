@@ -1451,6 +1451,8 @@ export function DraftBoardPage() {
               setMobileTab('players');
               setShowFsMenu(true);
             }}
+            onClockUrgency={myTurnUrgency}
+            onClockFlashing={myTurnFlashing}
           />
         </section>
 
