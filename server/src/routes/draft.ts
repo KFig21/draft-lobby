@@ -489,9 +489,23 @@ draftRouter.post('/:id/fast-forward', async (req: AuthedRequest, res: Response) 
     const playerId = await choosePlayer(lobbyId, settings, team.id);
     if (!playerId) break;
     const result = await applyPick(lobbyId, settings, overall, team, playerId, true);
-    if (!result.ok) break;
+    if (!result.ok) {
+      // The background auto-draft engine (draftEngine.ts's tick(), every
+      // 1.5s) can independently pick this same bot out from under us if its
+      // 5s clock had already expired when fast-forward started — a benign
+      // race, not a real failure. Re-loop instead of bailing out so
+      // fast-forward doesn't stop dead after one collision.
+      if (result.error === 'taken') continue;
+      break;
+    }
     made++;
     if (result.complete) break;
+
+    // A small pace between picks: it gives the background tick() a much
+    // smaller window to land on the same overall (the race above), and
+    // keeps this loop from firing off dozens of rapid-fire realtime updates
+    // that were swamping clients watching the board.
+    await new Promise((resolve) => setTimeout(resolve, 200));
   }
   if (aborted) return; // connection's gone — nothing to respond to
   res.json({ ok: true, picks: made });

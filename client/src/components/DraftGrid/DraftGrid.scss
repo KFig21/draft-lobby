@@ -411,6 +411,15 @@
     :root[data-theme='light'] & {
       color: #05231a;
     }
+
+    // Dark mode, final 10s: red-on-red (text vs. the danger wash) is hard to
+    // read — white cuts through instead. Higher specificity than the plain
+    // `.draft-grid__cell--danger &` rule above so it wins regardless of
+    // source order (see the light-mode override just above for the same
+    // trick), and the icon picks it up for free via currentColor.
+    :root[data-theme='dark'] .draft-grid__cell--danger & {
+      color: #fff;
+    }
   }
 
   &__onclock-icon {
