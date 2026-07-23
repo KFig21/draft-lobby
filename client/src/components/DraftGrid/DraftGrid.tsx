@@ -39,6 +39,9 @@ interface Props {
   fill?: boolean;
   /** Fullscreen: row height (px) computed to fill the available height. */
   fillRowHeight?: number | null;
+  /** Fullscreen only: the viewer's own on-the-clock cell was clicked — opens
+   * the Menu modal on the Players tab. */
+  onMyClockCellClick?: () => void;
 }
 
 /**
@@ -63,6 +66,7 @@ export function DraftGrid({
   commentsByPick,
   fill = false,
   fillRowHeight,
+  onMyClockCellClick,
 }: Props) {
   // Index picks by "round:teamId" for O(1) cell lookup.
   const byCell = new Map<string, PickRow>();
@@ -131,6 +135,9 @@ export function DraftGrid({
                   const player = pick ? playersById.get(pick.player_id) : undefined;
                   const isOnClock =
                     !pick && round === currentRound && team.id === onClockTeamId;
+                  // Only in fullscreen ("TV mode") does the viewer's own
+                  // on-the-clock cell double as a shortcut into the Players tab.
+                  const isMyClock = isOnClock && fill && team.id === myTeamId;
                   if (pick && player) {
                     return (
                       <PickCell
@@ -155,10 +162,25 @@ export function DraftGrid({
                       key={team.id}
                       className={`draft-grid__cell ${
                         isOnClock ? 'draft-grid__cell--onclock' : ''
-                      }`}
+                      }${isMyClock ? ' draft-grid__cell--onclock-mine' : ''}`}
+                      onClick={isMyClock ? onMyClockCellClick : undefined}
+                      role={isMyClock ? 'button' : undefined}
+                      tabIndex={isMyClock ? 0 : undefined}
+                      onKeyDown={
+                        isMyClock
+                          ? (e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                onMyClockCellClick?.();
+                              }
+                            }
+                          : undefined
+                      }
                     >
                       {isOnClock && (
-                        <span className="draft-grid__onclock-label">On the clock</span>
+                        <span className="draft-grid__onclock-label">
+                          {isMyClock ? 'On the clock — click here to view players' : 'On the clock'}
+                        </span>
                       )}
                     </td>
                   );

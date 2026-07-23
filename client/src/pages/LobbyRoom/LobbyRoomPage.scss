@@ -422,6 +422,13 @@
       background: rgba($accent, 0.15);
       color: $accent;
     }
+
+    // The team owner's username — lets the commissioner tell whose team is
+    // whose while renaming them, distinct from the transient friend/bot chips.
+    &--owner {
+      background: rgba($primary, 0.14);
+      color: $primary-hover;
+    }
   }
 
   // Pushes the action buttons to the right so chips hug the name.

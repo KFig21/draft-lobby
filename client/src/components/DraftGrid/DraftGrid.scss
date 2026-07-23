@@ -156,6 +156,26 @@
       box-shadow: 0 0 0 1px $accent inset;
     }
 
+    // Fullscreen ("TV mode") only: the viewer's own on-the-clock cell — a
+    // full accent-green fill so it's unmissable from across the room, with
+    // dark text for contrast (same convention as the current-round chevron).
+    &--onclock-mine {
+      background: $accent;
+      border-color: $accent;
+      cursor: pointer;
+      text-align: center;
+
+      .draft-grid__onclock-label {
+        color: #05231a;
+      }
+
+      @media (hover: hover) {
+        &:hover {
+          background: color-mix(in srgb, $accent 85%, black);
+        }
+      }
+    }
+
     // Made picks: clickable, and lift on hover (desktop). Touch has no hover.
     &--pick {
       cursor: pointer;

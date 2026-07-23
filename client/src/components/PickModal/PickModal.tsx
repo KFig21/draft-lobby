@@ -44,6 +44,9 @@ interface Props {
   pick: PickRow;
   player: PlayerRow;
   team: TeamRow | undefined;
+  /** Number of teams in the draft — used to derive the pick's slot within its
+   * round (e.g. "Round 5.6"). */
+  teamCount: number;
   entry: ReactionEntry | undefined;
   /** Who reacted, keyed by emoji (for the Discord-style tooltip + full-list modal). */
   reactors?: Record<string, Reactor[]>;
@@ -70,6 +73,7 @@ export function PickModal({
   pick,
   player,
   team,
+  teamCount,
   entry,
   reactors,
   onReact,
@@ -83,6 +87,7 @@ export function PickModal({
   onRollbackTo,
 }: Props) {
   const { closing, requestClose } = useModalClose(onClose);
+  const pickInRound = pick.overall - (pick.round - 1) * teamCount;
   const [comment, setComment] = useState('');
   const [posting, setPosting] = useState(false);
   const [sent, setSent] = useState(false);
@@ -142,8 +147,8 @@ export function PickModal({
           <div className="pick-modal__drafted">
             {team && <Avatar avatar={avatarForTeam(team, members)} size={18} />}
             <span>
-              <strong>{team?.name ?? 'A team'}</strong> · Round {pick.round} · Pick{' '}
-              {pick.overall} overall
+              <strong>{team?.name ?? 'A team'}</strong> · Pick {pick.overall} · Round{' '}
+              {pick.round}.{pickInRound}
               {pick.is_auto_pick && <span className="pick-modal__auto"> · auto</span>}
             </span>
           </div>

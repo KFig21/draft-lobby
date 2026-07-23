@@ -1446,6 +1446,11 @@ export function DraftBoardPage() {
             commentsByPick={commentsByPick}
             fill={isFullscreen}
             fillRowHeight={fsRowHeight}
+            onMyClockCellClick={() => {
+              setPanelTab('players');
+              setMobileTab('players');
+              setShowFsMenu(true);
+            }}
           />
         </section>
 
@@ -1629,6 +1634,7 @@ export function DraftBoardPage() {
               pick={pickModal}
               player={player}
               team={teamsById.get(pickModal.team_id)}
+              teamCount={teams.length}
               entry={reactionsByPick.get(pickModal.id)}
               reactors={reactors}
               onReact={(emoji) => reactPick(pickModal.id, emoji)}

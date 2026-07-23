@@ -238,6 +238,9 @@ export function LobbyRoomPage() {
     return member?.profiles?.avatar ?? defaultAvatar(ownerId);
   };
   const teamAvatar = (team: TeamRow): AvatarData => avatarForTeam(team, members);
+  // So the commissioner can tell whose team is whose while renaming them.
+  const ownerUsername = (ownerId: string | null): string | null =>
+    (ownerId && members.find((m) => m.user_id === ownerId)?.profiles?.username) || null;
 
   // Maps for the lobby chat (players load lazily; picks are empty pre-draft).
   const teamsById = useMemo(() => new Map(teams.map((t) => [t.id, t])), [teams]);
@@ -614,6 +617,11 @@ export function LobbyRoomPage() {
                         <>
                           <Avatar avatar={teamAvatar(team)} size={32} />
                           <span className="team-list__name">{team.name}</span>
+                          {!team.is_bot && ownerUsername(team.owner_id) && (
+                            <span className="team-list__chip team-list__chip--owner">
+                              {ownerUsername(team.owner_id)}
+                            </span>
+                          )}
                           {team.is_bot && (
                             <span className="team-list__chip muted">Bot</span>
                           )}
@@ -677,6 +685,14 @@ export function LobbyRoomPage() {
                   <li key={team.id} className="team-list__row">
                     <span className="team-list__pos">{team.draft_position}</span>
                     <Avatar avatar={teamAvatar(team)} size={32} />
+                    {/* Shown whether or not the name is being edited — the
+                        whole point is to help the commissioner tell whose
+                        team is whose while they're mid-rename. */}
+                    {!team.is_bot && ownerUsername(team.owner_id) && (
+                      <span className="team-list__chip team-list__chip--owner">
+                        {ownerUsername(team.owner_id)}
+                      </span>
+                    )}
                     {editing ? (
                       <form
                         className="team-list__edit"
