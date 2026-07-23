@@ -171,20 +171,23 @@
     // runs down. Clipped to the cell's rounded corners so the fill can't
     // spill past them.
     &--onclock {
+      // A thicker ring than the default 1px border — the color swap below
+      // needs to read clearly at a glance, not just on close inspection.
+      border-width: 2px;
       border-color: $accent;
-      box-shadow: 0 0 0 1px $accent inset;
+      box-shadow: 0 0 0 2px $accent inset;
       text-align: center;
       vertical-align: middle;
       overflow: hidden;
 
       &.draft-grid__cell--warning {
         border-color: $warning;
-        box-shadow: 0 0 0 1px $warning inset;
+        box-shadow: 0 0 0 2px $warning inset;
       }
 
       &.draft-grid__cell--danger {
         border-color: $danger;
-        box-shadow: 0 0 0 1px $danger inset;
+        box-shadow: 0 0 0 2px $danger inset;
       }
 
       // Last 5 seconds — pulses on top of whatever urgency color is active.
@@ -194,16 +197,18 @@
     }
 
     // The viewer's own on-the-clock cell additionally gets a persistent
-    // accent tint UNDER the countdown fill — regardless of urgency stage —
-    // so it reads as unmistakably "your pick" at a glance, not just another
-    // team's countdown.
+    // (but faint) accent tint UNDER the countdown fill — regardless of
+    // urgency stage — so it reads as unmistakably "your pick" at a glance.
+    // Kept much fainter than &__onclock-fill's wash (below) on purpose: the
+    // two need enough contrast to tell apart, and for the wash's color
+    // change to actually register against this base.
     &--onclock-mine {
-      background: rgba($accent, 0.35);
+      background: rgba($accent, 0.14);
       cursor: pointer;
 
       @media (hover: hover) {
         &:hover {
-          background: rgba($accent, 0.45);
+          background: rgba($accent, 0.22);
         }
       }
     }
@@ -345,22 +350,24 @@
   // inline from JS) — same "reveal more color as time passes" idea as the
   // toast progress bar, just growing instead of shrinking since there's no
   // single fixed CSS animation duration (the per-round pick clock length is
-  // dynamic). Low opacity so it reads as a wash, not a solid fill.
+  // dynamic). Noticeably more saturated than &--onclock-mine's base tint —
+  // it needs to visibly stand out, both as a wash over that base and as an
+  // unmistakable color shift once urgency hits warning/danger.
   &__onclock-fill {
     position: absolute;
     inset: 0 auto 0 0;
     z-index: 0;
-    background: rgba($accent, 0.2);
+    background: rgba($accent, 0.45);
     transition:
       width 1s linear,
       background 300ms ease;
 
     .draft-grid__cell--warning & {
-      background: rgba($warning, 0.2);
+      background: rgba($warning, 0.45);
     }
 
     .draft-grid__cell--danger & {
-      background: rgba($danger, 0.2);
+      background: rgba($danger, 0.45);
     }
   }
 
