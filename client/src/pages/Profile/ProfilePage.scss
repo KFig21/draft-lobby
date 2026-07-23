@@ -86,6 +86,23 @@
       color: $text;
     }
   }
+
+  &__filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: $space;
+  }
+
+  &__sort {
+    margin-left: auto;
+    padding: $space * 0.75 $space;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: $bg-raised;
+    color: $text;
+    font-size: 0.85rem;
+  }
 }
 
 .lobby-list {
@@ -142,7 +159,24 @@
     min-width: 0;
   }
 
+  &__name-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: $space * 0.75;
+  }
+
   &__name {
     font-weight: 600;
+  }
+
+  &__badge {
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: $bg-overlay;
+    color: $text-muted;
+    font-size: 0.68rem;
+    font-weight: 700;
+    white-space: nowrap;
   }
 }

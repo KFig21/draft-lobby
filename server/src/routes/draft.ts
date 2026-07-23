@@ -1141,7 +1141,9 @@ draftRouter.post('/:id/add-bot', async (req: AuthedRequest, res: Response) => {
   res.json({ ok: true, draftPosition: pos });
 });
 
-/** POST /api/lobbies/:id/team-name — rename your own team (or any team, if commissioner). */
+/** POST /api/lobbies/:id/team-name — rename your own team (or any team, if
+ * commissioner). Locked for everyone but the commissioner once the draft
+ * is COMPLETE. */
 draftRouter.post('/:id/team-name', async (req: AuthedRequest, res: Response) => {
   const lobbyId = req.params.id;
   const userId = req.user!.id;
@@ -1175,6 +1177,21 @@ draftRouter.post('/:id/team-name', async (req: AuthedRequest, res: Response) => 
   if (team.owner_id !== userId && !isCommish(role)) {
     res.status(403).json({ error: 'You can only rename your own team' });
     return;
+  }
+  // Once the draft is complete, team names lock for everyone but the
+  // commissioner — keeps rosters stable while the commissioner reviews.
+  if (!isCommish(role)) {
+    const { data: lobby } = await supabaseAdmin
+      .from('lobbies')
+      .select('status')
+      .eq('id', lobbyId)
+      .maybeSingle();
+    if (lobby?.status === 'COMPLETE') {
+      res.status(409).json({
+        error: 'Team names are locked once the draft is complete — ask the commissioner',
+      });
+      return;
+    }
   }
 
   const { error } = await supabaseAdmin

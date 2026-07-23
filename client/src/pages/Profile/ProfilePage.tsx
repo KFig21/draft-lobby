@@ -1,4 +1,4 @@
-import { defaultAvatar } from '@draft-lobby/shared';
+import { SCORING_PRESETS, defaultAvatar, matchPreset } from '@draft-lobby/shared';
 import ArchiveOutlinedIcon from '@mui/icons-material/ArchiveOutlined';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
@@ -14,6 +14,10 @@ import type { LobbyRow } from '../../lib/types';
 import './ProfilePage.scss';
 
 const PAST_PAGE_SIZE = 10;
+
+type DraftModeFilter = 'ALL' | 'LIVE' | 'MOCK';
+type VisibilityFilter = 'ALL' | 'PRIVATE' | 'OPEN';
+type SortOrder = 'NEWEST' | 'OLDEST' | 'NAME';
 
 interface MyLobby {
   role: string;
@@ -49,6 +53,10 @@ export function ProfilePage() {
   const [pastTotal, setPastTotal] = useState(0);
   const [pastLoading, setPastLoading] = useState(true);
 
+  const [draftModeFilter, setDraftModeFilter] = useState<DraftModeFilter>('ALL');
+  const [visibilityFilter, setVisibilityFilter] = useState<VisibilityFilter>('ALL');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('NEWEST');
+
   const userId = session?.user.id;
   const username =
     (session?.user.user_metadata?.username as string | undefined) ??
@@ -58,40 +66,54 @@ export function ProfilePage() {
   useEffect(() => {
     if (!userId) return;
     setSectionsLoading(true);
-    Promise.all([
-      supabase
-        .from('lobby_members')
-        .select('role, archived, lobbies!inner ( id, name, status, settings, created_at )')
-        .eq('user_id', userId)
-        .eq('archived', false)
-        .neq('lobbies.status', 'COMPLETE')
-        .order('created_at', { foreignTable: 'lobbies', ascending: false }),
-      supabase
-        .from('lobby_members')
-        .select('role, archived, lobbies ( id, name, status, settings, created_at )')
-        .eq('user_id', userId)
-        .eq('archived', true)
-        .order('created_at', { foreignTable: 'lobbies', ascending: false }),
-    ]).then(([activeRes, archivedRes]) => {
+    let activeQ = supabase
+      .from('lobby_members')
+      .select('role, archived, lobbies!inner ( id, name, status, settings, created_at )')
+      .eq('user_id', userId)
+      .eq('archived', false)
+      .neq('lobbies.status', 'COMPLETE');
+    let archivedQ = supabase
+      .from('lobby_members')
+      .select('role, archived, lobbies!inner ( id, name, status, settings, created_at )')
+      .eq('user_id', userId)
+      .eq('archived', true);
+    if (draftModeFilter !== 'ALL') {
+      activeQ = activeQ.eq('lobbies.settings->>draftMode', draftModeFilter);
+      archivedQ = archivedQ.eq('lobbies.settings->>draftMode', draftModeFilter);
+    }
+    if (visibilityFilter !== 'ALL') {
+      activeQ = activeQ.eq('lobbies.settings->>visibility', visibilityFilter);
+      archivedQ = archivedQ.eq('lobbies.settings->>visibility', visibilityFilter);
+    }
+    const orderCol = sortOrder === 'NAME' ? 'name' : 'created_at';
+    const ascending = sortOrder === 'NAME' ? true : sortOrder === 'OLDEST';
+    activeQ = activeQ.order(orderCol, { foreignTable: 'lobbies', ascending });
+    archivedQ = archivedQ.order(orderCol, { foreignTable: 'lobbies', ascending });
+    Promise.all([activeQ, archivedQ]).then(([activeRes, archivedRes]) => {
       setActive(toMyLobbies((activeRes.data ?? []) as unknown as RawRow[]));
       setArchived(toMyLobbies((archivedRes.data ?? []) as unknown as RawRow[]));
       setSectionsLoading(false);
     });
-  }, [userId]);
+  }, [userId, draftModeFilter, visibilityFilter, sortOrder]);
 
   const loadPast = useCallback(
     (page: number) => {
       if (!userId) return;
       setPastLoading(true);
-      void supabase
+      let q = supabase
         .from('lobby_members')
         .select('role, archived, lobbies!inner ( id, name, status, settings, created_at )', {
           count: 'exact',
         })
         .eq('user_id', userId)
         .eq('archived', false)
-        .eq('lobbies.status', 'COMPLETE')
-        .order('created_at', { foreignTable: 'lobbies', ascending: false })
+        .eq('lobbies.status', 'COMPLETE');
+      if (draftModeFilter !== 'ALL') q = q.eq('lobbies.settings->>draftMode', draftModeFilter);
+      if (visibilityFilter !== 'ALL') q = q.eq('lobbies.settings->>visibility', visibilityFilter);
+      const orderCol = sortOrder === 'NAME' ? 'name' : 'created_at';
+      const ascending = sortOrder === 'NAME' ? true : sortOrder === 'OLDEST';
+      void q
+        .order(orderCol, { foreignTable: 'lobbies', ascending })
         .range(page * PAST_PAGE_SIZE, page * PAST_PAGE_SIZE + PAST_PAGE_SIZE - 1)
         .then(({ data, count }) => {
           setPast(toMyLobbies((data ?? []) as unknown as RawRow[]));
@@ -99,12 +121,18 @@ export function ProfilePage() {
           setPastLoading(false);
         });
     },
-    [userId],
+    [userId, draftModeFilter, visibilityFilter, sortOrder],
   );
 
   useEffect(() => {
     loadPast(pastPage);
   }, [loadPast, pastPage]);
+
+  // Restart pagination whenever the filters/sort change underneath it.
+  useEffect(() => {
+    setPastPage(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftModeFilter, visibilityFilter, sortOrder]);
 
   async function setLobbyArchived(row: MyLobby, archivedNext: boolean) {
     // Optimistic — the flag is personal so there's no conflict to reconcile.
@@ -139,6 +167,43 @@ export function ProfilePage() {
           <h1>{username}</h1>
         </div>
       </header>
+
+      <div className="profile__filters">
+        <div className="segmented">
+          {(['ALL', 'LIVE', 'MOCK'] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              className={`segmented__opt${draftModeFilter === v ? ' segmented__opt--on' : ''}`}
+              onClick={() => setDraftModeFilter(v)}
+            >
+              {v === 'ALL' ? 'All' : v === 'LIVE' ? '🏈 Live' : '🤖 Mock'}
+            </button>
+          ))}
+        </div>
+        <div className="segmented">
+          {(['ALL', 'PRIVATE', 'OPEN'] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              className={`segmented__opt${visibilityFilter === v ? ' segmented__opt--on' : ''}`}
+              onClick={() => setVisibilityFilter(v)}
+            >
+              {v === 'ALL' ? 'All' : v === 'PRIVATE' ? '🔒 Private' : '🌐 Open'}
+            </button>
+          ))}
+        </div>
+        <select
+          className="profile__sort"
+          value={sortOrder}
+          onChange={(e) => setSortOrder(e.target.value as SortOrder)}
+          aria-label="Sort drafts"
+        >
+          <option value="NEWEST">Newest first</option>
+          <option value="OLDEST">Oldest first</option>
+          <option value="NAME">Name (A–Z)</option>
+        </select>
+      </div>
 
       {sectionsLoading ? (
         <div className="section-loading">
@@ -263,15 +328,27 @@ function LobbyList({
     <ul className="lobby-list">
       {rows.map((row) => {
         const { lobby, role } = row;
+        const { settings } = lobby;
         const live = lobby.status === 'DRAFTING' || lobby.status === 'COMPLETE';
         const to = live ? `/lobby/${lobby.id}/draft` : `/lobby/${lobby.id}`;
+        const preset = matchPreset(settings.scoring);
         return (
           <li key={lobby.id} className="lobby-list__item">
             <Link to={to} className="lobby-list__row">
               <div className="lobby-list__main">
-                <span className="lobby-list__name">{lobby.name}</span>
+                <div className="lobby-list__name-row">
+                  <span className="lobby-list__name">{lobby.name}</span>
+                  <span className="lobby-list__badge">
+                    {settings.draftMode === 'MOCK' ? '🤖 Mock' : '🏈 Live'}
+                  </span>
+                  <span className="lobby-list__badge">
+                    {settings.visibility === 'OPEN' ? '🌐 Open' : '🔒 Private'}
+                  </span>
+                </div>
                 <span className="muted">
-                  {lobby.settings.teamCount} teams ·{' '}
+                  {settings.teamCount} teams · {settings.draftType === 'SNAKE' ? 'Snake' : 'Straight'}
+                  {' · '}
+                  {preset ? SCORING_PRESETS[preset].label : 'Custom scoring'} ·{' '}
                   {new Date(lobby.created_at).toLocaleDateString()}
                   {role === 'COMMISSIONER' ? ' · Commissioner' : ''}
                 </span>

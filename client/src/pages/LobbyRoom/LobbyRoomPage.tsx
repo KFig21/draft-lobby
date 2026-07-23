@@ -461,6 +461,9 @@ export function LobbyRoomPage() {
   }
 
   const draftLive = lobby.status === 'DRAFTING' || lobby.status === 'COMPLETE';
+  // Team names lock for everyone but the commissioner once the draft is
+  // complete — keeps rosters stable while the commissioner reviews.
+  const isComplete = lobby.status === 'COMPLETE';
   const memberIds = new Set(members.map((m) => m.user_id));
   const teamById = new Map(teams.map((t) => [t.id, t]));
 
@@ -665,7 +668,7 @@ export function LobbyRoomPage() {
                     </li>
                   );
                 }
-                const canEdit = team.owner_id === userId || isCommish;
+                const canEdit = isCommish || (team.owner_id === userId && !isComplete);
                 const editing = editingTeamId === team.id;
                 const otherUserId =
                   team.owner_id && team.owner_id !== userId ? team.owner_id : null;
