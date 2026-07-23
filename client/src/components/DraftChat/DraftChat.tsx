@@ -11,6 +11,7 @@ import {
 } from '@draft-lobby/shared';
 import AddReactionOutlinedIcon from '@mui/icons-material/AddReactionOutlined';
 import CloseIcon from '@mui/icons-material/Close';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
 import ReplyIcon from '@mui/icons-material/Reply';
 import SendIcon from '@mui/icons-material/Send';
@@ -527,7 +528,13 @@ export function DraftChat({
 
       {locked ? (
         <div className="chat__locked">
-          {viewOnly ? '👀 View only — chat is private to lobby members.' : '🔒 Chat is locked for this draft.'}
+          {viewOnly ? (
+            '👀 View only — chat is private to lobby members.'
+          ) : (
+            <span className="bot-badge bot-badge--warn">
+              <LockOutlinedIcon fontSize="inherit" /> Chat is locked for this draft
+            </span>
+          )}
         </div>
       ) : (
         <>
