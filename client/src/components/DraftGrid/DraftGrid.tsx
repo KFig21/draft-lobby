@@ -1,4 +1,5 @@
 import { POSITION_COLORS, type DraftType, type Position } from '@draft-lobby/shared';
+import AccessTimeOutlinedIcon from '@mui/icons-material/AccessTimeOutlined';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlined';
 import TouchAppIcon from '@mui/icons-material/TouchApp';
 import { useState } from 'react';
@@ -190,7 +191,7 @@ export function DraftGrid({
                     >
                       {isOnClock &&
                         (isMyClock ? (
-                          <span className="draft-grid__onclock-label draft-grid__onclock-label--mine">
+                          <span className="draft-grid__onclock-label">
                             <span className="draft-grid__onclock-title">
                               <TouchAppIcon fontSize="inherit" /> On the clock
                             </span>
@@ -199,7 +200,10 @@ export function DraftGrid({
                             </span>
                           </span>
                         ) : (
-                          <span className="draft-grid__onclock-label">On the clock</span>
+                          <span className="draft-grid__onclock-label draft-grid__onclock-label--waiting">
+                            <AccessTimeOutlinedIcon className="draft-grid__onclock-icon" />
+                            On the clock
+                          </span>
                         ))}
                     </td>
                   );

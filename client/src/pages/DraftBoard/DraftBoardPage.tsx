@@ -1134,7 +1134,7 @@ export function DraftBoardPage() {
                 className={`chip ${filter === f ? 'chip--active' : ''}`}
                 onClick={() => setFilter(f)}
               >
-                {f}
+                {f === 'SUPERFLEX' ? 'OP' : f}
               </button>
             ))}
           </div>

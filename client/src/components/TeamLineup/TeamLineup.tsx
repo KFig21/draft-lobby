@@ -1,6 +1,7 @@
 import {
   POSITIONS,
   POSITION_COLORS,
+  ROSTER_SLOTS,
   SLOT_LABELS,
   type LobbySettings,
   type Position,
@@ -67,20 +68,27 @@ function buildLineup(
     .filter((e): e is PoolEntry => !!e)
     .sort((a, b) => (b.player.proj_points ?? 0) - (a.player.proj_points ?? 0));
 
+  // Slot -> configured count, so display order can follow the fixed
+  // ROSTER_SLOTS sequence below instead of however this league's
+  // rosterComposition array happens to be ordered (older leagues can have
+  // D/ST stored before OP/SUPERFLEX, for instance).
+  const countBySlot = new Map(settings.rosterComposition.map((rc) => [rc.slot, rc.count]));
+
   const assigned = new Set<string>();
   const rows: Row[] = [];
-  for (const rc of settings.rosterComposition) {
-    if (rc.slot === 'BENCH') continue;
-    for (let i = 0; i < rc.count; i++) {
+  for (const slot of ROSTER_SLOTS) {
+    if (slot === 'BENCH') continue;
+    const count = countBySlot.get(slot) ?? 0;
+    for (let i = 0; i < count; i++) {
       const entry = pool.find(
-        (e) => !assigned.has(e.player.id) && eligible(rc.slot, e.player.position as Position),
+        (e) => !assigned.has(e.player.id) && eligible(slot, e.player.position as Position),
       );
       if (entry) assigned.add(entry.player.id);
-      rows.push({ slot: rc.slot, player: entry?.player, pick: entry?.pick });
+      rows.push({ slot, player: entry?.player, pick: entry?.pick });
     }
   }
 
-  const benchCount = settings.rosterComposition.find((r) => r.slot === 'BENCH')?.count ?? 0;
+  const benchCount = countBySlot.get('BENCH') ?? 0;
   const leftover = pool.filter((e) => !assigned.has(e.player.id));
   for (let i = 0; i < Math.max(benchCount, leftover.length); i++) {
     const entry = leftover[i] as PoolEntry | undefined;

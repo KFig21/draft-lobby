@@ -42,7 +42,10 @@ export const SLOT_LABELS: Record<RosterSlot, string> = {
   WR: 'WR',
   TE: 'TE',
   FLEX: 'FLEX',
-  SUPERFLEX: 'SUPERFLEX',
+  // "OP" (offensive player) is the standard fantasy-platform abbreviation
+  // for the superflex slot — SLOT_HINTS still spells out QB/RB/WR/TE next
+  // to it wherever that's shown, so it stays unambiguous.
+  SUPERFLEX: 'OP',
   K: 'K',
   DEF: 'D/ST',
   IDP: 'IDP',

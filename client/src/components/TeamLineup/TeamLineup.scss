@@ -143,9 +143,7 @@
   gap: $space;
 
   &__label {
-    // Wide enough for the longest slot label ("SUPERFLEX") on one line —
-    // the others just left-align with extra room to their right.
-    width: 4.5rem;
+    width: 3rem;
     flex-shrink: 0;
     white-space: nowrap;
     font-size: 0.7rem;

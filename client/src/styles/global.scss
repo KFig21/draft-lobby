@@ -251,6 +251,20 @@ textarea {
   }
 }
 
+// iOS Safari (and some Android browsers) auto-zoom the whole page when a
+// focused text input's font-size is under 16px — plenty of inputs here are
+// intentionally smaller for visual density on desktop. !important is the
+// standard fix for this: it guarantees every input clears the 16px floor on
+// small screens without having to hunt down and patch each component's own
+// font-size individually.
+@media (max-width: #{$bp-md - 1px}) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
 .toggle {
   display: flex;
   align-items: center;

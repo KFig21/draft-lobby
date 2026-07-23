@@ -167,6 +167,8 @@
     &--onclock {
       border-color: $accent;
       box-shadow: 0 0 0 1px $accent inset;
+      text-align: center;
+      vertical-align: middle;
     }
 
     // The viewer's own on-the-clock cell — a full accent-green fill so it's
@@ -182,8 +184,6 @@
       // danger colors.
       box-shadow: none;
       cursor: pointer;
-      text-align: center;
-      vertical-align: middle;
 
       .draft-grid__onclock-label {
         color: #05231a;
@@ -363,17 +363,27 @@
   }
 
   &__onclock-label {
-    color: $accent;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25em;
     font-weight: 700;
     font-size: 0.65rem;
 
-    &--mine {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 0.25em;
-      text-align: center;
+    // Someone else is on the clock — this cell has no fill of its own (just
+    // the &--onclock ring), so it needs its own theme-aware color: black
+    // reads better than accent green against a plain light-mode background.
+    &--waiting {
+      color: $accent;
+
+      :root[data-theme='light'] & {
+        color: #05231a;
+      }
     }
+  }
+
+  &__onclock-icon {
+    font-size: 1.1em;
   }
 
   &__onclock-title {
@@ -453,10 +463,10 @@
       font-size: calc(0.65rem * var(--fs-scale));
     }
 
-    // Deliberately NOT scaled by --fs-scale like everything else above — the
-    // "your turn" label is a multi-line block (icon + bold title + subtext),
-    // so scaling it by the same factor as single-line labels compounded into
-    // comically large text on a big screen. It reads fine at its normal size.
+    // Deliberately NOT scaled by --fs-scale like everything else above —
+    // both on-clock states are icon+text stacks, so scaling them by the same
+    // factor as single-line labels compounded into comically large text on a
+    // big screen. They read fine at normal size.
     .draft-grid__onclock-label {
       font-size: 0.65rem;
     }
