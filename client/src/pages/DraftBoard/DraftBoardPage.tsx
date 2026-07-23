@@ -989,14 +989,42 @@ export function DraftBoardPage() {
           ? 'warning'
           : null;
   const myTurnFlashing = myTurnSecondsLeft != null && myTurnSecondsLeft <= 5;
-  // How much of this pick's clock has elapsed (0-1) — grows the on-clock
-  // cell's progress fill left to right as myTurnSecondsLeft counts down.
-  const myTurnTotalSeconds = myTurnHighlight
-    ? secondsForRound(round, lobby.settings.pickTiers)
-    : null;
-  const myTurnElapsedPct =
-    myTurnSecondsLeft != null && myTurnTotalSeconds
-      ? Math.min(1, Math.max(0, (myTurnTotalSeconds - myTurnSecondsLeft) / myTurnTotalSeconds))
+
+  // Same countdown, but for whichever team is on the clock (not just the
+  // viewer) — drives the draft grid's on-clock cell progress fill/urgency
+  // color for every viewer, not only the person whose turn it is. While
+  // paused, pick_deadline goes null server-side, so this falls back to the
+  // frozen snapshot (pick_deadline_remaining_ms) instead of going blank —
+  // the cell's color/fill should hold exactly where it was, not reset.
+  const onClockRemainingMs = isComplete
+    ? null
+    : isPaused
+      ? lobby.pick_deadline_remaining_ms
+      : lobby.pick_deadline
+        ? new Date(lobby.pick_deadline).getTime() - clockNow
+        : null;
+  const onClockCellSecondsLeft =
+    onClockRemainingMs != null ? Math.max(0, Math.floor(onClockRemainingMs / 1000)) : null;
+  const onClockCellUrgency =
+    onClockCellSecondsLeft == null
+      ? null
+      : onClockCellSecondsLeft <= 10
+        ? 'danger'
+        : onClockCellSecondsLeft <= 25
+          ? 'warning'
+          : null;
+  // No pulse while paused — the pulse implies an actively ticking clock.
+  const onClockCellFlashing =
+    !isPaused && onClockCellSecondsLeft != null && onClockCellSecondsLeft <= 5;
+  const onClockCellTotalSeconds = isComplete
+    ? null
+    : secondsForRound(round, lobby.settings.pickTiers);
+  const onClockCellElapsedPct =
+    onClockCellSecondsLeft != null && onClockCellTotalSeconds
+      ? Math.min(
+          1,
+          Math.max(0, (onClockCellTotalSeconds - onClockCellSecondsLeft) / onClockCellTotalSeconds),
+        )
       : null;
 
   // Commissioner-only tools. Rendered twice — inline in the desktop top bar,
@@ -1466,9 +1494,9 @@ export function DraftBoardPage() {
               setMobileTab('players');
               setShowFsMenu(true);
             }}
-            onClockUrgency={myTurnUrgency}
-            onClockFlashing={myTurnFlashing}
-            onClockElapsedPct={myTurnElapsedPct}
+            onClockUrgency={onClockCellUrgency}
+            onClockFlashing={onClockCellFlashing}
+            onClockElapsedPct={onClockCellElapsedPct}
           />
         </section>
 

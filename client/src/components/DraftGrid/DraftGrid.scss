@@ -164,64 +164,47 @@
     padding: $space * 0.75;
     vertical-align: top;
 
+    // Whichever cell is on the clock — visible to every viewer, not just
+    // whoever's turn it is. Border/inset ring switch green -> yellow -> red
+    // on the same schedule as the top bar's clock; &__onclock-fill (below)
+    // washes that same color over the cell's background as the pick clock
+    // runs down. Clipped to the cell's rounded corners so the fill can't
+    // spill past them.
     &--onclock {
       border-color: $accent;
       box-shadow: 0 0 0 1px $accent inset;
       text-align: center;
       vertical-align: middle;
-    }
-
-    // The viewer's own on-the-clock cell — a neutral surface (like any other
-    // cell) with a progress fill (see &__onclock-fill) growing left-to-right
-    // as the pick clock runs down, plus a border/text color that switches
-    // green -> yellow -> red on the same schedule as the top bar's clock.
-    // These brand colors already double as text color elsewhere in the app
-    // (PickClock, badges) without a per-theme override, so no light/dark
-    // split needed here either.
-    &--onclock-mine {
-      background: $bg;
-      border-color: $accent;
-      // The base &--onclock rule's inset ring is always accent-green —
-      // drop it so it can't stay green once the border above shifts to
-      // warning/danger colors (the border itself is enough of a ring).
-      box-shadow: none;
-      cursor: pointer;
-      // Clips &__onclock-fill to the cell's own rounded corners.
       overflow: hidden;
 
-      .draft-grid__onclock-label {
-        position: relative;
-        z-index: 1;
-        color: $accent;
-      }
-
-      @media (hover: hover) {
-        &:hover {
-          background: $bg-hover;
-        }
-      }
-
-      // Same thresholds as the top bar's pick clock: yellow at 25s left,
-      // red at 10s.
       &.draft-grid__cell--warning {
         border-color: $warning;
-
-        .draft-grid__onclock-label {
-          color: $warning;
-        }
+        box-shadow: 0 0 0 1px $warning inset;
       }
 
       &.draft-grid__cell--danger {
         border-color: $danger;
-
-        .draft-grid__onclock-label {
-          color: $danger;
-        }
+        box-shadow: 0 0 0 1px $danger inset;
       }
 
       // Last 5 seconds — pulses on top of whatever urgency color is active.
       &.draft-grid__cell--flash {
         animation: draft-grid-onclock-flash 1s ease-in-out infinite;
+      }
+    }
+
+    // The viewer's own on-the-clock cell additionally gets a persistent
+    // accent tint UNDER the countdown fill — regardless of urgency stage —
+    // so it reads as unmistakably "your pick" at a glance, not just another
+    // team's countdown.
+    &--onclock-mine {
+      background: rgba($accent, 0.35);
+      cursor: pointer;
+
+      @media (hover: hover) {
+        &:hover {
+          background: rgba($accent, 0.45);
+        }
       }
     }
 
@@ -382,22 +365,32 @@
   }
 
   &__onclock-label {
+    // Sits above &__onclock-fill (z-index: 0) so the countdown wash never
+    // obscures the text/icon.
+    position: relative;
+    z-index: 1;
     display: inline-flex;
     flex-direction: column;
     align-items: center;
     gap: 0.25em;
     font-weight: 700;
     font-size: 0.65rem;
+    // Dark-mode default (plenty of time left) — same brand green used
+    // elsewhere as text (PickClock, badges).
+    color: $accent;
 
-    // Someone else is on the clock — this cell has no fill of its own (just
-    // the &--onclock ring), so it needs its own theme-aware color: black
-    // reads better than accent green against a plain light-mode background.
-    &--waiting {
-      color: $accent;
+    .draft-grid__cell--warning & {
+      color: $warning;
+    }
 
-      :root[data-theme='light'] & {
-        color: #05231a;
-      }
+    .draft-grid__cell--danger & {
+      color: $danger;
+    }
+
+    // Light mode: black regardless of urgency stage — these brand colors
+    // read too faint against a near-white background here.
+    :root[data-theme='light'] & {
+      color: #05231a;
     }
   }
 

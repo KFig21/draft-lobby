@@ -44,13 +44,13 @@ interface Props {
   /** The viewer's own on-the-clock cell was clicked — switches to the
    * Players tab (and, in fullscreen, opens the Menu modal onto it). */
   onMyClockCellClick?: () => void;
-  /** Same thresholds as the top bar's pick clock — colors the viewer's own
-   * on-the-clock cell yellow at 25s left, red at 10s. */
+  /** Same thresholds as the top bar's pick clock — colors whichever cell is
+   * on the clock yellow at 25s left, red at 10s, for every viewer. */
   onClockUrgency?: 'warning' | 'danger' | null;
   /** Same "last 5 seconds" pulse as the top bar's pick clock. */
   onClockFlashing?: boolean;
-  /** 0-1: how much of the pick clock has elapsed — grows the progress fill
-   * on the viewer's own on-the-clock cell left to right. */
+  /** 0-1: how much of the current pick's clock has elapsed — grows the
+   * on-the-clock cell's progress fill left to right. */
   onClockElapsedPct?: number | null;
 }
 
@@ -177,8 +177,8 @@ export function DraftGrid({
                       className={`draft-grid__cell ${
                         isOnClock ? 'draft-grid__cell--onclock' : ''
                       }${isMyClock ? ' draft-grid__cell--onclock-mine' : ''}${
-                        isMyClock && onClockUrgency ? ` draft-grid__cell--${onClockUrgency}` : ''
-                      }${isMyClock && onClockFlashing ? ' draft-grid__cell--flash' : ''}`}
+                        isOnClock && onClockUrgency ? ` draft-grid__cell--${onClockUrgency}` : ''
+                      }${isOnClock && onClockFlashing ? ' draft-grid__cell--flash' : ''}`}
                       onClick={isMyClock ? onMyClockCellClick : undefined}
                       role={isMyClock ? 'button' : undefined}
                       tabIndex={isMyClock ? 0 : undefined}
@@ -193,7 +193,7 @@ export function DraftGrid({
                           : undefined
                       }
                     >
-                      {isMyClock && onClockElapsedPct != null && (
+                      {isOnClock && onClockElapsedPct != null && (
                         <span
                           className="draft-grid__onclock-fill"
                           style={{ width: `${Math.min(1, Math.max(0, onClockElapsedPct)) * 100}%` }}
@@ -211,7 +211,7 @@ export function DraftGrid({
                             </span>
                           </span>
                         ) : (
-                          <span className="draft-grid__onclock-label draft-grid__onclock-label--waiting">
+                          <span className="draft-grid__onclock-label">
                             <TimerOutlinedIcon className="draft-grid__onclock-icon" />
                             On the clock
                           </span>
