@@ -1,8 +1,9 @@
-import { POSITION_COLORS, type Position } from '@draft-lobby/shared';
 import BookmarkIcon from '@mui/icons-material/Bookmark';
 import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder';
+import CloseIcon from '@mui/icons-material/Close';
+import { useModalClose } from '../../lib/useModalClose';
 import type { PlayerRow } from '../../lib/types';
-import { Modal } from '../Modal/Modal';
+import { PlayerStatBlock } from '../PlayerStatBlock/PlayerStatBlock';
 import './PlayerDetailModal.scss';
 
 interface Props {
@@ -16,8 +17,9 @@ interface Props {
 }
 
 /** A closer look at a player before deciding to draft them — opened from the
- * Players tab pool, before any pick has been made (contrast with PickModal,
- * which is the same stat block but for a pick that's already happened). */
+ * Players tab pool, before any pick has been made. Same shell + stat block as
+ * PickModal (which is this same information, but for a pick that's already
+ * happened), so the two read as one consistent "player" surface. */
 export function PlayerDetailModal({
   player,
   onClose,
@@ -26,54 +28,24 @@ export function PlayerDetailModal({
   onQueue,
   queued,
 }: Props) {
-  const pos = player.position as Position;
-  const hasPrev = player.prev_points != null || player.prev_rank != null;
+  const { closing, requestClose } = useModalClose(onClose);
 
   return (
-    <Modal title={player.name} onClose={onClose}>
-      <div className="player-detail">
-        <header className="player-detail__head">
-          <span className="player-detail__pos" style={{ background: POSITION_COLORS[pos] }}>
-            {player.position}
-          </span>
-          <span className="muted">
-            {player.nfl_team}
-            {player.bye_week ? ` · Bye ${player.bye_week}` : ''}
-            {player.injury_status && player.injury_status !== 'ACTIVE'
-              ? ` · ${player.injury_status}`
-              : ''}
-          </span>
-        </header>
+    <div
+      className={`player-detail__backdrop modal-anim-backdrop${closing ? ' is-closing' : ''}`}
+      onClick={requestClose}
+    >
+      <div
+        className={`player-detail modal-anim-card${closing ? ' is-closing' : ''}`}
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-label={`${player.name} details`}
+      >
+        <button className="player-detail__close" aria-label="Close" onClick={requestClose}>
+          <CloseIcon fontSize="small" />
+        </button>
 
-        <div className="player-detail__stats">
-          <div className="player-detail__stat">
-            <span className="player-detail__stat-label">Projected</span>
-            <span className="player-detail__stat-value">
-              {player.proj_points != null ? player.proj_points.toFixed(1) : '—'}
-            </span>
-          </div>
-          <div className="player-detail__stat">
-            <span className="player-detail__stat-label">ADP</span>
-            <span className="player-detail__stat-value">
-              {player.adp != null ? player.adp.toFixed(1) : '—'}
-            </span>
-          </div>
-          <div className="player-detail__stat">
-            <span className="player-detail__stat-label">Last yr pts</span>
-            <span className="player-detail__stat-value">
-              {player.prev_points != null ? player.prev_points.toFixed(1) : '—'}
-            </span>
-          </div>
-          <div className="player-detail__stat">
-            <span className="player-detail__stat-label">Last yr rank</span>
-            <span className="player-detail__stat-value">
-              {player.prev_rank != null ? `#${player.prev_rank}` : '—'}
-            </span>
-          </div>
-        </div>
-        {!hasPrev && (
-          <p className="player-detail__note muted">Full prior-season stats aren’t loaded yet.</p>
-        )}
+        <PlayerStatBlock player={player} />
 
         {(onQueue || onPick) && (
           <div className="player-detail__actions">
@@ -104,6 +76,6 @@ export function PlayerDetailModal({
           </div>
         )}
       </div>
-    </Modal>
+    </div>
   );
 }

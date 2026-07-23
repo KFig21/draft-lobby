@@ -1,10 +1,4 @@
-import {
-  POSITION_COLORS,
-  REACTION_EMOJIS,
-  containsSlur,
-  type Avatar as AvatarData,
-  type Position,
-} from '@draft-lobby/shared';
+import { REACTION_EMOJIS, containsSlur, type Avatar as AvatarData } from '@draft-lobby/shared';
 import AddReactionOutlinedIcon from '@mui/icons-material/AddReactionOutlined';
 import CloseIcon from '@mui/icons-material/Close';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
@@ -19,6 +13,7 @@ import type { MemberRow, PickRow, PlayerRow, TeamRow } from '../../lib/types';
 import { Avatar } from '../Avatar/Avatar';
 import type { ReactionEntry } from '../DraftGrid/DraftGrid';
 import { MentionInput } from '../MentionInput/MentionInput';
+import { PlayerStatBlock } from '../PlayerStatBlock/PlayerStatBlock';
 import { ReactorsModal, type Reactor } from '../ReactorsModal/ReactorsModal';
 import './PickModal.scss';
 
@@ -95,7 +90,6 @@ export function PickModal({
   const [error, setError] = useState<string | null>(null);
   const commentInputRef = useRef<HTMLInputElement>(null);
 
-  const hasPrev = player.prev_points != null || player.prev_rank != null;
   const memberUsernames = useMemo(
     () => members.map((m) => m.profiles?.username).filter((u): u is string => !!u),
     [members],
@@ -125,8 +119,6 @@ export function PickModal({
     }
   }
 
-  const pos = player.position as Position;
-
   return (
     <div
       className={`pick-modal__backdrop modal-anim-backdrop${closing ? ' is-closing' : ''}`}
@@ -144,24 +136,7 @@ export function PickModal({
 
         {/* Player data + reactions stay pinned; only the comments below scroll. */}
         <div className="pick-modal__top">
-          <header className="pick-modal__head">
-            <span
-              className="pick-modal__pos"
-              style={{ background: POSITION_COLORS[pos] }}
-            >
-              {player.position}
-            </span>
-            <div className="pick-modal__title">
-              <h3>{player.name}</h3>
-              <span className="muted">
-                {player.nfl_team}
-                {player.bye_week ? ` · Bye ${player.bye_week}` : ''}
-                {player.injury_status && player.injury_status !== 'ACTIVE'
-                  ? ` · ${player.injury_status}`
-                  : ''}
-              </span>
-            </div>
-          </header>
+          <PlayerStatBlock player={player} />
 
           <div className="pick-modal__drafted">
             <strong>{team?.name ?? 'A team'}</strong> · Round {pick.round} · Pick{' '}
@@ -177,39 +152,6 @@ export function PickModal({
             >
               <UndoIcon fontSize="small" /> Roll back to this pick
             </button>
-          )}
-
-          {/* Stats */}
-          <div className="pick-modal__stats">
-            <div className="pick-modal__stat">
-              <span className="pick-modal__stat-label">Projected</span>
-              <span className="pick-modal__stat-value">
-                {player.proj_points != null ? player.proj_points.toFixed(1) : '—'}
-              </span>
-            </div>
-            <div className="pick-modal__stat">
-              <span className="pick-modal__stat-label">ADP</span>
-              <span className="pick-modal__stat-value">
-                {player.adp != null ? player.adp.toFixed(1) : '—'}
-              </span>
-            </div>
-            <div className="pick-modal__stat">
-              <span className="pick-modal__stat-label">Last yr pts</span>
-              <span className="pick-modal__stat-value">
-                {player.prev_points != null ? player.prev_points.toFixed(1) : '—'}
-              </span>
-            </div>
-            <div className="pick-modal__stat">
-              <span className="pick-modal__stat-label">Last yr rank</span>
-              <span className="pick-modal__stat-value">
-                {player.prev_rank != null ? `#${player.prev_rank}` : '—'}
-              </span>
-            </div>
-          </div>
-          {!hasPrev && (
-            <p className="pick-modal__note muted">
-              Full prior-season stats aren’t loaded yet.
-            </p>
           )}
 
           {/* Reactions */}

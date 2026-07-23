@@ -1,63 +1,48 @@
 @use 'variables' as *;
 
+// Same shell as .pick-modal (PickModal.scss) — same information, but for a
+// player who hasn't been drafted yet, so the two should look identical.
 .player-detail {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: $space * 2;
+  width: min(440px, 94vw);
+  max-height: 90dvh;
+  overflow-y: auto;
+  padding: $space * 3;
+  background: $bg-raised;
+  border: 1px solid $border;
+  border-radius: $radius;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
 
-  &__head {
-    display: flex;
-    align-items: center;
-    gap: $space * 1.25;
-  }
-
-  &__pos {
-    display: inline-grid;
-    place-items: center;
-    min-width: 44px;
-    padding: $space * 0.5 $space;
-    border-radius: $radius-sm;
-    // Position badges fill with a bright brand color — dark text reads far
-    // better on those than white (same convention as PickModal/PlayerCard).
-    color: #05231a;
-    font-weight: 800;
-    font-size: 0.9rem;
-  }
-
-  &__stats {
+  &__backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: $space;
+    place-items: center;
+    padding: $space * 2;
+    background: rgba(0, 0, 0, 0.6);
   }
 
-  &__stat {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    padding: $space;
-    background: $bg;
-    border: 1px solid $border;
+  &__close {
+    position: absolute;
+    top: $space * 1.5;
+    right: $space * 1.5;
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border: none;
     border-radius: $radius-sm;
-    text-align: center;
-  }
-
-  &__stat-label {
-    font-size: 0.62rem;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
+    background: $bg-overlay;
     color: $text-muted;
-    font-weight: 700;
-  }
+    cursor: pointer;
 
-  &__stat-value {
-    font-size: 1.05rem;
-    font-weight: 800;
-    font-variant-numeric: tabular-nums;
-  }
-
-  &__note {
-    margin-top: -$space;
-    font-size: 0.8rem;
+    &:hover {
+      color: $text;
+    }
   }
 
   &__actions {

@@ -1,0 +1,73 @@
+@use 'variables' as *;
+
+.player-stat-block {
+  &__head {
+    display: flex;
+    align-items: center;
+    gap: $space * 1.5;
+    padding-right: $space * 4;
+  }
+
+  &__pos {
+    display: inline-grid;
+    place-items: center;
+    min-width: 44px;
+    padding: $space * 0.5 $space;
+    border-radius: $radius-sm;
+    // Position badges fill with a bright brand color (see POSITION_COLORS) —
+    // dark text reads far better on those than white.
+    color: #05231a;
+    font-weight: 800;
+    font-size: 0.9rem;
+  }
+
+  &__title {
+    min-width: 0;
+
+    h3 {
+      font-size: 1.3rem;
+      line-height: 1.2;
+    }
+
+    .muted {
+      font-size: 0.85rem;
+    }
+  }
+
+  &__stats {
+    margin-top: $space * 2;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: $space;
+  }
+
+  &__stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: $space;
+    background: $bg;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    text-align: center;
+  }
+
+  &__stat-label {
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: $text-muted;
+    font-weight: 700;
+  }
+
+  &__stat-value {
+    font-size: 1.05rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__note {
+    margin-top: $space;
+    font-size: 0.8rem;
+  }
+}
