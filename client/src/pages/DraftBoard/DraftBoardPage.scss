@@ -79,6 +79,15 @@
     transition: background 150ms ease;
     z-index: 50;
 
+    // Desktop: true 3-column centering (grid, not flex space-between) so
+    // &__center — the on-clock team + pick clock — lands dead in the middle
+    // regardless of how wide &__left/&__right are, instead of drifting off
+    // to whichever side is narrower.
+    @include lg {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+    }
+
     // Your turn: whole bar goes green with dark text for contrast.
     &--myturn {
       background: $accent;
@@ -218,6 +227,10 @@
     gap: $space;
     min-width: 0;
     flex-wrap: wrap;
+
+    @include lg {
+      justify-self: start;
+    }
   }
 
   // Home + Room: traditional buttons, pinned to the far left. Desktop-only —
@@ -295,6 +308,10 @@
     align-items: center;
     gap: $space;
     justify-content: flex-end;
+
+    @include lg {
+      justify-self: end;
+    }
   }
 
   &__icon-btn {
@@ -395,6 +412,21 @@
     }
   }
 
+  // Wraps &__status + the pick clock as one group so they can be centered
+  // together in the top bar (see &__topbar's grid, above) with a fixed gap
+  // between them, instead of the clock living off on its own at the far
+  // right.
+  &__center {
+    display: flex;
+    align-items: center;
+    gap: $space * 2;
+    min-width: 0;
+
+    @include lg {
+      justify-self: center;
+    }
+  }
+
   &__status {
     display: flex;
     flex-direction: column;
@@ -402,6 +434,13 @@
     line-height: 1.3;
     text-align: center;
     min-width: 0;
+
+    // Desktop: left-aligned against the clock next to it, rather than
+    // centered against nothing.
+    @include lg {
+      align-items: flex-start;
+      text-align: left;
+    }
   }
 
   &__onclock-team {
@@ -409,6 +448,19 @@
     align-items: center;
     gap: $space;
     font-weight: 700;
+  }
+
+  &__onclock-avatar {
+    display: inline-flex;
+    flex-shrink: 0;
+  }
+
+  // The pick clock is the single most important thing in this bar — bigger
+  // on desktop, where there's room, so it can't be missed.
+  &__center .clock {
+    @include lg {
+      font-size: 1.9rem;
+    }
   }
 
   &__yourturn {

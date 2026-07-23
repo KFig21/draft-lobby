@@ -43,6 +43,7 @@ import {
   useParams,
   useSearchParams,
 } from 'react-router-dom';
+import { Avatar } from '../../components/Avatar/Avatar';
 import { ConfirmModal } from '../../components/ConfirmModal/ConfirmModal';
 import { DraftChat } from '../../components/DraftChat/DraftChat';
 import { DraftGrid, type ReactionEntry } from '../../components/DraftGrid/DraftGrid';
@@ -71,6 +72,7 @@ import { usePlayers } from '../../hooks/usePlayers';
 import { api } from '../../lib/api';
 import { mostCommonGrade } from '../../lib/draftGrade';
 import { exportDraftCsv, exportDraftExcel } from '../../lib/exportDraft';
+import { avatarForTeam } from '../../lib/teamAvatar';
 import { supabase } from '../../supabase';
 import { useToast } from '../../toast/ToastContext';
 import type {
@@ -1388,33 +1390,41 @@ export function DraftBoardPage() {
             </div>
           )}
         </div>
-        <div className="draft__status">
-          {isComplete ? (
-            <strong className="draft__complete">
-              <EmojiEventsIcon fontSize="small" /> Draft complete
-            </strong>
-          ) : (
-            <>
-              <span className="draft__onclock-team">
-                {onClockTeam ? onClockTeam.name : 'Waiting…'}
-                {isMyTurn && !isPaused && (
-                  <span className="draft__yourturn">Your pick</span>
-                )}
-                {isPaused && <span className="draft__paused-pill">Paused</span>}
-              </span>
-              <span className="muted">
-                Round {round} · Pick {lobby.current_overall}
-              </span>
-            </>
+        <div className="draft__center">
+          <div className="draft__status">
+            {isComplete ? (
+              <strong className="draft__complete">
+                <EmojiEventsIcon fontSize="small" /> Draft complete
+              </strong>
+            ) : (
+              <>
+                <span className="draft__onclock-team">
+                  {onClockTeam && (
+                    <span className="draft__onclock-avatar">
+                      <Avatar avatar={avatarForTeam(onClockTeam, members)} size={20} />
+                    </span>
+                  )}
+                  {onClockTeam ? onClockTeam.name : 'Waiting…'}
+                  {isMyTurn && !isPaused && (
+                    <span className="draft__yourturn">Your pick</span>
+                  )}
+                  {isPaused && <span className="draft__paused-pill">Paused</span>}
+                </span>
+                <span className="muted">
+                  Round {round} · Pick {lobby.current_overall}
+                </span>
+              </>
+            )}
+          </div>
+          {!isComplete && (
+            <PickClock deadline={lobby.pick_deadline} frozenMs={lobby.pick_deadline_remaining_ms} />
           )}
         </div>
         <div className="draft__right">
-          {isComplete ? (
+          {isComplete && (
             <button className="draft__export-btn" onClick={() => setShowExport(true)}>
               <FileDownloadOutlinedIcon fontSize="small" /> Export
             </button>
-          ) : (
-            <PickClock deadline={lobby.pick_deadline} frozenMs={lobby.pick_deadline_remaining_ms} />
           )}
           {!isComplete && <RequestPauseButton compact />}
           {myTeam && !myTeam.is_bot && !isComplete && (
