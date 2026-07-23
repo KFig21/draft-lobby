@@ -178,18 +178,6 @@ $mobile-tabs-h: 60px;
     gap: $space * 0.5;
   }
 
-  &__grade-badge {
-    display: inline-grid;
-    place-items: center;
-    min-width: 30px;
-    padding: 2px 6px;
-    border-radius: $radius-sm;
-    background: $accent;
-    color: #05231a;
-    font-size: 0.78rem;
-    font-weight: 800;
-  }
-
   &__grade-author {
     font-weight: 700;
     font-size: 0.82rem;

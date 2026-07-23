@@ -48,6 +48,7 @@ import { DraftGrid, type ReactionEntry } from '../../components/DraftGrid/DraftG
 import { DraftOutroModal } from '../../components/DraftOutroModal/DraftOutroModal';
 import { DraftResultsPanel } from '../../components/DraftResultsPanel/DraftResultsPanel';
 import { ErrorScreen } from '../../components/ErrorScreen/ErrorScreen';
+import { GradeBadge } from '../../components/GradeBadge/GradeBadge';
 import { Loader } from '../../components/Loader/Loader';
 import { LockInModal } from '../../components/LockInModal/LockInModal';
 import { Modal } from '../../components/Modal/Modal';
@@ -1304,14 +1305,17 @@ export function DraftBoardPage() {
                             setResultsDrawerView((v) => (v === 'closed' ? 'open' : 'closed'))
                           }
                         >
-                          <span className="draft__results-summary-item">
-                            <EmojiEventsOutlinedIcon fontSize="small" /> {voteCount} vote
-                            {voteCount === 1 ? '' : 's'}
-                          </span>
-                          <span className="draft__results-summary-item">
-                            {avgGrade ?? '—'}{' '}
-                            <span className="muted">({teamGrades.length})</span>
-                          </span>
+                          <GradeBadge grade={avgGrade} size={44} />
+                          <div className="draft__results-summary-main">
+                            <span className="draft__results-summary-item">
+                              <EmojiEventsOutlinedIcon fontSize="small" /> {voteCount} vote
+                              {voteCount === 1 ? '' : 's'}
+                            </span>
+                            <span className="draft__results-summary-item muted">
+                              {teamGrades.length} grade
+                              {teamGrades.length === 1 ? '' : 's'}
+                            </span>
+                          </div>
                           <ChevronRightIcon
                             fontSize="small"
                             className="draft__results-summary-chevron"

@@ -6,6 +6,7 @@ import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import { useMemo } from 'react';
 import type { DraftCrownVoteRow, DraftGradeRow, MemberRow, TeamRow } from '../../lib/types';
 import { Avatar } from '../Avatar/Avatar';
+import { GradeBadge } from '../GradeBadge/GradeBadge';
 import './TeamResultsDrawer.scss';
 
 export type ResultsDrawerView = 'closed' | 'open' | 'full';
@@ -123,7 +124,7 @@ export function TeamResultsDrawer({ team, members, crownVotes, grades, view, onV
                   return (
                     <li key={g.rater_id} className="team-results-drawer__grade">
                       <div className="team-results-drawer__grade-head">
-                        <span className="team-results-drawer__grade-badge">{g.grade}</span>
+                        <GradeBadge grade={g.grade} size={28} />
                         <Avatar
                           avatar={member?.profiles?.avatar ?? defaultAvatar(g.rater_id)}
                           size={20}

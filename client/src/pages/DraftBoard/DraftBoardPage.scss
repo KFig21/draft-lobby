@@ -487,23 +487,32 @@
   }
 
   // Crown-vote + grade summary beneath the team dropdown — click to open
-  // TeamResultsDrawer for the currently-selected roster team.
+  // TeamResultsDrawer for the currently-selected roster team. Styled like a
+  // player-card row: big color-coded square, info column, trailing chevron.
   &__results-summary {
     display: flex;
     align-items: center;
-    gap: $space * 1.5;
+    gap: $space * 1.25;
     width: 100%;
-    padding: $space * 0.9 $space * 1.25;
+    padding: $space * 1.25;
     border: 1px solid $border;
     border-radius: $radius-sm;
-    background: $bg-overlay;
+    background: $bg;
     color: $text;
     cursor: pointer;
     text-align: left;
 
     &:hover {
-      background: $bg-hover;
+      background: $bg-overlay;
     }
+  }
+
+  &__results-summary-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
   }
 
   &__results-summary-item {
@@ -512,10 +521,15 @@
     gap: 4px;
     font-size: 0.85rem;
     font-weight: 700;
+
+    &.muted {
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
   }
 
   &__results-summary-chevron {
-    margin-left: auto;
+    flex-shrink: 0;
     color: $text-muted;
   }
 

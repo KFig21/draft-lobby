@@ -2,7 +2,8 @@ import { DRAFT_GRADE_COLORS, type DraftGrade } from '@draft-lobby/shared';
 import './GradeBadge.scss';
 
 interface Props {
-  grade: DraftGrade;
+  /** null renders a neutral placeholder square — no grades yet. */
+  grade: DraftGrade | null;
   size?: number;
 }
 
@@ -11,15 +12,15 @@ interface Props {
 export function GradeBadge({ grade, size = 22 }: Props) {
   return (
     <span
-      className="grade-badge"
+      className={`grade-badge${grade ? '' : ' grade-badge--empty'}`}
       style={{
         width: size,
         height: size,
-        background: DRAFT_GRADE_COLORS[grade],
+        background: grade ? DRAFT_GRADE_COLORS[grade] : undefined,
         fontSize: size * 0.5,
       }}
     >
-      {grade}
+      {grade ?? '—'}
     </span>
   );
 }
