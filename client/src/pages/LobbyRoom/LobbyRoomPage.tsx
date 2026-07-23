@@ -756,11 +756,6 @@ export function LobbyRoomPage() {
                     {/* Shown whether or not the name is being edited — the
                         whole point is to help the commissioner tell whose
                         team is whose while they're mid-rename. */}
-                    {!team.is_bot && ownerUsername(team.owner_id) && (
-                      <span className="team-list__chip team-list__chip--owner">
-                        {ownerUsername(team.owner_id)}
-                      </span>
-                    )}
                     {editing ? (
                       <form
                         className="team-list__edit"
@@ -793,8 +788,18 @@ export function LobbyRoomPage() {
                         </button>
                       </form>
                     ) : (
+                      <span className="team-list__name">{team.name}</span>
+                    )}
+                    {/* Shown whether or not the name is being edited — the
+                        whole point is to help the commissioner tell whose
+                        team is whose while they're mid-rename. */}
+                    {!team.is_bot && ownerUsername(team.owner_id) && (
+                      <span className="team-list__chip team-list__chip--owner">
+                        {ownerUsername(team.owner_id)}
+                      </span>
+                    )}
+                    {!editing && (
                       <>
-                        <span className="team-list__name">{team.name}</span>
                         {/* Status chips sit right next to the team name. */}
                         {team.owner_id === userId && (
                           <span className="team-list__you">you</span>
