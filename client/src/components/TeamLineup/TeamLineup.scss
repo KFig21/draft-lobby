@@ -44,24 +44,6 @@
     }
   }
 
-  // Bot / auto-drafting indicator — a colored pill instead of plain muted
-  // text, so it actually reads as a status rather than blending in.
-  .bot-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: $space * 0.4 $space * 0.9;
-    border-radius: 999px;
-    background: rgba($primary, 0.16);
-    color: $primary-hover;
-    font-size: 0.78rem;
-    font-weight: 700;
-
-    svg {
-      font-size: 1rem;
-    }
-  }
-
   &__composition {
     display: flex;
     flex-wrap: wrap;

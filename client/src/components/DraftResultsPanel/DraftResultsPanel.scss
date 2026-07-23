@@ -84,9 +84,11 @@
       background: $bg-hover;
       color: $text;
     }
+
     &:disabled {
       cursor: not-allowed;
     }
+
     &.is-active {
       border-color: $accent;
       background: $accent;
@@ -204,6 +206,7 @@
     &:hover {
       background: $bg-hover;
     }
+
     &.is-active {
       border-color: $accent;
       background: $accent;
@@ -247,12 +250,12 @@
     // Once you've already graded this roster, "Update grade" reads as a
     // distinct (blue, not the initial teal) action from "Submit grade".
     &--update {
-      background: $pos-wr;
-      border-color: $pos-wr;
+      background: color-mix(in srgb, black 12%, $pos-wr);
+      border-color: color-mix(in srgb, black 12%, $pos-wr);
       color: #fff;
 
       &:hover {
-        background: color-mix(in srgb, black 12%, $pos-wr);
+        background: color-mix(in srgb, white 1%, $pos-wr);
       }
     }
   }
