@@ -165,29 +165,25 @@
     vertical-align: top;
 
     // Whichever cell is on the clock — visible to every viewer, not just
-    // whoever's turn it is. Border/inset ring switch green -> yellow -> red
-    // on the same schedule as the top bar's clock; &__onclock-fill (below)
-    // washes that same color over the cell's background as the pick clock
-    // runs down. Clipped to the cell's rounded corners so the fill can't
-    // spill past them.
+    // whoever's turn it is. Border switches green -> yellow -> red on the
+    // same schedule as the top bar's clock; &__onclock-fill (below) washes
+    // that same color over the cell's background as the pick clock runs
+    // down. Clipped to the cell's rounded corners so the fill can't spill
+    // past them. Just the one border (no extra box-shadow ring) — combining
+    // both produced a visible double-ring artifact at the rounded corners.
     &--onclock {
-      // A thicker ring than the default 1px border — the color swap below
-      // needs to read clearly at a glance, not just on close inspection.
       border-width: 2px;
       border-color: $accent;
-      box-shadow: 0 0 0 2px $accent inset;
       text-align: center;
       vertical-align: middle;
       overflow: hidden;
 
       &.draft-grid__cell--warning {
         border-color: $warning;
-        box-shadow: 0 0 0 2px $warning inset;
       }
 
       &.draft-grid__cell--danger {
         border-color: $danger;
-        box-shadow: 0 0 0 2px $danger inset;
       }
 
       // Last 5 seconds — pulses on top of whatever urgency color is active.
@@ -197,18 +193,34 @@
     }
 
     // The viewer's own on-the-clock cell additionally gets a persistent
-    // (but faint) accent tint UNDER the countdown fill — regardless of
-    // urgency stage — so it reads as unmistakably "your pick" at a glance.
-    // Kept much fainter than &__onclock-fill's wash (below) on purpose: the
-    // two need enough contrast to tell apart, and for the wash's color
-    // change to actually register against this base.
+    // (but faint) tint UNDER the countdown fill, so it reads as unmistakably
+    // "your pick" at a glance. Tracks the same green/yellow/red stage as the
+    // fill (not locked to green) — mixing a frozen green base with an
+    // orange/red wash produced a muddy, off-looking blend instead of a
+    // clean color.
     &--onclock-mine {
       background: rgba($accent, 0.14);
       cursor: pointer;
 
+      &.draft-grid__cell--warning {
+        background: rgba($warning, 0.14);
+      }
+
+      &.draft-grid__cell--danger {
+        background: rgba($danger, 0.14);
+      }
+
       @media (hover: hover) {
         &:hover {
           background: rgba($accent, 0.22);
+        }
+
+        &.draft-grid__cell--warning:hover {
+          background: rgba($warning, 0.22);
+        }
+
+        &.draft-grid__cell--danger:hover {
+          background: rgba($danger, 0.22);
         }
       }
     }
