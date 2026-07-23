@@ -157,16 +157,14 @@ export function PickModal({
               <UndoIcon fontSize="small" /> Roll back to this pick
             </button>
           )}
-
-          <PlayerStatGrid player={player} />
         </div>
 
-        {/* Reactions + comments — the only part of the modal that scrolls, so a
-            pick with a long comment thread can't stretch the modal itself. */}
+        {/* Stats + reactions + comments — the only part of the modal that
+            scrolls, so a long comment thread can't stretch the modal itself. */}
         <div className="pick-modal__scroll">
-          <div className="pick-modal__section-label pick-modal__section-label--flush">
-            Reactions
-          </div>
+          <PlayerStatGrid player={player} />
+
+          <div className="pick-modal__section-label">Reactions</div>
           <div className="pick-modal__reactions">
             {REACTION_EMOJIS.map((emoji) => {
               const count = entry?.counts[emoji] ?? 0;
