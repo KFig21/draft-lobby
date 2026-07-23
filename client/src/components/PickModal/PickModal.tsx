@@ -8,6 +8,7 @@ import UndoIcon from '@mui/icons-material/Undo';
 import { useMemo, useRef, useState, type FormEvent } from 'react';
 import { api } from '../../lib/api';
 import { renderMentionText } from '../../lib/renderMentions';
+import { avatarForTeam } from '../../lib/teamAvatar';
 import { useModalClose } from '../../lib/useModalClose';
 import type { MemberRow, PickRow, PlayerRow, TeamRow } from '../../lib/types';
 import { Avatar } from '../Avatar/Avatar';
@@ -134,14 +135,17 @@ export function PickModal({
           <CloseIcon fontSize="small" />
         </button>
 
-        {/* Player data + reactions stay pinned; only the comments below scroll. */}
+        {/* Player data + pick data stay pinned; everything else scrolls. */}
         <div className="pick-modal__top">
           <PlayerHeader player={player} />
 
           <div className="pick-modal__drafted">
-            <strong>{team?.name ?? 'A team'}</strong> · Round {pick.round} · Pick{' '}
-            {pick.overall} overall
-            {pick.is_auto_pick && <span className="pick-modal__auto"> · auto</span>}
+            {team && <Avatar avatar={avatarForTeam(team, members)} size={18} />}
+            <span>
+              <strong>{team?.name ?? 'A team'}</strong> · Round {pick.round} · Pick{' '}
+              {pick.overall} overall
+              {pick.is_auto_pick && <span className="pick-modal__auto"> · auto</span>}
+            </span>
           </div>
 
           {isCommish && onRollbackTo && (
@@ -155,9 +159,14 @@ export function PickModal({
           )}
 
           <PlayerStatGrid player={player} />
+        </div>
 
-          {/* Reactions */}
-          <div className="pick-modal__section-label">Reactions</div>
+        {/* Reactions + comments — the only part of the modal that scrolls, so a
+            pick with a long comment thread can't stretch the modal itself. */}
+        <div className="pick-modal__scroll">
+          <div className="pick-modal__section-label pick-modal__section-label--flush">
+            Reactions
+          </div>
           <div className="pick-modal__reactions">
             {REACTION_EMOJIS.map((emoji) => {
               const count = entry?.counts[emoji] ?? 0;
@@ -193,15 +202,11 @@ export function PickModal({
               <LockOutlinedIcon fontSize="inherit" /> Reactions are locked for this draft
             </span>
           )}
-          {/* Stays pinned above the scrolling comment list below, instead of
-              scrolling away with it. */}
+
           <div className="pick-modal__section-label">
             Comments{comments.length > 0 ? ` (${comments.length})` : ''}
           </div>
-        </div>
 
-        {/* Comments — the one part of the modal that scrolls. */}
-        <div className="pick-modal__comments">
           {comments.length === 0 ? (
             <p className="muted pick-modal__no-comments">No comments yet.</p>
           ) : (
