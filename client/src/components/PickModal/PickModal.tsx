@@ -249,13 +249,15 @@ export function PickModal({
               <LockOutlinedIcon fontSize="inherit" /> Reactions are locked for this draft
             </span>
           )}
+          {/* Stays pinned above the scrolling comment list below, instead of
+              scrolling away with it. */}
+          <div className="pick-modal__section-label">
+            Comments{comments.length > 0 ? ` (${comments.length})` : ''}
+          </div>
         </div>
 
         {/* Comments — the one part of the modal that scrolls. */}
         <div className="pick-modal__comments">
-          <div className="pick-modal__section-label">
-            Comments{comments.length > 0 ? ` (${comments.length})` : ''}
-          </div>
           {comments.length === 0 ? (
             <p className="muted pick-modal__no-comments">No comments yet.</p>
           ) : (

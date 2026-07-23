@@ -4,6 +4,7 @@ import {
   containsSlur,
   defaultAvatar,
   type Avatar as AvatarData,
+  type DraftGrade,
   type LobbyStatus,
   type Position,
 } from '@draft-lobby/shared';
@@ -22,12 +23,14 @@ import { renderMentionText } from '../../lib/renderMentions';
 import type {
   ChatMessageRow,
   ChatReactionRow,
+  DraftGradeRow,
   MemberRow,
   PickRow,
   PlayerRow,
   TeamRow,
 } from '../../lib/types';
 import { Avatar } from '../Avatar/Avatar';
+import { GradeBadge } from '../GradeBadge/GradeBadge';
 import { MentionInput } from '../MentionInput/MentionInput';
 import { ReactorsModal, type Reactor } from '../ReactorsModal/ReactorsModal';
 import './DraftChat.scss';
@@ -40,6 +43,8 @@ interface Props {
    * reactions lock — one combined timer. */
   chatLockMs: number;
   picks: PickRow[];
+  /** Peer grades — shown as their own timeline item, post-draft only. */
+  grades?: DraftGradeRow[];
   teamsById: Map<string, TeamRow>;
   playersById: Map<string, PlayerRow>;
   members: MemberRow[];
@@ -76,7 +81,16 @@ type Item =
     }
   | { type: 'sys'; id: string; at: string; body: string }
   | { type: 'pick'; id: string; at: string; pick: PickRow }
-  | { type: 'reaction'; id: string; at: string; userId: string; emoji: string; pickId: string };
+  | { type: 'reaction'; id: string; at: string; userId: string; emoji: string; pickId: string }
+  | {
+      type: 'grade';
+      id: string;
+      at: string;
+      raterId: string;
+      teamId: string;
+      grade: DraftGrade;
+      comment: string;
+    };
 
 export function DraftChat({
   lobbyId,
@@ -84,6 +98,7 @@ export function DraftChat({
   completedAt,
   chatLockMs,
   picks,
+  grades = [],
   teamsById,
   playersById,
   members,
@@ -214,9 +229,22 @@ export function DraftChat({
         pickId: r.target_id,
       });
     }
+    // Synthetic id (no PK of its own) — stable across a re-grade, since
+    // rater+team is the natural key; re-grading just bumps its timestamp.
+    for (const g of grades) {
+      out.push({
+        type: 'grade',
+        id: `grade:${g.rater_id}:${g.team_id}`,
+        at: g.updated_at,
+        raterId: g.rater_id,
+        teamId: g.team_id,
+        grade: g.grade,
+        comment: g.comment,
+      });
+    }
     out.sort((a, b) => a.at.localeCompare(b.at));
     return out;
-  }, [messages, picks, reactions]);
+  }, [messages, picks, reactions, grades]);
 
   const [highlightId, setHighlightId] = useState<string | null>(null);
   // Set when the "who reacted" icon is clicked — shows the full reactions modal.
@@ -385,6 +413,22 @@ export function DraftChat({
                 ) : (
                   <span className="chat__reaction-text">{label}</span>
                 )}
+                <span className="chat__msg-time">{formatTime(it.at)}</span>
+              </div>
+            );
+          }
+          if (it.type === 'grade') {
+            const team = teamsById.get(it.teamId);
+            const rater = userMap.get(it.raterId);
+            return (
+              <div key={it.id} className="chat__grade">
+                <Avatar avatar={rater?.avatar ?? defaultAvatar(it.raterId)} size={20} />
+                <span className="chat__grade-text">
+                  <strong>{rater?.username ?? 'Someone'}</strong> graded{' '}
+                  <strong>{team?.name ?? 'a team'}</strong>&rsquo;s roster{' '}
+                  <GradeBadge grade={it.grade} size={16} />
+                  {it.comment ? ` — ${it.comment}` : ''}
+                </span>
                 <span className="chat__msg-time">{formatTime(it.at)}</span>
               </div>
             );

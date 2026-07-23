@@ -266,24 +266,6 @@
     }
   }
 
-  // "See who reacted" — opens the full, filterable reactions list.
-  &__rchip-viewall {
-    display: inline-grid;
-    place-items: center;
-    width: 20px;
-    height: 20px;
-    border: none;
-    border-radius: 999px;
-    background: none;
-    color: $text-muted;
-    cursor: pointer;
-
-    &:hover {
-      background: $bg-hover;
-      color: $text;
-    }
-  }
-
   &__pick {
     display: flex;
     flex-direction: column;

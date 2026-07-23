@@ -1,11 +1,10 @@
 import { POSITION_COLORS, type DraftType, type Position } from '@draft-lobby/shared';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlined';
-import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
 import { useState } from 'react';
 import { avatarForTeam } from '../../lib/teamAvatar';
 import type { ChatMessageRow, MemberRow, PickRow, PlayerRow, TeamRow } from '../../lib/types';
 import { Avatar } from '../Avatar/Avatar';
-import { ReactorsModal, type Reactor } from '../ReactorsModal/ReactorsModal';
+import type { Reactor } from '../ReactorsModal/ReactorsModal';
 import './DraftGrid.scss';
 
 export interface ReactionEntry {
@@ -68,9 +67,6 @@ export function DraftGrid({
   // Index picks by "round:teamId" for O(1) cell lookup.
   const byCell = new Map<string, PickRow>();
   for (const p of picks) byCell.set(`${p.round}:${p.team_id}`, p);
-
-  // Set when a pick's "see who reacted" icon is clicked.
-  const [reactorsModal, setReactorsModal] = useState<Record<string, Reactor[]> | null>(null);
 
   // Cross-highlight the hovered pick's round cell + team header (desktop).
   const [hover, setHover] = useState<{ round: number; teamId: string } | null>(null);
@@ -145,7 +141,6 @@ export function DraftGrid({
                         hasComment={(commentsByPick?.get(pick.id)?.length ?? 0) > 0}
                         onReact={onReactPick}
                         onClick={onPickClick}
-                        onShowAllReactions={setReactorsModal}
                         onEnter={() => setHover({ round, teamId: team.id })}
                         onLeave={() =>
                           setHover((h) =>
@@ -173,10 +168,6 @@ export function DraftGrid({
           })}
         </tbody>
       </table>
-
-      {reactorsModal && (
-        <ReactorsModal reactors={reactorsModal} onClose={() => setReactorsModal(null)} />
-      )}
     </div>
   );
 }
@@ -188,7 +179,6 @@ function PickCell({
   hasComment,
   onReact,
   onClick,
-  onShowAllReactions,
   onEnter,
   onLeave,
 }: {
@@ -198,7 +188,6 @@ function PickCell({
   hasComment: boolean;
   onReact?: (pickId: string, emoji: string) => void;
   onClick?: (pick: PickRow) => void;
-  onShowAllReactions: (reactors: Record<string, Reactor[]>) => void;
   onEnter: () => void;
   onLeave: () => void;
 }) {
@@ -250,15 +239,6 @@ function PickCell({
               {(entry?.counts[e] ?? 0) > 1 ? entry?.counts[e] : ''}
             </button>
           ))}
-          <button
-            type="button"
-            className="draft-grid__rchip-viewall"
-            aria-label="See who reacted"
-            title="See who reacted"
-            onClick={() => onShowAllReactions(entry?.reactors ?? {})}
-          >
-            <PeopleAltOutlinedIcon sx={{ fontSize: 13 }} />
-          </button>
         </div>
       )}
     </td>

@@ -21,6 +21,7 @@ import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 import GridViewOutlinedIcon from '@mui/icons-material/GridViewOutlined';
 import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
 import InsertDriveFileOutlinedIcon from '@mui/icons-material/InsertDriveFileOutlined';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import MeetingRoomOutlinedIcon from '@mui/icons-material/MeetingRoomOutlined';
 import MenuIcon from '@mui/icons-material/Menu';
 import PauseIcon from '@mui/icons-material/Pause';
@@ -1263,6 +1264,7 @@ export function DraftBoardPage() {
             completedAt={lobby.completed_at}
             chatLockMs={lobby.chat_lock_ms}
             picks={picks}
+            grades={grades}
             teamsById={teamsById}
             playersById={playersById}
             members={members}
@@ -1282,9 +1284,10 @@ export function DraftBoardPage() {
           >
             <div className="draft__results">
               {resultsLocked && (
-                <p className="muted draft__results-locked">
-                  🔒 Voting and grading closed 24h after the draft ended — showing final results.
-                </p>
+                <span className="bot-badge bot-badge--warn draft__results-locked">
+                  <LockOutlinedIcon fontSize="inherit" /> Voting and grading closed 24h after the
+                  draft ended — showing final results
+                </span>
               )}
               <DraftResultsPanel
                 teams={teams}

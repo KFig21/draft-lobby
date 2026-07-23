@@ -181,7 +181,8 @@
   }
 
   // ── Pick reaction activity line — same pill treatment as &__reply, but
-  // purple so picks (green) / replies (blue) / reactions are all distinct. ──
+  // purple so picks (green) / replies (blue) / reactions (purple) / grades
+  // (orange, see &__grade-text below) are all distinct. ──
   &__reaction {
     display: flex;
     align-items: center;
@@ -218,6 +219,35 @@
         color: $text;
       }
     }
+  }
+
+  // ── Peer-grade activity line — same treatment as &__reaction, orange. ──
+  &__grade {
+    display: flex;
+    align-items: center;
+    gap: $space * 0.75;
+
+    .avatar {
+      flex-shrink: 0;
+    }
+  }
+
+  &__grade-text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin: 2px 0 3px;
+    padding: 2px 8px;
+    border-left: 2px solid $pos-te;
+    border-radius: 3px;
+    background: rgba($pos-te, 0.1);
+    color: $text-muted;
+    font-size: 0.72rem;
   }
 
   // ── User message ──
