@@ -259,12 +259,16 @@
       // the position color set inline (see DraftGrid.tsx) fills the whole
       // cell — nothing here overrides it, hover's background-color tint
       // above included, since inline styles always win regardless.
+      //
+      // Centered via text-align/vertical-align (real table-cell properties),
+      // NOT display: flex — flexing a <td> knocks it out of the table's
+      // normal cell layout, which under table-layout: fixed made every
+      // column but the first collapse to nothing (visually confirmed: only
+      // column 1 rendered, everything else went blank).
       &.draft-grid__cell--bold {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: $space * 0.5;
         text-align: center;
+        vertical-align: middle;
+        padding: $space * 0.5;
         overflow: hidden;
       }
     }
