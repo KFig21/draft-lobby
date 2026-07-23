@@ -396,14 +396,14 @@
     font-size: 0.65rem;
     // Dark-mode default (plenty of time left) — same brand green used
     // elsewhere as text (PickClock, badges).
-    color: $accent;
+    color: #fff;
 
     .draft-grid__cell--warning & {
-      color: $warning;
+      color: #fff;
     }
 
     .draft-grid__cell--danger & {
-      color: $danger;
+      color: #fff;
     }
 
     // Light mode: black regardless of urgency stage — these brand colors
@@ -423,7 +423,7 @@
   }
 
   &__onclock-icon {
-    font-size: 1.1em;
+    font-size: 1.5em;
   }
 
   &__onclock-title {
