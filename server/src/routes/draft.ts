@@ -2,7 +2,6 @@ import { Router, type Response } from 'express';
 import {
   CHAT_LOCK_MS,
   DRAFT_RESULTS_LOCK_MS,
-  REACTION_LOCK_MS,
   ROLLBACK_LOCK_MS,
   chatReactSchema,
   containsSlur,
@@ -283,17 +282,27 @@ async function draftEndedAt(lobbyId: string): Promise<string | null> {
   return (lastPick?.picked_at as string | undefined) ?? null;
 }
 
-/** Chat locks CHAT_LOCK_MS after the draft ends. */
-async function isChatLocked(lobbyId: string): Promise<boolean> {
-  const endedAt = await draftEndedAt(lobbyId);
-  return !!endedAt && Date.now() > new Date(endedAt).getTime() + CHAT_LOCK_MS;
+/** Commissioner-configured chat/reactions lock delay for this lobby (ms
+ * after the draft ends) — falls back to CHAT_LOCK_MS for older lobbies. */
+async function chatLockMsFor(lobbyId: string): Promise<number> {
+  const { data } = await supabaseAdmin
+    .from('lobbies')
+    .select('chat_lock_ms')
+    .eq('id', lobbyId)
+    .maybeSingle();
+  return (data?.chat_lock_ms as number | null) ?? CHAT_LOCK_MS;
 }
 
-/** Emoji reactions lock REACTION_LOCK_MS (much later) after the draft ends. */
-async function isReactionsLocked(lobbyId: string): Promise<boolean> {
+/** Chat locks chatLockMsFor() after the draft ends. */
+async function isChatLocked(lobbyId: string): Promise<boolean> {
   const endedAt = await draftEndedAt(lobbyId);
-  return !!endedAt && Date.now() > new Date(endedAt).getTime() + REACTION_LOCK_MS;
+  if (!endedAt) return false;
+  const lockMs = await chatLockMsFor(lobbyId);
+  return Date.now() > new Date(endedAt).getTime() + lockMs;
 }
+
+/** Reactions share the same commissioner-configured lock delay as chat. */
+const isReactionsLocked = isChatLocked;
 
 /** The rollback feature disappears ROLLBACK_LOCK_MS after the draft ends. */
 async function isRollbackLocked(lobbyId: string): Promise<boolean> {

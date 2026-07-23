@@ -1,8 +1,6 @@
 import {
-  CHAT_LOCK_MS,
   POSITION_COLORS,
   REACTION_EMOJIS,
-  REACTION_LOCK_MS,
   containsSlur,
   defaultAvatar,
   type Avatar as AvatarData,
@@ -38,6 +36,9 @@ interface Props {
   lobbyId: string;
   status: LobbyStatus;
   completedAt: string | null;
+  /** Commissioner-configured delay (ms) after the draft ends before chat and
+   * reactions lock — one combined timer. */
+  chatLockMs: number;
   picks: PickRow[];
   teamsById: Map<string, TeamRow>;
   playersById: Map<string, PlayerRow>;
@@ -81,6 +82,7 @@ export function DraftChat({
   lobbyId,
   status,
   completedAt,
+  chatLockMs,
   picks,
   teamsById,
   playersById,
@@ -254,21 +256,17 @@ export function DraftChat({
     return m;
   }, [reactions, userId, userMap]);
 
-  // ── Lock: CHAT_LOCK_MS after the draft ends (reactions get much longer — REACTION_LOCK_MS) ──
+  // ── Lock: chatLockMs after the draft ends — chat and reactions share it ──
   const lastPickAt = picks.reduce((max, p) => (p.picked_at > max ? p.picked_at : max), '');
   const endedAt = status === 'COMPLETE' ? completedAt ?? (lastPickAt || null) : null;
-  const lockAtMs = endedAt ? new Date(endedAt).getTime() + CHAT_LOCK_MS : null;
+  const lockAtMs = endedAt ? new Date(endedAt).getTime() + chatLockMs : null;
   const locked = viewOnly || (!!lockAtMs && nowMs >= lockAtMs);
-  const reactionLockAtMs = endedAt ? new Date(endedAt).getTime() + REACTION_LOCK_MS : null;
-  const reactionsLocked = viewOnly || (!!reactionLockAtMs && nowMs >= reactionLockAtMs);
+  const reactionsLocked = locked;
   useEffect(() => {
-    const nextLockAt = [lockAtMs, reactionLockAtMs]
-      .filter((t): t is number => t != null && t > Date.now())
-      .sort((a, b) => a - b)[0];
-    if (nextLockAt == null) return;
-    const t = setTimeout(() => setNowMs(Date.now()), nextLockAt - Date.now() + 500);
+    if (lockAtMs == null || lockAtMs <= Date.now()) return;
+    const t = setTimeout(() => setNowMs(Date.now()), lockAtMs - Date.now() + 500);
     return () => clearTimeout(t);
-  }, [lockAtMs, reactionLockAtMs]);
+  }, [lockAtMs]);
 
   // Keep pinned to the newest item — but only if the reader is already at the
   // bottom, so scrolling up to read history isn't yanked back down.

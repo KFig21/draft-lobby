@@ -1,8 +1,6 @@
 import {
-  CHAT_LOCK_MS,
   DRAFT_RESULTS_LOCK_MS,
   POSITIONS,
-  REACTION_LOCK_MS,
   ROLLBACK_LOCK_MS,
   defaultAvatar,
   draftPositionForOverall,
@@ -840,10 +838,10 @@ export function DraftBoardPage() {
   // moment their window closes, not just whenever something else happens to
   // trigger a re-render — otherwise a tab left open straddles the deadline
   // showing an already-locked form as if it were still open.
-  const chatLocked = !!endedAt && clockNow >= new Date(endedAt).getTime() + CHAT_LOCK_MS;
-  // Emoji reactions stay open much longer than chat — locked 24h after the draft.
-  const reactionsLocked =
-    !!endedAt && clockNow >= new Date(endedAt).getTime() + REACTION_LOCK_MS;
+  // Commissioner-configured at lobby creation (default 24h) — chat and
+  // reactions share this one lock delay.
+  const chatLocked = !!endedAt && clockNow >= new Date(endedAt).getTime() + lobby.chat_lock_ms;
+  const reactionsLocked = chatLocked;
   // Commissioners can still fix a mistake right after the draft ends, but the
   // rollback feature disappears for good a few minutes later.
   const rollbackLocked =
@@ -1263,6 +1261,7 @@ export function DraftBoardPage() {
             lobbyId={id}
             status={lobby.status}
             completedAt={lobby.completed_at}
+            chatLockMs={lobby.chat_lock_ms}
             picks={picks}
             teamsById={teamsById}
             playersById={playersById}

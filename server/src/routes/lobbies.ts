@@ -28,7 +28,8 @@ lobbiesRouter.post('/', async (req: AuthedRequest, res: Response) => {
     res.status(400).json({ error: parsed.error.flatten() });
     return;
   }
-  const { settings, password, resultsPublic, chatPublic, publicVotingAllowed } = parsed.data;
+  const { settings, password, resultsPublic, chatPublic, publicVotingAllowed, chatLockMs } =
+    parsed.data;
   const userId = req.user!.id;
 
   const { data: lobby, error } = await supabaseAdmin
@@ -42,6 +43,7 @@ lobbiesRouter.post('/', async (req: AuthedRequest, res: Response) => {
       results_public: resultsPublic,
       chat_public: chatPublic,
       public_voting_allowed: publicVotingAllowed,
+      chat_lock_ms: chatLockMs,
     })
     .select()
     .single();

@@ -883,6 +883,7 @@ export function LobbyRoomPage() {
               lobbyId={id}
               status={lobby.status}
               completedAt={lobby.completed_at}
+              chatLockMs={lobby.chat_lock_ms}
               picks={picks}
               teamsById={teamsById}
               playersById={playersById}
@@ -934,6 +935,7 @@ export function LobbyRoomPage() {
               lobbyId={id}
               status={lobby.status}
               completedAt={lobby.completed_at}
+              chatLockMs={lobby.chat_lock_ms}
               picks={picks}
               teamsById={teamsById}
               playersById={playersById}

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { rosterSlotSchema } from './positions.js';
 import { DEFAULT_SCORING_RULES, scoringRulesSchema } from './scoring.js';
+import { CHAT_LOCK_MS, MAX_CHAT_LOCK_MS } from './social.js';
 
 export const draftTypeSchema = z.enum(['SNAKE', 'STRAIGHT']);
 export type DraftType = z.infer<typeof draftTypeSchema>;
@@ -149,6 +150,9 @@ export const createLobbySchema = z.object({
   resultsPublic: z.boolean().default(false),
   chatPublic: z.boolean().default(false),
   publicVotingAllowed: z.boolean().default(false),
+  // Delay (ms) after the draft ends before chat + reactions lock — one
+  // combined timer, commissioner-configurable from immediate up to 7 days.
+  chatLockMs: z.number().int().min(0).max(MAX_CHAT_LOCK_MS).default(CHAT_LOCK_MS),
 });
 export type CreateLobbyInput = z.infer<typeof createLobbySchema>;
 

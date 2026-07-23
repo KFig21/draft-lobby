@@ -81,11 +81,13 @@ export const chatReactSchema = z.object({
 });
 export type ChatReactInput = z.infer<typeof chatReactSchema>;
 
-/** How long after a draft ends the chat locks (matches REACTION_LOCK_MS). */
+/** Default delay (ms) after a draft ends before chat AND reactions lock —
+ * one combined timer. Commissioner-configurable per lobby (lobbies.chat_lock_ms);
+ * this is just the fallback for lobbies created before that column existed. */
 export const CHAT_LOCK_MS = 24 * 60 * 60 * 1000;
 
-/** How long after a draft ends emoji reactions (on picks and messages) lock. */
-export const REACTION_LOCK_MS = 24 * 60 * 60 * 1000;
+/** Upper bound a commissioner can configure the chat/reactions lock to. */
+export const MAX_CHAT_LOCK_MS = 7 * 24 * 60 * 60 * 1000;
 
 /** How long after a draft ends the commissioner can still roll back picks. */
 export const ROLLBACK_LOCK_MS = 5 * 60 * 1000;

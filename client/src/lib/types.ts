@@ -26,6 +26,7 @@ export interface LobbyRow {
   results_public: boolean;
   chat_public: boolean;
   public_voting_allowed: boolean;
+  chat_lock_ms: number;
 }
 
 export interface ChatMessageRow {

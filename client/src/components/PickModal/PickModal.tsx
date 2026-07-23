@@ -57,7 +57,7 @@ interface Props {
   onReactComment: (commentId: string, emoji: string) => void;
   members: MemberRow[];
   locked: boolean;
-  /** Emoji reactions lock much later than chat (REACTION_LOCK_MS post-draft). */
+  /** Reactions share the same commissioner-configured lock delay as chat. */
   reactionsLocked?: boolean;
   onClose: () => void;
   /** Commissioner-only: offers "Roll back to this pick" when provided. */

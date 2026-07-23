@@ -125,6 +125,25 @@
   }
 }
 
+// "24 [hours]" — the value + unit row under the chat/reactions-lock segmented control.
+.lobby-lock-value {
+  display: inline-flex;
+  align-items: center;
+  gap: $space;
+  font-size: 0.9rem;
+  font-weight: 600;
+
+  input {
+    width: 70px;
+    padding: $space * 0.5;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: $bg;
+    color: $text;
+    text-align: center;
+  }
+}
+
 .timer-tiers {
   display: flex;
   flex-direction: column;

@@ -41,6 +41,29 @@ const BUILT_IN_LEAGUES: SavedLeague[] = [
   baseLeague('12-team Standard', 12, 'STANDARD'),
 ];
 
+// How long after the draft ends chat + reactions lock. "Immediate" needs no
+// value; the other units each cap out well short of the next unit up.
+type LockUnit = 'immediate' | 'minutes' | 'hours' | 'days';
+const LOCK_UNITS: { key: LockUnit; label: string }[] = [
+  { key: 'immediate', label: 'Immediately' },
+  { key: 'minutes', label: 'Minutes' },
+  { key: 'hours', label: 'Hours' },
+  { key: 'days', label: 'Days' },
+];
+const LOCK_UNIT_MAX: Record<Exclude<LockUnit, 'immediate'>, number> = {
+  minutes: 60,
+  hours: 24,
+  days: 7,
+};
+const LOCK_UNIT_MS: Record<Exclude<LockUnit, 'immediate'>, number> = {
+  minutes: 60 * 1000,
+  hours: 60 * 60 * 1000,
+  days: 24 * 60 * 60 * 1000,
+};
+function lockUnitDefault(unit: LockUnit): number {
+  return unit === 'hours' ? 24 : unit === 'days' ? 1 : 30;
+}
+
 export function LobbyWizardPage() {
   const navigate = useNavigate();
   const [savedLeagues, setSavedLeagues] = useState<SavedLeague[]>([]);
@@ -52,6 +75,9 @@ export function LobbyWizardPage() {
   const [resultsPublic, setResultsPublic] = useState(false);
   const [chatPublic, setChatPublic] = useState(false);
   const [publicVotingAllowed, setPublicVotingAllowed] = useState(false);
+  // Defaults match the old fixed 24h lock.
+  const [lockUnit, setLockUnit] = useState<LockUnit>('hours');
+  const [lockValue, setLockValue] = useState(24);
   const [showLeagueModal, setShowLeagueModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -90,12 +116,14 @@ export function LobbyWizardPage() {
       rosterComposition: settings.rosterComposition.filter((r) => r.count > 0),
       pickTiers: normalizeTiers(settings.pickTiers, rounds),
     };
+    const chatLockMs = lockUnit === 'immediate' ? 0 : lockValue * LOCK_UNIT_MS[lockUnit];
     const parsed = createLobbySchema.safeParse({
       settings: finalSettings,
       password,
       resultsPublic,
       chatPublic,
       publicVotingAllowed: resultsPublic && publicVotingAllowed,
+      chatLockMs,
     });
     if (!parsed.success) {
       setError(parsed.error.issues[0]?.message ?? 'Please check your settings');
@@ -266,6 +294,46 @@ export function LobbyWizardPage() {
               <span>Make chat + reactions public once complete</span>
             </label>
             <em className="muted">Non-members can view chat and reactions, but not post.</em>
+          </div>
+          <div className="field">
+            <span>Chat & reactions lock</span>
+            <div className="segmented">
+              {LOCK_UNITS.map(({ key, label }) => (
+                <button
+                  key={key}
+                  type="button"
+                  className={`segmented__opt${lockUnit === key ? ' segmented__opt--on' : ''}`}
+                  onClick={() => {
+                    setLockUnit(key);
+                    if (key !== 'immediate') setLockValue(lockUnitDefault(key));
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {lockUnit !== 'immediate' && (
+              <label className="lobby-lock-value">
+                <input
+                  type="number"
+                  min={1}
+                  max={LOCK_UNIT_MAX[lockUnit]}
+                  value={lockValue}
+                  onChange={(e) => {
+                    const n = Math.round(Number(e.target.value));
+                    setLockValue(
+                      Number.isFinite(n) ? Math.min(LOCK_UNIT_MAX[lockUnit], Math.max(1, n)) : 1,
+                    );
+                  }}
+                />
+                <span>
+                  {lockUnit} (max {LOCK_UNIT_MAX[lockUnit]})
+                </span>
+              </label>
+            )}
+            <em className="muted">
+              How long after the draft ends before chat and reactions close for good.
+            </em>
           </div>
           {settings.visibility === 'PRIVATE' && (
             <label className="field">
