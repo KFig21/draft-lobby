@@ -770,13 +770,19 @@ export function LobbyRoomPage() {
                         {/* Own line below the input — keeps the input full-width
                             and uncramped on mobile. The owner's username only
                             needs to be visible here, while renaming, to help
-                            the commissioner tell whose team is whose. */}
+                            the commissioner tell whose team is whose; the
+                            you/Bot badges just carry over from the non-editing
+                            line so they don't blink out mid-rename. */}
                         <div className="team-list__edit-meta">
                           {!team.is_bot && ownerUsername(team.owner_id) && (
                             <span className="team-list__chip team-list__chip--owner">
                               {ownerUsername(team.owner_id)}
                             </span>
                           )}
+                          {team.owner_id === userId && (
+                            <span className="team-list__you">you</span>
+                          )}
+                          {team.is_bot && <span className="team-list__chip muted">Bot</span>}
                           <span className="team-list__spacer" />
                           <button
                             type="submit"

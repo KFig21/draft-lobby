@@ -306,11 +306,22 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: $space;
   margin-bottom: $space * 1.5;
 
   h2 {
     font-size: 1rem;
+  }
+
+  // Mobile: the action buttons rarely fit beside the heading without
+  // squeezing it into an awkward two-line wrap — give them their own
+  // full-width row below it instead, so both read as tidy left-aligned
+  // groups rather than a lopsided right-aligned stack.
+  @media (max-width: #{$bp-md - 1px}) {
+    .room__teams-actions {
+      flex-basis: 100%;
+    }
   }
 }
 
