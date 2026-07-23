@@ -158,6 +158,9 @@ export function DraftBoardPage() {
   const [rollbackConfirmText, setRollbackConfirmText] = useState('');
   const [showExport, setShowExport] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  // Only meaningful in full screen (the sidebar tabs aren't mounted there) —
+  // force-closed the moment full screen exits, since the sidebar comes back.
+  const [showFsPlayers, setShowFsPlayers] = useState(false);
   // Ticks every second so the top bar can flip yellow/red as the pick clock
   // runs low, not just the clock text itself.
   const [clockNow, setClockNow] = useState(() => Date.now());
@@ -175,7 +178,10 @@ export function DraftBoardPage() {
   const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
+    const onFsChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+      if (!document.fullscreenElement) setShowFsPlayers(false);
+    };
     document.addEventListener('fullscreenchange', onFsChange);
     return () => document.removeEventListener('fullscreenchange', onFsChange);
   }, []);
@@ -357,6 +363,7 @@ export function DraftBoardPage() {
               body: player?.name,
               tone: 'info',
               avatar: memberAvatar(row.user_id),
+              category: 'reaction',
               onClick: () => setPickModal(pick),
             });
             return;
@@ -372,6 +379,7 @@ export function DraftBoardPage() {
             body: comment.body,
             tone: 'info',
             avatar: memberAvatar(row.user_id),
+            category: 'reaction',
             onClick: pick ? () => setPickModal(pick) : undefined,
           });
         },
@@ -424,6 +432,7 @@ export function DraftBoardPage() {
             tone: 'info',
             avatar: memberAvatar(row.rater_id),
             grade: row.grade,
+            category: 'grade',
             onClick: () => {
               setRosterTeamSel(myTeam.id);
               setPanelTab('roster');
@@ -723,6 +732,7 @@ export function DraftBoardPage() {
                 body: player ? `${player.name}: “${row.body}”` : row.body,
                 tone: 'info',
                 avatar: memberAvatar(row.user_id),
+                category: 'reply',
                 onClick: () => setPickModal(repliedPick),
               });
               return;
@@ -735,6 +745,7 @@ export function DraftBoardPage() {
                 body: row.body,
                 tone: 'info',
                 avatar: memberAvatar(row.user_id),
+                category: 'mention',
                 onClick: repliedPick
                   ? () => setPickModal(repliedPick)
                   : () => {
@@ -755,6 +766,7 @@ export function DraftBoardPage() {
                 tone: 'warning',
                 action: { label: 'Pause draft', onClick: () => commishAction('pause') },
                 avatar: memberAvatar(row.user_id),
+                category: 'draft_control',
               });
             }
           } else if (row.body.startsWith('⏸️')) {
@@ -763,6 +775,7 @@ export function DraftBoardPage() {
               body: row.body.replace('⏸️ ', ''),
               tone: 'warning',
               avatar: memberAvatar(row.user_id),
+              category: 'draft_control',
             });
           } else if (row.body.startsWith('▶️')) {
             showToast({
@@ -771,12 +784,14 @@ export function DraftBoardPage() {
               tone: 'success',
               avatar: memberAvatar(row.user_id),
               durationMs: 2000,
+              category: 'draft_control',
             });
           } else if (row.body.startsWith('↩️')) {
             showToast({
               title: 'Pick rolled back',
               body: row.body.replace('↩️ ', ''),
               tone: 'info',
+              category: 'draft_control',
               avatar: memberAvatar(row.user_id),
             });
           }
@@ -1054,6 +1069,89 @@ export function DraftBoardPage() {
     );
   }
 
+  // Shared between the sidebar's Players tab and the fullscreen "Players"
+  // modal. Deliberately a plain function called as {renderPlayersPool()}
+  // rather than a nested <PlayersPool/> component — the latter would be a
+  // new component type on every render and remount the subtree, dropping
+  // focus out of the search input on every keystroke.
+  function renderPlayersPool() {
+    // Also closes the fullscreen Players modal (no-op elsewhere) — it's
+    // rendered later in the DOM than LockInModal, so left open it would
+    // paint on top and hide the pick-confirm dialog behind it.
+    function pick(p: PlayerRow) {
+      setSelected(p);
+      setShowFsPlayers(false);
+    }
+    return (
+      <>
+        {queuedPlayers.length > 0 && (
+          <div className="pool__queue">
+            <div className="pool__queue-head">Queue ({queuedPlayers.length})</div>
+            {queuedPlayers.map((p) => (
+              <PlayerCard
+                key={p.id}
+                player={p}
+                queued
+                onQueue={() => toggleQueue(p.id)}
+                onPick={canPick ? () => pick(p) : undefined}
+                disabled={!canPick}
+              />
+            ))}
+          </div>
+        )}
+        <div className="pool__filters">
+          <div className="chip-row">
+            <button
+              className={`chip ${filter === 'ALL' ? 'chip--active' : ''}`}
+              onClick={() => setFilter('ALL')}
+            >
+              ALL
+            </button>
+            {POSITIONS.map((pos) => (
+              <button
+                key={pos}
+                className={`chip ${filter === pos ? 'chip--active' : ''}`}
+                onClick={() => setFilter(pos)}
+              >
+                {pos === 'DEF' ? 'D/ST' : pos}
+                <span className="chip__dot"> · </span>
+                <span className="chip__count">{myPosCounts[pos] ?? 0}</span>
+              </button>
+            ))}
+            {(['FLEX', 'SUPERFLEX'] as const).map((f) => (
+              <button
+                key={f}
+                className={`chip ${filter === f ? 'chip--active' : ''}`}
+                onClick={() => setFilter(f)}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
+          <input
+            className="pool__search"
+            placeholder="Search players…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <div className="pool__list">
+          {available.slice(0, 200).map((p) => (
+            <PlayerCard
+              key={p.id}
+              player={p}
+              onPick={canPick ? () => pick(p) : undefined}
+              disabled={!canPick}
+              onQueue={() => toggleQueue(p.id)}
+              queued={queue.includes(p.id)}
+            />
+          ))}
+          {available.length === 0 && <p className="muted pool__empty">No players match.</p>}
+        </div>
+      </>
+    );
+  }
+
   return (
     <div className="draft" ref={rootRef}>
       <header
@@ -1122,6 +1220,16 @@ export function DraftBoardPage() {
               ) : (
                 <SmartToyOutlinedIcon fontSize="small" />
               )}
+            </button>
+          )}
+          {isFullscreen && (
+            <button
+              className="draft__fs-players-btn"
+              onClick={() => setShowFsPlayers(true)}
+              aria-label="Players"
+              title="Players"
+            >
+              <SportsFootballIcon fontSize="small" /> Players
             </button>
           )}
           <button
@@ -1203,72 +1311,7 @@ export function DraftBoardPage() {
               mobileTab === 'players' ? 'is-mobile-active' : ''
             }`}
           >
-            {queuedPlayers.length > 0 && (
-              <div className="pool__queue">
-                <div className="pool__queue-head">Queue ({queuedPlayers.length})</div>
-                {queuedPlayers.map((p) => (
-                  <PlayerCard
-                    key={p.id}
-                    player={p}
-                    queued
-                    onQueue={() => toggleQueue(p.id)}
-                    onPick={canPick ? () => setSelected(p) : undefined}
-                    disabled={!canPick}
-                  />
-                ))}
-              </div>
-            )}
-            <div className="pool__filters">
-              <div className="chip-row">
-                <button
-                  className={`chip ${filter === 'ALL' ? 'chip--active' : ''}`}
-                  onClick={() => setFilter('ALL')}
-                >
-                  ALL
-                </button>
-                {POSITIONS.map((pos) => (
-                  <button
-                    key={pos}
-                    className={`chip ${filter === pos ? 'chip--active' : ''}`}
-                    onClick={() => setFilter(pos)}
-                  >
-                    {pos === 'DEF' ? 'D/ST' : pos}
-                    <span className="chip__dot"> · </span>
-                    <span className="chip__count">{myPosCounts[pos] ?? 0}</span>
-                  </button>
-                ))}
-                {(['FLEX', 'SUPERFLEX'] as const).map((f) => (
-                  <button
-                    key={f}
-                    className={`chip ${filter === f ? 'chip--active' : ''}`}
-                    onClick={() => setFilter(f)}
-                  >
-                    {f}
-                  </button>
-                ))}
-              </div>
-              <input
-                className="pool__search"
-                placeholder="Search players…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
-            <div className="pool__list">
-              {available.slice(0, 200).map((p) => (
-                <PlayerCard
-                  key={p.id}
-                  player={p}
-                  onPick={canPick ? () => setSelected(p) : undefined}
-                  disabled={!canPick}
-                  onQueue={() => toggleQueue(p.id)}
-                  queued={queue.includes(p.id)}
-                />
-              ))}
-              {available.length === 0 && (
-                <p className="muted pool__empty">No players match.</p>
-              )}
-            </div>
+            {renderPlayersPool()}
           </div>
 
           {/* Roster */}
@@ -1639,6 +1682,12 @@ export function DraftBoardPage() {
               </span>
             </button>
           </div>
+        </Modal>
+      )}
+
+      {isFullscreen && showFsPlayers && (
+        <Modal title="Players" onClose={() => setShowFsPlayers(false)} wide>
+          <div className="draft__fs-players">{renderPlayersPool()}</div>
         </Modal>
       )}
     </div>

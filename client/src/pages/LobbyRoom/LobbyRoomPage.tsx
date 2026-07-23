@@ -137,6 +137,7 @@ export function LobbyRoomPage() {
             title: 'New team joined',
             body: `${newRow.name} joined the lobby`,
             avatar: memberAvatar(newRow.owner_id),
+            category: 'lobby',
           });
         },
       )
@@ -150,6 +151,7 @@ export function LobbyRoomPage() {
             title: 'New team joined',
             body: `${row.name} joined the lobby`,
             avatar: memberAvatar(row.owner_id),
+            category: 'lobby',
           });
         },
       )
@@ -166,6 +168,7 @@ export function LobbyRoomPage() {
               body: row.body,
               tone: 'info',
               avatar: memberAvatar(row.user_id),
+              category: 'mention',
             });
           }
         },

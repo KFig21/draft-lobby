@@ -337,6 +337,23 @@
     }
   }
 
+  // Full screen only — the sidebar (and its Players tab) isn't mounted
+  // there, so this is the only way to queue/draft while in TV mode.
+  &__fs-players-btn {
+    @extend %draft-chip-btn;
+    flex-shrink: 0;
+  }
+
+  // Fullscreen "Players" modal body — same pool__* pieces as the sidebar's
+  // Players tab, given their own bounded flex column so the player list
+  // scrolls internally while the queue/filters stay pinned above it.
+  &__fs-players {
+    display: flex;
+    flex-direction: column;
+    height: min(70vh, 640px);
+    margin: -$space * 2.5;
+  }
+
   // Auto-draft toggle: faded robot when off, filled + accent when on.
   // Desktop-only in the top bar — mobile gets it as a toggle row in the nav
   // drawer instead (more room, and frees up the cramped mobile top bar).

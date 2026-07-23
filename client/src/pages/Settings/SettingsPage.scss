@@ -85,6 +85,26 @@
     }
   }
 
+  &__toast-categories {
+    display: flex;
+    flex-direction: column;
+    gap: $space * 1.25;
+    padding: $space 0 $space * 1.5 $space * 2;
+    transition: opacity 150ms ease;
+
+    &.is-disabled {
+      opacity: 0.45;
+    }
+  }
+
+  &__toast-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $space;
+    font-size: 0.92rem;
+  }
+
   &__setup {
     display: block;
     padding: $space * 1.5 0;

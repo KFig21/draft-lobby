@@ -7,6 +7,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { isToastCategoryEnabled, type ToastCategory } from './toastPrefs';
 import { ToastViewport } from './ToastViewport';
 
 export type ToastTone = 'info' | 'success' | 'warning' | 'danger';
@@ -29,6 +30,10 @@ export interface ToastInput {
   avatar?: AvatarData | null;
   /** Shown as a colored badge in the title — for grade notifications. */
   grade?: DraftGrade | null;
+  /** Which Settings toggle silences this toast. Omit for toasts that are
+   * direct feedback on the user's own action (errors, confirmations) —
+   * those aren't "notifications" and always show. */
+  category?: ToastCategory;
   /** Makes the whole card clickable (e.g. jump to the pick that was reacted
    * to) — like clicking a notification. Dismisses the toast when clicked. */
   onClick?: () => void;
@@ -83,6 +88,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const showToast = useCallback(
     (input: ToastInput): string => {
       const id = crypto.randomUUID();
+      if (input.category && !isToastCategoryEnabled(input.category)) return id;
       const durationMs = input.durationMs ?? 6000;
       const item: ToastItem = {
         id,

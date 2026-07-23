@@ -11,8 +11,16 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
 import { ProfileEditor } from '../../components/ProfileEditor/ProfileEditor';
 import { ThemeToggle } from '../../components/ThemeToggle/ThemeToggle';
+import { ToggleSwitch } from '../../components/ToggleSwitch/ToggleSwitch';
 import { useTheme } from '../../theme/ThemeContext';
 import { supabase } from '../../supabase';
+import {
+  TOAST_CATEGORIES,
+  getToastPrefs,
+  setToastCategoryEnabled,
+  setToastsEnabled,
+  type ToastCategory,
+} from '../../toast/toastPrefs';
 import './SettingsPage.scss';
 
 interface ScoringFormatRow {
@@ -36,6 +44,16 @@ export function SettingsPage() {
   const { theme } = useTheme();
   const [formats, setFormats] = useState<ScoringFormatRow[]>([]);
   const [leagues, setLeagues] = useState<LeagueRow[]>([]);
+  const [toastPrefs, setToastPrefsState] = useState(() => getToastPrefs());
+
+  function updateToastsEnabled(enabled: boolean) {
+    setToastsEnabled(enabled);
+    setToastPrefsState((p) => ({ ...p, enabled }));
+  }
+  function updateToastCategory(category: ToastCategory, enabled: boolean) {
+    setToastCategoryEnabled(category, enabled);
+    setToastPrefsState((p) => ({ ...p, categories: { ...p.categories, [category]: enabled } }));
+  }
 
   async function refresh() {
     const [f, l] = await Promise.all([
@@ -76,6 +94,34 @@ export function SettingsPage() {
             <span className="muted">{theme === 'dark' ? 'Dark' : 'Light'}</span>
           </div>
           <ThemeToggle className="settings__icon" />
+        </div>
+      </section>
+
+      {/* Notifications */}
+      <section className="settings__section">
+        <h2>Notifications</h2>
+        <div className="settings__row">
+          <div className="settings__row-main">
+            <span className="settings__row-name">Toast pop-ups</span>
+            <span className="muted">Live alerts while you're active in a lobby</span>
+          </div>
+          <ToggleSwitch
+            label="Toggle toast pop-ups"
+            checked={toastPrefs.enabled}
+            onChange={updateToastsEnabled}
+          />
+        </div>
+        <div className={`settings__toast-categories${toastPrefs.enabled ? '' : ' is-disabled'}`}>
+          {TOAST_CATEGORIES.map((c) => (
+            <div className="settings__toast-row" key={c.key}>
+              <span>{c.label}</span>
+              <ToggleSwitch
+                label={c.label}
+                checked={toastPrefs.categories[c.key]}
+                onChange={(v) => updateToastCategory(c.key, v)}
+              />
+            </div>
+          ))}
         </div>
       </section>
 

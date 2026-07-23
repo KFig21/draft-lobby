@@ -12,6 +12,13 @@
   border-radius: $radius;
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
 
+  // "Chat/reactions are locked" badges read better as the primary teal than
+  // the orange warning color against this modal's dark surface.
+  :root[data-theme='dark'] & .bot-badge--warn {
+    background: rgba($primary, 0.18);
+    color: $primary-hover;
+  }
+
   // Player data + reactions — fixed, never scrolls.
   &__top {
     flex-shrink: 0;
