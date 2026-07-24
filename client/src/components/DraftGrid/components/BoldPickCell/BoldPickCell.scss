@@ -17,16 +17,24 @@
   // the name harder to read against it.
   @media (hover: hover) {
     &:hover {
-      transform: scale(1.02);
+      transform: scale(1.03);
       box-shadow: none;
       z-index: 4;
 
+      // border: solid transparent (not none) — .draft-grid__cell's base border
+      // is 1px solid, so dropping the border on hover shrank this box's
+      // content width by that much (border-box sizing), reflowing the name
+      // onto fewer/more lines right as you hover it. A same-width transparent
+      // border keeps the box-model footprint identical in both states; the
+      // box-shadow ring supplies the visible outline instead.
       :root[data-theme='light'] & {
-        border: solid 3px rgb(0, 0, 0);
+        border: 1px solid transparent;
+        box-shadow: 0 0 0 6px white, 0 0 0 8px black;
       }
 
       :root[data-theme='dark'] & {
-        border: solid 3px rgba(0, 0, 0, 0.209);
+        border: 1px solid transparent;
+        box-shadow: 0 0 0 6px black, 0 0 0 8px white;
       }
     }
   }

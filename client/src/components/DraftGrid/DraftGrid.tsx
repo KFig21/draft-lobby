@@ -154,7 +154,20 @@ export function DraftGrid({
                   const isMyClock = isOnClock && team.id === myTeamId;
                   if (pick && player) {
                     if (cellStyle === 'bold') {
-                      return <BoldPickCell key={team.id} pick={pick} player={player} onClick={onPickClick} />;
+                      return (
+                        <BoldPickCell
+                          key={team.id}
+                          pick={pick}
+                          player={player}
+                          onClick={onPickClick}
+                          onEnter={() => setHover({ round, teamId: team.id })}
+                          onLeave={() =>
+                            setHover((h) =>
+                              h && h.round === round && h.teamId === team.id ? null : h,
+                            )
+                          }
+                        />
+                      );
                     }
                     return (
                       <PickCell

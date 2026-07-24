@@ -21,16 +21,23 @@ export function BoldPickCell({
   pick,
   player,
   onClick,
+  onEnter,
+  onLeave,
 }: {
   pick: PickRow;
   player: PlayerRow;
   onClick?: (pick: PickRow) => void;
+  /** Cross-highlights this pick's team header + round number, same as PickCell. */
+  onEnter?: () => void;
+  onLeave?: () => void;
 }) {
   return (
     <td
       className="draft-grid__cell bold-pick-cell"
       style={{ background: POSITION_COLORS[player.position as Position] }}
       onClick={() => onClick?.(pick)}
+      onMouseEnter={onEnter}
+      onMouseLeave={onLeave}
     >
       <span className="bold-pick-cell__name">{player.name}</span>
     </td>
