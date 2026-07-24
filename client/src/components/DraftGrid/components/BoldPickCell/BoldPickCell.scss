@@ -1,7 +1,7 @@
 @use 'variables' as *;
 
-// Independent of DraftGrid.scss's &--pick rules on purpose (see the comment
-// in BoldPickCell.tsx) — nothing here shares a selector with the default
+// Independent of PickCell.scss's rules on purpose (see the comment in
+// BoldPickCell.tsx) — nothing here shares a selector with the default
 // style, so the two styles' hover treatments can never fight over which one
 // wins. .draft-grid__cell (base size/border/position) is still shared, since
 // that's just cell geometry every style needs to fit into the table.

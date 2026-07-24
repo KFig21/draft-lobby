@@ -32,7 +32,7 @@
 
   // The real cell components underneath keep their own hover lift — a nice
   // little "yep, that's really it" touch — clicks still reach the wrapping
-  // <label> regardless (neither cell passes a real onClick here).
+  // option div regardless (neither cell passes a real onClick here).
   &__table {
     border-collapse: separate;
     border-spacing: 0;

@@ -1,5 +1,5 @@
 import { POSITION_COLORS, type Position } from '@draft-lobby/shared';
-import type { PickRow, PlayerRow } from '../../lib/types';
+import type { PickRow, PlayerRow } from '../../../../lib/types';
 import './BoldPickCell.scss';
 
 /**

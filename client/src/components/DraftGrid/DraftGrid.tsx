@@ -1,23 +1,16 @@
-import { POSITION_COLORS, type DraftType, type Position } from '@draft-lobby/shared';
+import type { DraftType } from '@draft-lobby/shared';
 import TimerOutlinedIcon from '@mui/icons-material/TimerOutlined';
-import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlined';
 import TouchAppIcon from '@mui/icons-material/TouchApp';
 import { useState } from 'react';
 import type { DraftCellStyle } from '../../lib/draftCellStyle';
 import { avatarForTeam } from '../../lib/teamAvatar';
 import type { ChatMessageRow, MemberRow, PickRow, PlayerRow, TeamRow } from '../../lib/types';
 import { Avatar } from '../Avatar/Avatar';
-import { BoldPickCell } from './BoldPickCell';
-import type { Reactor } from '../ReactorsModal/ReactorsModal';
+import { BoldPickCell } from './components/BoldPickCell/BoldPickCell';
+import { PickCell, type ReactionEntry } from './components/PickCell/PickCell';
 import './DraftGrid.scss';
 
-export interface ReactionEntry {
-  counts: Record<string, number>;
-  mine: Set<string>;
-  /** Who reacted, keyed by emoji — populated for board picks (for the
-   * "see who reacted" modal); comment reactions don't need it here. */
-  reactors?: Record<string, Reactor[]>;
-}
+export type { ReactionEntry };
 
 interface Props {
   teams: TeamRow[];
@@ -235,80 +228,5 @@ export function DraftGrid({
         </tbody>
       </table>
     </div>
-  );
-}
-
-// Exported so DraftCellStylePicker (Settings > Draft board) can render a
-// real example cell instead of a hand-drawn mockup.
-export function PickCell({
-  pick,
-  player,
-  entry,
-  hasComment,
-  onReact,
-  onClick,
-  onEnter,
-  onLeave,
-}: {
-  pick: PickRow;
-  player: PlayerRow;
-  entry: ReactionEntry | undefined;
-  hasComment: boolean;
-  onReact?: (pickId: string, emoji: string) => void;
-  onClick?: (pick: PickRow) => void;
-  onEnter: () => void;
-  onLeave: () => void;
-}) {
-  const active = entry ? Object.keys(entry.counts) : [];
-
-  return (
-    <td
-      className="draft-grid__cell draft-grid__cell--pick"
-      onMouseEnter={onEnter}
-      onMouseLeave={onLeave}
-      onClick={() => onClick?.(pick)}
-    >
-      <div className="draft-grid__pick">
-        <span
-          className="draft-grid__pos"
-          style={{ color: POSITION_COLORS[player.position as Position] }}
-        >
-          {player.position}
-        </span>
-        <span className="draft-grid__player">{player.name}</span>
-        <span className="draft-grid__meta">
-          {player.nfl_team}
-          {player.bye_week ? ` · ${player.bye_week}` : ''}
-        </span>
-      </div>
-
-      {/* Subtle, uncluttered indicators for reactions / comments on this pick. */}
-      {(active.length > 0 || hasComment) && (
-        <span className="draft-grid__flags" aria-hidden>
-          {hasComment && (
-            <ChatBubbleOutlineIcon className="draft-grid__comment-flag" sx={{ fontSize: 11 }} />
-          )}
-          {active.length > 0 && <span className="draft-grid__react-flag">!!</span>}
-        </span>
-      )}
-
-      {/* On hover (desktop) the reactions unfold just below the pick. Adding a
-          reaction happens in the pick modal, so no add button here. */}
-      {active.length > 0 && (
-        <div className="draft-grid__react-pop" onClick={(e) => e.stopPropagation()}>
-          {active.map((e) => (
-            <button
-              key={e}
-              type="button"
-              className={`draft-grid__rchip${entry?.mine.has(e) ? ' is-mine' : ''}`}
-              onClick={() => onReact?.(pick.id, e)}
-            >
-              {e}
-              {(entry?.counts[e] ?? 0) > 1 ? entry?.counts[e] : ''}
-            </button>
-          ))}
-        </div>
-      )}
-    </td>
   );
 }

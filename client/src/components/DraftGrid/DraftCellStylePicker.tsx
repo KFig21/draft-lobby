@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import type { DraftCellStyle } from '../../lib/draftCellStyle';
 import type { PickRow } from '../../lib/types';
-import { BoldPickCell } from './BoldPickCell';
-import { PickCell } from './DraftGrid';
+import { BoldPickCell } from './components/BoldPickCell/BoldPickCell';
+import { PickCell } from './components/PickCell/PickCell';
 import { randomSamplePlayer } from './samplePlayers';
 import './DraftCellStylePicker.scss';
 
@@ -40,15 +40,24 @@ export function DraftCellStylePicker({
   return (
     <div className="cell-style-picker">
       {OPTIONS.map((opt) => (
-        <label
+        // A <table> isn't valid inside a <button> (button only accepts
+        // phrasing content) — role="button" on a plain div is the same
+        // pattern DraftGrid.tsx's own on-clock cell already uses for a
+        // clickable <td> that needs richer content than a button allows.
+        <div
           key={opt.value}
+          role="button"
+          tabIndex={0}
+          aria-pressed={value === opt.value}
           className={`cell-style-picker__option${value === opt.value ? ' is-selected' : ''}`}
+          onClick={() => onChange(opt.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              onChange(opt.value);
+            }
+          }}
         >
-          <input
-            type="checkbox"
-            checked={value === opt.value}
-            onChange={() => onChange(opt.value)}
-          />
           <span className="cell-style-picker__swatch">
             <table className="cell-style-picker__table">
               <tbody>
@@ -70,7 +79,7 @@ export function DraftCellStylePicker({
             </table>
           </span>
           <span className="cell-style-picker__name">{opt.label}</span>
-        </label>
+        </div>
       ))}
     </div>
   );

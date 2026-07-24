@@ -1,0 +1,153 @@
+@use 'variables' as *;
+
+// Made picks: clickable, and lift on hover (desktop). Touch has no hover.
+.draft-grid__cell--pick {
+  cursor: pointer;
+  transition:
+    transform 190ms ease,
+    box-shadow 190ms ease,
+    border-color 190ms ease;
+
+  @media (hover: hover) {
+    &:hover {
+      transform: translateY(-2px);
+      z-index: 4;
+
+      // Light mode: the original plain lift shadow.
+      :root[data-theme='light'] & {
+        border-color: $primary;
+        box-shadow: 3px 3px 0 0 $primary;
+        background-color: rgba($accent, 0.17);
+      }
+
+      // Dark mode: solid green shadow — no blur/spread, so it reads as
+      // a crisp offset shape rather than a soft glow.
+      :root[data-theme='dark'] & {
+        border-color: $accent;
+        background-color: rgba($accent, 0.12);
+        box-shadow: 3px 3px 0 0 $accent;
+      }
+    }
+  }
+}
+
+// Uncluttered "has reactions/comments" indicators (grayed), shown when not hovering.
+.draft-grid__flags {
+  position: absolute;
+  bottom: 2px;
+  right: 4px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  color: $text-muted;
+  opacity: 0.7;
+  pointer-events: none;
+
+  // On hover the reactions popover takes over, so drop the flags.
+  @media (hover: hover) {
+    .draft-grid__cell--pick:hover & {
+      display: none;
+    }
+  }
+}
+
+.draft-grid__comment-flag {
+  color: $text-muted;
+}
+
+.draft-grid__react-flag {
+  font-size: 0.6rem;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  line-height: 1;
+}
+
+// Full reactions + add affordance — unfolds just below the pick on hover.
+.draft-grid__react-pop {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  z-index: 30;
+  display: none;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 4px;
+  background: $bg-raised;
+  border: 1px solid $border;
+  border-radius: $radius-sm;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.5);
+  white-space: nowrap;
+
+  // Only reveal on real hover (desktop); touch uses the pick modal.
+  @media (hover: hover) {
+    .draft-grid__cell--pick:hover & {
+      display: flex;
+    }
+  }
+}
+
+.draft-grid__rchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  padding: 1px 5px;
+  border: none;
+  border-radius: 999px;
+  background: $bg-overlay;
+  color: $text;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.4;
+  cursor: pointer;
+
+  &:hover {
+    background: $bg-hover;
+  }
+
+  &.is-mine {
+    background: rgba($accent, 0.25);
+  }
+}
+
+.draft-grid__pick {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.draft-grid__pos {
+  font-weight: 800;
+  font-size: 0.65rem;
+}
+
+.draft-grid__player {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.draft-grid__meta {
+  color: $text-muted;
+  font-size: 0.65rem;
+}
+
+// Fullscreen ("TV mode") scaling — matches DraftGrid.scss's own --fs-scale
+// mechanism (set on .draft-grid--fill).
+.draft-grid.draft-grid--fill {
+  .draft-grid__react-flag {
+    font-size: calc(0.6rem * var(--fs-scale));
+  }
+
+  .draft-grid__rchip {
+    font-size: calc(0.72rem * var(--fs-scale));
+  }
+
+  .draft-grid__pos {
+    font-size: calc(0.65rem * var(--fs-scale));
+  }
+
+  .draft-grid__meta {
+    font-size: calc(0.65rem * var(--fs-scale));
+  }
+}
