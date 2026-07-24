@@ -3,7 +3,8 @@ import type { PlayerRow, TeamRow } from './types';
 /**
  * One parsed row of a keeper import, resolved (or not) against the lobby's
  * teams and the player pool. `error` is null once both the team and player
- * resolved; otherwise it explains what to fix.
+ * resolved; otherwise it explains what to fix. `suggestion` carries the closest
+ * near-miss player when the name almost matched (for a "did you mean" fix).
  */
 export interface ParsedKeeperRow {
   team: string;
@@ -13,6 +14,7 @@ export interface ParsedKeeperRow {
   teamId: string | null;
   playerId: string | null;
   error: string | null;
+  suggestion: { playerId: string; name: string } | null;
 }
 
 export interface KeeperImportResult {
@@ -28,7 +30,114 @@ interface RawRow {
   round: string;
 }
 
-/** Pull the four fields out of one JSON object, tolerating a few key aliases. */
+// ── Name normalization ──────────────────────────────────────────────
+// Match despite punctuation/suffix noise: "C.J. Stroud" ⇄ "CJ Stroud",
+// "Amon-Ra St. Brown" ⇄ "Amon Ra St Brown", "Chris Godwin Jr." ⇄ "Chris Godwin".
+const SUFFIXES = new Set(['jr', 'sr', 'ii', 'iii', 'iv', 'v']);
+function normalizeName(s: string): string {
+  return s
+    .toLowerCase()
+    .replace(/[.'’,]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .split(' ')
+    .filter((w) => w && !SUFFIXES.has(w))
+    .join(' ')
+    .trim();
+}
+
+// ── Defense aliases ─────────────────────────────────────────────────
+// D/ST entries are stored as "{ABBR} D/ST" (nfl_team = ABBR). Let people type a
+// nickname or city ("Chiefs", "Kansas City", "KC D/ST") and still land on it.
+const NFL_TEAMS: [string, string, string][] = [
+  ['ARI', 'arizona', 'cardinals'], ['ATL', 'atlanta', 'falcons'],
+  ['BAL', 'baltimore', 'ravens'], ['BUF', 'buffalo', 'bills'],
+  ['CAR', 'carolina', 'panthers'], ['CHI', 'chicago', 'bears'],
+  ['CIN', 'cincinnati', 'bengals'], ['CLE', 'cleveland', 'browns'],
+  ['DAL', 'dallas', 'cowboys'], ['DEN', 'denver', 'broncos'],
+  ['DET', 'detroit', 'lions'], ['GB', 'green bay', 'packers'],
+  ['HOU', 'houston', 'texans'], ['IND', 'indianapolis', 'colts'],
+  ['JAX', 'jacksonville', 'jaguars'], ['KC', 'kansas city', 'chiefs'],
+  ['LV', 'las vegas', 'raiders'], ['LAC', 'los angeles chargers', 'chargers'],
+  ['LAR', 'los angeles rams', 'rams'], ['MIA', 'miami', 'dolphins'],
+  ['MIN', 'minnesota', 'vikings'], ['NE', 'new england', 'patriots'],
+  ['NO', 'new orleans', 'saints'], ['NYG', 'new york giants', 'giants'],
+  ['NYJ', 'new york jets', 'jets'], ['PHI', 'philadelphia', 'eagles'],
+  ['PIT', 'pittsburgh', 'steelers'], ['SF', 'san francisco', '49ers'],
+  ['SEA', 'seattle', 'seahawks'], ['TB', 'tampa bay', 'buccaneers'],
+  ['TEN', 'tennessee', 'titans'], ['WAS', 'washington', 'commanders'],
+];
+const DEF_ALIAS = new Map<string, string>();
+for (const [abbr, city, nick] of NFL_TEAMS) {
+  for (const a of [abbr, city, nick, `${city} ${nick}`]) {
+    DEF_ALIAS.set(normalizeName(a), abbr.toLowerCase());
+  }
+}
+/** Strip the "D/ST"/"defense" noise before looking a team name up. */
+function defenseAbbr(raw: string): string | null {
+  const stripped = normalizeName(raw.replace(/d\s*\/?\s*st|defense|\bdef\b|\bdst\b/gi, ' '));
+  return DEF_ALIAS.get(stripped) ?? DEF_ALIAS.get(normalizeName(raw)) ?? null;
+}
+
+// ── Levenshtein (for "did you mean") ────────────────────────────────
+function editDistance(a: string, b: string): number {
+  const m = a.length;
+  const n = b.length;
+  let prev = Array.from({ length: n + 1 }, (_, j) => j);
+  for (let i = 1; i <= m; i++) {
+    const curr = [i];
+    for (let j = 1; j <= n; j++) {
+      curr[j] = Math.min(
+        prev[j] + 1,
+        curr[j - 1] + 1,
+        prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1),
+      );
+    }
+    prev = curr;
+  }
+  return prev[n];
+}
+
+interface Indices {
+  byNamePos: Map<string, string>;
+  byName: Map<string, string>;
+  nameCounts: Map<string, number>;
+  defByAbbr: Map<string, string>;
+  norms: { norm: string; id: string; name: string }[];
+}
+
+function buildIndices(players: PlayerRow[]): Indices {
+  const byNamePos = new Map<string, string>();
+  const byName = new Map<string, string>();
+  const nameCounts = new Map<string, number>();
+  const defByAbbr = new Map<string, string>();
+  const norms: { norm: string; id: string; name: string }[] = [];
+  for (const p of players) {
+    const norm = normalizeName(p.name);
+    byNamePos.set(`${norm}|${p.position.toUpperCase()}`, p.id);
+    byName.set(norm, p.id);
+    nameCounts.set(norm, (nameCounts.get(norm) ?? 0) + 1);
+    norms.push({ norm, id: p.id, name: p.name });
+    if (p.position === 'DEF') defByAbbr.set(p.nfl_team.toLowerCase(), p.id);
+  }
+  return { byNamePos, byName, nameCounts, defByAbbr, norms };
+}
+
+/** Closest player by edit distance on the normalized name, within a tight
+ * threshold — enough to catch a typo ("Orondre" → "Oronde"), not to guess. */
+function suggest(norm: string, idx: Indices): { playerId: string; name: string } | null {
+  if (norm.length < 4) return null;
+  const limit = Math.min(3, Math.floor(norm.length * 0.34));
+  let best: { d: number; id: string; name: string } | null = null;
+  for (const c of idx.norms) {
+    if (Math.abs(c.norm.length - norm.length) > limit) continue;
+    const d = editDistance(norm, c.norm);
+    if (d <= limit && (!best || d < best.d)) best = { d, id: c.id, name: c.name };
+    if (best?.d === 1) break;
+  }
+  return best ? { playerId: best.id, name: best.name } : null;
+}
+
+// ── Parsing ─────────────────────────────────────────────────────────
 function rawFromJson(o: Record<string, unknown>): RawRow {
   const pick = (...keys: string[]): string => {
     for (const k of keys) {
@@ -45,8 +154,6 @@ function rawFromJson(o: Record<string, unknown>): RawRow {
   };
 }
 
-/** Split one CSV line on commas, trimming quotes/whitespace. Player names in
- * this pool never contain commas, so a full CSV parser isn't needed. */
 function splitCsvLine(line: string): string[] {
   return line.split(',').map((c) => c.trim().replace(/^"|"$/g, ''));
 }
@@ -60,7 +167,6 @@ function parseRaw(text: string): { raws: RawRow[]; parseError: string | null } {
   const trimmed = text.trim();
   if (!trimmed) return { raws: [], parseError: null };
 
-  // JSON array of row objects.
   if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
     try {
       const data = JSON.parse(trimmed);
@@ -76,12 +182,11 @@ function parseRaw(text: string): { raws: RawRow[]; parseError: string | null } {
     }
   }
 
-  // CSV: team, player, position, round.
   const lines = trimmed.split(/\r?\n/).filter((l) => l.trim());
   const raws: RawRow[] = [];
   lines.forEach((line, i) => {
     const cols = splitCsvLine(line);
-    if (i === 0 && looksLikeHeader(cols)) return; // skip a header row
+    if (i === 0 && looksLikeHeader(cols)) return;
     if (cols.every((c) => !c)) return;
     raws.push({
       team: cols[0] ?? '',
@@ -96,8 +201,8 @@ function parseRaw(text: string): { raws: RawRow[]; parseError: string | null } {
 /**
  * Parse pasted keeper data (CSV or JSON) and resolve each row against the
  * lobby. Columns/keys: team, player, position, round. Round is optional and
- * falls back to `defaultRound`. Team matches by name (case-insensitive) or by
- * draft-position number; player matches by name (+ position when given).
+ * falls back to `defaultRound`. Team matches by name or draft position; player
+ * matches by normalized name (+ position), with D/ST and near-miss handling.
  */
 export function parseKeeperImport(
   text: string,
@@ -110,38 +215,43 @@ export function parseKeeperImport(
 
   const teamByName = new Map(teams.map((t) => [t.name.trim().toLowerCase(), t.id]));
   const teamByPos = new Map(teams.map((t) => [String(t.draft_position), t.id]));
-
-  const playerByNamePos = new Map<string, string>();
-  const nameCounts = new Map<string, number>();
-  for (const p of players) {
-    const name = p.name.trim().toLowerCase();
-    playerByNamePos.set(`${name}|${p.position.toUpperCase()}`, p.id);
-    playerByNamePos.set(name, p.id); // name-only fallback (last wins)
-    nameCounts.set(name, (nameCounts.get(name) ?? 0) + 1);
-  }
+  const idx = buildIndices(players);
 
   const rows = raws.map((r): ParsedKeeperRow => {
     const teamKey = r.team.trim().toLowerCase();
     const teamId = teamByName.get(teamKey) ?? teamByPos.get(r.team.trim()) ?? null;
 
-    const name = r.player.trim().toLowerCase();
+    const rawName = r.player.trim();
+    const norm = normalizeName(rawName);
     const pos = r.position.trim().toUpperCase();
     let playerId: string | null = null;
-    if (name) {
-      if (pos) playerId = playerByNamePos.get(`${name}|${pos}`) ?? null;
-      if (!playerId && (nameCounts.get(name) ?? 0) <= 1) playerId = playerByNamePos.get(name) ?? null;
+    let suggestion: { playerId: string; name: string } | null = null;
+
+    if (rawName) {
+      // Defenses first when the row is clearly a D/ST (by position or name).
+      if (pos === 'DEF' || pos === 'DST' || pos === 'D/ST' || defenseAbbr(rawName)) {
+        const abbr = defenseAbbr(rawName);
+        if (abbr) playerId = idx.defByAbbr.get(abbr) ?? null;
+      }
+      if (!playerId && pos) playerId = idx.byNamePos.get(`${norm}|${pos}`) ?? null;
+      if (!playerId && (idx.nameCounts.get(norm) ?? 0) <= 1) {
+        playerId = idx.byName.get(norm) ?? null;
+      }
+      if (!playerId) suggestion = suggest(norm, idx);
     }
 
     const roundNum = r.round.trim() ? Number(r.round) : defaultRound;
     const round = Number.isInteger(roundNum) && roundNum >= 1 ? roundNum : defaultRound;
 
     let error: string | null = null;
-    if (!r.player.trim()) error = 'Missing player name';
-    else if (!playerId) error = `Player "${r.player}" not found`;
-    else if (!r.team.trim()) error = 'Missing team';
+    if (!rawName) error = 'Missing player name';
+    else if (!playerId) {
+      error = `Player "${r.player}" not found`;
+      if (suggestion) error += ` — did you mean ${suggestion.name}?`;
+    } else if (!r.team.trim()) error = 'Missing team';
     else if (!teamId) error = `Team "${r.team}" not found`;
 
-    return { team: r.team, player: r.player, position: r.position, round, teamId, playerId, error };
+    return { team: r.team, player: r.player, position: r.position, round, teamId, playerId, error, suggestion };
   });
 
   return { rows, parseError: null };
