@@ -24,6 +24,7 @@ import {
   setAutoDraftSchema,
   setDraftOrderSchema,
   setKeeperCountSchema,
+  updateKeeperOptionSchema,
   type LobbySettings,
 } from '@draft-lobby/shared';
 import { requireAuth, type AuthedRequest } from '../middleware/auth.js';
@@ -889,6 +890,103 @@ draftRouter.post(
       .eq('player_id', option.player_id)
       .eq('is_keeper', true);
     await supabaseAdmin.from('keeper_options').update({ selected: false }).eq('id', option.id);
+    res.json({ ok: true });
+  },
+);
+
+/**
+ * PATCH /api/lobbies/:id/keeper-options/:optionId — commissioner edits a
+ * candidate's compensation round. If it's already kept, its board pick moves to
+ * the new round's slot (rejecting the change if that slot is already taken).
+ */
+draftRouter.patch(
+  '/:id/keeper-options/:optionId',
+  async (req: AuthedRequest, res: Response) => {
+    const lobbyId = req.params.id;
+    const role = await getRole(lobbyId, req.user!.id);
+    if (!isCommish(role)) {
+      res.status(403).json({ error: 'Only the commissioner can edit keeper options' });
+      return;
+    }
+    const parsed = updateKeeperOptionSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.flatten() });
+      return;
+    }
+    const { round } = parsed.data;
+
+    const { data: lobby } = await supabaseAdmin
+      .from('lobbies')
+      .select('status, settings')
+      .eq('id', lobbyId)
+      .maybeSingle();
+    if (!lobby) {
+      res.status(404).json({ error: 'Lobby not found' });
+      return;
+    }
+    if (lobby.status === 'DRAFTING' || lobby.status === 'PAUSED' || lobby.status === 'COMPLETE') {
+      res.status(409).json({ error: 'Keepers can only be changed before the draft starts' });
+      return;
+    }
+    const settings = lobby.settings as LobbySettings;
+    if (round > roundsForSettings(settings)) {
+      res.status(400).json({ error: `This draft only has ${roundsForSettings(settings)} rounds` });
+      return;
+    }
+
+    const { data: option } = await supabaseAdmin
+      .from('keeper_options')
+      .select('id, team_id, player_id, selected')
+      .eq('id', req.params.optionId)
+      .eq('lobby_id', lobbyId)
+      .maybeSingle();
+    if (!option) {
+      res.status(404).json({ error: 'Keeper option not found' });
+      return;
+    }
+
+    // A kept candidate has a board pick — move it to the new round's slot.
+    if (option.selected) {
+      const { data: team } = await supabaseAdmin
+        .from('teams')
+        .select('draft_position, name')
+        .eq('id', option.team_id)
+        .maybeSingle();
+      if (team) {
+        const overall = overallForDraftPosition(
+          round,
+          team.draft_position as number,
+          settings.teamCount,
+          settings.draftType,
+        );
+        const { data: clash } = await supabaseAdmin
+          .from('picks')
+          .select('id, player_id')
+          .eq('lobby_id', lobbyId)
+          .eq('overall', overall)
+          .maybeSingle();
+        if (clash && clash.player_id !== option.player_id) {
+          res.status(409).json({ error: `${team.name} already has a keeper in round ${round}` });
+          return;
+        }
+        await supabaseAdmin
+          .from('picks')
+          .delete()
+          .eq('lobby_id', lobbyId)
+          .eq('player_id', option.player_id)
+          .eq('is_keeper', true);
+        await supabaseAdmin.from('picks').insert({
+          lobby_id: lobbyId,
+          overall,
+          round,
+          team_id: option.team_id,
+          player_id: option.player_id,
+          is_keeper: true,
+        });
+      }
+    }
+
+    await supabaseAdmin.from('keeper_options').update({ round }).eq('id', option.id);
     res.json({ ok: true });
   },
 );

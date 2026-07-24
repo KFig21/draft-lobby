@@ -1,5 +1,6 @@
 import CloseIcon from '@mui/icons-material/Close';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlineOutlined';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { useMemo, useState } from 'react';
 import { api } from '../../lib/api';
 import { KEEPER_IMPORT_EXAMPLE, parseKeeperImport } from '../../lib/keeperImport';
@@ -61,6 +62,12 @@ export function KeeperManagerModal({
   const [importBusy, setImportBusy] = useState(false);
   const [importResult, setImportResult] = useState<{ added: number; skipped: number } | null>(null);
 
+  // Offer-pool accordion: one team open at a time, with an inline add form.
+  const [expandedTeam, setExpandedTeam] = useState<string | null>(null);
+  const [addSearch, setAddSearch] = useState('');
+  const [addPlayerId, setAddPlayerId] = useState('');
+  const [addRound, setAddRound] = useState(1);
+
   const selectedPlayer = playerId ? playersById.get(playerId) : undefined;
 
   const parsed = useMemo(
@@ -89,6 +96,22 @@ export function KeeperManagerModal({
       .filter((p) => !draftedIds.has(p.id) && p.name.toLowerCase().includes(q))
       .slice(0, 30);
   }, [players, draftedIds, search]);
+
+  const addMatches = useMemo(() => {
+    const q = addSearch.trim().toLowerCase();
+    if (!q) return [];
+    return players
+      .filter((p) => !draftedIds.has(p.id) && p.name.toLowerCase().includes(q))
+      .slice(0, 20);
+  }, [players, draftedIds, addSearch]);
+  const addPlayer = addPlayerId ? playersById.get(addPlayerId) : undefined;
+
+  function toggleTeam(teamId: string) {
+    setExpandedTeam((cur) => (cur === teamId ? null : teamId));
+    setAddSearch('');
+    setAddPlayerId('');
+    setAddRound(1);
+  }
 
   const teamName = (id: string) => teams.find((t) => t.id === id)?.name ?? 'Team';
 
@@ -211,6 +234,36 @@ export function KeeperManagerModal({
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not set keeper count');
+    }
+  }
+
+  async function updateOptionRound(optionId: string, round: number) {
+    setError(null);
+    try {
+      await api(`/lobbies/${lobbyId}/keeper-options/${optionId}`, {
+        method: 'PATCH',
+        body: { round },
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not change the round');
+    }
+  }
+
+  async function addOption(teamId: string) {
+    if (!addPlayerId) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await api(`/lobbies/${lobbyId}/keeper-options/bulk`, {
+        method: 'POST',
+        body: { options: [{ teamId, playerId: addPlayerId, round: addRound }] },
+      });
+      setAddSearch('');
+      setAddPlayerId('');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not add candidate');
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -403,69 +456,152 @@ export function KeeperManagerModal({
               </p>
             )}
 
-            {mode === 'offer' && keeperOptions.length > 0 && (
+            {mode === 'offer' && (
               <div className="keeper-modal__pool">
-                {orderedTeams
-                  .filter((t) => optionsByTeam.has(t.id))
-                  .map((t) => {
-                    const opts = optionsByTeam.get(t.id) ?? [];
-                    const chosen = opts.filter((o) => o.selected).length;
-                    return (
-                      <div key={t.id} className="keeper-modal__pool-team">
-                        <div className="keeper-modal__pool-head">
-                          <span className="keeper-modal__pool-name">{t.name}</span>
-                          <span className="keeper-modal__count">
-                            keeps
-                            <button
-                              type="button"
-                              onClick={() => setCount(t.id, t.keeper_count - 1)}
-                              disabled={t.keeper_count <= 0}
-                              aria-label="Fewer keepers"
-                            >
-                              −
-                            </button>
-                            <span className="keeper-modal__count-val">{t.keeper_count}</span>
-                            <button
-                              type="button"
-                              onClick={() => setCount(t.id, t.keeper_count + 1)}
-                              aria-label="More keepers"
-                            >
-                              +
-                            </button>
-                          </span>
-                        </div>
-                        {opts.map((o) => {
-                          const player = playersById.get(o.player_id);
-                          return (
-                            <div key={o.id} className="keeper-modal__row">
-                              <span className="keeper-modal__row-round">R{o.round}</span>
-                              <span className="keeper-modal__row-player">
-                                {player ? (
-                                  <>
-                                    <strong>{player.position}</strong> {player.name}
-                                  </>
-                                ) : (
-                                  'Player'
-                                )}
-                                {o.selected && <span className="keeper-modal__kept">kept</span>}
-                              </span>
-                              <button
-                                className="keeper-modal__remove"
-                                onClick={() => removeOption(o.id)}
-                                disabled={removingId === o.id}
-                                aria-label="Remove candidate"
-                              >
-                                <DeleteOutlineIcon fontSize="small" />
-                              </button>
-                            </div>
-                          );
-                        })}
-                        <span className="keeper-modal__pool-status">
-                          {chosen}/{t.keeper_count} chosen
+                {orderedTeams.map((t) => {
+                  const opts = optionsByTeam.get(t.id) ?? [];
+                  const chosen = opts.filter((o) => o.selected).length;
+                  const open = expandedTeam === t.id;
+                  return (
+                    <div key={t.id} className={`keeper-modal__acc${open ? ' is-open' : ''}`}>
+                      <button
+                        type="button"
+                        className="keeper-modal__acc-head"
+                        onClick={() => toggleTeam(t.id)}
+                      >
+                        <ExpandMoreIcon className="keeper-modal__acc-chev" fontSize="small" />
+                        <span className="keeper-modal__acc-name">
+                          {t.draft_position}. {t.name}
                         </span>
-                      </div>
-                    );
-                  })}
+                        <span className="keeper-modal__acc-meta">
+                          {opts.length > 0 ? `${chosen}/${t.keeper_count} · ${opts.length} offered` : 'empty'}
+                        </span>
+                      </button>
+
+                      {open && (
+                        <div className="keeper-modal__acc-body">
+                          <div className="keeper-modal__pool-head">
+                            <span className="keeper-modal__count">
+                              keeps
+                              <button
+                                type="button"
+                                onClick={() => setCount(t.id, t.keeper_count - 1)}
+                                disabled={t.keeper_count <= 0}
+                                aria-label="Fewer keepers"
+                              >
+                                −
+                              </button>
+                              <span className="keeper-modal__count-val">{t.keeper_count}</span>
+                              <button
+                                type="button"
+                                onClick={() => setCount(t.id, t.keeper_count + 1)}
+                                aria-label="More keepers"
+                              >
+                                +
+                              </button>
+                            </span>
+                          </div>
+
+                          {opts.map((o) => {
+                            const player = playersById.get(o.player_id);
+                            return (
+                              <div key={o.id} className="keeper-modal__row">
+                                <select
+                                  className="keeper-modal__round-sel"
+                                  value={o.round}
+                                  onChange={(e) => updateOptionRound(o.id, Number(e.target.value))}
+                                  aria-label="Compensation round"
+                                >
+                                  {Array.from({ length: rounds }, (_, i) => i + 1).map((r) => (
+                                    <option key={r} value={r}>
+                                      R{r}
+                                    </option>
+                                  ))}
+                                </select>
+                                <span className="keeper-modal__row-player">
+                                  {player ? (
+                                    <>
+                                      <strong>{player.position}</strong> {player.name}
+                                    </>
+                                  ) : (
+                                    'Player'
+                                  )}
+                                  {o.selected && <span className="keeper-modal__kept">kept</span>}
+                                </span>
+                                <button
+                                  className="keeper-modal__remove"
+                                  onClick={() => removeOption(o.id)}
+                                  disabled={removingId === o.id}
+                                  aria-label="Remove candidate"
+                                >
+                                  <DeleteOutlineIcon fontSize="small" />
+                                </button>
+                              </div>
+                            );
+                          })}
+
+                          {/* Manual add */}
+                          <div className="keeper-modal__add-row">
+                            <select
+                              className="keeper-modal__round-sel"
+                              value={addRound}
+                              onChange={(e) => setAddRound(Number(e.target.value))}
+                              aria-label="Round"
+                            >
+                              {Array.from({ length: rounds }, (_, i) => i + 1).map((r) => (
+                                <option key={r} value={r}>
+                                  R{r}
+                                </option>
+                              ))}
+                            </select>
+                            {addPlayer ? (
+                              <span className="keeper-modal__add-chosen">
+                                <strong>{addPlayer.position}</strong> {addPlayer.name}
+                                <button type="button" onClick={() => setAddPlayerId('')}>
+                                  ×
+                                </button>
+                              </span>
+                            ) : (
+                              <input
+                                type="text"
+                                className="keeper-modal__add-input"
+                                placeholder="Add a player…"
+                                value={addSearch}
+                                onChange={(e) => setAddSearch(e.target.value)}
+                              />
+                            )}
+                            <button
+                              className="keeper-modal__add-btn"
+                              onClick={() => addOption(t.id)}
+                              disabled={busy || !addPlayerId}
+                            >
+                              Add
+                            </button>
+                          </div>
+                          {!addPlayer && addMatches.length > 0 && (
+                            <ul className="keeper-modal__results keeper-modal__results--inline">
+                              {addMatches.map((p) => (
+                                <li key={p.id}>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setAddPlayerId(p.id);
+                                      setAddSearch('');
+                                    }}
+                                  >
+                                    <span className="keeper-modal__result-pos">{p.position}</span>
+                                    {p.name}
+                                    <span className="keeper-modal__result-team">{p.nfl_team}</span>
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

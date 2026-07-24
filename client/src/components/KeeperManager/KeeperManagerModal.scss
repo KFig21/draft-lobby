@@ -206,32 +206,164 @@
     opacity: 0.7;
   }
 
-  // ── Offered pool (owner-choice) ──
+  // ── Offered pool (owner-choice) — accordion of all teams ──
   &__pool {
     display: flex;
     flex-direction: column;
-    gap: $space * 1.5;
+    gap: $space * 0.5;
     margin-top: $space;
   }
 
-  &__pool-team {
+  &__acc {
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    overflow: hidden;
+
+    &.is-open {
+      border-color: rgba($keeper, 0.5);
+    }
+  }
+
+  &__acc-head {
+    display: flex;
+    align-items: center;
+    gap: $space * 0.75;
+    width: 100%;
+    padding: $space * 0.75 $space;
+    border: none;
+    background: $bg;
+    color: $text;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover {
+      background: $bg-overlay;
+    }
+  }
+
+  &__acc-chev {
+    flex-shrink: 0;
+    color: $text-muted;
+    transition: transform 150ms ease;
+
+    .is-open & {
+      transform: rotate(180deg);
+    }
+  }
+
+  &__acc-name {
+    flex: 1;
+    font-weight: 700;
+    font-size: 0.9rem;
+  }
+
+  &__acc-meta {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: $text-muted;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__acc-body {
     display: flex;
     flex-direction: column;
     gap: $space * 0.5;
-    padding-top: $space;
+    padding: $space;
     border-top: 1px solid $border;
+    background: $bg-raised;
   }
 
   &__pool-head {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: $space;
+    justify-content: flex-end;
   }
 
-  &__pool-name {
+  // Editable round selector on a candidate row.
+  &__round-sel {
+    flex-shrink: 0;
+    padding: 2px 4px;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: $bg;
+    color: $keeper;
+    font: inherit;
+    font-size: 0.75rem;
+    font-weight: 800;
+  }
+
+  // Manual add-a-player row inside an open team.
+  &__add-row {
+    display: flex;
+    align-items: center;
+    gap: $space * 0.5;
+    margin-top: $space * 0.5;
+    padding-top: $space * 0.75;
+    border-top: 1px dashed $border;
+  }
+
+  &__add-input {
+    flex: 1;
+    min-width: 0;
+    padding: $space * 0.5 $space * 0.75;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: $bg;
+    color: $text;
+    font: inherit;
+    font-size: 0.85rem;
+  }
+
+  &__add-chosen {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: $space * 0.4 $space * 0.6;
+    border: 1px solid $keeper;
+    border-radius: $radius-sm;
+    background: rgba($keeper, 0.12);
+    font-size: 0.85rem;
+
+    strong {
+      color: $text-muted;
+      font-size: 0.78rem;
+    }
+
+    button {
+      margin-left: auto;
+      border: none;
+      background: none;
+      color: $text-muted;
+      font-size: 1rem;
+      line-height: 1;
+      cursor: pointer;
+    }
+  }
+
+  &__add-btn {
+    flex-shrink: 0;
+    padding: $space * 0.5 $space;
+    border: 1px solid $primary;
+    border-radius: $radius-sm;
+    background: rgba($primary, 0.15);
+    color: $primary;
+    font: inherit;
+    font-size: 0.82rem;
     font-weight: 700;
-    font-size: 0.95rem;
+    cursor: pointer;
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+
+  &__results--inline {
+    position: static;
+    box-shadow: none;
+    margin-top: 0;
   }
 
   &__count {
