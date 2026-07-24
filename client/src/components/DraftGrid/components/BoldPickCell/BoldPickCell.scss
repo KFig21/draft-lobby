@@ -19,8 +19,15 @@
     &:hover {
       transform: scale(1.02);
       box-shadow: none;
-      border: solid 3px rgba(0, 0, 0, 0.209);
       z-index: 4;
+
+      :root[data-theme='light'] & {
+        border: solid 3px rgb(0, 0, 0);
+      }
+
+      :root[data-theme='dark'] & {
+        border: solid 3px rgba(0, 0, 0, 0.209);
+      }
     }
   }
 
