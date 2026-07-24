@@ -907,6 +907,10 @@ export function DraftBoardPage() {
   const totalRounds = roundsForSettings(lobby.settings);
   const isComplete = lobby.status === 'COMPLETE';
   const isPaused = lobby.status === 'PAUSED';
+  // STAGING: the room is open but the draft hasn't started — no clock, no
+  // picking, no on-clock highlight. People take seats and (once keepers ship)
+  // lock keepers; the commissioner starts from the red Start button below.
+  const isStaging = lobby.status === 'STAGING';
   const endedAt = isComplete ? lobby.completed_at ?? null : null;
   // clockNow (ticks every second — see above), not Date.now(): these gate
   // interactive UI (chat box, grading form, etc.), so they need to flip the
@@ -924,9 +928,18 @@ export function DraftBoardPage() {
   // Crown vote + peer grading stay open 24h after the draft, same as reactions.
   const resultsLocked =
     !!endedAt && clockNow >= new Date(endedAt).getTime() + DRAFT_RESULTS_LOCK_MS;
-  const isMyTurn = !!onClockTeam && onClockTeam.owner_id === userId;
-  const canPick = !isComplete && !isPaused && (isMyTurn || isCommish);
+  const isMyTurn = !isStaging && !!onClockTeam && onClockTeam.owner_id === userId;
+  const canPick = !isStaging && !isComplete && !isPaused && (isMyTurn || isCommish);
   const pickingForTeam = !isMyTurn && onClockTeam ? onClockTeam.name : null;
+  // Staging counters for the commissioner: humans seated, and keepers locked.
+  // keepersExpected reads 0 until the keeper feature lands (teams.keeper_count),
+  // so the keeper counter stays hidden for now.
+  const humansSeated = teams.filter((t) => t.owner_id && !t.is_bot).length;
+  const keepersSelected = picks.filter((p) => p.is_keeper).length;
+  const keepersExpected = teams.reduce(
+    (n, t) => n + ((t as { keeper_count?: number }).keeper_count ?? 0),
+    0,
+  );
   const myTeamId = teams.find((t) => t.owner_id === userId)?.id ?? teams[0]?.id ?? null;
   const myTeam = teams.find((t) => t.owner_id === userId) ?? null;
   // A signed-in visitor with no membership row — only possible at all once
@@ -981,6 +994,20 @@ export function DraftBoardPage() {
       setCommishError(err instanceof Error ? err.message : 'Action failed');
     } finally {
       setPauseBusy(false);
+    }
+  }
+
+  // Commissioner starts the draft from staging (STAGING → DRAFTING). Realtime
+  // flips everyone's board out of the staging layout — no navigation needed.
+  async function startDraft() {
+    setCommishError(null);
+    setCommishBusy(true);
+    try {
+      await api(`/lobbies/${id}/start`, { method: 'POST' });
+    } catch (err) {
+      setCommishError(err instanceof Error ? err.message : 'Failed to start the draft');
+    } finally {
+      setCommishBusy(false);
     }
   }
 
@@ -1117,6 +1144,21 @@ export function DraftBoardPage() {
         </>
       );
     }
+    // Staging: the only commissioner action is starting the draft.
+    if (isStaging) {
+      return (
+        <>
+          <button
+            className="draft__tool-btn draft__start-btn"
+            onClick={startDraft}
+            disabled={commishBusy}
+          >
+            <PlayArrowIcon fontSize="small" /> Start draft
+          </button>
+          {commishError && <span className="draft__commish-error">{commishError}</span>}
+        </>
+      );
+    }
     return (
       <>
         {isPaused ? (
@@ -1164,7 +1206,7 @@ export function DraftBoardPage() {
   // Member-only "Request pause". `compact` renders an icon-only button for
   // the mobile top bar; the full text version stays in the desktop top bar.
   function RequestPauseButton({ compact }: { compact?: boolean }) {
-    if (isCommish || isComplete || isPaused) return null;
+    if (isCommish || isComplete || isPaused || isStaging) return null;
     return (
       <button
         className={compact ? 'draft__icon-btn draft__reqpause-btn' : 'draft__tool-btn'}
@@ -1471,6 +1513,20 @@ export function DraftBoardPage() {
               <strong className="draft__complete">
                 <EmojiEventsIcon fontSize="small" /> Draft complete
               </strong>
+            ) : isStaging ? (
+              <span className="draft__staging-status">
+                <MeetingRoomOutlinedIcon fontSize="small" /> Draft room open
+                <span className="draft__staging-counts">
+                  <span className="draft__count">
+                    {humansSeated}/{lobby.settings.teamCount} seated
+                  </span>
+                  {keepersExpected > 0 && (
+                    <span className="draft__count">
+                      {keepersSelected}/{keepersExpected} keepers
+                    </span>
+                  )}
+                </span>
+              </span>
             ) : (
               <>
                 <span className="draft__onclock-team">
@@ -1494,7 +1550,7 @@ export function DraftBoardPage() {
               </>
             )}
           </div>
-          {!isComplete && (
+          {!isComplete && !isStaging && (
             <PickClock deadline={lobby.pick_deadline} frozenMs={lobby.pick_deadline_remaining_ms} />
           )}
         </div>
@@ -1555,6 +1611,16 @@ export function DraftBoardPage() {
         </div>
       )}
 
+      {isStaging && (
+        <div className="draft__staging-banner">
+          <span>
+            {isCommish
+              ? 'The draft room is open. Players are taking their seats — hit Start when everyone’s ready.'
+              : 'The draft room is open — the commissioner will start the draft shortly.'}
+          </span>
+        </div>
+      )}
+
       <div className="draft__body" style={{ ['--sidebar-w' as string]: `${sidebarWidth}px` }}>
         <section
           ref={boardSectionRef}
@@ -1566,7 +1632,7 @@ export function DraftBoardPage() {
             rounds={totalRounds}
             picks={picks}
             playersById={playersById}
-            onClockTeamId={isComplete ? null : onClockTeam?.id ?? null}
+            onClockTeamId={isComplete || isStaging ? null : onClockTeam?.id ?? null}
             myTeamId={myTeam?.id ?? null}
             currentRound={round}
             draftType={lobby.settings.draftType}

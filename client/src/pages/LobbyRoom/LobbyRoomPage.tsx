@@ -385,14 +385,17 @@ export function LobbyRoomPage() {
   const filledSlots = teams.length;
   const emptySlots = Math.max(0, s.teamCount - filledSlots);
 
-  async function startDraft() {
+  // Opens the draft room (staging) rather than starting the draft — people
+  // enter the board and lock keepers there, and the commissioner hits the red
+  // Start button from inside the room when everyone's ready.
+  async function openRoom() {
     setActionError(null);
     setStarting(true);
     try {
-      await api(`/lobbies/${id}/start`, { method: 'POST' });
+      await api(`/lobbies/${id}/open`, { method: 'POST' });
       navigate(`/lobby/${id}/draft`);
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'Failed to start');
+      setActionError(err instanceof Error ? err.message : 'Failed to open the draft room');
     } finally {
       setStarting(false);
     }
@@ -500,6 +503,9 @@ export function LobbyRoomPage() {
   // (which would hit the start endpoint and resume it).
   const draftLive =
     lobby.status === 'DRAFTING' || lobby.status === 'PAUSED' || lobby.status === 'COMPLETE';
+  // The draft room is reachable once it's open (STAGING) or live. Before that,
+  // only the commissioner sees the "Open draft room" action.
+  const roomOpen = draftLive || lobby.status === 'STAGING';
   // Team names lock for everyone but the commissioner once the draft is
   // complete — keeps rosters stable while the commissioner reviews.
   const isComplete = lobby.status === 'COMPLETE';
@@ -556,21 +562,21 @@ export function LobbyRoomPage() {
 
         {/* Primary action sits between the invite and the draft order. */}
         <div className="room__primary-action">
-          {draftLive ? (
+          {roomOpen ? (
             <Link className="button button--primary button--lg" to={`/lobby/${id}/draft`}>
               Go to draft board →
             </Link>
           ) : isCommish ? (
             <button
               className="button button--primary button--lg room__start"
-              onClick={startDraft}
+              onClick={openRoom}
               disabled={starting || orderMode}
               title={orderMode ? 'Save or cancel the draft order first' : undefined}
             >
-              {starting ? 'Starting…' : 'Start draft'}
+              {starting ? 'Opening…' : 'Open draft room'}
             </button>
           ) : (
-            <p className="muted">Waiting for the commissioner to start the draft…</p>
+            <p className="muted">Waiting for the commissioner to open the draft room…</p>
           )}
         </div>
 

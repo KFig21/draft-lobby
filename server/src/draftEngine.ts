@@ -357,11 +357,38 @@ async function autoPickOne(
   await applyPick(lobbyId, settings, overall, team, playerId, true);
 }
 
+// ── Scheduled opens: when a lobby's scheduledStart passes, auto-open the room
+// (SETUP → STAGING) so people can take their seats and lock keepers ahead of
+// time. The commissioner still hits Start manually. Runs on a slower cadence
+// than the pick tick — a scheduled start only needs coarse granularity.
+async function openScheduled(): Promise<void> {
+  try {
+    const { data: lobbies } = await supabaseAdmin
+      .from('lobbies')
+      .select('id, settings')
+      .eq('status', 'SETUP');
+    const now = Date.now();
+    for (const lobby of lobbies ?? []) {
+      const at = (lobby.settings as LobbySettings).scheduledStart;
+      if (!at || now < new Date(at).getTime()) continue;
+      // The extra status filter guards against a race with a manual /open.
+      await supabaseAdmin
+        .from('lobbies')
+        .update({ status: 'STAGING' })
+        .eq('id', lobby.id as string)
+        .eq('status', 'SETUP');
+    }
+  } catch (err) {
+    console.error('[draft-engine] openScheduled failed', err);
+  }
+}
+
 let started = false;
 /** Start the auto-draft loop. Safe to call once at server boot. */
 export function startDraftEngine(): void {
   if (started) return;
   started = true;
   setInterval(() => void tick(), 1500);
-  console.log('🤖 draft engine running (auto-picks on clock expiry)');
+  setInterval(() => void openScheduled(), 10_000);
+  console.log('🤖 draft engine running (auto-picks + scheduled room opens)');
 }

@@ -9,6 +9,7 @@ export type DraftType = z.infer<typeof draftTypeSchema>;
 export const lobbyStatusSchema = z.enum([
   'SETUP', // being configured by commissioner
   'SCHEDULED', // params locked, waiting for start time
+  'STAGING', // draft room open pre-draft: seats + keepers, no clock yet
   'DRAFTING', // draft in progress
   'PAUSED', // commissioner paused
   'COMPLETE', // draft finished

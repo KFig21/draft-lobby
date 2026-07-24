@@ -405,6 +405,10 @@ textarea {
   background: $bg-overlay;
   color: $text-muted;
 
+  &--staging {
+    background: rgba($primary, 0.2);
+    color: $primary;
+  }
   &--drafting {
     background: rgba($accent, 0.2);
     color: $accent;

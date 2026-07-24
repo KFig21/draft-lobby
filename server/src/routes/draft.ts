@@ -366,6 +366,52 @@ draftRouter.post('/:id/start', async (req: AuthedRequest, res: Response) => {
   res.json({ ok: true });
 });
 
+/**
+ * POST /api/lobbies/:id/open — commissioner opens the draft room without
+ * starting the draft. Moves SETUP/SCHEDULED → STAGING: everyone can enter the
+ * board, take their seats, and (once keepers ship) lock their keepers, but no
+ * pick clock runs until the commissioner hits Start (→ /start).
+ */
+draftRouter.post('/:id/open', async (req: AuthedRequest, res: Response) => {
+  const lobbyId = req.params.id;
+  const userId = req.user!.id;
+
+  const role = await getRole(lobbyId, userId);
+  if (!isCommish(role)) {
+    res.status(403).json({ error: 'Only the commissioner can open the draft room' });
+    return;
+  }
+
+  const { data: lobby, error } = await supabaseAdmin
+    .from('lobbies')
+    .select('id, status')
+    .eq('id', lobbyId)
+    .single();
+  if (error || !lobby) {
+    res.status(404).json({ error: 'Lobby not found' });
+    return;
+  }
+  // Idempotent once the room is already open (or the draft is live/paused).
+  if (lobby.status === 'STAGING' || lobby.status === 'DRAFTING' || lobby.status === 'PAUSED') {
+    res.json({ ok: true, alreadyOpen: true });
+    return;
+  }
+  if (lobby.status === 'COMPLETE') {
+    res.status(409).json({ error: 'Draft is already complete' });
+    return;
+  }
+
+  const { error: updateError } = await supabaseAdmin
+    .from('lobbies')
+    .update({ status: 'STAGING' })
+    .eq('id', lobbyId);
+  if (updateError) {
+    res.status(500).json({ error: updateError.message });
+    return;
+  }
+  res.json({ ok: true });
+});
+
 /** DELETE /api/lobbies/:id — commissioner cancels/deletes a lobby before the draft starts. */
 draftRouter.delete('/:id', async (req: AuthedRequest, res: Response) => {
   const lobbyId = req.params.id;
@@ -384,7 +430,7 @@ draftRouter.delete('/:id', async (req: AuthedRequest, res: Response) => {
     res.status(403).json({ error: 'Only the commissioner can delete this lobby' });
     return;
   }
-  if (lobby.status !== 'SETUP' && lobby.status !== 'SCHEDULED') {
+  if (lobby.status !== 'SETUP' && lobby.status !== 'SCHEDULED' && lobby.status !== 'STAGING') {
     res.status(409).json({ error: 'You can only delete a lobby before the draft starts' });
     return;
   }
@@ -795,7 +841,7 @@ draftRouter.post('/:id/accept-invite', async (req: AuthedRequest, res: Response)
     res.status(404).json({ error: 'Lobby not found' });
     return;
   }
-  if (lobby.status !== 'SETUP' && lobby.status !== 'SCHEDULED') {
+  if (lobby.status !== 'SETUP' && lobby.status !== 'SCHEDULED' && lobby.status !== 'STAGING') {
     res.status(409).json({ error: 'This draft has already started' });
     return;
   }
@@ -1065,7 +1111,7 @@ draftRouter.post('/:id/draft-order', async (req: AuthedRequest, res: Response) =
     res.status(404).json({ error: 'Lobby not found' });
     return;
   }
-  if (lobby.status !== 'SETUP' && lobby.status !== 'SCHEDULED') {
+  if (lobby.status !== 'SETUP' && lobby.status !== 'SCHEDULED' && lobby.status !== 'STAGING') {
     res.status(409).json({ error: 'The draft order is locked once the draft starts' });
     return;
   }
@@ -1124,7 +1170,7 @@ draftRouter.post('/:id/add-bot', async (req: AuthedRequest, res: Response) => {
     res.status(404).json({ error: 'Lobby not found' });
     return;
   }
-  if (lobby.status !== 'SETUP' && lobby.status !== 'SCHEDULED') {
+  if (lobby.status !== 'SETUP' && lobby.status !== 'SCHEDULED' && lobby.status !== 'STAGING') {
     res.status(409).json({ error: 'Bots can only be added before the draft starts' });
     return;
   }
@@ -1336,7 +1382,7 @@ draftRouter.post('/:id/fill-bots', async (req: AuthedRequest, res: Response) => 
     res.status(404).json({ error: 'Lobby not found' });
     return;
   }
-  if (lobby.status !== 'SETUP' && lobby.status !== 'SCHEDULED') {
+  if (lobby.status !== 'SETUP' && lobby.status !== 'SCHEDULED' && lobby.status !== 'STAGING') {
     res.status(409).json({ error: 'Bots can only be added before the draft starts' });
     return;
   }
@@ -1368,7 +1414,7 @@ draftRouter.post('/:id/remove-bot', async (req: AuthedRequest, res: Response) =>
     res.status(404).json({ error: 'Lobby not found' });
     return;
   }
-  if (lobby.status !== 'SETUP' && lobby.status !== 'SCHEDULED') {
+  if (lobby.status !== 'SETUP' && lobby.status !== 'SCHEDULED' && lobby.status !== 'STAGING') {
     res.status(409).json({ error: 'Bots can only be removed before the draft starts' });
     return;
   }
@@ -1407,7 +1453,7 @@ draftRouter.post('/:id/randomize-bot-names', async (req: AuthedRequest, res: Res
     res.status(404).json({ error: 'Lobby not found' });
     return;
   }
-  if (lobby.status !== 'SETUP' && lobby.status !== 'SCHEDULED') {
+  if (lobby.status !== 'SETUP' && lobby.status !== 'SCHEDULED' && lobby.status !== 'STAGING') {
     res.status(409).json({ error: 'Bots can only be renamed before the draft starts' });
     return;
   }
@@ -1454,7 +1500,7 @@ draftRouter.post('/:id/leave', async (req: AuthedRequest, res: Response) => {
     res.status(409).json({ error: 'The commissioner can’t leave — delete the lobby instead' });
     return;
   }
-  if (lobby.status !== 'SETUP' && lobby.status !== 'SCHEDULED') {
+  if (lobby.status !== 'SETUP' && lobby.status !== 'SCHEDULED' && lobby.status !== 'STAGING') {
     res.status(409).json({ error: 'You can only leave before the draft starts' });
     return;
   }
@@ -1496,7 +1542,7 @@ draftRouter.post('/:id/kick', async (req: AuthedRequest, res: Response) => {
     res.status(409).json({ error: 'The commissioner can’t be removed' });
     return;
   }
-  if (lobby.status !== 'SETUP' && lobby.status !== 'SCHEDULED') {
+  if (lobby.status !== 'SETUP' && lobby.status !== 'SCHEDULED' && lobby.status !== 'STAGING') {
     res.status(409).json({ error: 'Members can only be removed before the draft starts' });
     return;
   }

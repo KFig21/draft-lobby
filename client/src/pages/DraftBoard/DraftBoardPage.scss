@@ -621,6 +621,65 @@
     font-size: 0.78rem;
   }
 
+  // Big red "Start draft" — the one commissioner action in staging. Deliberately
+  // stands out (red, per the ask) against the neutral chip buttons around it.
+  &__start-btn {
+    @extend %draft-chip-btn;
+    padding: $space * 0.6 $space * 1.5;
+    font-size: 0.85rem;
+    font-weight: 800;
+    border-color: $danger;
+    background: $danger;
+    color: #fff;
+
+    &:hover:not(:disabled) {
+      border-color: $danger;
+      background: $danger;
+      box-shadow: 0 0 0 3px rgba($danger, 0.28);
+    }
+  }
+
+  // Top-bar center while staging: "Draft room open" + live seat/keeper counts.
+  &__staging-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    color: $primary;
+  }
+
+  &__staging-counts {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  &__count {
+    padding: 1px $space;
+    border-radius: 999px;
+    background: rgba($primary, 0.16);
+    color: $primary;
+    font-size: 0.72rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+
+  // Sits where the paused banner does, but reads "go" (primary) not "warning".
+  &__staging-banner {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: $space;
+    padding: $space $space * 2;
+    text-align: center;
+    font-size: 0.85rem;
+    font-weight: 700;
+    background: rgba($primary, 0.14);
+    color: $primary;
+  }
+
   &__body {
     position: relative; // anchor for the desktop team-results drawer
     display: flex;
