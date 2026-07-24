@@ -62,6 +62,43 @@
   }
 }
 
+// Fullscreen (TV mode): scale up so toasts are readable from across a room.
+// :fullscreen matches whichever element is currently fullscreened —
+// DraftBoardPage.tsx's toggleFullscreen targets the whole document, so this
+// applies regardless of which page triggered fullscreen, no JS plumbing
+// needed here. (The avatar some toasts show is sized via an inline style —
+// see Avatar.tsx's `size` prop — so it can't be scaled from CSS; left as-is.)
+:fullscreen .toast-viewport {
+  width: min(640px, calc(100vw - #{$space * 8}));
+  gap: $space * 1.5;
+}
+
+:fullscreen .toast {
+  padding: $space * 2.5 $space * 3;
+}
+
+:fullscreen .toast__title {
+  font-size: 1.3rem;
+}
+
+:fullscreen .toast__body {
+  font-size: 1.05rem;
+}
+
+:fullscreen .toast__action {
+  font-size: 1rem;
+  padding: 8px 16px;
+}
+
+:fullscreen .toast__icon-btn {
+  width: 36px;
+  height: 36px;
+
+  svg {
+    font-size: 1.6rem;
+  }
+}
+
 // Solid, unmissable tone color. The progress bar (below) fills the whole
 // toast in a slightly different shade of the same color, and shrinks away to
 // reveal the base color as time runs out.

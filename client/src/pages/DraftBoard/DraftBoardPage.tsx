@@ -198,7 +198,13 @@ export function DraftBoardPage() {
       if (!document.fullscreenElement) setShowFsMenu(false);
     };
     document.addEventListener('fullscreenchange', onFsChange);
-    return () => document.removeEventListener('fullscreenchange', onFsChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', onFsChange);
+      // Fullscreen targets the whole document now (see toggleFullscreen), so
+      // it otherwise survives navigating to a different route entirely —
+      // leaving the user stuck in a fullscreen home page/lobby list.
+      if (document.fullscreenElement) void document.exitFullscreen?.();
+    };
   }, []);
 
   function toggleFullscreen() {

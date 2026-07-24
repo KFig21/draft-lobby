@@ -362,5 +362,20 @@
     .draft-grid__onclock-label {
       font-size: calc(0.65rem * var(--fs-scale));
     }
+
+    // The "your pick" variant stacks two lines (title + sub) in the same
+    // cell height the single-line "someone else's turn" variant uses — their
+    // normal 1.1em/0.8em (relative to &__onclock-label just above) compounds
+    // with --fs-scale and reads too big once both lines are scaled up
+    // together. Pinned to smaller absolute multipliers here instead of
+    // staying purely em-relative; &__onclock-icon (the non-mine, single-line
+    // state) is unaffected and stays as-is.
+    .draft-grid__onclock-title {
+      font-size: calc(0.6rem * var(--fs-scale));
+    }
+
+    .draft-grid__onclock-sub {
+      font-size: calc(0.45rem * var(--fs-scale));
+    }
   }
 }
