@@ -191,7 +191,6 @@ export function DraftBoardPage() {
   // consecutive bot in one call) when the commissioner turns the toggle back
   // off — abort it, or the server just keeps drafting bots regardless.
   const fastForwardAbortRef = useRef<AbortController | null>(null);
-  const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const onFsChange = () => {
@@ -203,7 +202,11 @@ export function DraftBoardPage() {
   }, []);
 
   function toggleFullscreen() {
-    if (!document.fullscreenElement) void rootRef.current?.requestFullscreen?.();
+    // The whole document, not just this page's root div — anything rendered
+    // outside the fullscreened element (the toast viewport, mounted at the
+    // app root) doesn't paint at all while fullscreen, since the Fullscreen
+    // API only shows that element's own subtree.
+    if (!document.fullscreenElement) void document.documentElement.requestFullscreen?.();
     else void document.exitFullscreen?.();
   }
 
@@ -1366,7 +1369,7 @@ export function DraftBoardPage() {
   }
 
   return (
-    <div className="draft" ref={rootRef}>
+    <div className="draft">
       <header
         className={`draft__topbar${isFullscreen ? ' draft__topbar--fill' : ''}${
           myTurnHighlight ? ' draft__topbar--myturn' : ''

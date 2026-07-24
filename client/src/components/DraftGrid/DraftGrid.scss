@@ -355,12 +355,12 @@
       font-size: calc(0.7rem * var(--fs-scale));
     }
 
-    // Deliberately NOT scaled by --fs-scale like everything else above —
-    // both on-clock states are icon+text stacks, so scaling them by the same
-    // factor as single-line labels compounded into comically large text on a
-    // big screen. They read fine at normal size.
+    // Scales like everything else — &__onclock-icon/-title/-sub are all sized
+    // in em against this, so they grow proportionally for free. (Previously
+    // left unscaled on a guess that it'd look "comically large" on a big
+    // screen — actual TV testing showed the opposite: too small to read.)
     .draft-grid__onclock-label {
-      font-size: 0.65rem;
+      font-size: calc(0.65rem * var(--fs-scale));
     }
   }
 }

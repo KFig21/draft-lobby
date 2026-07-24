@@ -1,9 +1,12 @@
 @use 'variables' as *;
 
+// Direction toasts slide in/out from — set per-breakpoint on .toast-viewport
+// below (negative = from above, toward a top anchor; positive = from below,
+// toward a bottom anchor) so the same keyframes work for both.
 @keyframes toast-in {
   from {
     opacity: 0;
-    transform: translateY(-16px);
+    transform: translateY(var(--toast-slide, -16px));
   }
   to {
     opacity: 1;
@@ -18,7 +21,7 @@
   }
   to {
     opacity: 0;
-    transform: translateY(-16px);
+    transform: translateY(var(--toast-slide, -16px));
   }
 }
 
@@ -33,7 +36,10 @@
 
 .toast-viewport {
   position: fixed;
-  top: $space * 2;
+  // Desktop/fullscreen: anchored to the bottom, newest toast closest to the
+  // anchor (last in DOM order, per the flex column below) — the mobile
+  // override further down switches this back to the original top anchor.
+  bottom: $space * 2;
   left: 50%;
   transform: translateX(-50%);
   z-index: 500; // above modals (200) and nav drawers (40/60)
@@ -42,14 +48,17 @@
   gap: $space;
   width: min(420px, calc(100vw - #{$space * 4}));
   pointer-events: none; // gaps between toasts stay click-through
+  --toast-slide: 16px; // slide up into place, from below
 
   @media (max-width: #{$bp-md - 1px}) {
     top: env(safe-area-inset-top, 0);
+    bottom: auto;
     left: 0;
     right: 0;
     transform: none;
     width: auto;
     padding: $space;
+    --toast-slide: -16px; // slide down into place, from above
   }
 }
 
