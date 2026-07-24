@@ -86,6 +86,25 @@ export const assignKeeperSchema = z.object({
 });
 export type AssignKeeperInput = z.infer<typeof assignKeeperSchema>;
 
+/**
+ * Bulk keeper assignment from an imported roster. The client resolves the raw
+ * team/player names (and rounds) against the lobby's teams and the player pool
+ * before sending, so the server just validates + places each resolved row.
+ */
+export const bulkAssignKeepersSchema = z.object({
+  keepers: z
+    .array(
+      z.object({
+        teamId: z.string().uuid(),
+        playerId: z.string().uuid(),
+        round: z.number().int().min(1),
+      }),
+    )
+    .min(1)
+    .max(500),
+});
+export type BulkAssignKeepersInput = z.infer<typeof bulkAssignKeepersSchema>;
+
 /** Seconds a bot / auto-draft team gets on the clock before the engine picks. */
 export const AUTO_PICK_SECONDS = 5;
 

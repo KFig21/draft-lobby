@@ -5,6 +5,7 @@ import {
   RANDOM_BOT_TEAM_NAMES,
   ROLLBACK_LOCK_MS,
   assignKeeperSchema,
+  bulkAssignKeepersSchema,
   chatReactSchema,
   containsSlur,
   crownVoteSchema,
@@ -552,6 +553,97 @@ draftRouter.post('/:id/keepers', async (req: AuthedRequest, res: Response) => {
     `🔒 ${team.name} keeps ${player.name} (Round ${round})`,
   );
   res.json({ ok: true, pickId: inserted.id, overall });
+});
+
+/**
+ * POST /api/lobbies/:id/keepers/bulk — commissioner imports many keepers at
+ * once (from a pasted/uploaded roster the client already resolved to team +
+ * player ids). Skips rows that collide (slot already kept, player already kept,
+ * unknown team, round beyond the draft) and reports how many landed vs skipped.
+ */
+draftRouter.post('/:id/keepers/bulk', async (req: AuthedRequest, res: Response) => {
+  const lobbyId = req.params.id;
+  const userId = req.user!.id;
+
+  const role = await getRole(lobbyId, userId);
+  if (!isCommish(role)) {
+    res.status(403).json({ error: 'Only the commissioner can set keepers' });
+    return;
+  }
+  const parsed = bulkAssignKeepersSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.flatten() });
+    return;
+  }
+
+  const { data: lobby } = await supabaseAdmin
+    .from('lobbies')
+    .select('status, settings')
+    .eq('id', lobbyId)
+    .maybeSingle();
+  if (!lobby) {
+    res.status(404).json({ error: 'Lobby not found' });
+    return;
+  }
+  if (lobby.status === 'DRAFTING' || lobby.status === 'PAUSED' || lobby.status === 'COMPLETE') {
+    res.status(409).json({ error: 'Keepers can only be set before the draft starts' });
+    return;
+  }
+
+  const settings = lobby.settings as LobbySettings;
+  const rounds = roundsForSettings(settings);
+
+  const [{ data: teams }, { data: existingPicks }] = await Promise.all([
+    supabaseAdmin.from('teams').select('id, draft_position').eq('lobby_id', lobbyId),
+    supabaseAdmin.from('picks').select('overall, player_id').eq('lobby_id', lobbyId),
+  ]);
+  const positionByTeam = new Map(
+    (teams ?? []).map((t) => [t.id as string, t.draft_position as number]),
+  );
+  const takenOveralls = new Set((existingPicks ?? []).map((p) => p.overall as number));
+  const takenPlayers = new Set((existingPicks ?? []).map((p) => p.player_id as string));
+
+  const rows: Record<string, unknown>[] = [];
+  let skipped = 0;
+  for (const k of parsed.data.keepers) {
+    const pos = positionByTeam.get(k.teamId);
+    if (pos == null || k.round > rounds) {
+      skipped++;
+      continue;
+    }
+    const overall = overallForDraftPosition(k.round, pos, settings.teamCount, settings.draftType);
+    // Reject collisions against both existing keepers and earlier rows in this
+    // same batch (dedupe as we go).
+    if (takenOveralls.has(overall) || takenPlayers.has(k.playerId)) {
+      skipped++;
+      continue;
+    }
+    takenOveralls.add(overall);
+    takenPlayers.add(k.playerId);
+    rows.push({
+      lobby_id: lobbyId,
+      overall,
+      round: k.round,
+      team_id: k.teamId,
+      player_id: k.playerId,
+      is_keeper: true,
+    });
+  }
+
+  if (rows.length) {
+    const { error } = await supabaseAdmin.from('picks').insert(rows);
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    await postSystemMessage(
+      lobbyId,
+      userId,
+      `🔒 ${rows.length} keeper${rows.length === 1 ? '' : 's'} imported`,
+    );
+  }
+
+  res.json({ ok: true, added: rows.length, skipped });
 });
 
 /**

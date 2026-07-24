@@ -2,6 +2,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import { useMemo, useState } from 'react';
 import { api } from '../../lib/api';
+import { KEEPER_IMPORT_EXAMPLE, parseKeeperImport } from '../../lib/keeperImport';
 import { useModalClose } from '../../lib/useModalClose';
 import type { PickRow, PlayerRow, TeamRow } from '../../lib/types';
 import './KeeperManagerModal.scss';
@@ -37,6 +38,7 @@ export function KeeperManagerModal({ lobbyId, teams, players, picks, rounds, onC
     [picks],
   );
 
+  const [mode, setMode] = useState<'manual' | 'import'>('manual');
   const [teamId, setTeamId] = useState<string>('');
   const [search, setSearch] = useState('');
   const [playerId, setPlayerId] = useState<string>('');
@@ -45,7 +47,18 @@ export function KeeperManagerModal({ lobbyId, teams, players, picks, rounds, onC
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const [importText, setImportText] = useState('');
+  const [importBusy, setImportBusy] = useState(false);
+  const [importResult, setImportResult] = useState<{ added: number; skipped: number } | null>(null);
+
   const selectedPlayer = playerId ? playersById.get(playerId) : undefined;
+
+  const parsed = useMemo(
+    () => parseKeeperImport(importText, teams, players),
+    [importText, teams, players],
+  );
+  const readyRows = useMemo(() => parsed.rows.filter((r) => !r.error), [parsed]);
+  const problemRows = useMemo(() => parsed.rows.filter((r) => r.error), [parsed]);
 
   const matches = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -88,6 +101,44 @@ export function KeeperManagerModal({ lobbyId, teams, players, picks, rounds, onC
     }
   }
 
+  function downloadExample() {
+    const blob = new Blob([KEEPER_IMPORT_EXAMPLE], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'keepers-example.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function importKeepers() {
+    if (readyRows.length === 0) return;
+    setImportBusy(true);
+    setError(null);
+    setImportResult(null);
+    try {
+      const res = await api<{ added: number; skipped: number }>(
+        `/lobbies/${lobbyId}/keepers/bulk`,
+        {
+          method: 'POST',
+          body: {
+            keepers: readyRows.map((r) => ({
+              teamId: r.teamId,
+              playerId: r.playerId,
+              round: r.round,
+            })),
+          },
+        },
+      );
+      setImportResult({ added: res.added, skipped: res.skipped });
+      setImportText('');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Import failed');
+    } finally {
+      setImportBusy(false);
+    }
+  }
+
   return (
     <div
       className={`keeper-modal__backdrop modal-anim-backdrop${closing ? ' is-closing' : ''}`}
@@ -110,6 +161,24 @@ export function KeeperManagerModal({ lobbyId, teams, players, picks, rounds, onC
           round and appears on the board right away.
         </p>
 
+        <div className="keeper-modal__tabs">
+          <button
+            type="button"
+            className={`keeper-modal__tab${mode === 'manual' ? ' is-active' : ''}`}
+            onClick={() => setMode('manual')}
+          >
+            Add one
+          </button>
+          <button
+            type="button"
+            className={`keeper-modal__tab${mode === 'import' ? ' is-active' : ''}`}
+            onClick={() => setMode('import')}
+          >
+            Import
+          </button>
+        </div>
+
+        {mode === 'manual' ? (
         <div className="keeper-modal__form">
           <label className="keeper-modal__field">
             <span>Team</span>
@@ -182,6 +251,66 @@ export function KeeperManagerModal({ lobbyId, teams, players, picks, rounds, onC
             {busy ? 'Adding…' : 'Add keeper'}
           </button>
         </div>
+        ) : (
+          <div className="keeper-modal__import">
+            <div className="keeper-modal__import-head">
+              <p className="keeper-modal__import-hint">
+                Paste CSV or JSON with columns <code>team, player, position, round</code>. Team
+                matches by name or draft position; round defaults to 1 if left blank.
+              </p>
+              <button type="button" className="keeper-modal__example" onClick={downloadExample}>
+                Download example
+              </button>
+            </div>
+            <textarea
+              className="keeper-modal__textarea"
+              placeholder={KEEPER_IMPORT_EXAMPLE}
+              value={importText}
+              onChange={(e) => setImportText(e.target.value)}
+              rows={6}
+              spellCheck={false}
+            />
+            {parsed.parseError && <p className="keeper-modal__error">{parsed.parseError}</p>}
+            {parsed.rows.length > 0 && (
+              <div className="keeper-modal__preview">
+                <div className="keeper-modal__preview-summary">
+                  <span className="keeper-modal__ready">{readyRows.length} ready</span>
+                  {problemRows.length > 0 && (
+                    <span className="keeper-modal__problem">{problemRows.length} to fix</span>
+                  )}
+                </div>
+                {problemRows.length > 0 && (
+                  <ul className="keeper-modal__problems">
+                    {problemRows.slice(0, 8).map((r, i) => (
+                      <li key={i}>
+                        {r.error}
+                        <span className="keeper-modal__problem-src">
+                          {r.team || '—'} / {r.player || '—'}
+                        </span>
+                      </li>
+                    ))}
+                    {problemRows.length > 8 && <li>+{problemRows.length - 8} more…</li>}
+                  </ul>
+                )}
+              </div>
+            )}
+            <button
+              className="button button--primary keeper-modal__add"
+              onClick={importKeepers}
+              disabled={importBusy || readyRows.length === 0}
+            >
+              {importBusy
+                ? 'Importing…'
+                : `Import ${readyRows.length} keeper${readyRows.length === 1 ? '' : 's'}`}
+            </button>
+            {importResult && (
+              <p className="keeper-modal__import-result">
+                Added {importResult.added}
+                {importResult.skipped ? `, skipped ${importResult.skipped} (already taken)` : ''}.
+              </p>
+            )}
+          </div>
+        )}
 
         {error && <p className="keeper-modal__error">{error}</p>}
 
