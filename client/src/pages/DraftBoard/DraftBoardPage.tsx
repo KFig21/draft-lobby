@@ -1374,6 +1374,13 @@ export function DraftBoardPage() {
           myTurnFlashing ? ' draft__topbar--flash' : ''
         }`}
       >
+        {onClockCellElapsedPct != null && (
+          <span
+            className="draft__topbar-fill"
+            style={{ width: `${onClockCellElapsedPct * 100}%` }}
+            aria-hidden
+          />
+        )}
         <div className="draft__left">
           <div className="draft__nav-links">
             <button
