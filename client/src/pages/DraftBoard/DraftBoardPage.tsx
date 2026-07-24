@@ -1368,9 +1368,11 @@ export function DraftBoardPage() {
   return (
     <div className="draft" ref={rootRef}>
       <header
-        className={`draft__topbar${myTurnHighlight ? ' draft__topbar--myturn' : ''}${
-          myTurnUrgency ? ` draft__topbar--${myTurnUrgency}` : ''
-        }${myTurnFlashing ? ' draft__topbar--flash' : ''}`}
+        className={`draft__topbar${isFullscreen ? ' draft__topbar--fill' : ''}${
+          myTurnHighlight ? ' draft__topbar--myturn' : ''
+        }${myTurnUrgency ? ` draft__topbar--${myTurnUrgency}` : ''}${
+          myTurnFlashing ? ' draft__topbar--flash' : ''
+        }`}
       >
         <div className="draft__left">
           <div className="draft__nav-links">
@@ -1405,7 +1407,10 @@ export function DraftBoardPage() {
                 <span className="draft__onclock-team">
                   {onClockTeam && (
                     <span className="draft__onclock-avatar">
-                      <Avatar avatar={avatarForTeam(onClockTeam, members)} size={20} />
+                      <Avatar
+                        avatar={avatarForTeam(onClockTeam, members)}
+                        size={isFullscreen ? 30 : 20}
+                      />
                     </span>
                   )}
                   {onClockTeam ? onClockTeam.name : 'Waiting…'}

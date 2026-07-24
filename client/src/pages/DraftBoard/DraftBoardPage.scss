@@ -219,6 +219,64 @@
     &--flash {
       animation: draft-topbar-flash 1s ease-in-out infinite;
     }
+
+    // Fullscreen (TV mode): the bar itself doesn't get any bigger on its own
+    // (unlike DraftGrid, its height isn't driven by a measured --fs-scale) —
+    // scale it and its contents up by a fixed amount instead, since from
+    // across a room the clock and on-the-clock team were too small to read.
+    &--fill {
+      padding: $space * 1.5 $space * 2.5;
+      gap: $space * 2.5;
+
+      .draft__center {
+        gap: $space * 3;
+
+        @include lg {
+          gap: $space * 4;
+        }
+      }
+
+      .clock {
+        font-size: 2.1rem;
+      }
+
+      .draft__onclock-team {
+        font-size: 1.3rem;
+      }
+
+      .muted {
+        font-size: 1.05rem;
+      }
+
+      .draft__yourturn,
+      .draft__paused-pill {
+        font-size: 1rem;
+        padding: 4px 10px;
+      }
+
+      .draft__home-btn,
+      .draft__room-btn,
+      .draft__tool-btn,
+      .draft__export-btn,
+      .draft__fs-menu-btn,
+      .draft__reqpause-btn {
+        font-size: 1.1rem;
+        padding: $space * 0.85 $space * 1.5;
+
+        svg {
+          font-size: 1.4rem;
+        }
+      }
+
+      .draft__icon-btn {
+        width: 48px;
+        height: 48px;
+
+        svg {
+          font-size: 1.8rem;
+        }
+      }
+    }
   }
 
   &__left {
