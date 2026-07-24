@@ -1,6 +1,7 @@
 import { POSITION_COLORS, type Position } from '@draft-lobby/shared';
 import BookmarkIcon from '@mui/icons-material/Bookmark';
 import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import { INJURY_ABBR, INJURY_SEVERITY } from '../../lib/injuryStatus';
 import type { PlayerRow } from '../../lib/types';
 import './PlayerCard.scss';
@@ -14,12 +15,22 @@ interface Props {
   /** Opens the full player-detail modal. Clicking the queue/draft buttons
    * themselves doesn't trigger it (they stopPropagation). */
   onOpenDetail?: () => void;
+  /** This pick was a kept player, not a normal draft selection. */
+  isKeeper?: boolean;
 }
 
 const PREV_YEAR = String(new Date().getFullYear() - 1).slice(-2);
 
 /** A row in the player pool: color-coded position, bye, injury, projection, prev rank. */
-export function PlayerCard({ player, onPick, disabled, onQueue, queued, onOpenDetail }: Props) {
+export function PlayerCard({
+  player,
+  onPick,
+  disabled,
+  onQueue,
+  queued,
+  onOpenDetail,
+  isKeeper,
+}: Props) {
   const color = POSITION_COLORS[player.position as Position];
   const injury = INJURY_ABBR[player.injury_status];
 
@@ -46,6 +57,11 @@ export function PlayerCard({ player, onPick, disabled, onQueue, queued, onOpenDe
       <div className="player-card__main">
         <div className="player-card__name">
           {player.name}
+          {isKeeper && (
+            <span className="player-card__keeper-badge">
+              <LockOutlinedIcon sx={{ fontSize: 11 }} /> Keeper
+            </span>
+          )}
           {injury && (
             <span
               className={`injury-badge injury-badge--${INJURY_SEVERITY[player.injury_status] ?? 'danger'}`}

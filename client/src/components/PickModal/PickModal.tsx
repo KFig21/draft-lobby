@@ -142,7 +142,7 @@ export function PickModal({
 
         {/* Player data + pick data stay pinned; everything else scrolls. */}
         <div className="pick-modal__top">
-          <PlayerHeader player={player} />
+          <PlayerHeader player={player} isKeeper={pick.is_keeper} />
 
           <div className="pick-modal__drafted">
             {team && <Avatar avatar={avatarForTeam(team, members)} size={18} />}

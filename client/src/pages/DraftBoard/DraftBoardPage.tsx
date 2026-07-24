@@ -1159,7 +1159,7 @@ export function DraftBoardPage() {
         <>
           {lobby?.settings.keepersEnabled && (
             <button
-              className="draft__tool-btn"
+              className="draft__tool-btn draft__keepers-btn"
               onClick={() => setShowKeepers(true)}
               disabled={commishBusy}
             >

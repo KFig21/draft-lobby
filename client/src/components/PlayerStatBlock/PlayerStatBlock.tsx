@@ -1,4 +1,5 @@
 import { POSITION_COLORS, type Position } from '@draft-lobby/shared';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import TrendingFlatIcon from '@mui/icons-material/TrendingFlat';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
@@ -8,13 +9,15 @@ import './PlayerStatBlock.scss';
 
 interface Props {
   player: PlayerRow;
+  /** This pick was a kept player, not a normal draft selection. */
+  isKeeper?: boolean;
 }
 
 /** Position badge + name/team/bye/injury — shared between PickModal and
  * PlayerDetailModal. PickModal renders its pick-specific info (drafted by,
  * round/pick, rollback) between this and <PlayerStatGrid>; PlayerDetailModal
  * renders them back-to-back since there's no pick yet to describe. */
-export function PlayerHeader({ player }: Props) {
+export function PlayerHeader({ player, isKeeper }: Props) {
   const pos = player.position as Position;
   const injury = INJURY_ABBR[player.injury_status];
   return (
@@ -23,7 +26,14 @@ export function PlayerHeader({ player }: Props) {
         {player.position}
       </span>
       <div className="player-stat-block__title">
-        <h3>{player.name}</h3>
+        <h3>
+          {player.name}
+          {isKeeper && (
+            <span className="player-stat-block__keeper-badge">
+              <LockOutlinedIcon sx={{ fontSize: 13 }} /> Keeper
+            </span>
+          )}
+        </h3>
         <div className="player-stat-block__subtitle">
           <span className="muted">
             {player.nfl_team}

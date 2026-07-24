@@ -87,7 +87,19 @@ interface SleeperPlayer {
   position?: string | null;
   active?: boolean;
   injury_status?: string | null;
+  // Sleeper never purges long-retired players (they keep active:true / a stale
+  // team indefinitely) — a null depth chart slot is what actually distinguishes
+  // a real roster player from stale data like Ben Roethlisberger.
+  depth_chart_order?: number | null;
 }
+
+// 32 standard team abbreviations, same convention FFC's ADP feed uses (already
+// matches the ~23 D/ST entries that make it into the pool via ADP alone).
+const ALL_NFL_TEAMS = [
+  'ARI', 'ATL', 'BAL', 'BUF', 'CAR', 'CHI', 'CIN', 'CLE', 'DAL', 'DEN', 'DET', 'GB',
+  'HOU', 'IND', 'JAX', 'KC', 'LAC', 'LAR', 'LV', 'MIA', 'MIN', 'NE', 'NO', 'NYG',
+  'NYJ', 'PHI', 'PIT', 'SEA', 'SF', 'TB', 'TEN', 'WAS',
+];
 
 const INJURY_MAP: Record<string, string> = {
   questionable: 'QUESTIONABLE',
@@ -227,6 +239,33 @@ async function main() {
     });
   }
 
+  // FFC's ADP feed only ranks defenses that actually get drafted in its mock
+  // sample — usually ~23 of 32 in a 12-team PPR pool. Force-add every team's
+  // D/ST so all 32 are always keeper/draft-eligible, not just the popular ones.
+  let defsAdded = 0;
+  for (const team of ALL_NFL_TEAMS) {
+    const name = `${team} D/ST`;
+    const keyStr = `${normalize(name)}|DEF`;
+    if (seen.has(keyStr)) continue;
+    seen.add(keyStr);
+    pool.push({
+      name,
+      position: 'DEF',
+      nfl_team: team,
+      bye_week: teamByeMap.get(team) ?? null,
+      injury_status: 'ACTIVE',
+      proj_points: null,
+      proj_rank: null,
+      proj_stat_line: null,
+      adp: null,
+      prev_points: null,
+      prev_rank: null,
+      prev_stat_line: null,
+    });
+    defsAdded++;
+  }
+  if (defsAdded) console.log(`Added ${defsAdded} D/ST team(s) missing from ADP`);
+
   // 2) Sleeper enrichment: injuries for known players, depth beyond ADP, and
   // a normalized-name → sleeper player_id map for the stats/projections join
   // below (those endpoints are keyed by Sleeper's own player_id, not name).
@@ -245,8 +284,12 @@ async function main() {
       if (sp.active && sp.injury_status) {
         injuryByKey.set(keyStr, mapInjury(sp.injury_status));
       }
-      // Append active players not already in the ADP pool (real depth).
-      if (sp.active && sp.team && !seen.has(keyStr)) {
+      // Append active players not already in the ADP pool (real depth) — but
+      // only ones actually slotted on a depth chart. Sleeper's `active` flag
+      // alone isn't enough: it stays true indefinitely for players who
+      // retired years ago (e.g. Ben Roethlisberger), while a real bench
+      // player always carries a depth_chart_order.
+      if (sp.active && sp.team && sp.depth_chart_order != null && !seen.has(keyStr)) {
         seen.add(keyStr);
         pool.push({
           name: full,

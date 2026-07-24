@@ -621,6 +621,21 @@
     font-size: 0.78rem;
   }
 
+  // Keepers — gold, matching the keeper-cell outline/badge color elsewhere, so
+  // it reads as its own distinct action rather than blending with the neutral
+  // chip buttons (Pause/Undo/Skip bots) around it.
+  &__keepers-btn {
+    @extend %draft-chip-btn;
+    border-color: $keeper;
+    color: $keeper;
+    background: rgba($keeper, 0.12);
+
+    &:hover:not(:disabled) {
+      border-color: $keeper;
+      background: rgba($keeper, 0.2);
+    }
+  }
+
   // Big red "Start draft" — the one commissioner action in staging. Deliberately
   // stands out (red, per the ask) against the neutral chip buttons around it.
   &__start-btn {

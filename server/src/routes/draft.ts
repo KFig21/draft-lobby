@@ -683,21 +683,31 @@ draftRouter.post('/:id/keeper-options/bulk', async (req: AuthedRequest, res: Res
   }
 
   const rounds = roundsForSettings(lobby.settings as LobbySettings);
-  const { data: teams } = await supabaseAdmin
-    .from('teams')
-    .select('id')
-    .eq('lobby_id', lobbyId);
+  const [{ data: teams }, { data: existingOptions }, { data: existingPicks }] = await Promise.all([
+    supabaseAdmin.from('teams').select('id').eq('lobby_id', lobbyId),
+    supabaseAdmin.from('keeper_options').select('team_id, player_id').eq('lobby_id', lobbyId),
+    supabaseAdmin.from('picks').select('player_id').eq('lobby_id', lobbyId),
+  ]);
   const teamIds = new Set((teams ?? []).map((t) => t.id as string));
+  // A player can only be a candidate for ONE team at a time — offering them to
+  // a second team would let both teams "keep" the same player. Also block
+  // anyone already a real pick (drafted, or a commissioner-assigned keeper).
+  const takenByOtherTeam = new Map((existingOptions ?? []).map((o) => [o.player_id as string, o.team_id as string]));
+  const alreadyPicked = new Set((existingPicks ?? []).map((p) => p.player_id as string));
 
-  const rows = parsed.data.options
-    .filter((o) => teamIds.has(o.teamId) && o.round <= rounds)
-    .map((o) => ({
-      lobby_id: lobbyId,
-      team_id: o.teamId,
-      player_id: o.playerId,
-      round: o.round,
-    }));
-  const skipped = parsed.data.options.length - rows.length;
+  const rows: Record<string, unknown>[] = [];
+  let skipped = 0;
+  const seenInBatch = new Set<string>();
+  for (const o of parsed.data.options) {
+    const heldBy = takenByOtherTeam.get(o.playerId);
+    const dup = (heldBy && heldBy !== o.teamId) || seenInBatch.has(o.playerId);
+    if (!teamIds.has(o.teamId) || o.round > rounds || alreadyPicked.has(o.playerId) || dup) {
+      skipped++;
+      continue;
+    }
+    seenInBatch.add(o.playerId);
+    rows.push({ lobby_id: lobbyId, team_id: o.teamId, player_id: o.playerId, round: o.round });
+  }
 
   if (rows.length) {
     const { error } = await supabaseAdmin
@@ -863,19 +873,24 @@ draftRouter.post(
         res.status(409).json({ error: `${team.name} already has a keeper in round ${option.round}` });
         return;
       }
-      if (!playerTaken) {
-        const { error } = await supabaseAdmin.from('picks').insert({
-          lobby_id: lobbyId,
-          overall,
-          round: option.round,
-          team_id: team.id,
-          player_id: option.player_id,
-          is_keeper: true,
-        });
-        if (error) {
-          res.status(500).json({ error: error.message });
-          return;
-        }
+      // A different team beat this one to the same player (shouldn't happen
+      // given the offer-time cross-team guard, but stay consistent rather than
+      // silently flagging this option "selected" with no matching board pick).
+      if (playerTaken) {
+        res.status(409).json({ error: 'That player is already kept by another team' });
+        return;
+      }
+      const { error } = await supabaseAdmin.from('picks').insert({
+        lobby_id: lobbyId,
+        overall,
+        round: option.round,
+        team_id: team.id,
+        player_id: option.player_id,
+        is_keeper: true,
+      });
+      if (error) {
+        res.status(500).json({ error: error.message });
+        return;
       }
       await supabaseAdmin.from('keeper_options').update({ selected: true }).eq('id', option.id);
       res.json({ ok: true });
@@ -896,8 +911,9 @@ draftRouter.post(
 
 /**
  * PATCH /api/lobbies/:id/keeper-options/:optionId — commissioner edits a
- * candidate's compensation round. If it's already kept, its board pick moves to
- * the new round's slot (rejecting the change if that slot is already taken).
+ * candidate's round and/or swaps which player it refers to (fixing an import
+ * mismatch without deleting and re-adding). If it's already kept, its board
+ * pick moves accordingly (rejecting the change if the new slot/player collide).
  */
 draftRouter.patch(
   '/:id/keeper-options/:optionId',
@@ -913,7 +929,10 @@ draftRouter.patch(
       res.status(400).json({ error: parsed.error.flatten() });
       return;
     }
-    const { round } = parsed.data;
+    if (parsed.data.round === undefined && parsed.data.playerId === undefined) {
+      res.status(400).json({ error: 'Nothing to update' });
+      return;
+    }
 
     const { data: lobby } = await supabaseAdmin
       .from('lobbies')
@@ -929,14 +948,10 @@ draftRouter.patch(
       return;
     }
     const settings = lobby.settings as LobbySettings;
-    if (round > roundsForSettings(settings)) {
-      res.status(400).json({ error: `This draft only has ${roundsForSettings(settings)} rounds` });
-      return;
-    }
 
     const { data: option } = await supabaseAdmin
       .from('keeper_options')
-      .select('id, team_id, player_id, selected')
+      .select('id, team_id, player_id, round, selected')
       .eq('id', req.params.optionId)
       .eq('lobby_id', lobbyId)
       .maybeSingle();
@@ -945,7 +960,48 @@ draftRouter.patch(
       return;
     }
 
-    // A kept candidate has a board pick — move it to the new round's slot.
+    const round = parsed.data.round ?? (option.round as number);
+    const playerId = parsed.data.playerId ?? (option.player_id as string);
+    if (round > roundsForSettings(settings)) {
+      res.status(400).json({ error: `This draft only has ${roundsForSettings(settings)} rounds` });
+      return;
+    }
+
+    if (playerId !== option.player_id) {
+      const [{ data: elsewhere }, { data: dupInTeam }, { data: picked }] = await Promise.all([
+        supabaseAdmin
+          .from('keeper_options')
+          .select('id')
+          .eq('lobby_id', lobbyId)
+          .eq('player_id', playerId)
+          .neq('team_id', option.team_id)
+          .maybeSingle(),
+        supabaseAdmin
+          .from('keeper_options')
+          .select('id')
+          .eq('lobby_id', lobbyId)
+          .eq('team_id', option.team_id)
+          .eq('player_id', playerId)
+          .neq('id', option.id)
+          .maybeSingle(),
+        supabaseAdmin
+          .from('picks')
+          .select('id')
+          .eq('lobby_id', lobbyId)
+          .eq('player_id', playerId)
+          .maybeSingle(),
+      ]);
+      if (elsewhere || picked) {
+        res.status(409).json({ error: 'That player is already a candidate elsewhere' });
+        return;
+      }
+      if (dupInTeam) {
+        res.status(409).json({ error: 'This team already has that player as a candidate' });
+        return;
+      }
+    }
+
+    // A kept candidate has a board pick — move it to the new round/player.
     if (option.selected) {
       const { data: team } = await supabaseAdmin
         .from('teams')
@@ -980,13 +1036,16 @@ draftRouter.patch(
           overall,
           round,
           team_id: option.team_id,
-          player_id: option.player_id,
+          player_id: playerId,
           is_keeper: true,
         });
       }
     }
 
-    await supabaseAdmin.from('keeper_options').update({ round }).eq('id', option.id);
+    await supabaseAdmin
+      .from('keeper_options')
+      .update({ round, player_id: playerId })
+      .eq('id', option.id);
     res.json({ ok: true });
   },
 );

@@ -127,8 +127,11 @@ export type OfferKeeperOptionsInput = z.infer<typeof offerKeeperOptionsSchema>;
 export const selectKeeperOptionSchema = z.object({ selected: z.boolean() });
 export type SelectKeeperOptionInput = z.infer<typeof selectKeeperOptionSchema>;
 
-/** Commissioner edits a candidate's compensation round. */
-export const updateKeeperOptionSchema = z.object({ round: z.number().int().min(1) });
+/** Commissioner edits a candidate's round and/or which player it refers to. */
+export const updateKeeperOptionSchema = z.object({
+  round: z.number().int().min(1).optional(),
+  playerId: z.string().uuid().optional(),
+});
 export type UpdateKeeperOptionInput = z.infer<typeof updateKeeperOptionSchema>;
 
 /** Commissioner sets how many keepers a team may pick. */

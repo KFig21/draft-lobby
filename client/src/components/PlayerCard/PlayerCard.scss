@@ -42,6 +42,19 @@
     font-size: 0.75rem;
     color: $text-muted;
   }
+  &__keeper-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: rgba($keeper, 0.16);
+    color: $keeper;
+    font-size: 0.6rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
   &__stats {
     display: flex;
     flex-direction: column;

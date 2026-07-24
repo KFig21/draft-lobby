@@ -11,13 +11,13 @@
   padding: $space * 0.5;
   overflow: hidden;
   transition:
-    transform 190ms ease;
+    transform 300ms ease;
 
   // Lift only — no brightness/color shift on the fill itself, which made
   // the name harder to read against it.
   @media (hover: hover) {
     &:hover {
-      transform: scale(1.03);
+      transform: scale(1.07);
       box-shadow: none;
       z-index: 4;
 
