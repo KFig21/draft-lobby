@@ -1,5 +1,9 @@
 import { POSITION_COLORS, type Position } from '@draft-lobby/shared';
 import type { PickRow, PlayerRow } from '../../../../lib/types';
+// Same reasoning as PickCell.tsx's identical import: this component also
+// renders standalone in Settings' cell-style picker, a separate lazy-loaded
+// route that would otherwise never load DraftGrid.scss's base .draft-grid__cell.
+import '../../DraftGrid.scss';
 import './BoldPickCell.scss';
 
 /**

@@ -2,6 +2,11 @@ import { POSITION_COLORS, type Position } from '@draft-lobby/shared';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlined';
 import type { PickRow, PlayerRow } from '../../../../lib/types';
 import type { Reactor } from '../../../ReactorsModal/ReactorsModal';
+// The base .draft-grid__cell box (size/border/padding) lives in DraftGrid.scss
+// — import it directly rather than counting on DraftGrid.tsx already being
+// loaded: this component also renders on its own (Settings' cell-style
+// picker), a separate lazy-loaded route that otherwise never pulls it in.
+import '../../DraftGrid.scss';
 import './PickCell.scss';
 
 export interface ReactionEntry {

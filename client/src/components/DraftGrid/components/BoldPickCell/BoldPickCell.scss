@@ -8,19 +8,18 @@
 .bold-pick-cell {
   cursor: pointer;
   text-align: center;
-  vertical-align: middle;
   padding: $space * 0.5;
   overflow: hidden;
   transition:
-    transform 190ms ease,
-    box-shadow 190ms ease;
+    transform 190ms ease;
 
   // Lift only — no brightness/color shift on the fill itself, which made
   // the name harder to read against it.
   @media (hover: hover) {
     &:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+      transform: scale(1.02);
+      box-shadow: none;
+      border: solid 3px rgba(0, 0, 0, 0.209);
       z-index: 4;
     }
   }
@@ -31,20 +30,36 @@
     line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
-    word-break: break-word;
+    // The lenient, last-resort break: wrap whole words down to the next line
+    // first, only splitting mid-word if one truly doesn't fit a line alone.
+    // word-break: break-word was splitting names like "Robinson" into
+    // "Robinso" / "n" even when the whole word had room on the next line.
+    overflow-wrap: break-word;
     font-weight: 800;
     font-size: 0.95rem;
     line-height: 1.15;
-    color: #fff;
+    color: #000000;
     // White reads clearly against every position color (some, like RB's
     // teal, are too bright for reliable contrast with a single fixed text
     // color alone) — the shadow is what keeps it legible either way.
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
+    // text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
+    text-shadow: none;
   }
+}
+
+// .draft-grid__cell (DraftGrid.scss) sets vertical-align: top as its base —
+// same specificity as .bold-pick-cell alone, so whichever rule's CSS lands
+// later in the bundle silently wins; that was DraftGrid.scss's, since
+// DraftGrid.tsx imports this component before its own stylesheet. Only fill
+// (TV) mode escaped it, via the higher-specificity
+// `.draft-grid--fill .draft-grid__cell` override. The type qualifier here
+// outranks the plain class on its own merits, regardless of import order.
+td.bold-pick-cell {
+  vertical-align: middle;
 }
 
 // Fullscreen ("TV mode"): grows further as --fs-scale grows, same mechanism
 // DraftGrid.scss's own fill-mode font sizes use.
 .draft-grid--fill .bold-pick-cell__name {
-  font-size: calc(1.3rem * var(--fs-scale));
+  font-size: calc(0.9rem * var(--fs-scale));
 }
