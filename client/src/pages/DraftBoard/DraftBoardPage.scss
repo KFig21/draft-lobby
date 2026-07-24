@@ -259,10 +259,19 @@
       }
 
       .draft__complete {
-        font-size: 1.3rem;
+        font-size: 1.8rem;
+
+        :root[data-theme='dark'] & {
+          color: $accent;
+        }
+
+        :root[data-theme='light'] & {
+          color: $primary;
+        }
 
         svg {
-          font-size: 1.5rem;
+          font-size: 2rem;
+          color: $pos-te;
         }
       }
 
