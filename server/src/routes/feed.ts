@@ -1,6 +1,7 @@
 import { Router, type Response } from 'express';
 import { reactSchema } from '@draft-lobby/shared';
 import { requireAuth, type AuthedRequest } from '../middleware/auth.js';
+import { rateLimit } from '../middleware/rateLimit.js';
 import { supabaseAdmin } from '../supabase.js';
 
 export const feedRouter = Router();
@@ -219,7 +220,7 @@ feedRouter.get('/:activityId/reactors', async (req: AuthedRequest, res: Response
 });
 
 /** POST /api/feed/:activityId/react — toggle an emoji reaction. */
-feedRouter.post('/:activityId/react', async (req: AuthedRequest, res: Response) => {
+feedRouter.post('/:activityId/react', rateLimit('feed-react', { max: 20, windowMs: 10_000 }), async (req: AuthedRequest, res: Response) => {
   const me = req.user!.id;
   const activityId = req.params.activityId;
   const parsed = reactSchema.safeParse(req.body);

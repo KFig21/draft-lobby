@@ -20,6 +20,7 @@ import {
   type LobbySettings,
 } from '@draft-lobby/shared';
 import { requireAuth, type AuthedRequest } from '../middleware/auth.js';
+import { rateLimit } from '../middleware/rateLimit.js';
 import {
   applyPick,
   choosePlayer,
@@ -861,7 +862,7 @@ draftRouter.post('/:id/archive', async (req: AuthedRequest, res: Response) => {
 });
 
 /** POST /api/lobbies/:id/chat — post a chat message (members only, before the lock). */
-draftRouter.post('/:id/chat', async (req: AuthedRequest, res: Response) => {
+draftRouter.post('/:id/chat', rateLimit('chat', { max: 8, windowMs: 10_000 }), async (req: AuthedRequest, res: Response) => {
   const lobbyId = req.params.id;
   const userId = req.user!.id;
 
@@ -898,7 +899,7 @@ draftRouter.post('/:id/chat', async (req: AuthedRequest, res: Response) => {
 });
 
 /** POST /api/lobbies/:id/pick-comment — comment on a pick; posts to chat as a reply. */
-draftRouter.post('/:id/pick-comment', async (req: AuthedRequest, res: Response) => {
+draftRouter.post('/:id/pick-comment', rateLimit('pick-comment', { max: 8, windowMs: 10_000 }), async (req: AuthedRequest, res: Response) => {
   const lobbyId = req.params.id;
   const userId = req.user!.id;
 
@@ -972,7 +973,7 @@ draftRouter.post('/:id/pick-comment', async (req: AuthedRequest, res: Response) 
 });
 
 /** POST /api/lobbies/:id/chat-react — toggle an emoji reaction on a message or pick. */
-draftRouter.post('/:id/chat-react', async (req: AuthedRequest, res: Response) => {
+draftRouter.post('/:id/chat-react', rateLimit('chat-react', { max: 20, windowMs: 10_000 }), async (req: AuthedRequest, res: Response) => {
   const lobbyId = req.params.id;
   const userId = req.user!.id;
 
@@ -1517,7 +1518,7 @@ async function myTeamId(lobbyId: string, userId: string): Promise<string | null>
 }
 
 /** POST /api/lobbies/:id/crown-vote — cast/change your vote for the best OTHER roster. */
-draftRouter.post('/:id/crown-vote', async (req: AuthedRequest, res: Response) => {
+draftRouter.post('/:id/crown-vote', rateLimit('crown-vote', { max: 10, windowMs: 30_000 }), async (req: AuthedRequest, res: Response) => {
   const lobbyId = req.params.id;
   const userId = req.user!.id;
 
@@ -1576,7 +1577,7 @@ draftRouter.post('/:id/crown-vote', async (req: AuthedRequest, res: Response) =>
 });
 
 /** POST /api/lobbies/:id/grade-team — leave/update a grade + 140-char comment on an OTHER team's roster. */
-draftRouter.post('/:id/grade-team', async (req: AuthedRequest, res: Response) => {
+draftRouter.post('/:id/grade-team', rateLimit('grade-team', { max: 30, windowMs: 60_000 }), async (req: AuthedRequest, res: Response) => {
   const lobbyId = req.params.id;
   const userId = req.user!.id;
 
