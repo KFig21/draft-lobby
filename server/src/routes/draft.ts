@@ -4,6 +4,7 @@ import {
   DRAFT_RESULTS_LOCK_MS,
   RANDOM_BOT_TEAM_NAMES,
   ROLLBACK_LOCK_MS,
+  assignKeeperSchema,
   chatReactSchema,
   containsSlur,
   crownVoteSchema,
@@ -11,10 +12,12 @@ import {
   gradeTeamSchema,
   inviteToLobbySchema,
   makePickSchema,
+  overallForDraftPosition,
   pickCommentSchema,
   postChatSchema,
   renameTeamSchema,
   rollbackToSchema,
+  roundsForSettings,
   setAutoDraftSchema,
   setDraftOrderSchema,
   type LobbySettings,
@@ -27,7 +30,9 @@ import {
   claimSeat,
   computeDeadline,
   fillOpenSeatsWithBots,
+  nextOpenOverall,
   onClockTeam,
+  resyncKeepers,
 } from '../draftEngine.js';
 import { supabaseAdmin } from '../supabase.js';
 
@@ -352,12 +357,31 @@ draftRouter.post('/:id/start', async (req: AuthedRequest, res: Response) => {
   // Fill any empty seats with bots so every draft slot has a drafter.
   await fillOpenSeatsWithBots(lobbyId, settings);
 
+  // Start on the first slot that isn't already a keeper — keepers were placed
+  // as picks during staging, so the clock opens on the first genuinely open pick.
+  const total = settings.teamCount * roundsForSettings(settings);
+  const firstOverall = await nextOpenOverall(lobbyId, 1, total);
+  if (firstOverall === null) {
+    // Degenerate: every slot is a keeper. There's nothing to draft.
+    await supabaseAdmin
+      .from('lobbies')
+      .update({
+        status: 'COMPLETE',
+        completed_at: new Date().toISOString(),
+        current_overall: total + 1,
+        pick_deadline: null,
+      })
+      .eq('id', lobbyId);
+    res.json({ ok: true, complete: true });
+    return;
+  }
+
   // Deadline honours whoever lands on the clock first (a bot gets a short one).
-  const deadline = await computeDeadline(lobbyId, settings, 1);
+  const deadline = await computeDeadline(lobbyId, settings, firstOverall);
 
   const { error: updateError } = await supabaseAdmin
     .from('lobbies')
-    .update({ status: 'DRAFTING', current_overall: 1, pick_deadline: deadline })
+    .update({ status: 'DRAFTING', current_overall: firstOverall, pick_deadline: deadline })
     .eq('id', lobbyId);
   if (updateError) {
     res.status(500).json({ error: updateError.message });
@@ -407,6 +431,172 @@ draftRouter.post('/:id/open', async (req: AuthedRequest, res: Response) => {
     .eq('id', lobbyId);
   if (updateError) {
     res.status(500).json({ error: updateError.message });
+    return;
+  }
+  res.json({ ok: true });
+});
+
+/**
+ * POST /api/lobbies/:id/keepers — commissioner assigns a keeper. The player is
+ * placed as an is_keeper pick at the team's slot in `round`, so it shows on the
+ * board pre-draft and the engine skips that slot once the draft starts. Only
+ * before the draft goes live.
+ */
+draftRouter.post('/:id/keepers', async (req: AuthedRequest, res: Response) => {
+  const lobbyId = req.params.id;
+  const userId = req.user!.id;
+
+  const role = await getRole(lobbyId, userId);
+  if (!isCommish(role)) {
+    res.status(403).json({ error: 'Only the commissioner can set keepers' });
+    return;
+  }
+  const parsed = assignKeeperSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.flatten() });
+    return;
+  }
+  const { teamId, playerId, round } = parsed.data;
+
+  const { data: lobby } = await supabaseAdmin
+    .from('lobbies')
+    .select('id, status, settings')
+    .eq('id', lobbyId)
+    .maybeSingle();
+  if (!lobby) {
+    res.status(404).json({ error: 'Lobby not found' });
+    return;
+  }
+  if (lobby.status === 'DRAFTING' || lobby.status === 'PAUSED' || lobby.status === 'COMPLETE') {
+    res.status(409).json({ error: 'Keepers can only be set before the draft starts' });
+    return;
+  }
+
+  const settings = lobby.settings as LobbySettings;
+  const rounds = roundsForSettings(settings);
+  if (round > rounds) {
+    res.status(400).json({ error: `This draft only has ${rounds} rounds` });
+    return;
+  }
+
+  const [{ data: team }, { data: player }] = await Promise.all([
+    supabaseAdmin
+      .from('teams')
+      .select('id, name, draft_position')
+      .eq('id', teamId)
+      .eq('lobby_id', lobbyId)
+      .maybeSingle(),
+    supabaseAdmin.from('players').select('id, name').eq('id', playerId).maybeSingle(),
+  ]);
+  if (!team) {
+    res.status(404).json({ error: 'Team not found in this lobby' });
+    return;
+  }
+  if (!player) {
+    res.status(404).json({ error: 'Player not found' });
+    return;
+  }
+
+  const overall = overallForDraftPosition(
+    round,
+    team.draft_position as number,
+    settings.teamCount,
+    settings.draftType,
+  );
+
+  // Guard both unique constraints up front for friendly errors (the insert
+  // would otherwise 23505): the round slot must be free, and the player unkept.
+  const [{ data: slotTaken }, { data: playerTaken }] = await Promise.all([
+    supabaseAdmin
+      .from('picks')
+      .select('id')
+      .eq('lobby_id', lobbyId)
+      .eq('overall', overall)
+      .maybeSingle(),
+    supabaseAdmin
+      .from('picks')
+      .select('id')
+      .eq('lobby_id', lobbyId)
+      .eq('player_id', playerId)
+      .maybeSingle(),
+  ]);
+  if (slotTaken) {
+    res.status(409).json({ error: `${team.name} already has a keeper in round ${round}` });
+    return;
+  }
+  if (playerTaken) {
+    res.status(409).json({ error: `${player.name} is already kept by another team` });
+    return;
+  }
+
+  const { data: inserted, error: insertError } = await supabaseAdmin
+    .from('picks')
+    .insert({
+      lobby_id: lobbyId,
+      overall,
+      round,
+      team_id: teamId,
+      player_id: playerId,
+      is_keeper: true,
+    })
+    .select('id')
+    .single();
+  if (insertError || !inserted) {
+    res.status(500).json({ error: insertError?.message ?? 'Could not save keeper' });
+    return;
+  }
+
+  await postSystemMessage(
+    lobbyId,
+    userId,
+    `🔒 ${team.name} keeps ${player.name} (Round ${round})`,
+  );
+  res.json({ ok: true, pickId: inserted.id, overall });
+});
+
+/**
+ * DELETE /api/lobbies/:id/keepers/:pickId — commissioner removes a keeper.
+ * Only before the draft goes live, and only rows that are actually keepers.
+ */
+draftRouter.delete('/:id/keepers/:pickId', async (req: AuthedRequest, res: Response) => {
+  const lobbyId = req.params.id;
+  const pickId = req.params.pickId;
+  const userId = req.user!.id;
+
+  const role = await getRole(lobbyId, userId);
+  if (!isCommish(role)) {
+    res.status(403).json({ error: 'Only the commissioner can remove keepers' });
+    return;
+  }
+
+  const { data: lobby } = await supabaseAdmin
+    .from('lobbies')
+    .select('status')
+    .eq('id', lobbyId)
+    .maybeSingle();
+  if (!lobby) {
+    res.status(404).json({ error: 'Lobby not found' });
+    return;
+  }
+  if (lobby.status === 'DRAFTING' || lobby.status === 'PAUSED' || lobby.status === 'COMPLETE') {
+    res.status(409).json({ error: 'Keepers can only be changed before the draft starts' });
+    return;
+  }
+
+  const { data: pick } = await supabaseAdmin
+    .from('picks')
+    .select('id, is_keeper')
+    .eq('id', pickId)
+    .eq('lobby_id', lobbyId)
+    .maybeSingle();
+  if (!pick || !pick.is_keeper) {
+    res.status(404).json({ error: 'Keeper not found' });
+    return;
+  }
+
+  const { error } = await supabaseAdmin.from('picks').delete().eq('id', pickId);
+  if (error) {
+    res.status(500).json({ error: error.message });
     return;
   }
   res.json({ ok: true });
@@ -1149,6 +1339,10 @@ draftRouter.post('/:id/draft-order', async (req: AuthedRequest, res: Response) =
     const teamId = slots[i];
     if (teamId) await supabaseAdmin.from('teams').update({ draft_position: i + 1 }).eq('id', teamId);
   }
+
+  // Keepers are pinned to a slot derived from their team's position — reorder
+  // that position and the slot has to move with it.
+  await resyncKeepers(lobbyId, lobby.settings as LobbySettings);
   res.json({ ok: true });
 });
 

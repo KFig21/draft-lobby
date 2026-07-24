@@ -42,7 +42,9 @@ export function PickCell({
 
   return (
     <td
-      className="draft-grid__cell draft-grid__cell--pick"
+      className={`draft-grid__cell draft-grid__cell--pick${
+        pick.is_keeper ? ' draft-grid__cell--keeper' : ''
+      }`}
       onMouseEnter={onEnter}
       onMouseLeave={onLeave}
       onClick={() => onClick?.(pick)}

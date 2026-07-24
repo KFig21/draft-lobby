@@ -46,7 +46,9 @@ export function BoldPickCell({
 }) {
   return (
     <td
-      className="draft-grid__cell bold-pick-cell"
+      className={`draft-grid__cell bold-pick-cell${
+        pick.is_keeper ? ' draft-grid__cell--keeper' : ''
+      }`}
       style={{ background: POSITION_COLORS[player.position as Position] }}
       onClick={() => onClick?.(pick)}
       onMouseEnter={onEnter}

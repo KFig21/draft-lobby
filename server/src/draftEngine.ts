@@ -1,6 +1,7 @@
 import {
   AUTO_PICK_SECONDS,
   draftPositionForOverall,
+  overallForDraftPosition,
   roundsForSettings,
   secondsForRound,
   type LobbySettings,
@@ -27,6 +28,73 @@ export async function usernameOf(userId: string): Promise<string | null> {
     .eq('id', userId)
     .maybeSingle();
   return (data?.username as string | undefined) ?? null;
+}
+
+/**
+ * The next overall slot at or after `from` that isn't already filled — skipping
+ * keeper slots (and any pick already made). Returns null when every slot through
+ * `total` is filled, which means the draft is done. Keepers are pre-placed picks
+ * (is_keeper), so "filled" and "keeper" are the same thing to the engine: it
+ * just walks past them, and the on-clock team is still derived from the slot.
+ */
+export async function nextOpenOverall(
+  lobbyId: string,
+  from: number,
+  total: number,
+): Promise<number | null> {
+  const { data: picks } = await supabaseAdmin
+    .from('picks')
+    .select('overall')
+    .eq('lobby_id', lobbyId);
+  const taken = new Set((picks ?? []).map((p) => p.overall as number));
+  for (let o = from; o <= total; o++) {
+    if (!taken.has(o)) return o;
+  }
+  return null;
+}
+
+/**
+ * Recompute every keeper's slot from its team's *current* draft position and
+ * round. Keeper picks store an `overall` derived from where the team sat when
+ * the keeper was assigned, so reordering the draft afterwards would strand them
+ * at the wrong slot — call this after any draft-order change (pre-draft only).
+ * Delete-then-reinsert avoids transient unique(lobby_id, overall) collisions
+ * while slots shuffle. No-op when there are no keepers.
+ */
+export async function resyncKeepers(lobbyId: string, settings: LobbySettings): Promise<void> {
+  const { data: keepers } = await supabaseAdmin
+    .from('picks')
+    .select('team_id, player_id, round')
+    .eq('lobby_id', lobbyId)
+    .eq('is_keeper', true);
+  if (!keepers || keepers.length === 0) return;
+
+  const { data: teams } = await supabaseAdmin
+    .from('teams')
+    .select('id, draft_position')
+    .eq('lobby_id', lobbyId);
+  const positionByTeam = new Map(
+    (teams ?? []).map((t) => [t.id as string, t.draft_position as number]),
+  );
+
+  await supabaseAdmin.from('picks').delete().eq('lobby_id', lobbyId).eq('is_keeper', true);
+
+  const rows = keepers
+    .map((k) => {
+      const pos = positionByTeam.get(k.team_id as string);
+      if (pos == null) return null; // team gone — drop the keeper
+      const round = k.round as number;
+      return {
+        lobby_id: lobbyId,
+        overall: overallForDraftPosition(round, pos, settings.teamCount, settings.draftType),
+        round,
+        team_id: k.team_id as string,
+        player_id: k.player_id as string,
+        is_keeper: true,
+      };
+    })
+    .filter((r): r is NonNullable<typeof r> => r !== null);
+  if (rows.length) await supabaseAdmin.from('picks').insert(rows);
 }
 
 /** Look up the team on the clock for a given overall pick. */
@@ -284,14 +352,15 @@ export async function applyPick(
     return { ok: false, error: 'db', message: insertError.message };
   }
 
-  const nextOverall = overall + 1;
-  const isComplete = nextOverall > totalPicks;
+  // Advance to the next *open* slot, skipping any keeper slots in between.
+  const nextOverall = await nextOpenOverall(lobbyId, overall + 1, totalPicks);
+  const isComplete = nextOverall === null;
   const deadline = isComplete ? null : await computeDeadline(lobbyId, settings, nextOverall);
 
   const { error: advanceError } = await supabaseAdmin
     .from('lobbies')
     .update({
-      current_overall: nextOverall,
+      current_overall: nextOverall ?? totalPicks + 1,
       status: isComplete ? 'COMPLETE' : 'DRAFTING',
       completed_at: isComplete ? new Date().toISOString() : null,
       pick_deadline: deadline,

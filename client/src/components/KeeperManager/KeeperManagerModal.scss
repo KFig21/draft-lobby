@@ -1,0 +1,264 @@
+@use 'variables' as *;
+
+// $keeper (variables.scss) is shared with the board's keeper cell outline so the
+// modal and the cells it creates read as the same feature.
+.keeper-modal {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(560px, 94vw);
+  max-height: 90dvh;
+  overflow-y: auto;
+  padding: $space * 3;
+  background: $bg-raised;
+  border: 1px solid $border;
+  border-radius: $radius;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
+
+  &__backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: grid;
+    place-items: center;
+    padding: $space * 2;
+    background: rgba(0, 0, 0, 0.6);
+  }
+
+  &__close {
+    position: absolute;
+    top: $space * 1.5;
+    right: $space * 1.5;
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: $radius-sm;
+    background: $bg-overlay;
+    color: $text-muted;
+    cursor: pointer;
+
+    &:hover {
+      color: $text;
+    }
+  }
+
+  &__title {
+    margin: 0 0 $space * 0.5;
+    font-size: 1.2rem;
+  }
+
+  &__intro {
+    margin: 0 0 $space * 2;
+    color: $text-muted;
+    font-size: 0.88rem;
+    max-width: 46ch;
+  }
+
+  // Add-keeper form: team + player + round + button, wrapping on narrow widths.
+  &__form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: $space;
+  }
+
+  &__field {
+    display: flex;
+    flex-direction: column;
+    gap: $space * 0.4;
+    position: relative;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: $text-muted;
+
+    select,
+    input {
+      font: inherit;
+      font-size: 0.9rem;
+      font-weight: 500;
+      text-transform: none;
+      letter-spacing: 0;
+      padding: $space * 0.7 $space;
+      border: 1px solid $border;
+      border-radius: $radius-sm;
+      background: $bg;
+      color: $text;
+    }
+
+    &--player {
+      flex: 1 1 200px;
+
+      input {
+        width: 100%;
+      }
+    }
+
+    &--round select {
+      width: 68px;
+    }
+  }
+
+  // Search results: absolutely positioned so they overlay the list below
+  // rather than shoving it down as you type.
+  &__results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 5;
+    margin: 4px 0 0;
+    padding: 0;
+    list-style: none;
+    max-height: 240px;
+    overflow-y: auto;
+    background: $bg-raised;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+
+    button {
+      display: flex;
+      align-items: center;
+      gap: $space * 0.75;
+      width: 100%;
+      padding: $space * 0.6 $space;
+      border: none;
+      background: none;
+      color: $text;
+      font: inherit;
+      font-size: 0.88rem;
+      text-align: left;
+      cursor: pointer;
+
+      &:hover {
+        background: $bg-overlay;
+      }
+    }
+  }
+
+  &__result-pos {
+    flex-shrink: 0;
+    min-width: 30px;
+    font-size: 0.68rem;
+    font-weight: 800;
+    color: $text-muted;
+  }
+
+  &__result-team {
+    margin-left: auto;
+    font-size: 0.72rem;
+    color: $text-muted;
+  }
+
+  &__chosen {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $space;
+    padding: $space * 0.6 $space;
+    border: 1px solid $keeper;
+    border-radius: $radius-sm;
+    background: rgba($keeper, 0.12);
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: 0;
+    color: $text;
+
+    button {
+      border: none;
+      background: none;
+      color: $primary;
+      font: inherit;
+      font-size: 0.78rem;
+      cursor: pointer;
+    }
+  }
+
+  &__add {
+    white-space: nowrap;
+  }
+
+  &__error {
+    margin: $space 0 0;
+    color: $danger;
+    font-size: 0.85rem;
+  }
+
+  // The assigned-keepers list.
+  &__list {
+    margin-top: $space * 2;
+    display: flex;
+    flex-direction: column;
+    gap: $space * 0.5;
+  }
+
+  &__empty {
+    margin: 0;
+    padding: $space * 2 0;
+    text-align: center;
+    color: $text-muted;
+    font-size: 0.9rem;
+  }
+
+  &__row {
+    display: flex;
+    align-items: center;
+    gap: $space;
+    padding: $space * 0.75 $space;
+    border: 1px solid $border;
+    border-left: 3px solid $keeper;
+    border-radius: $radius-sm;
+    background: $bg;
+    font-size: 0.9rem;
+  }
+
+  &__row-round {
+    flex-shrink: 0;
+    min-width: 34px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: $keeper;
+  }
+
+  &__row-player {
+    flex: 1;
+
+    strong {
+      color: $text-muted;
+      margin-right: 4px;
+      font-size: 0.82rem;
+    }
+  }
+
+  &__row-team {
+    color: $text-muted;
+    font-size: 0.82rem;
+  }
+
+  &__remove {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    border: none;
+    border-radius: $radius-sm;
+    background: none;
+    color: $text-muted;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      color: $danger;
+      background: $bg-overlay;
+    }
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+  }
+}

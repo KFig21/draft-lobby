@@ -164,6 +164,17 @@
     padding: $space * 0.75;
     vertical-align: top;
 
+    // Keepers — placed on the board before the draft (is_keeper picks). Marked
+    // with a gold *outline* rather than a border: it sits on top of each cell
+    // style's own border/hover box-shadow rules without changing layout or
+    // being overridden by them, so it reads identically in the default and
+    // big-screen styles, at rest and on hover. (Keepers are never on the clock
+    // — the engine skips them — so this never fights the --onclock border.)
+    &--keeper {
+      outline: 2px solid $keeper;
+      outline-offset: -2px;
+    }
+
     // Whichever cell is on the clock — visible to every viewer, not just
     // whoever's turn it is. Border switches green -> yellow -> red on the
     // same schedule as the top bar's clock; &__onclock-fill (below) washes

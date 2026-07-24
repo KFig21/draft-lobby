@@ -54,6 +54,7 @@ import { DraftOutroModal } from '../../components/DraftOutroModal/DraftOutroModa
 import { DraftResultsPanel } from '../../components/DraftResultsPanel/DraftResultsPanel';
 import { ErrorScreen } from '../../components/ErrorScreen/ErrorScreen';
 import { GradeBadge } from '../../components/GradeBadge/GradeBadge';
+import { KeeperManagerModal } from '../../components/KeeperManager/KeeperManagerModal';
 import { Loader } from '../../components/Loader/Loader';
 import { LockInModal } from '../../components/LockInModal/LockInModal';
 import { Modal } from '../../components/Modal/Modal';
@@ -176,6 +177,7 @@ export function DraftBoardPage() {
   const [rollbackTarget, setRollbackTarget] = useState<PickRow | null>(null);
   const [rollbackConfirmText, setRollbackConfirmText] = useState('');
   const [showExport, setShowExport] = useState(false);
+  const [showKeepers, setShowKeepers] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   // Only meaningful in full screen (the sidebar isn't mounted there) —
   // force-closed the moment full screen exits, since the sidebar comes back.
@@ -931,15 +933,10 @@ export function DraftBoardPage() {
   const isMyTurn = !isStaging && !!onClockTeam && onClockTeam.owner_id === userId;
   const canPick = !isStaging && !isComplete && !isPaused && (isMyTurn || isCommish);
   const pickingForTeam = !isMyTurn && onClockTeam ? onClockTeam.name : null;
-  // Staging counters for the commissioner: humans seated, and keepers locked.
-  // keepersExpected reads 0 until the keeper feature lands (teams.keeper_count),
-  // so the keeper counter stays hidden for now.
+  // Staging counters: humans seated, and keepers placed so far. A target
+  // keeper count (X/Y) arrives with per-team keeper counts in a later phase.
   const humansSeated = teams.filter((t) => t.owner_id && !t.is_bot).length;
   const keepersSelected = picks.filter((p) => p.is_keeper).length;
-  const keepersExpected = teams.reduce(
-    (n, t) => n + ((t as { keeper_count?: number }).keeper_count ?? 0),
-    0,
-  );
   const myTeamId = teams.find((t) => t.owner_id === userId)?.id ?? teams[0]?.id ?? null;
   const myTeam = teams.find((t) => t.owner_id === userId) ?? null;
   // A signed-in visitor with no membership row — only possible at all once
@@ -1144,10 +1141,19 @@ export function DraftBoardPage() {
         </>
       );
     }
-    // Staging: the only commissioner action is starting the draft.
+    // Staging: manage keepers (if enabled) and start the draft.
     if (isStaging) {
       return (
         <>
+          {lobby?.settings.keepersEnabled && (
+            <button
+              className="draft__tool-btn"
+              onClick={() => setShowKeepers(true)}
+              disabled={commishBusy}
+            >
+              <LockOutlinedIcon fontSize="small" /> Keepers
+            </button>
+          )}
           <button
             className="draft__tool-btn draft__start-btn"
             onClick={startDraft}
@@ -1520,9 +1526,9 @@ export function DraftBoardPage() {
                   <span className="draft__count">
                     {humansSeated}/{lobby.settings.teamCount} seated
                   </span>
-                  {keepersExpected > 0 && (
+                  {keepersSelected > 0 && (
                     <span className="draft__count">
-                      {keepersSelected}/{keepersExpected} keepers
+                      {keepersSelected} keeper{keepersSelected === 1 ? '' : 's'}
                     </span>
                   )}
                 </span>
@@ -1777,6 +1783,17 @@ export function DraftBoardPage() {
           ) : undefined
         }
       />
+
+      {showKeepers && (
+        <KeeperManagerModal
+          lobbyId={id}
+          teams={teams}
+          players={players}
+          picks={picks}
+          rounds={totalRounds}
+          onClose={() => setShowKeepers(false)}
+        />
+      )}
 
       {showOutro && (
         <DraftOutroModal

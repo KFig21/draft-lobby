@@ -75,6 +75,17 @@ export const setAutoDraftSchema = z.object({
 });
 export type SetAutoDraftInput = z.infer<typeof setAutoDraftSchema>;
 
+/**
+ * Commissioner assigns a keeper: `playerId` is kept by `teamId`, costing that
+ * team its pick in `round`. Placed as an is_keeper pick before the draft starts.
+ */
+export const assignKeeperSchema = z.object({
+  teamId: z.string().uuid(),
+  playerId: z.string().uuid(),
+  round: z.number().int().min(1),
+});
+export type AssignKeeperInput = z.infer<typeof assignKeeperSchema>;
+
 /** Seconds a bot / auto-draft team gets on the clock before the engine picks. */
 export const AUTO_PICK_SECONDS = 5;
 
@@ -119,4 +130,23 @@ export function draftPositionForOverall(
     return indexInRound + 1;
   }
   return teamCount - indexInRound; // reversed round for snake
+}
+
+/**
+ * Inverse of draftPositionForOverall: the overall pick number at which a given
+ * (1-indexed) draft position picks in a given (1-indexed) round. Used to place
+ * keepers, which cost a team its pick in a specific round.
+ */
+export function overallForDraftPosition(
+  round: number,
+  draftPosition: number,
+  teamCount: number,
+  draftType: 'SNAKE' | 'STRAIGHT',
+): number {
+  const roundIndex = round - 1; // 0-indexed
+  const indexInRound =
+    draftType === 'STRAIGHT' || roundIndex % 2 === 0
+      ? draftPosition - 1
+      : teamCount - draftPosition; // reversed round for snake
+  return roundIndex * teamCount + indexInRound + 1;
 }
