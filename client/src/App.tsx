@@ -72,13 +72,24 @@ function ScrollToTop() {
  * ErrorBoundary sits above <Routes> and, once tripped, substitutes
  * ErrorScreen for the entire tree — including Routes itself — so navigating
  * away (e.g. "Back to home") changes the URL but never actually renders the
- * new page; only a hard refresh clears it. Keying on `location.key` (unique
- * per navigation, even to the same path) forces a fresh ErrorBoundary
- * instance on every navigation, discarding the caught error along with it.
+ * new page; only a hard refresh clears it. Keying on `location.pathname`
+ * forces a fresh ErrorBoundary instance whenever the page actually changes,
+ * discarding the caught error along with it.
+ *
+ * Deliberately NOT `location.key` (unique per navigation, even a same-path
+ * `replace`): several pages fire a same-pathname `replace` navigation purely
+ * to clear consumed router state/query params after a deep link (e.g.
+ * DraftBoardPage's notification/pick deep-link effects call `setPickModal`
+ * then immediately `navigate(location.pathname, { replace: true, state: null })`
+ * in the same tick). `location.key` changes on every navigation regardless of
+ * push/replace, so keying on it remounted this entire boundary — wiping the
+ * state that was just set — before it ever painted. Keying on pathname only
+ * remounts on an actual page change, so same-page cleanup replaces no longer
+ * discard in-flight state.
  */
 function RoutedErrorBoundary({ children }: { children: React.ReactNode }) {
   const location = useLocation();
-  return <ErrorBoundary key={location.key}>{children}</ErrorBoundary>;
+  return <ErrorBoundary key={location.pathname}>{children}</ErrorBoundary>;
 }
 
 /** Splash / auth are for signed-out visitors; send signed-in users home. */
