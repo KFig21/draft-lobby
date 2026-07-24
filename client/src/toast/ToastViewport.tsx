@@ -1,3 +1,4 @@
+import { POSITION_COLORS, type Position } from '@draft-lobby/shared';
 import CloseIcon from '@mui/icons-material/Close';
 import PauseIcon from '@mui/icons-material/Pause';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
@@ -33,8 +34,20 @@ function ToastCard({
   onClose: () => void;
   onTogglePause: () => void;
 }) {
-  const { title, body, tone, action, avatar, grade, onClick, durationMs, paused, closing } =
-    toast;
+  const {
+    title,
+    titleIcon,
+    body,
+    tone,
+    action,
+    avatar,
+    grade,
+    pick,
+    onClick,
+    durationMs,
+    paused,
+    closing,
+  } = toast;
 
   function activate() {
     if (!onClick) return;
@@ -68,8 +81,23 @@ function ToastCard({
       <div className="toast__content">
         <p className="toast__title">
           {title}
+          {titleIcon}
           {grade && <GradeBadge grade={grade} size={18} />}
         </p>
+        {pick && (
+          <p className="toast__pick">
+            <span
+              className="toast__pick-pos"
+              style={{ background: POSITION_COLORS[pick.position as Position] }}
+            >
+              {pick.position}
+            </span>
+            {pick.name}
+            <span className="toast__pick-meta">
+              Round {pick.round} · Pick {pick.overall}
+            </span>
+          </p>
+        )}
         {body && <p className="toast__body">{body}</p>}
       </div>
       <div className="toast__controls">

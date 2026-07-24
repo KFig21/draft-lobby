@@ -3,19 +3,22 @@
 .clock {
   font-variant-numeric: tabular-nums;
   font-weight: 800;
-  font-size: 1.3rem;
+  font-size: 2rem;
   min-width: 3.5ch;
   text-align: right;
 
   &--urgent {
     color: $warning;
   }
+
   &--expired {
     color: $danger;
   }
+
   &--idle {
     color: $text-muted;
   }
+
   &--paused {
     color: $text-muted;
   }

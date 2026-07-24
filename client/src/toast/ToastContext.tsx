@@ -1,4 +1,4 @@
-import type { Avatar as AvatarData, DraftGrade } from '@draft-lobby/shared';
+import type { Avatar as AvatarData, DraftGrade, Position } from '@draft-lobby/shared';
 import {
   createContext,
   useCallback,
@@ -19,6 +19,9 @@ export interface ToastAction {
 
 export interface ToastInput {
   title: string;
+  /** Small icon shown before the title text (e.g. a comment bubble for
+   * "commented on your pick"). */
+  titleIcon?: ReactNode;
   body?: string;
   tone?: ToastTone;
   /** Auto-dismiss after this long, unless paused. Default 6000ms. */
@@ -30,6 +33,10 @@ export interface ToastInput {
   avatar?: AvatarData | null;
   /** Shown as a colored badge in the title — for grade notifications. */
   grade?: DraftGrade | null;
+  /** Player summary shown in place of a plain `body` string — for toasts
+   * about a specific pick (e.g. a reaction), so the position and round/pick
+   * are visible without needing to click through. */
+  pick?: { position: Position; name: string; round: number; overall: number } | null;
   /** Which Settings toggle silences this toast. Omit for toasts that are
    * direct feedback on the user's own action (errors, confirmations) —
    * those aren't "notifications" and always show. */
@@ -41,10 +48,12 @@ export interface ToastInput {
 
 export interface ToastItem extends Required<Pick<ToastInput, 'title' | 'tone' | 'durationMs'>> {
   id: string;
+  titleIcon?: ReactNode;
   body?: string;
   action?: ToastAction;
   avatar?: AvatarData | null;
   grade?: DraftGrade | null;
+  pick?: ToastInput['pick'];
   onClick?: () => void;
   paused: boolean;
   closing: boolean;
@@ -93,11 +102,13 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       const item: ToastItem = {
         id,
         title: input.title,
+        titleIcon: input.titleIcon,
         body: input.body,
         tone: input.tone ?? 'info',
         action: input.action,
         avatar: input.avatar,
         grade: input.grade,
+        pick: input.pick,
         onClick: input.onClick,
         durationMs,
         paused: false,

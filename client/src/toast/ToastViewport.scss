@@ -8,6 +8,7 @@
     opacity: 0;
     transform: translateY(var(--toast-slide, -16px));
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -19,6 +20,7 @@
     opacity: 1;
     transform: translateY(0);
   }
+
   to {
     opacity: 0;
     transform: translateY(var(--toast-slide, -16px));
@@ -29,6 +31,7 @@
   from {
     width: 100%;
   }
+
   to {
     width: 0%;
   }
@@ -85,6 +88,15 @@
   font-size: 1.05rem;
 }
 
+:fullscreen .toast__pick {
+  font-size: 1.05rem;
+}
+
+:fullscreen .toast__pick-pos {
+  padding: 2px 8px;
+  font-size: 0.85rem;
+}
+
 :fullscreen .toast__action {
   font-size: 1rem;
   padding: 8px 16px;
@@ -124,10 +136,12 @@
     background: $accent;
     color: #05231a;
   }
+
   &--warning {
     background: $warning;
     color: #05231a;
   }
+
   &--danger {
     background: $danger;
     color: #fff;
@@ -171,8 +185,52 @@
 
 .toast__body {
   margin-top: 2px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   font-size: 0.82rem;
   opacity: 0.85;
+}
+
+// Extra breathing room specifically when a pick chip precedes the comment
+// text, so the two groups don't read as one cramped block.
+.toast__pick + .toast__body {
+  margin-top: 8px;
+}
+
+.toast__pick {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 3px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin-top: 8px;
+  background-color: rgba(0, 0, 0, 0.15);
+  padding: 4px;
+  border-radius: 6px;
+}
+
+// A plain fill isn't enough here — RB's position color (#3fd6a5) is the
+// exact same hex as $accent, this toast's own --success background, so an
+// unbordered chip would be completely invisible on a success-toned toast.
+// A consistent border on every position (not just RB) is simpler than
+// special-casing one, and reads fine against every tone/color combination.
+.toast__pick-pos {
+  display: inline-grid;
+  place-items: center;
+  padding: 1px 6px;
+  border: 1px solid rgba(0, 0, 0, 0.35);
+  border-radius: $radius-sm;
+  color: #05231a;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.toast__pick-meta {
+  font-weight: 500;
+  opacity: 0.8;
 }
 
 .toast__controls {
@@ -243,9 +301,11 @@
 .toast--success .toast__bar {
   background: color-mix(in srgb, black 12%, $accent);
 }
+
 .toast--warning .toast__bar {
   background: color-mix(in srgb, black 12%, $warning);
 }
+
 .toast--danger .toast__bar {
   background: color-mix(in srgb, black 18%, $danger);
 }

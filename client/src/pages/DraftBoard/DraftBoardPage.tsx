@@ -385,7 +385,14 @@ export function DraftBoardPage() {
             const player = playersByIdRef.current.get(pick.player_id);
             showToast({
               title: `${memberUsername(row.user_id)} reacted ${row.emoji} to your pick`,
-              body: player?.name,
+              pick: player
+                ? {
+                    position: player.position,
+                    name: player.name,
+                    round: pick.round,
+                    overall: pick.overall,
+                  }
+                : undefined,
               tone: 'info',
               avatar: memberAvatar(row.user_id),
               category: 'reaction',
@@ -399,9 +406,19 @@ export function DraftBoardPage() {
           const comment = myReply(row.target_id);
           if (!comment) return;
           const pick = picksRef.current.find((p) => p.id === comment.reply_to_pick_id) ?? null;
+          const replyPlayer = pick ? playersByIdRef.current.get(pick.player_id) : undefined;
           showToast({
             title: `${memberUsername(row.user_id)} reacted ${row.emoji} to your reply`,
-            body: comment.body,
+            pick:
+              pick && replyPlayer
+                ? {
+                    position: replyPlayer.position,
+                    name: replyPlayer.name,
+                    round: pick.round,
+                    overall: pick.overall,
+                  }
+                : undefined,
+            body: `“${comment.body}”`,
             tone: 'info',
             avatar: memberAvatar(row.user_id),
             category: 'reaction',
@@ -754,7 +771,16 @@ export function DraftBoardPage() {
               const player = playersByIdRef.current.get(repliedPick.player_id);
               showToast({
                 title: `${memberUsername(row.user_id)} commented on your pick`,
-                body: player ? `${player.name}: “${row.body}”` : row.body,
+                titleIcon: <ChatBubbleOutlineIcon fontSize="inherit" />,
+                pick: player
+                  ? {
+                      position: player.position,
+                      name: player.name,
+                      round: repliedPick.round,
+                      overall: repliedPick.overall,
+                    }
+                  : undefined,
+                body: player ? `“${row.body}”` : row.body,
                 tone: 'info',
                 avatar: memberAvatar(row.user_id),
                 category: 'reply',
