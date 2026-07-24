@@ -7,6 +7,7 @@ import type { DraftCellStyle } from '../../lib/draftCellStyle';
 import { avatarForTeam } from '../../lib/teamAvatar';
 import type { ChatMessageRow, MemberRow, PickRow, PlayerRow, TeamRow } from '../../lib/types';
 import { Avatar } from '../Avatar/Avatar';
+import { BoldPickCell } from './BoldPickCell';
 import type { Reactor } from '../ReactorsModal/ReactorsModal';
 import './DraftGrid.scss';
 
@@ -159,6 +160,9 @@ export function DraftGrid({
                   // mobile tabs, fullscreen).
                   const isMyClock = isOnClock && team.id === myTeamId;
                   if (pick && player) {
+                    if (cellStyle === 'bold') {
+                      return <BoldPickCell key={team.id} pick={pick} player={player} onClick={onPickClick} />;
+                    }
                     return (
                       <PickCell
                         key={team.id}
@@ -166,7 +170,6 @@ export function DraftGrid({
                         player={player}
                         entry={reactionsByPick?.get(pick.id)}
                         hasComment={(commentsByPick?.get(pick.id)?.length ?? 0) > 0}
-                        bold={cellStyle === 'bold'}
                         onReact={onReactPick}
                         onClick={onPickClick}
                         onEnter={() => setHover({ round, teamId: team.id })}
@@ -240,7 +243,6 @@ function PickCell({
   player,
   entry,
   hasComment,
-  bold,
   onReact,
   onClick,
   onEnter,
@@ -250,29 +252,12 @@ function PickCell({
   player: PlayerRow;
   entry: ReactionEntry | undefined;
   hasComment: boolean;
-  bold: boolean;
   onReact?: (pickId: string, emoji: string) => void;
   onClick?: (pick: PickRow) => void;
   onEnter: () => void;
   onLeave: () => void;
 }) {
   const active = entry ? Object.keys(entry.counts) : [];
-  const posColor = POSITION_COLORS[player.position as Position];
-
-  if (bold) {
-    // "Big screen" style: the whole cell is the position color, showing only
-    // the player's name, large — nothing else is legible from across a room
-    // anyway, so reactions/comments/meta are dropped rather than shrunk.
-    return (
-      <td
-        className="draft-grid__cell draft-grid__cell--pick draft-grid__cell--bold"
-        style={{ background: posColor }}
-        onClick={() => onClick?.(pick)}
-      >
-        <span className="draft-grid__player draft-grid__player--bold">{player.name}</span>
-      </td>
-    );
-  }
 
   return (
     <td
@@ -282,7 +267,10 @@ function PickCell({
       onClick={() => onClick?.(pick)}
     >
       <div className="draft-grid__pick">
-        <span className="draft-grid__pos" style={{ color: posColor }}>
+        <span
+          className="draft-grid__pos"
+          style={{ color: POSITION_COLORS[player.position as Position] }}
+        >
           {player.position}
         </span>
         <span className="draft-grid__player">{player.name}</span>

@@ -1,0 +1,50 @@
+@use 'variables' as *;
+
+// Independent of DraftGrid.scss's &--pick rules on purpose (see the comment
+// in BoldPickCell.tsx) — nothing here shares a selector with the default
+// style, so the two styles' hover treatments can never fight over which one
+// wins. .draft-grid__cell (base size/border/position) is still shared, since
+// that's just cell geometry every style needs to fit into the table.
+.bold-pick-cell {
+  cursor: pointer;
+  text-align: center;
+  vertical-align: middle;
+  padding: $space * 0.5;
+  overflow: hidden;
+  transition:
+    transform 190ms ease,
+    box-shadow 190ms ease;
+
+  // Lift only — no brightness/color shift on the fill itself, which made
+  // the name harder to read against it.
+  @media (hover: hover) {
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+      z-index: 4;
+    }
+  }
+
+  &__name {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    word-break: break-word;
+    font-weight: 800;
+    font-size: 0.95rem;
+    line-height: 1.15;
+    color: #fff;
+    // White reads clearly against every position color (some, like RB's
+    // teal, are too bright for reliable contrast with a single fixed text
+    // color alone) — the shadow is what keeps it legible either way.
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
+  }
+}
+
+// Fullscreen ("TV mode"): grows further as --fs-scale grows, same mechanism
+// DraftGrid.scss's own fill-mode font sizes use.
+.draft-grid--fill .bold-pick-cell__name {
+  font-size: calc(1.3rem * var(--fs-scale));
+}

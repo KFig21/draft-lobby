@@ -231,8 +231,7 @@
       transition:
         transform 190ms ease,
         box-shadow 190ms ease,
-        border-color 190ms ease,
-        filter 190ms ease;
+        border-color 190ms ease;
 
       @media (hover: hover) {
         &:hover {
@@ -253,35 +252,7 @@
             background-color: rgba($accent, 0.12);
             box-shadow: 3px 3px 0 0 $accent;
           }
-
-          // Bold cells are already a solid, vivid position color — the
-          // accent-green border/shadow above (either theme) clashes against
-          // whatever that color happens to be instead of reading as a hover
-          // cue. Brighten the fill itself so the same color lifts, and swap
-          // the border/shadow for a neutral one that doesn't fight it.
-          &.draft-grid__cell--bold {
-            filter: brightness(1.18);
-            border-color: $border;
-            box-shadow: 3px 3px 0 0 rgba(0, 0, 0, 0.35);
-          }
         }
-      }
-
-      // "Big screen" cell style (user preference, Settings > Draft board):
-      // the position color set inline (see DraftGrid.tsx) fills the whole
-      // cell — nothing here overrides it, hover's background-color tint
-      // above included, since inline styles always win regardless.
-      //
-      // Centered via text-align/vertical-align (real table-cell properties),
-      // NOT display: flex — flexing a <td> knocks it out of the table's
-      // normal cell layout, which under table-layout: fixed made every
-      // column but the first collapse to nothing (visually confirmed: only
-      // column 1 rendered, everything else went blank).
-      &.draft-grid__cell--bold {
-        text-align: center;
-        vertical-align: middle;
-        padding: $space * 0.5;
-        overflow: hidden;
       }
     }
   }
@@ -380,23 +351,6 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-
-    // "Big screen" style — see &__cell--bold. White + a dark shadow reads
-    // clearly against every position color (some, like RB's teal, are too
-    // bright for reliable contrast with a single fixed text color alone).
-    &--bold {
-      white-space: normal;
-      font-weight: 800;
-      font-size: 0.95rem;
-      line-height: 1.15;
-      color: #fff;
-      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
-      display: -webkit-box;
-      -webkit-line-clamp: 3;
-      line-clamp: 3;
-      -webkit-box-orient: vertical;
-      word-break: break-word;
-    }
   }
 
   &__meta {
@@ -547,12 +501,6 @@
 
     .draft-grid__meta {
       font-size: calc(0.65rem * var(--fs-scale));
-    }
-
-    // The whole point of the "big screen" cell style — grows well past the
-    // other labels above as the row height (and so --fs-scale) grows.
-    .draft-grid__player--bold {
-      font-size: calc(1.3rem * var(--fs-scale));
     }
 
     // Deliberately NOT scaled by --fs-scale like everything else above —
