@@ -12,6 +12,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { ProfileEditor } from '../../components/ProfileEditor/ProfileEditor';
 import { ThemeToggle } from '../../components/ThemeToggle/ThemeToggle';
 import { ToggleSwitch } from '../../components/ToggleSwitch/ToggleSwitch';
+import { DraftCellStylePicker } from '../../components/DraftGrid/DraftCellStylePicker';
 import {
   getDraftCellStyle,
   setDraftCellStyle,
@@ -114,25 +115,10 @@ export function SettingsPage() {
         <div className="settings__row">
           <div className="settings__row-main">
             <span className="settings__row-name">Cell style</span>
-            <span className="muted">
-              {cellStyle === 'bold'
-                ? 'Big screen: solid position color, just the player name — built to read from across the room'
-                : 'Default: position, player name, team & bye week'}
-            </span>
+            <span className="muted">How a drafted pick looks on the board</span>
           </div>
         </div>
-        <div className="segmented">
-          {(['default', 'bold'] as const).map((v) => (
-            <button
-              key={v}
-              type="button"
-              className={`segmented__opt${cellStyle === v ? ' segmented__opt--on' : ''}`}
-              onClick={() => updateCellStyle(v)}
-            >
-              {v === 'default' ? 'Default' : 'Big screen'}
-            </button>
-          ))}
-        </div>
+        <DraftCellStylePicker value={cellStyle} onChange={updateCellStyle} />
       </section>
 
       {/* Notifications */}

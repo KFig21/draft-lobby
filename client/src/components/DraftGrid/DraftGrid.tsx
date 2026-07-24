@@ -238,7 +238,9 @@ export function DraftGrid({
   );
 }
 
-function PickCell({
+// Exported so DraftCellStylePicker (Settings > Draft board) can render a
+// real example cell instead of a hand-drawn mockup.
+export function PickCell({
   pick,
   player,
   entry,

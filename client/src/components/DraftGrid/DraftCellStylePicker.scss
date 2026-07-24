@@ -1,0 +1,45 @@
+@use 'variables' as *;
+
+.cell-style-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space * 2;
+  margin-top: $space;
+
+  &__option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $space * 0.75;
+    padding: $space * 1.5;
+    border: 1px solid $border;
+    border-radius: $radius;
+    background: $bg;
+    cursor: pointer;
+    transition:
+      border-color 120ms ease,
+      background 120ms ease;
+
+    &:hover {
+      border-color: $primary;
+    }
+
+    &.is-selected {
+      border-color: $primary;
+      background: rgba($primary, 0.08);
+    }
+  }
+
+  // The real cell components underneath keep their own hover lift — a nice
+  // little "yep, that's really it" touch — clicks still reach the wrapping
+  // <label> regardless (neither cell passes a real onClick here).
+  &__table {
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  &__name {
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+}
