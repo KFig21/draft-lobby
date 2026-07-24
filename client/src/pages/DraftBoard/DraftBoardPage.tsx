@@ -11,10 +11,12 @@ import {
   type DraftGrade,
   type Position,
 } from '@draft-lobby/shared';
+import AlternateEmailIcon from '@mui/icons-material/AlternateEmail';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlined';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import EmojiEventsOutlinedIcon from '@mui/icons-material/EmojiEventsOutlined';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutlineOutlined';
 import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
 import FastForwardIcon from '@mui/icons-material/FastForward';
 import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
@@ -27,6 +29,7 @@ import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import MeetingRoomOutlinedIcon from '@mui/icons-material/MeetingRoomOutlined';
 import MenuIcon from '@mui/icons-material/Menu';
 import PauseIcon from '@mui/icons-material/Pause';
+import PauseCircleOutlineIcon from '@mui/icons-material/PauseCircleOutlineOutlined';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
 import SmartToyOutlinedIcon from '@mui/icons-material/SmartToyOutlined';
@@ -692,6 +695,7 @@ export function DraftBoardPage() {
     } catch (err) {
       showToast({
         title: 'Vote failed',
+        titleIcon: <ErrorOutlineIcon fontSize="inherit" />,
         body: err instanceof Error ? err.message : undefined,
         tone: 'warning',
       });
@@ -705,6 +709,7 @@ export function DraftBoardPage() {
     } catch (err) {
       showToast({
         title: 'Grade failed',
+        titleIcon: <ErrorOutlineIcon fontSize="inherit" />,
         body: err instanceof Error ? err.message : undefined,
         tone: 'warning',
       });
@@ -791,9 +796,22 @@ export function DraftBoardPage() {
             const myUsername = membersRef.current.find((m) => m.user_id === userId)?.profiles
               ?.username;
             if (myUsername && extractMentionedUsernames(row.body, [myUsername]).length > 0) {
+              const mentionPlayer = repliedPick
+                ? playersByIdRef.current.get(repliedPick.player_id)
+                : undefined;
               showToast({
                 title: 'You were mentioned',
-                body: row.body,
+                titleIcon: <AlternateEmailIcon fontSize="inherit" />,
+                pick:
+                  repliedPick && mentionPlayer
+                    ? {
+                        position: mentionPlayer.position,
+                        name: mentionPlayer.name,
+                        round: repliedPick.round,
+                        overall: repliedPick.overall,
+                      }
+                    : undefined,
+                body: `“${row.body}”`,
                 tone: 'info',
                 avatar: memberAvatar(row.user_id),
                 category: 'mention',
@@ -813,6 +831,7 @@ export function DraftBoardPage() {
             if (isCommish) {
               showToast({
                 title: 'Pause requested',
+                titleIcon: <PauseCircleOutlineIcon fontSize="inherit" />,
                 body: row.body.replace('🙋 ', ''),
                 tone: 'warning',
                 action: { label: 'Pause draft', onClick: () => commishAction('pause') },
@@ -823,6 +842,7 @@ export function DraftBoardPage() {
           } else if (row.body.startsWith('⏸️')) {
             showToast({
               title: 'Draft paused',
+              titleIcon: <PauseIcon fontSize="inherit" />,
               body: row.body.replace('⏸️ ', ''),
               tone: 'warning',
               avatar: memberAvatar(row.user_id),
@@ -831,6 +851,7 @@ export function DraftBoardPage() {
           } else if (row.body.startsWith('▶️')) {
             showToast({
               title: 'Draft resumed',
+              titleIcon: <PlayArrowIcon fontSize="inherit" />,
               body: row.body.replace('▶️ ', ''),
               tone: 'success',
               avatar: memberAvatar(row.user_id),
@@ -840,6 +861,7 @@ export function DraftBoardPage() {
           } else if (row.body.startsWith('↩️')) {
             showToast({
               title: 'Pick rolled back',
+              titleIcon: <UndoIcon fontSize="inherit" />,
               body: row.body.replace('↩️ ', ''),
               tone: 'info',
               category: 'draft_control',
@@ -982,12 +1004,17 @@ export function DraftBoardPage() {
       await api(`/lobbies/${id}/request-pause`, { method: 'POST' });
       showToast({
         title: 'Pause requested',
+        titleIcon: <PauseCircleOutlineIcon fontSize="inherit" />,
         body: "The commissioner's been notified.",
         tone: 'info',
         durationMs: 2000,
       });
     } catch {
-      showToast({ title: "Couldn't request a pause", tone: 'danger' });
+      showToast({
+        title: "Couldn't request a pause",
+        titleIcon: <ErrorOutlineIcon fontSize="inherit" />,
+        tone: 'danger',
+      });
     } finally {
       setReqPauseBusy(false);
     }

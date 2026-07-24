@@ -5,6 +5,7 @@ import {
   type Avatar as AvatarData,
 } from '@draft-lobby/shared';
 import AddIcon from '@mui/icons-material/Add';
+import AlternateEmailIcon from '@mui/icons-material/AlternateEmail';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
@@ -139,6 +140,7 @@ export function LobbyRoomPage() {
           if (newRow.owner_id === userId) return;
           showToast({
             title: 'New team joined',
+            titleIcon: <PersonAddAlt1Icon fontSize="inherit" />,
             body: `${newRow.name} joined the lobby`,
             avatar: memberAvatar(newRow.owner_id),
             category: 'lobby',
@@ -153,6 +155,7 @@ export function LobbyRoomPage() {
           if (row.is_bot || !row.owner_id || row.owner_id === userId) return;
           showToast({
             title: 'New team joined',
+            titleIcon: <PersonAddAlt1Icon fontSize="inherit" />,
             body: `${row.name} joined the lobby`,
             avatar: memberAvatar(row.owner_id),
             category: 'lobby',
@@ -169,7 +172,8 @@ export function LobbyRoomPage() {
           if (myUsername && extractMentionedUsernames(row.body, [myUsername]).length > 0) {
             showToast({
               title: 'You were mentioned',
-              body: row.body,
+              titleIcon: <AlternateEmailIcon fontSize="inherit" />,
+              body: `“${row.body}”`,
               tone: 'info',
               avatar: memberAvatar(row.user_id),
               category: 'mention',
