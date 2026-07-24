@@ -76,5 +76,5 @@ td.bold-pick-cell {
 // Fullscreen ("TV mode"): grows further as --fs-scale grows, same mechanism
 // DraftGrid.scss's own fill-mode font sizes use.
 .draft-grid--fill .bold-pick-cell__name {
-  font-size: calc(0.9rem * var(--fs-scale));
+  font-size: calc(1.1rem * var(--fs-scale));
 }
