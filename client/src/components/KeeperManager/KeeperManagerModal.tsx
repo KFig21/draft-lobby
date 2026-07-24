@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { api } from '../../lib/api';
 import { KEEPER_IMPORT_EXAMPLE, parseKeeperImport } from '../../lib/keeperImport';
 import { useModalClose } from '../../lib/useModalClose';
-import type { PickRow, PlayerRow, TeamRow } from '../../lib/types';
+import type { KeeperOptionRow, PickRow, PlayerRow, TeamRow } from '../../lib/types';
 import './KeeperManagerModal.scss';
 
 interface Props {
@@ -15,6 +15,8 @@ interface Props {
    * count as "already taken" for the search. Updates via the parent's realtime
    * subscription, so the list reflects adds/removes without a manual refetch. */
   picks: PickRow[];
+  /** Owner-choice candidate pool, for the "Offer pool" tab. */
+  keeperOptions: KeeperOptionRow[];
   rounds: number;
   onClose: () => void;
 }
@@ -24,7 +26,15 @@ interface Props {
  * season. A keeper costs the team its pick in the chosen round and is placed on
  * the board immediately as an is_keeper pick, which the draft engine then skips.
  */
-export function KeeperManagerModal({ lobbyId, teams, players, picks, rounds, onClose }: Props) {
+export function KeeperManagerModal({
+  lobbyId,
+  teams,
+  players,
+  picks,
+  keeperOptions,
+  rounds,
+  onClose,
+}: Props) {
   const { closing, requestClose } = useModalClose(onClose);
 
   const orderedTeams = useMemo(
@@ -38,7 +48,7 @@ export function KeeperManagerModal({ lobbyId, teams, players, picks, rounds, onC
     [picks],
   );
 
-  const [mode, setMode] = useState<'manual' | 'import'>('manual');
+  const [mode, setMode] = useState<'manual' | 'import' | 'offer'>('manual');
   const [teamId, setTeamId] = useState<string>('');
   const [search, setSearch] = useState('');
   const [playerId, setPlayerId] = useState<string>('');
@@ -59,6 +69,18 @@ export function KeeperManagerModal({ lobbyId, teams, players, picks, rounds, onC
   );
   const readyRows = useMemo(() => parsed.rows.filter((r) => !r.error), [parsed]);
   const problemRows = useMemo(() => parsed.rows.filter((r) => r.error), [parsed]);
+
+  // Offered candidates grouped by team, for the "Offer pool" tab.
+  const optionsByTeam = useMemo(() => {
+    const m = new Map<string, KeeperOptionRow[]>();
+    for (const o of keeperOptions) {
+      const list = m.get(o.team_id) ?? [];
+      list.push(o);
+      m.set(o.team_id, list);
+    }
+    for (const list of m.values()) list.sort((a, b) => a.round - b.round);
+    return m;
+  }, [keeperOptions]);
 
   const matches = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -139,6 +161,59 @@ export function KeeperManagerModal({ lobbyId, teams, players, picks, rounds, onC
     }
   }
 
+  async function importOffer() {
+    if (readyRows.length === 0) return;
+    setImportBusy(true);
+    setError(null);
+    setImportResult(null);
+    try {
+      const res = await api<{ added: number; skipped: number }>(
+        `/lobbies/${lobbyId}/keeper-options/bulk`,
+        {
+          method: 'POST',
+          body: {
+            options: readyRows.map((r) => ({
+              teamId: r.teamId,
+              playerId: r.playerId,
+              round: r.round,
+            })),
+          },
+        },
+      );
+      setImportResult({ added: res.added, skipped: res.skipped });
+      setImportText('');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Import failed');
+    } finally {
+      setImportBusy(false);
+    }
+  }
+
+  async function removeOption(optionId: string) {
+    setRemovingId(optionId);
+    setError(null);
+    try {
+      await api(`/lobbies/${lobbyId}/keeper-options/${optionId}`, { method: 'DELETE' });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not remove candidate');
+    } finally {
+      setRemovingId(null);
+    }
+  }
+
+  async function setCount(teamId: string, count: number) {
+    if (count < 0) return;
+    setError(null);
+    try {
+      await api(`/lobbies/${lobbyId}/keeper-count`, {
+        method: 'PATCH',
+        body: { teamId, count },
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not set keeper count');
+    }
+  }
+
   return (
     <div
       className={`keeper-modal__backdrop modal-anim-backdrop${closing ? ' is-closing' : ''}`}
@@ -175,6 +250,13 @@ export function KeeperManagerModal({ lobbyId, teams, players, picks, rounds, onC
             onClick={() => setMode('import')}
           >
             Import
+          </button>
+          <button
+            type="button"
+            className={`keeper-modal__tab${mode === 'offer' ? ' is-active' : ''}`}
+            onClick={() => setMode('offer')}
+          >
+            Offer pool
           </button>
         </div>
 
@@ -255,8 +337,11 @@ export function KeeperManagerModal({ lobbyId, teams, players, picks, rounds, onC
           <div className="keeper-modal__import">
             <div className="keeper-modal__import-head">
               <p className="keeper-modal__import-hint">
-                Paste CSV or JSON with columns <code>team, player, position, round</code>. Team
-                matches by name or draft position; round defaults to 1 if left blank.
+                {mode === 'offer'
+                  ? 'Paste each team’s prior roster as candidates — owners choose which to keep. '
+                  : 'Paste CSV or JSON with columns '}
+                <code>team, player, position, round</code>. Team matches by name or draft position;
+                round defaults to 1 if left blank.
               </p>
               <button type="button" className="keeper-modal__example" onClick={downloadExample}>
                 Download example
@@ -270,6 +355,10 @@ export function KeeperManagerModal({ lobbyId, teams, players, picks, rounds, onC
               rows={6}
               spellCheck={false}
             />
+            <div className="keeper-modal__example-block">
+              <span className="keeper-modal__example-label">Example</span>
+              <pre>{KEEPER_IMPORT_EXAMPLE}</pre>
+            </div>
             {parsed.parseError && <p className="keeper-modal__error">{parsed.parseError}</p>}
             {parsed.rows.length > 0 && (
               <div className="keeper-modal__preview">
@@ -296,24 +385,95 @@ export function KeeperManagerModal({ lobbyId, teams, players, picks, rounds, onC
             )}
             <button
               className="button button--primary keeper-modal__add"
-              onClick={importKeepers}
+              onClick={mode === 'offer' ? importOffer : importKeepers}
               disabled={importBusy || readyRows.length === 0}
             >
               {importBusy
-                ? 'Importing…'
-                : `Import ${readyRows.length} keeper${readyRows.length === 1 ? '' : 's'}`}
+                ? mode === 'offer'
+                  ? 'Offering…'
+                  : 'Importing…'
+                : mode === 'offer'
+                  ? `Offer ${readyRows.length} candidate${readyRows.length === 1 ? '' : 's'}`
+                  : `Import ${readyRows.length} keeper${readyRows.length === 1 ? '' : 's'}`}
             </button>
             {importResult && (
               <p className="keeper-modal__import-result">
-                Added {importResult.added}
+                {mode === 'offer' ? 'Offered' : 'Added'} {importResult.added}
                 {importResult.skipped ? `, skipped ${importResult.skipped} (already taken)` : ''}.
               </p>
+            )}
+
+            {mode === 'offer' && keeperOptions.length > 0 && (
+              <div className="keeper-modal__pool">
+                {orderedTeams
+                  .filter((t) => optionsByTeam.has(t.id))
+                  .map((t) => {
+                    const opts = optionsByTeam.get(t.id) ?? [];
+                    const chosen = opts.filter((o) => o.selected).length;
+                    return (
+                      <div key={t.id} className="keeper-modal__pool-team">
+                        <div className="keeper-modal__pool-head">
+                          <span className="keeper-modal__pool-name">{t.name}</span>
+                          <span className="keeper-modal__count">
+                            keeps
+                            <button
+                              type="button"
+                              onClick={() => setCount(t.id, t.keeper_count - 1)}
+                              disabled={t.keeper_count <= 0}
+                              aria-label="Fewer keepers"
+                            >
+                              −
+                            </button>
+                            <span className="keeper-modal__count-val">{t.keeper_count}</span>
+                            <button
+                              type="button"
+                              onClick={() => setCount(t.id, t.keeper_count + 1)}
+                              aria-label="More keepers"
+                            >
+                              +
+                            </button>
+                          </span>
+                        </div>
+                        {opts.map((o) => {
+                          const player = playersById.get(o.player_id);
+                          return (
+                            <div key={o.id} className="keeper-modal__row">
+                              <span className="keeper-modal__row-round">R{o.round}</span>
+                              <span className="keeper-modal__row-player">
+                                {player ? (
+                                  <>
+                                    <strong>{player.position}</strong> {player.name}
+                                  </>
+                                ) : (
+                                  'Player'
+                                )}
+                                {o.selected && <span className="keeper-modal__kept">kept</span>}
+                              </span>
+                              <button
+                                className="keeper-modal__remove"
+                                onClick={() => removeOption(o.id)}
+                                disabled={removingId === o.id}
+                                aria-label="Remove candidate"
+                              >
+                                <DeleteOutlineIcon fontSize="small" />
+                              </button>
+                            </div>
+                          );
+                        })}
+                        <span className="keeper-modal__pool-status">
+                          {chosen}/{t.keeper_count} chosen
+                        </span>
+                      </div>
+                    );
+                  })}
+              </div>
             )}
           </div>
         )}
 
         {error && <p className="keeper-modal__error">{error}</p>}
 
+        {mode !== 'offer' && (
         <div className="keeper-modal__list">
           {keeperPicks.length === 0 ? (
             <p className="keeper-modal__empty">No keepers yet.</p>
@@ -346,6 +506,7 @@ export function KeeperManagerModal({ lobbyId, teams, players, picks, rounds, onC
             })
           )}
         </div>
+        )}
       </div>
     </div>
   );

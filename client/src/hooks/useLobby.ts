@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../supabase';
-import type { LobbyRow, MemberRow, PickRow, TeamRow } from '../lib/types';
+import type { KeeperOptionRow, LobbyRow, MemberRow, PickRow, TeamRow } from '../lib/types';
 
 export interface LobbyState {
   lobby: LobbyRow | null;
   teams: TeamRow[];
   members: MemberRow[];
   picks: PickRow[];
+  keeperOptions: KeeperOptionRow[];
   loading: boolean;
   error: string | null;
   refetch: () => void;
@@ -21,6 +22,7 @@ export function useLobby(lobbyId: string): LobbyState {
   const [teams, setTeams] = useState<TeamRow[]>([]);
   const [members, setMembers] = useState<MemberRow[]>([]);
   const [picks, setPicks] = useState<PickRow[]>([]);
+  const [keeperOptions, setKeeperOptions] = useState<KeeperOptionRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,15 +62,33 @@ export function useLobby(lobbyId: string): LobbyState {
     if (data) setPicks(data as PickRow[]);
   }, [lobbyId]);
 
+  const fetchKeeperOptions = useCallback(async () => {
+    const { data } = await supabase
+      .from('keeper_options')
+      .select('*')
+      .eq('lobby_id', lobbyId);
+    if (data) setKeeperOptions(data as KeeperOptionRow[]);
+  }, [lobbyId]);
+
   const refetch = useCallback(() => {
-    void Promise.all([fetchLobby(), fetchTeams(), fetchMembers(), fetchPicks()]);
-  }, [fetchLobby, fetchTeams, fetchMembers, fetchPicks]);
+    void Promise.all([
+      fetchLobby(),
+      fetchTeams(),
+      fetchMembers(),
+      fetchPicks(),
+      fetchKeeperOptions(),
+    ]);
+  }, [fetchLobby, fetchTeams, fetchMembers, fetchPicks, fetchKeeperOptions]);
 
   useEffect(() => {
     setLoading(true);
-    Promise.all([fetchLobby(), fetchTeams(), fetchMembers(), fetchPicks()]).finally(
-      () => setLoading(false),
-    );
+    Promise.all([
+      fetchLobby(),
+      fetchTeams(),
+      fetchMembers(),
+      fetchPicks(),
+      fetchKeeperOptions(),
+    ]).finally(() => setLoading(false));
 
     const channel = supabase
       .channel(`lobby:${lobbyId}`)
@@ -81,6 +101,11 @@ export function useLobby(lobbyId: string): LobbyState {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'teams', filter: `lobby_id=eq.${lobbyId}` },
         () => void fetchTeams(),
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'keeper_options', filter: `lobby_id=eq.${lobbyId}` },
+        () => void fetchKeeperOptions(),
       )
       .on(
         'postgres_changes',
@@ -100,7 +125,7 @@ export function useLobby(lobbyId: string): LobbyState {
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [lobbyId, fetchLobby, fetchTeams, fetchMembers, fetchPicks]);
+  }, [lobbyId, fetchLobby, fetchTeams, fetchMembers, fetchPicks, fetchKeeperOptions]);
 
-  return { lobby, teams, members, picks, loading, error, refetch };
+  return { lobby, teams, members, picks, keeperOptions, loading, error, refetch };
 }

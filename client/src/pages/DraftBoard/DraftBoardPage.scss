@@ -680,6 +680,30 @@
     color: $primary;
   }
 
+  // Owner "Choose your keepers" call-to-action inside the staging banner.
+  &__staging-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: $space * 0.5 $space * 1.25;
+    border: none;
+    border-radius: $radius-sm;
+    background: $primary;
+    color: #fff;
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 800;
+    cursor: pointer;
+
+    svg {
+      font-size: 1rem;
+    }
+
+    &:hover {
+      box-shadow: 0 0 0 3px rgba($primary, 0.28);
+    }
+  }
+
   &__body {
     position: relative; // anchor for the desktop team-results drawer
     display: flex;

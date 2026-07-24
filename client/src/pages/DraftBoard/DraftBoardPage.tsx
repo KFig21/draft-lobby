@@ -55,6 +55,7 @@ import { DraftResultsPanel } from '../../components/DraftResultsPanel/DraftResul
 import { ErrorScreen } from '../../components/ErrorScreen/ErrorScreen';
 import { GradeBadge } from '../../components/GradeBadge/GradeBadge';
 import { KeeperManagerModal } from '../../components/KeeperManager/KeeperManagerModal';
+import { OwnerKeepersModal } from '../../components/KeeperManager/OwnerKeepersModal';
 import { Loader } from '../../components/Loader/Loader';
 import { LockInModal } from '../../components/LockInModal/LockInModal';
 import { Modal } from '../../components/Modal/Modal';
@@ -144,7 +145,7 @@ export function DraftBoardPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { session } = useAuth();
   const { showToast } = useToast();
-  const { lobby, teams, members, picks, loading } = useLobby(id);
+  const { lobby, teams, members, picks, keeperOptions, loading } = useLobby(id);
   const { players, loading: playersLoading } = usePlayers();
 
   // Personal display preference (Settings > Draft board), not per-lobby —
@@ -178,6 +179,7 @@ export function DraftBoardPage() {
   const [rollbackConfirmText, setRollbackConfirmText] = useState('');
   const [showExport, setShowExport] = useState(false);
   const [showKeepers, setShowKeepers] = useState(false);
+  const [showMyKeepers, setShowMyKeepers] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   // Only meaningful in full screen (the sidebar isn't mounted there) —
   // force-closed the moment full screen exits, since the sidebar comes back.
@@ -933,12 +935,22 @@ export function DraftBoardPage() {
   const isMyTurn = !isStaging && !!onClockTeam && onClockTeam.owner_id === userId;
   const canPick = !isStaging && !isComplete && !isPaused && (isMyTurn || isCommish);
   const pickingForTeam = !isMyTurn && onClockTeam ? onClockTeam.name : null;
-  // Staging counters: humans seated, and keepers placed so far. A target
-  // keeper count (X/Y) arrives with per-team keeper counts in a later phase.
+  // Staging counters: humans seated, and keepers placed vs. the total allowance
+  // (sum of each team's keeper_count) when keepers are enabled.
   const humansSeated = teams.filter((t) => t.owner_id && !t.is_bot).length;
   const keepersSelected = picks.filter((p) => p.is_keeper).length;
+  const keepersExpected = lobby.settings.keepersEnabled
+    ? teams.reduce((n, t) => n + t.keeper_count, 0)
+    : 0;
   const myTeamId = teams.find((t) => t.owner_id === userId)?.id ?? teams[0]?.id ?? null;
   const myTeam = teams.find((t) => t.owner_id === userId) ?? null;
+  // Owner-choice: this team's offered candidates + how many keepers remain.
+  const myKeeperOptions = myTeam
+    ? keeperOptions.filter((o) => o.team_id === myTeam.id)
+    : [];
+  const myKeepersLeft = myTeam
+    ? myTeam.keeper_count - myKeeperOptions.filter((o) => o.selected).length
+    : 0;
   // A signed-in visitor with no membership row — only possible at all once
   // the commissioner has opted into public results and/or public chat.
   const isMember = members.some((m) => m.user_id === userId);
@@ -1526,9 +1538,9 @@ export function DraftBoardPage() {
                   <span className="draft__count">
                     {humansSeated}/{lobby.settings.teamCount} seated
                   </span>
-                  {keepersSelected > 0 && (
+                  {keepersExpected > 0 && (
                     <span className="draft__count">
-                      {keepersSelected} keeper{keepersSelected === 1 ? '' : 's'}
+                      {keepersSelected}/{keepersExpected} keepers
                     </span>
                   )}
                 </span>
@@ -1624,6 +1636,14 @@ export function DraftBoardPage() {
               ? 'The draft room is open. Players are taking their seats — hit Start when everyone’s ready.'
               : 'The draft room is open — the commissioner will start the draft shortly.'}
           </span>
+          {myKeeperOptions.length > 0 && (
+            <button className="draft__staging-cta" onClick={() => setShowMyKeepers(true)}>
+              <LockOutlinedIcon fontSize="small" />
+              {myKeepersLeft > 0
+                ? `Choose your keepers (${myKeepersLeft} left)`
+                : 'Your keepers'}
+            </button>
+          )}
         </div>
       )}
 
@@ -1790,8 +1810,19 @@ export function DraftBoardPage() {
           teams={teams}
           players={players}
           picks={picks}
+          keeperOptions={keeperOptions}
           rounds={totalRounds}
           onClose={() => setShowKeepers(false)}
+        />
+      )}
+
+      {showMyKeepers && myTeam && (
+        <OwnerKeepersModal
+          lobbyId={id}
+          team={myTeam}
+          options={myKeeperOptions}
+          players={players}
+          onClose={() => setShowMyKeepers(false)}
         />
       )}
 

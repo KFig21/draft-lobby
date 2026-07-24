@@ -60,6 +60,8 @@ export interface TeamRow {
   is_prev_champion: boolean;
   is_bot: boolean;
   auto_draft: boolean;
+  /** How many keepers this team may select (owner-choice flow). Default 1. */
+  keeper_count: number;
 }
 
 export interface MemberRow {
@@ -78,6 +80,18 @@ export interface PickRow {
   is_keeper: boolean;
   is_auto_pick: boolean;
   picked_at: string;
+}
+
+/** A candidate a team may keep (owner-choice flow) — mirrored by an is_keeper
+ * pick while `selected`. */
+export interface KeeperOptionRow {
+  id: string;
+  lobby_id: string;
+  team_id: string;
+  player_id: string;
+  round: number;
+  selected: boolean;
+  is_default: boolean;
 }
 
 /** A vote for which OTHER team had the best draft (one per voter per lobby). */

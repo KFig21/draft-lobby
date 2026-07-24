@@ -13,14 +13,17 @@ import {
   gradeTeamSchema,
   inviteToLobbySchema,
   makePickSchema,
+  offerKeeperOptionsSchema,
   overallForDraftPosition,
   pickCommentSchema,
   postChatSchema,
   renameTeamSchema,
   rollbackToSchema,
   roundsForSettings,
+  selectKeeperOptionSchema,
   setAutoDraftSchema,
   setDraftOrderSchema,
+  setKeeperCountSchema,
   type LobbySettings,
 } from '@draft-lobby/shared';
 import { requireAuth, type AuthedRequest } from '../middleware/auth.js';
@@ -644,6 +647,291 @@ draftRouter.post('/:id/keepers/bulk', async (req: AuthedRequest, res: Response) 
   }
 
   res.json({ ok: true, added: rows.length, skipped });
+});
+
+/**
+ * POST /api/lobbies/:id/keeper-options/bulk — commissioner offers each team a
+ * pool of candidate keepers (owner-choice flow). Upserts on (lobby, team,
+ * player) so re-importing the same roster doesn't duplicate rows.
+ */
+draftRouter.post('/:id/keeper-options/bulk', async (req: AuthedRequest, res: Response) => {
+  const lobbyId = req.params.id;
+  const role = await getRole(lobbyId, req.user!.id);
+  if (!isCommish(role)) {
+    res.status(403).json({ error: 'Only the commissioner can offer keepers' });
+    return;
+  }
+  const parsed = offerKeeperOptionsSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.flatten() });
+    return;
+  }
+
+  const { data: lobby } = await supabaseAdmin
+    .from('lobbies')
+    .select('status, settings')
+    .eq('id', lobbyId)
+    .maybeSingle();
+  if (!lobby) {
+    res.status(404).json({ error: 'Lobby not found' });
+    return;
+  }
+  if (lobby.status === 'DRAFTING' || lobby.status === 'PAUSED' || lobby.status === 'COMPLETE') {
+    res.status(409).json({ error: 'Keepers can only be set before the draft starts' });
+    return;
+  }
+
+  const rounds = roundsForSettings(lobby.settings as LobbySettings);
+  const { data: teams } = await supabaseAdmin
+    .from('teams')
+    .select('id')
+    .eq('lobby_id', lobbyId);
+  const teamIds = new Set((teams ?? []).map((t) => t.id as string));
+
+  const rows = parsed.data.options
+    .filter((o) => teamIds.has(o.teamId) && o.round <= rounds)
+    .map((o) => ({
+      lobby_id: lobbyId,
+      team_id: o.teamId,
+      player_id: o.playerId,
+      round: o.round,
+    }));
+  const skipped = parsed.data.options.length - rows.length;
+
+  if (rows.length) {
+    const { error } = await supabaseAdmin
+      .from('keeper_options')
+      .upsert(rows, { onConflict: 'lobby_id,team_id,player_id' });
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+  }
+  res.json({ ok: true, added: rows.length, skipped });
+});
+
+/** DELETE /api/lobbies/:id/keeper-options/:optionId — commissioner drops a candidate. */
+draftRouter.delete('/:id/keeper-options/:optionId', async (req: AuthedRequest, res: Response) => {
+  const lobbyId = req.params.id;
+  const role = await getRole(lobbyId, req.user!.id);
+  if (!isCommish(role)) {
+    res.status(403).json({ error: 'Only the commissioner can remove keeper options' });
+    return;
+  }
+
+  const { data: lobby } = await supabaseAdmin
+    .from('lobbies')
+    .select('status')
+    .eq('id', lobbyId)
+    .maybeSingle();
+  if (!lobby) {
+    res.status(404).json({ error: 'Lobby not found' });
+    return;
+  }
+  if (lobby.status === 'DRAFTING' || lobby.status === 'PAUSED' || lobby.status === 'COMPLETE') {
+    res.status(409).json({ error: 'Keepers can only be changed before the draft starts' });
+    return;
+  }
+
+  const { data: option } = await supabaseAdmin
+    .from('keeper_options')
+    .select('id, player_id, selected')
+    .eq('id', req.params.optionId)
+    .eq('lobby_id', lobbyId)
+    .maybeSingle();
+  if (!option) {
+    res.status(404).json({ error: 'Keeper option not found' });
+    return;
+  }
+
+  // A selected candidate has a materialized pick — clear it too.
+  if (option.selected) {
+    await supabaseAdmin
+      .from('picks')
+      .delete()
+      .eq('lobby_id', lobbyId)
+      .eq('player_id', option.player_id)
+      .eq('is_keeper', true);
+  }
+  await supabaseAdmin.from('keeper_options').delete().eq('id', option.id);
+  res.json({ ok: true });
+});
+
+/**
+ * POST /api/lobbies/:id/keeper-options/:optionId/select — the team's owner (or
+ * the commissioner) keeps/unkeeps a candidate. Keeping materializes an
+ * is_keeper pick at the team's slot for that round; unkeeping removes it.
+ */
+draftRouter.post(
+  '/:id/keeper-options/:optionId/select',
+  async (req: AuthedRequest, res: Response) => {
+    const lobbyId = req.params.id;
+    const userId = req.user!.id;
+
+    const parsed = selectKeeperOptionSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.flatten() });
+      return;
+    }
+    const { selected } = parsed.data;
+
+    const { data: lobby } = await supabaseAdmin
+      .from('lobbies')
+      .select('status, settings')
+      .eq('id', lobbyId)
+      .maybeSingle();
+    if (!lobby) {
+      res.status(404).json({ error: 'Lobby not found' });
+      return;
+    }
+    if (lobby.status === 'DRAFTING' || lobby.status === 'PAUSED' || lobby.status === 'COMPLETE') {
+      res.status(409).json({ error: 'Keepers are locked once the draft starts' });
+      return;
+    }
+
+    const { data: option } = await supabaseAdmin
+      .from('keeper_options')
+      .select('id, team_id, player_id, round, selected')
+      .eq('id', req.params.optionId)
+      .eq('lobby_id', lobbyId)
+      .maybeSingle();
+    if (!option) {
+      res.status(404).json({ error: 'Keeper option not found' });
+      return;
+    }
+
+    const { data: team } = await supabaseAdmin
+      .from('teams')
+      .select('id, owner_id, draft_position, keeper_count, name')
+      .eq('id', option.team_id)
+      .maybeSingle();
+    if (!team) {
+      res.status(404).json({ error: 'Team not found' });
+      return;
+    }
+    const role = await getRole(lobbyId, userId);
+    if (team.owner_id !== userId && !isCommish(role)) {
+      res.status(403).json({ error: 'You can only choose keepers for your own team' });
+      return;
+    }
+
+    const settings = lobby.settings as LobbySettings;
+
+    if (selected) {
+      if (option.selected) {
+        res.json({ ok: true }); // already selected — idempotent
+        return;
+      }
+      // Enforce the team's keeper allowance.
+      const { data: chosen } = await supabaseAdmin
+        .from('keeper_options')
+        .select('id')
+        .eq('lobby_id', lobbyId)
+        .eq('team_id', team.id)
+        .eq('selected', true);
+      if ((chosen?.length ?? 0) >= (team.keeper_count as number)) {
+        res.status(409).json({
+          error: `${team.name} can only keep ${team.keeper_count} player${
+            team.keeper_count === 1 ? '' : 's'
+          }`,
+        });
+        return;
+      }
+
+      const overall = overallForDraftPosition(
+        option.round as number,
+        team.draft_position as number,
+        settings.teamCount,
+        settings.draftType,
+      );
+      const [{ data: slotTaken }, { data: playerTaken }] = await Promise.all([
+        supabaseAdmin
+          .from('picks')
+          .select('id')
+          .eq('lobby_id', lobbyId)
+          .eq('overall', overall)
+          .maybeSingle(),
+        supabaseAdmin
+          .from('picks')
+          .select('id')
+          .eq('lobby_id', lobbyId)
+          .eq('player_id', option.player_id)
+          .maybeSingle(),
+      ]);
+      if (slotTaken) {
+        res.status(409).json({ error: `${team.name} already has a keeper in round ${option.round}` });
+        return;
+      }
+      if (!playerTaken) {
+        const { error } = await supabaseAdmin.from('picks').insert({
+          lobby_id: lobbyId,
+          overall,
+          round: option.round,
+          team_id: team.id,
+          player_id: option.player_id,
+          is_keeper: true,
+        });
+        if (error) {
+          res.status(500).json({ error: error.message });
+          return;
+        }
+      }
+      await supabaseAdmin.from('keeper_options').update({ selected: true }).eq('id', option.id);
+      res.json({ ok: true });
+      return;
+    }
+
+    // Deselecting: drop the materialized pick and clear the flag.
+    await supabaseAdmin
+      .from('picks')
+      .delete()
+      .eq('lobby_id', lobbyId)
+      .eq('player_id', option.player_id)
+      .eq('is_keeper', true);
+    await supabaseAdmin.from('keeper_options').update({ selected: false }).eq('id', option.id);
+    res.json({ ok: true });
+  },
+);
+
+/** PATCH /api/lobbies/:id/keeper-count — commissioner sets a team's keeper allowance. */
+draftRouter.patch('/:id/keeper-count', async (req: AuthedRequest, res: Response) => {
+  const lobbyId = req.params.id;
+  const role = await getRole(lobbyId, req.user!.id);
+  if (!isCommish(role)) {
+    res.status(403).json({ error: 'Only the commissioner can set keeper counts' });
+    return;
+  }
+  const parsed = setKeeperCountSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.flatten() });
+    return;
+  }
+  const { teamId, count } = parsed.data;
+
+  const { data: lobby } = await supabaseAdmin
+    .from('lobbies')
+    .select('status')
+    .eq('id', lobbyId)
+    .maybeSingle();
+  if (!lobby) {
+    res.status(404).json({ error: 'Lobby not found' });
+    return;
+  }
+  if (lobby.status === 'DRAFTING' || lobby.status === 'PAUSED' || lobby.status === 'COMPLETE') {
+    res.status(409).json({ error: 'Keeper counts are locked once the draft starts' });
+    return;
+  }
+
+  const { error } = await supabaseAdmin
+    .from('teams')
+    .update({ keeper_count: count })
+    .eq('id', teamId)
+    .eq('lobby_id', lobbyId);
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
+  res.json({ ok: true });
 });
 
 /**

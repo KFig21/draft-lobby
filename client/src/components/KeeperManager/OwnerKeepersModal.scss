@@ -1,0 +1,154 @@
+@use 'variables' as *;
+
+.owner-keepers {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(460px, 94vw);
+  max-height: 90dvh;
+  overflow-y: auto;
+  padding: $space * 3;
+  background: $bg-raised;
+  border: 1px solid $border;
+  border-radius: $radius;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
+
+  &__backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: grid;
+    place-items: center;
+    padding: $space * 2;
+    background: rgba(0, 0, 0, 0.6);
+  }
+
+  &__close {
+    position: absolute;
+    top: $space * 1.5;
+    right: $space * 1.5;
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: $radius-sm;
+    background: $bg-overlay;
+    color: $text-muted;
+    cursor: pointer;
+
+    &:hover {
+      color: $text;
+    }
+  }
+
+  &__title {
+    margin: 0 0 $space * 0.5;
+    font-size: 1.2rem;
+  }
+
+  &__intro {
+    margin: 0 0 $space;
+    color: $text-muted;
+    font-size: 0.88rem;
+  }
+
+  &__status {
+    margin-bottom: $space;
+    font-size: 0.8rem;
+    font-weight: 800;
+    color: $keeper;
+  }
+
+  &__error {
+    margin: 0 0 $space;
+    color: $danger;
+    font-size: 0.85rem;
+  }
+
+  &__list {
+    display: flex;
+    flex-direction: column;
+    gap: $space * 0.5;
+  }
+
+  &__empty {
+    margin: 0;
+    padding: $space * 2 0;
+    text-align: center;
+    color: $text-muted;
+    font-size: 0.9rem;
+  }
+
+  &__opt {
+    display: flex;
+    align-items: center;
+    gap: $space;
+    width: 100%;
+    padding: $space * 0.85 $space;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: $bg;
+    color: $text;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition:
+      border-color 120ms ease,
+      background 120ms ease;
+
+    &:hover:not(:disabled) {
+      border-color: $keeper;
+    }
+
+    &.is-selected {
+      border-color: $keeper;
+      background: rgba($keeper, 0.1);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+
+  &__check {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    color: $text-muted;
+
+    .is-selected & {
+      color: $keeper;
+    }
+  }
+
+  &__player {
+    flex: 1;
+    font-size: 0.92rem;
+
+    strong {
+      margin-right: 5px;
+      color: $text-muted;
+      font-size: 0.82rem;
+    }
+  }
+
+  &__team {
+    margin-left: $space * 0.75;
+    color: $text-muted;
+    font-size: 0.76rem;
+  }
+
+  &__round {
+    flex-shrink: 0;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: $keeper;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__done {
+    margin-top: $space * 2;
+  }
+}

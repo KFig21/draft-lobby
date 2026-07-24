@@ -105,6 +105,35 @@ export const bulkAssignKeepersSchema = z.object({
 });
 export type BulkAssignKeepersInput = z.infer<typeof bulkAssignKeepersSchema>;
 
+/**
+ * Owner-choice keepers: the commissioner offers each team a pool of candidate
+ * players (from last year's roster). The client resolves names to ids first.
+ */
+export const offerKeeperOptionsSchema = z.object({
+  options: z
+    .array(
+      z.object({
+        teamId: z.string().uuid(),
+        playerId: z.string().uuid(),
+        round: z.number().int().min(1),
+      }),
+    )
+    .min(1)
+    .max(1000),
+});
+export type OfferKeeperOptionsInput = z.infer<typeof offerKeeperOptionsSchema>;
+
+/** An owner (or commissioner) toggles whether a candidate is kept. */
+export const selectKeeperOptionSchema = z.object({ selected: z.boolean() });
+export type SelectKeeperOptionInput = z.infer<typeof selectKeeperOptionSchema>;
+
+/** Commissioner sets how many keepers a team may pick. */
+export const setKeeperCountSchema = z.object({
+  teamId: z.string().uuid(),
+  count: z.number().int().min(0).max(20),
+});
+export type SetKeeperCountInput = z.infer<typeof setKeeperCountSchema>;
+
 /** Seconds a bot / auto-draft team gets on the clock before the engine picks. */
 export const AUTO_PICK_SECONDS = 5;
 

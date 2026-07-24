@@ -177,6 +177,118 @@
     font-size: 0.85rem;
   }
 
+  &__example-block {
+    position: relative;
+    padding: $space $space $space * 0.75;
+    border: 1px dashed $border;
+    border-radius: $radius-sm;
+    background: $bg;
+
+    pre {
+      margin: 0;
+      overflow-x: auto;
+      font-family:
+        ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
+      font-size: 0.76rem;
+      line-height: 1.5;
+      color: $text-muted;
+    }
+  }
+
+  &__example-label {
+    display: block;
+    margin-bottom: $space * 0.4;
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: $text-muted;
+    opacity: 0.7;
+  }
+
+  // ── Offered pool (owner-choice) ──
+  &__pool {
+    display: flex;
+    flex-direction: column;
+    gap: $space * 1.5;
+    margin-top: $space;
+  }
+
+  &__pool-team {
+    display: flex;
+    flex-direction: column;
+    gap: $space * 0.5;
+    padding-top: $space;
+    border-top: 1px solid $border;
+  }
+
+  &__pool-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $space;
+  }
+
+  &__pool-name {
+    font-weight: 700;
+    font-size: 0.95rem;
+  }
+
+  &__count {
+    display: inline-flex;
+    align-items: center;
+    gap: $space * 0.5;
+    font-size: 0.75rem;
+    color: $text-muted;
+
+    button {
+      display: grid;
+      place-items: center;
+      width: 22px;
+      height: 22px;
+      border: 1px solid $border;
+      border-radius: $radius-sm;
+      background: $bg;
+      color: $text;
+      font-size: 1rem;
+      line-height: 1;
+      cursor: pointer;
+
+      &:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+    }
+  }
+
+  &__count-val {
+    min-width: 14px;
+    text-align: center;
+    font-weight: 800;
+    color: $text;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__kept {
+    margin-left: $space * 0.5;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: rgba($keeper, 0.18);
+    color: $keeper;
+    font-size: 0.62rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  &__pool-status {
+    align-self: flex-end;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: $text-muted;
+    font-variant-numeric: tabular-nums;
+  }
+
   // Add-keeper form: team + player + round + button, wrapping on narrow widths.
   &__form {
     display: flex;
