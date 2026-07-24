@@ -10,7 +10,10 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: $space * 0.75;
+    // Bigger than a snug fit needs — the bold style's hover ring
+    // (box-shadow, not a border) grows outward past the swatch's own edges,
+    // and a tighter gap let it visually overlap the style name below it.
+    gap: $space * 1.5;
     padding: $space * 1.5;
     border: 1px solid $border;
     border-radius: $radius;
@@ -36,6 +39,17 @@
   &__table {
     border-collapse: separate;
     border-spacing: 0;
+
+    // Both styles otherwise share .draft-grid__cell's normal 52px height,
+    // but Default's 3-line layout (position/name/team-bye) still needs more
+    // room than that and grows the cell taller — Big screen's 1-2 lines
+    // don't, so the two swatches ended up different heights, pushing the
+    // "Default"/"Big screen" labels below them out of alignment. Pinned to
+    // one fixed height (bigger than either style needs) so every card's
+    // label lands at the same spot regardless of which style renders taller.
+    .draft-grid__cell {
+      height: 70px;
+    }
   }
 
   &__name {

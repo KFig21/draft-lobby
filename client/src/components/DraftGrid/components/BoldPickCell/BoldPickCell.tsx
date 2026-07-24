@@ -6,6 +6,19 @@ import type { PickRow, PlayerRow } from '../../../../lib/types';
 import '../../DraftGrid.scss';
 import './BoldPickCell.scss';
 
+// Longer names otherwise wrap to a 3rd line (line-clamp cuts them off),
+// which stands out against the mostly-1/2-line names around them and breaks
+// the board's uniform look. Shrinking font-size in proportion to name length
+// keeps most names on 1-2 lines instead. Tiers picked against real rosters
+// (e.g. "Jaxon Smith-Njigba" = 18 chars, "Christian McCaffrey" = 19).
+function nameScale(name: string): number {
+  const len = name.length;
+  if (len <= 13) return 1;
+  if (len <= 16) return 0.88;
+  if (len <= 19) return 0.76;
+  return 0.66;
+}
+
 /**
  * "Big screen" draft cell style (Settings > Draft board): the whole cell
  * fills with the position color, showing just the player's name, large —
@@ -39,7 +52,12 @@ export function BoldPickCell({
       onMouseEnter={onEnter}
       onMouseLeave={onLeave}
     >
-      <span className="bold-pick-cell__name">{player.name}</span>
+      <span
+        className="bold-pick-cell__name"
+        style={{ ['--name-scale' as string]: nameScale(player.name) }}
+      >
+        {player.name}
+      </span>
     </td>
   );
 }

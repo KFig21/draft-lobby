@@ -51,7 +51,7 @@
     // "Robinso" / "n" even when the whole word had room on the next line.
     overflow-wrap: break-word;
     font-weight: 800;
-    font-size: 0.95rem;
+    font-size: calc(0.95rem * var(--name-scale, 1));
     line-height: 1.15;
     color: #000000;
     // White reads clearly against every position color (some, like RB's
@@ -74,7 +74,8 @@ td.bold-pick-cell {
 }
 
 // Fullscreen ("TV mode"): grows further as --fs-scale grows, same mechanism
-// DraftGrid.scss's own fill-mode font sizes use.
+// DraftGrid.scss's own fill-mode font sizes use — still scaled down by name
+// length on top of that (--name-scale, set inline per cell).
 .draft-grid--fill .bold-pick-cell__name {
-  font-size: calc(1.1rem * var(--fs-scale));
+  font-size: calc(1.1rem * var(--fs-scale) * var(--name-scale, 1));
 }
