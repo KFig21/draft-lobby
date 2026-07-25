@@ -764,6 +764,24 @@
     &:hover {
       box-shadow: 0 0 0 3px rgba($primary, 0.28);
     }
+
+    :root[data-theme='light'] & {
+      background: $primary;
+      color: white;
+
+      &:hover {
+        box-shadow: 0 0 0 3px rgba($primary, 0.28);
+      }
+    }
+
+    :root[data-theme='dark'] & {
+      background: $accent;
+      color: black;
+
+      &:hover {
+        box-shadow: 0 0 0 3px rgba($accent, 0.28);
+      }
+    }
   }
 
   &__body {
