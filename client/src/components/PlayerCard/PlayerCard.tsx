@@ -19,9 +19,7 @@ interface Props {
   isKeeper?: boolean;
 }
 
-const PREV_YEAR = String(new Date().getFullYear() - 1).slice(-2);
-
-/** A row in the player pool: color-coded position, bye, injury, projection, prev rank. */
+/** A row in the player pool: color-coded position, bye, injury, projection. */
 export function PlayerCard({
   player,
   onPick,
@@ -74,7 +72,6 @@ export function PlayerCard({
         <div className="player-card__sub">
           {player.nfl_team}
           {player.bye_week ? ` · Bye ${player.bye_week}` : ''}
-          {player.prev_rank ? ` · '${PREV_YEAR} #${player.prev_rank}` : ''}
         </div>
       </div>
       <div className="player-card__stats">

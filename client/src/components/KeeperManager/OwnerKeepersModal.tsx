@@ -1,3 +1,4 @@
+import { POSITION_COLORS, type Position } from '@draft-lobby/shared';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CloseIcon from '@mui/icons-material/Close';
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
@@ -103,7 +104,13 @@ export function OwnerKeepersModal({ lobbyId, team, options, players, onClose }: 
                   <span className="owner-keepers__player">
                     {player ? (
                       <>
-                        <strong>{player.position}</strong> {player.name}
+                        <span
+                          className="owner-keepers__pos"
+                          style={{ background: POSITION_COLORS[player.position as Position] }}
+                        >
+                          {player.position}
+                        </span>{' '}
+                        {player.name}
                         <span className="owner-keepers__team">{player.nfl_team}</span>
                       </>
                     ) : (

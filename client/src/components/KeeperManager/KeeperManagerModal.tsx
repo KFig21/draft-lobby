@@ -1,3 +1,4 @@
+import { POSITION_COLORS, type Position } from '@draft-lobby/shared';
 import CloseIcon from '@mui/icons-material/Close';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
@@ -97,7 +98,13 @@ function PlayerSearch({
   if (chosen) {
     return (
       <span className="keeper-modal__chosen">
-        <strong>{chosen.position}</strong> {chosen.name}
+        <span
+          className="keeper-modal__pos"
+          style={{ background: POSITION_COLORS[chosen.position as Position] }}
+        >
+          {chosen.position}
+        </span>
+        {chosen.name}
         <button type="button" onClick={() => onChange(null)}>
           Change
         </button>
@@ -132,7 +139,12 @@ function PlayerSearch({
                     setSearch('');
                   }}
                 >
-                  <span className="keeper-modal__result-pos">{p.position}</span>
+                  <span
+                    className="keeper-modal__result-pos"
+                    style={{ background: POSITION_COLORS[p.position as Position] }}
+                  >
+                    {p.position}
+                  </span>
                   {p.name}
                   <span className="keeper-modal__result-team">{p.nfl_team}</span>
                 </button>
@@ -516,7 +528,13 @@ export function KeeperManagerModal({
                       <span className="keeper-modal__row-player">
                         {player ? (
                           <>
-                            <strong>{player.position}</strong> {player.name}
+                            <span
+                              className="keeper-modal__pos"
+                              style={{ background: POSITION_COLORS[player.position as Position] }}
+                            >
+                              {player.position}
+                            </span>
+                            {player.name}
                           </>
                         ) : (
                           'Player'
@@ -680,7 +698,13 @@ export function KeeperManagerModal({
                                 <span className="keeper-modal__row-player">
                                   {player ? (
                                     <>
-                                      <strong>{player.position}</strong> {player.name}
+                                      <span
+                                        className="keeper-modal__pos"
+                                        style={{ background: POSITION_COLORS[player.position as Position] }}
+                                      >
+                                        {player.position}
+                                      </span>
+                                      {player.name}
                                     </>
                                   ) : (
                                     'Player'

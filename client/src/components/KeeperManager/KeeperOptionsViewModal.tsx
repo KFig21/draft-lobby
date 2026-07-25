@@ -1,3 +1,4 @@
+import { POSITION_COLORS, type Position } from '@draft-lobby/shared';
 import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';
 import { useMemo } from 'react';
@@ -97,7 +98,13 @@ export function KeeperOptionsViewModal({ teams, players, keeperOptions, teamId, 
                           <span className="keeper-view__player">
                             {player ? (
                               <>
-                                <strong>{player.position}</strong> {player.name}
+                                <span
+                                  className="keeper-view__pos"
+                                  style={{ background: POSITION_COLORS[player.position as Position] }}
+                                >
+                                  {player.position}
+                                </span>{' '}
+                                {player.name}
                               </>
                             ) : (
                               'Player'

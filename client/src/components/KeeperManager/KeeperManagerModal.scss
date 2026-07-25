@@ -605,12 +605,20 @@
     }
   }
 
+  // Position badge — colored per POSITION_COLORS, dark text (same convention
+  // as PlayerCard/PlayerStatBlock/the draft chat's pick badge). Shared shape
+  // across the search dropdown, the "chosen" display, and every keeper row.
+  &__pos,
   &__result-pos {
+    display: inline-grid;
+    place-items: center;
     flex-shrink: 0;
-    min-width: 30px;
-    font-size: 0.68rem;
+    width: 22px;
+    height: 22px;
+    border-radius: $radius-sm;
+    font-size: 0.58rem;
     font-weight: 800;
-    color: $text-muted;
+    color: #05231a;
   }
 
   &__result-team {
