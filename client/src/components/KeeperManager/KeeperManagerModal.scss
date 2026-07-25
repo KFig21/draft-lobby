@@ -89,12 +89,12 @@
     }
 
     &:hover {
-      border-color: rgba($keeper, 0.5);
+      border-color: color-mix(in srgb, $keeper 50%, transparent);
     }
 
     &.is-active {
       border-color: $keeper;
-      background: rgba($keeper, 0.1);
+      background: color-mix(in srgb, $keeper 10%, transparent);
       color: $text;
 
       svg {
@@ -277,7 +277,7 @@
     overflow: hidden;
 
     &.is-open {
-      border-color: rgba($keeper, 0.5);
+      border-color: color-mix(in srgb, $keeper 50%, transparent);
     }
   }
 
@@ -380,7 +380,7 @@
     padding: $space * 0.4 $space * 0.6;
     border: 1px solid $keeper;
     border-radius: $radius-sm;
-    background: rgba($keeper, 0.12);
+    background: color-mix(in srgb, $keeper 12%, transparent);
     font-size: 0.85rem;
 
     strong {
@@ -465,7 +465,7 @@
     margin-left: $space * 0.5;
     padding: 1px 6px;
     border-radius: 999px;
-    background: rgba($keeper, 0.18);
+    background: color-mix(in srgb, $keeper 18%, transparent);
     color: $keeper;
     font-size: 0.62rem;
     font-weight: 800;
@@ -587,7 +587,7 @@
     padding: $space * 0.6 $space;
     border: 1px solid $keeper;
     border-radius: $radius-sm;
-    background: rgba($keeper, 0.12);
+    background: color-mix(in srgb, $keeper 12%, transparent);
     font-size: 0.9rem;
     font-weight: 500;
     text-transform: none;

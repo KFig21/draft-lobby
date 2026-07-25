@@ -103,7 +103,7 @@
 
     &.is-selected {
       border-color: $keeper;
-      background: rgba($keeper, 0.1);
+      background: color-mix(in srgb, $keeper 10%, transparent);
     }
 
     &:disabled {

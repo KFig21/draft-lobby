@@ -48,7 +48,7 @@
     gap: 2px;
     padding: 1px 5px;
     border-radius: 3px;
-    background: rgba($keeper, 0.16);
+    background: color-mix(in srgb, $keeper 16%, transparent);
     color: $keeper;
     font-size: 0.6rem;
     font-weight: 800;

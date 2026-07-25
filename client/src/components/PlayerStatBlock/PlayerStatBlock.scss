@@ -50,7 +50,7 @@
     margin-left: 8px;
     padding: 2px 7px;
     border-radius: 4px;
-    background: rgba($keeper, 0.16);
+    background: color-mix(in srgb, $keeper 16%, transparent);
     color: $keeper;
     font-size: 0.62rem;
     font-weight: 800;

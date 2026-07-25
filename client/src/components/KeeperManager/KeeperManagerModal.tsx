@@ -35,12 +35,17 @@ function PlayerSearch({
   value,
   onChange,
   placeholder = 'Search players…',
+  inline = false,
 }: {
   players: PlayerRow[];
   excludeIds: Set<string>;
   value: string | null;
   onChange: (playerId: string | null) => void;
   placeholder?: string;
+  /** The offer-pool accordion's rows are cramped/scrolling, so its dropdown
+   * pushes content down (static) instead of floating over neighboring rows —
+   * the manual "Add one" form has room to float (the default). */
+  inline?: boolean;
 }) {
   const [search, setSearch] = useState('');
   const playersById = useMemo(() => new Map(players.map((p) => [p.id, p])), [players]);
@@ -72,7 +77,7 @@ function PlayerSearch({
         autoFocus
       />
       {matches.length > 0 && (
-        <ul className="keeper-modal__results keeper-modal__results--inline">
+        <ul className={`keeper-modal__results${inline ? ' keeper-modal__results--inline' : ''}`}>
           {matches.map((p) => (
             <li key={p.id}>
               <button
@@ -549,6 +554,7 @@ export function KeeperManagerModal({
                                       if (id) void updateOption(o.id, { playerId: id });
                                     }}
                                     placeholder="Replace with…"
+                                    inline
                                   />
                                   <button
                                     type="button"
@@ -611,6 +617,7 @@ export function KeeperManagerModal({
                             value={addPlayerId}
                             onChange={setAddPlayerId}
                             placeholder="Add a player…"
+                            inline
                           />
                           <button
                             className="keeper-modal__add-btn"

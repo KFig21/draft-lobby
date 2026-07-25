@@ -16,7 +16,10 @@ $accent: #3fd6a5;
 $danger: #f8577d;
 $warning: #f6a642;
 // Keepers — a distinct gold, used for keeper cell outlines + the keeper manager.
-$keeper: #e0a92b;
+// Unlike the brand colors above, this one IS theme-aware (see global.scss's
+// --keeper): the bright dark-mode gold has ~2:1 contrast on the light theme's
+// near-white surfaces, too low to read as text/icon/border color.
+$keeper: var(--keeper);
 
 // Position colors — keep in sync with POSITION_COLORS in @draft-lobby/shared
 $pos-qb: #f8577d;

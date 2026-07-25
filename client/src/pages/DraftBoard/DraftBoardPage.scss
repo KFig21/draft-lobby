@@ -628,11 +628,11 @@
     @extend %draft-chip-btn;
     border-color: $keeper;
     color: $keeper;
-    background: rgba($keeper, 0.12);
+    background: color-mix(in srgb, $keeper 12%, transparent);
 
     &:hover:not(:disabled) {
       border-color: $keeper;
-      background: rgba($keeper, 0.2);
+      background: color-mix(in srgb, $keeper 20%, transparent);
     }
   }
 
