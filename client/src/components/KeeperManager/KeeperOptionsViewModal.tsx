@@ -1,7 +1,7 @@
-import { POSITION_COLORS, type Position } from '@draft-lobby/shared';
+import { POSITION_COLORS, POSITIONS, type Position } from '@draft-lobby/shared';
 import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useModalClose } from '../../lib/useModalClose';
 import type { KeeperOptionRow, PlayerRow, TeamRow } from '../../lib/types';
 import './KeeperOptionsViewModal.scss';
@@ -43,6 +43,18 @@ export function KeeperOptionsViewModal({ teams, players, keeperOptions, teamId, 
 
   const single = teamId != null;
 
+  // Multi-select position filter — "View all" only (see the modal header
+  // below). Empty set = no filter, show everything.
+  const [posFilter, setPosFilter] = useState<Set<Position>>(new Set());
+  function togglePos(pos: Position) {
+    setPosFilter((cur) => {
+      const next = new Set(cur);
+      if (next.has(pos)) next.delete(pos);
+      else next.add(pos);
+      return next;
+    });
+  }
+
   return (
     <div
       className={`keeper-view__backdrop modal-anim-backdrop${closing ? ' is-closing' : ''}`}
@@ -65,15 +77,46 @@ export function KeeperOptionsViewModal({ teams, players, keeperOptions, teamId, 
           {single ? `${shownTeams[0]?.name ?? 'Team'}’s keepers` : 'Keeper candidates'}
         </h2>
         {!single && (
-          <p className="keeper-view__intro">
-            Every team’s offered keepers — highlighted ones are locked in.
-          </p>
+          <>
+            <p className="keeper-view__intro">
+              Every team’s offered keepers — highlighted ones are locked in.
+            </p>
+            <div className="keeper-view__posfilter">
+              {POSITIONS.map((pos) => (
+                <button
+                  key={pos}
+                  type="button"
+                  className={`keeper-view__pill${posFilter.has(pos) ? ' is-active' : ''}`}
+                  style={posFilter.has(pos) ? { background: POSITION_COLORS[pos] } : undefined}
+                  onClick={() => togglePos(pos)}
+                >
+                  {pos}
+                </button>
+              ))}
+              {posFilter.size > 0 && (
+                <button
+                  type="button"
+                  className="keeper-view__pill-clear"
+                  onClick={() => setPosFilter(new Set())}
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+          </>
         )}
 
         <div className={`keeper-view__grid${single ? ' keeper-view__grid--single' : ''}`}>
           {shownTeams.map((t) => {
-            const opts = optionsByTeam.get(t.id) ?? [];
-            const kept = opts.filter((o) => o.selected).length;
+            const allOpts = optionsByTeam.get(t.id) ?? [];
+            const opts =
+              posFilter.size === 0
+                ? allOpts
+                : allOpts.filter((o) => {
+                    const p = playersById.get(o.player_id);
+                    return p && posFilter.has(p.position as Position);
+                  });
+            const kept = allOpts.filter((o) => o.selected).length;
             return (
               <div key={t.id} className="keeper-view__team">
                 {!single && (
@@ -87,7 +130,9 @@ export function KeeperOptionsViewModal({ teams, players, keeperOptions, teamId, 
                   </div>
                 )}
                 {opts.length === 0 ? (
-                  <p className="keeper-view__empty">No candidates offered.</p>
+                  <p className="keeper-view__empty">
+                    {allOpts.length === 0 ? 'No candidates offered.' : 'No matches for this filter.'}
+                  </p>
                 ) : (
                   <ul className="keeper-view__list">
                     {opts.map((o) => {

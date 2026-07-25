@@ -56,9 +56,61 @@
   }
 
   &__intro {
-    margin: 0 0 $space * 1.5;
+    margin: 0 0 $space;
     color: $text-muted;
     font-size: 0.88rem;
+  }
+
+  // Multi-select position filter — pills toggle independently (not the
+  // single-select radio-like behavior of the player pool's own position
+  // chips), so "active" is a set membership check, not an equality check.
+  &__posfilter {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: $space * 0.5;
+    margin-bottom: $space * 1.5;
+  }
+
+  &__pill {
+    padding: $space * 0.3 $space * 0.85;
+    border: 1px solid $border;
+    border-radius: 999px;
+    background: $bg;
+    color: $text-muted;
+    font: inherit;
+    font-size: 0.76rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition:
+      background 120ms ease,
+      border-color 120ms ease,
+      color 120ms ease;
+
+    &:hover {
+      border-color: $text-muted;
+      color: $text;
+    }
+
+    &.is-active {
+      border-color: transparent;
+      color: #05231a;
+    }
+  }
+
+  &__pill-clear {
+    border: none;
+    background: none;
+    color: $text-muted;
+    font: inherit;
+    font-size: 0.76rem;
+    font-weight: 700;
+    text-decoration: underline;
+    cursor: pointer;
+
+    &:hover {
+      color: $text;
+    }
   }
 
   &__grid {
