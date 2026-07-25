@@ -788,7 +788,7 @@ draftRouter.post(
 
     const { data: lobby } = await supabaseAdmin
       .from('lobbies')
-      .select('status, settings')
+      .select('status, settings, keepers_locked')
       .eq('id', lobbyId)
       .maybeSingle();
     if (!lobby) {
@@ -823,6 +823,14 @@ draftRouter.post(
     const role = await getRole(lobbyId, userId);
     if (team.owner_id !== userId && !isCommish(role)) {
       res.status(403).json({ error: 'You can only choose keepers for your own team' });
+      return;
+    }
+    // The commissioner can still adjust picks on anyone's behalf even while
+    // locked — same "everyone but the commissioner" model as team_names_locked.
+    if (lobby.keepers_locked && !isCommish(role)) {
+      res.status(409).json({
+        error: 'The commissioner has locked keeper selections — ask them to make changes',
+      });
       return;
     }
 
@@ -2022,6 +2030,32 @@ draftRouter.post('/:id/team-names-locked', async (req: AuthedRequest, res: Respo
   const { error } = await supabaseAdmin
     .from('lobbies')
     .update({ team_names_locked: locked })
+    .eq('id', lobbyId);
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
+  res.json({ ok: true, locked });
+});
+
+/** POST /api/lobbies/:id/keepers-locked — commissioner locks/unlocks owners'
+ * ability to keep/unkeep their offered candidates. Same shape as
+ * team-names-locked; enforced in the owner-facing select endpoint above. */
+draftRouter.post('/:id/keepers-locked', async (req: AuthedRequest, res: Response) => {
+  const lobbyId = req.params.id;
+  const role = await getRole(lobbyId, req.user!.id);
+  if (!isCommish(role)) {
+    res.status(403).json({ error: 'Only the commissioner can lock keeper selections' });
+    return;
+  }
+  const locked = req.body?.locked;
+  if (typeof locked !== 'boolean') {
+    res.status(400).json({ error: 'locked must be a boolean' });
+    return;
+  }
+  const { error } = await supabaseAdmin
+    .from('lobbies')
+    .update({ keepers_locked: locked })
     .eq('id', lobbyId);
   if (error) {
     res.status(500).json({ error: error.message });

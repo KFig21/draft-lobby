@@ -1,6 +1,7 @@
 import { POSITION_COLORS, type Position } from '@draft-lobby/shared';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CloseIcon from '@mui/icons-material/Close';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
 import { useMemo, useState } from 'react';
 import { api } from '../../lib/api';
@@ -14,6 +15,10 @@ interface Props {
   /** This team's offered candidates. */
   options: KeeperOptionRow[];
   players: PlayerRow[];
+  /** The commissioner has frozen everyone's keeper selections — the toggle
+   * buttons below go read-only rather than let the owner hit a confusing
+   * 409 from the server (which enforces this too). */
+  locked?: boolean;
   onClose: () => void;
 }
 
@@ -23,7 +28,7 @@ interface Props {
  * a kept player lands on the board immediately. Keeping none is fine: just
  * leave them all unpicked.
  */
-export function OwnerKeepersModal({ lobbyId, team, options, players, onClose }: Props) {
+export function OwnerKeepersModal({ lobbyId, team, options, players, locked, onClose }: Props) {
   const { closing, requestClose } = useModalClose(onClose);
   const playersById = useMemo(() => new Map(players.map((p) => [p.id, p])), [players]);
   const sorted = useMemo(() => [...options].sort((a, b) => a.round - b.round), [options]);
@@ -77,6 +82,13 @@ export function OwnerKeepersModal({ lobbyId, team, options, players, onClose }: 
           </span>
         </div>
 
+        {locked && (
+          <p className="owner-keepers__locked">
+            <LockOutlinedIcon fontSize="inherit" /> The commissioner has locked keeper selections
+            — ask them if something needs to change.
+          </p>
+        )}
+
         {error && <p className="owner-keepers__error">{error}</p>}
 
         <div className="owner-keepers__list">
@@ -85,7 +97,7 @@ export function OwnerKeepersModal({ lobbyId, team, options, players, onClose }: 
           ) : (
             sorted.map((o) => {
               const player = playersById.get(o.player_id);
-              const disabled = busyId === o.id || (!o.selected && atLimit);
+              const disabled = locked || busyId === o.id || (!o.selected && atLimit);
               return (
                 <button
                   key={o.id}

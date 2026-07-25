@@ -28,6 +28,7 @@ export interface LobbyRow {
   public_voting_allowed: boolean;
   chat_lock_ms: number;
   team_names_locked: boolean;
+  keepers_locked: boolean;
 }
 
 export interface ChatMessageRow {

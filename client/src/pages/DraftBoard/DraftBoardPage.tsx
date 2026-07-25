@@ -12,6 +12,7 @@ import {
   type Position,
 } from '@draft-lobby/shared';
 import AlternateEmailIcon from '@mui/icons-material/AlternateEmail';
+import BookmarkIcon from '@mui/icons-material/Bookmark';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlined';
 import CheckIcon from '@mui/icons-material/Check';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
@@ -27,6 +28,7 @@ import GridViewOutlinedIcon from '@mui/icons-material/GridViewOutlined';
 import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
 import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
 import InsertDriveFileOutlinedIcon from '@mui/icons-material/InsertDriveFileOutlined';
+import LockOpenOutlinedIcon from '@mui/icons-material/LockOpenOutlined';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import MeetingRoomOutlinedIcon from '@mui/icons-material/MeetingRoomOutlined';
 import MenuIcon from '@mui/icons-material/Menu';
@@ -95,7 +97,7 @@ import type {
 } from '../../lib/types';
 import './DraftBoardPage.scss';
 
-type Filter = 'ALL' | Position | 'FLEX' | 'SUPERFLEX';
+type Filter = 'ALL' | Position | 'FLEX' | 'SUPERFLEX' | 'QUEUE';
 type PanelTab = 'players' | 'roster' | 'chat' | 'results';
 type MobileTab = 'board' | PanelTab;
 
@@ -890,7 +892,9 @@ export function DraftBoardPage() {
     const q = search.trim().toLowerCase();
     return players.filter((p) => {
       if (draftedIds.has(p.id)) return false;
-      if (filter === 'FLEX') {
+      if (filter === 'QUEUE') {
+        if (!queue.includes(p.id)) return false;
+      } else if (filter === 'FLEX') {
         if (!(FLEX_POS as string[]).includes(p.position)) return false;
       } else if (filter === 'SUPERFLEX') {
         if (!(SUPERFLEX_POS as string[]).includes(p.position)) return false;
@@ -900,7 +904,7 @@ export function DraftBoardPage() {
       if (q && !p.name.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [players, draftedIds, filter, search]);
+  }, [players, draftedIds, filter, search, queue]);
 
   if (loading || playersLoading)
     return (
@@ -1022,6 +1026,21 @@ export function DraftBoardPage() {
       setCommishError(err instanceof Error ? err.message : 'Failed to start the draft');
     } finally {
       setCommishBusy(false);
+    }
+  }
+
+  // Freezes everyone but the commissioner out of keep/unkeep — a deliberate
+  // "everything's set" checkpoint before Start, same shape as team-names-locked.
+  const [keepersLockBusy, setKeepersLockBusy] = useState(false);
+  async function toggleKeepersLocked(locked: boolean) {
+    setCommishError(null);
+    setKeepersLockBusy(true);
+    try {
+      await api(`/lobbies/${id}/keepers-locked`, { method: 'POST', body: { locked } });
+    } catch (err) {
+      setCommishError(err instanceof Error ? err.message : 'Failed to update the keeper lock');
+    } finally {
+      setKeepersLockBusy(false);
     }
   }
 
@@ -1171,6 +1190,27 @@ export function DraftBoardPage() {
               <LockOutlinedIcon fontSize="small" /> Keepers
             </button>
           )}
+          {lobby?.settings.keepersEnabled && (
+            <button
+              className={`draft__tool-btn draft__keeperslock-btn${
+                lobby.keepers_locked ? ' is-on' : ''
+              }`}
+              onClick={() => toggleKeepersLocked(!lobby.keepers_locked)}
+              disabled={keepersLockBusy}
+              title={
+                lobby.keepers_locked
+                  ? 'Owners can no longer change their keepers — click to unlock'
+                  : 'Lock keeper selections so nothing changes before you start'
+              }
+            >
+              {lobby.keepers_locked ? (
+                <LockOutlinedIcon fontSize="small" />
+              ) : (
+                <LockOpenOutlinedIcon fontSize="small" />
+              )}
+              {lobby.keepers_locked ? 'Keepers locked' : 'Lock keepers'}
+            </button>
+          )}
           <button
             className="draft__tool-btn draft__start-btn"
             onClick={startDraft}
@@ -1287,6 +1327,14 @@ export function DraftBoardPage() {
               onClick={() => setFilter('ALL')}
             >
               ALL
+            </button>
+            <button
+              className={`chip chip--queue ${filter === 'QUEUE' ? 'chip--active' : ''}`}
+              onClick={() => setFilter(filter === 'QUEUE' ? 'ALL' : 'QUEUE')}
+            >
+              <BookmarkIcon fontSize="inherit" /> Bookmarked
+              <span className="chip__dot"> · </span>
+              <span className="chip__count">{queuedPlayers.length}</span>
             </button>
             {POSITIONS.map((pos) => (
               <button
@@ -1857,6 +1905,7 @@ export function DraftBoardPage() {
           team={myTeam}
           options={myKeeperOptions}
           players={players}
+          locked={lobby.keepers_locked}
           onClose={() => setShowMyKeepers(false)}
         />
       )}

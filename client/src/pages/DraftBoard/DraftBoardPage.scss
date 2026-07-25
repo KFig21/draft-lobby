@@ -636,6 +636,24 @@
     }
   }
 
+  // Lock/unlock keeper selections — neutral until locked, then fills solid
+  // gold (same dark-text-on-bright-badge convention as the position/keeper
+  // badges) so the "everything's frozen" state is unmistakable at a glance.
+  &__keeperslock-btn {
+    @extend %draft-chip-btn;
+
+    &.is-on {
+      border-color: $keeper;
+      background: $keeper;
+      color: #05231a;
+
+      &:hover:not(:disabled) {
+        border-color: $keeper;
+        background: color-mix(in srgb, black 10%, $keeper);
+      }
+    }
+  }
+
   // Big red "Start draft" — the one commissioner action in staging. Deliberately
   // stands out (red, per the ask) against the neutral chip buttons around it.
   &__start-btn {
@@ -1094,9 +1112,12 @@
 
 // Player pool
 .pool {
+  // On mobile the dedicated queue block ate too much vertical space above an
+  // already-cramped player list — the "Bookmarked" filter chip below covers
+  // the same need without it. Desktop/fullscreen (both only ever @include lg
+  // and up) keep the block since there's room for it.
   &__queue {
-    flex-shrink: 0;
-    display: flex;
+    display: none;
     flex-direction: column;
     gap: $space * 0.75;
     padding: $space;
@@ -1104,6 +1125,11 @@
     background: rgba($accent, 0.06);
     max-height: 42%;
     overflow-y: auto;
+
+    @include lg {
+      display: flex;
+      flex-shrink: 0;
+    }
   }
 
   &__queue-head {
@@ -1120,6 +1146,18 @@
     gap: $space;
     padding: $space * 1.5;
     border-bottom: 1px solid $border;
+  }
+
+  // "Bookmarked" chip needs icon+text alignment the plain text-only chips
+  // (global.scss's .chip) never had to account for.
+  .chip--queue {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+
+    svg {
+      font-size: 0.9rem;
+    }
   }
 
   // Pick count on a position filter chip, e.g. "QB · 2".

@@ -66,6 +66,20 @@
     font-size: 0.85rem;
   }
 
+  &__locked {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 $space;
+    padding: $space * 0.75 $space;
+    border: 1px solid color-mix(in srgb, $keeper 45%, transparent);
+    border-radius: $radius-sm;
+    background: color-mix(in srgb, $keeper 10%, transparent);
+    color: $keeper;
+    font-size: 0.82rem;
+    font-weight: 600;
+  }
+
   &__list {
     display: flex;
     flex-direction: column;
