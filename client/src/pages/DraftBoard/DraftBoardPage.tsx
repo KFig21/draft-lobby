@@ -1328,14 +1328,7 @@ export function DraftBoardPage() {
             >
               ALL
             </button>
-            <button
-              className={`chip chip--queue ${filter === 'QUEUE' ? 'chip--active' : ''}`}
-              onClick={() => setFilter(filter === 'QUEUE' ? 'ALL' : 'QUEUE')}
-            >
-              <BookmarkIcon fontSize="inherit" /> Bookmarked
-              <span className="chip__dot"> · </span>
-              <span className="chip__count">{queuedPlayers.length}</span>
-            </button>
+
             {POSITIONS.map((pos) => (
               <button
                 key={pos}
@@ -1356,6 +1349,14 @@ export function DraftBoardPage() {
                 {f === 'SUPERFLEX' ? 'OP' : f}
               </button>
             ))}
+            <button
+              className={`chip chip--queue ${filter === 'QUEUE' ? 'chip--active' : ''}`}
+              onClick={() => setFilter(filter === 'QUEUE' ? 'ALL' : 'QUEUE')}
+            >
+              <BookmarkIcon fontSize="inherit" />
+              <span className="chip__dot"> · </span>
+              <span className="chip__count">{queuedPlayers.length}</span>
+            </button>
           </div>
           <input
             className="pool__search"
