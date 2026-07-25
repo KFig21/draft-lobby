@@ -1,0 +1,170 @@
+@use 'variables' as *;
+
+// Read-only keeper-pool viewer — shares the backdrop/card conventions of
+// OwnerKeepersModal/KeeperManagerModal, but sized for a grid of teams rather
+// than one team's picker (see &--single for the roster-tab, one-team case).
+.keeper-view {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(880px, 94vw);
+  max-height: 90dvh;
+  overflow-y: auto;
+  padding: $space * 3;
+  background: $bg-raised;
+  border: 1px solid $border;
+  border-radius: $radius;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
+
+  &--single {
+    width: min(420px, 94vw);
+  }
+
+  &__backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: grid;
+    place-items: center;
+    padding: $space * 2;
+    background: rgba(0, 0, 0, 0.6);
+  }
+
+  &__close {
+    position: absolute;
+    top: $space * 1.5;
+    right: $space * 1.5;
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: $radius-sm;
+    background: $bg-overlay;
+    color: $text-muted;
+    cursor: pointer;
+
+    &:hover {
+      color: $text;
+    }
+  }
+
+  &__title {
+    margin: 0 0 $space * 0.5;
+    padding-right: $space * 3;
+    font-size: 1.2rem;
+  }
+
+  &__intro {
+    margin: 0 0 $space * 1.5;
+    color: $text-muted;
+    font-size: 0.88rem;
+  }
+
+  &__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: $space * 1.25;
+
+    &--single {
+      display: block;
+    }
+  }
+
+  &__team {
+    display: flex;
+    flex-direction: column;
+    gap: $space * 0.6;
+    padding: $space;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: $bg;
+
+    .keeper-view--single & {
+      padding: 0;
+      border: none;
+      background: none;
+    }
+  }
+
+  &__team-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $space * 0.5;
+  }
+
+  &__team-name {
+    font-weight: 700;
+    font-size: 0.86rem;
+  }
+
+  &__team-count {
+    flex-shrink: 0;
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: $keeper;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__empty {
+    margin: 0;
+    color: $text-muted;
+    font-size: 0.8rem;
+  }
+
+  &__list {
+    display: flex;
+    flex-direction: column;
+    gap: $space * 0.4;
+  }
+
+  &__opt {
+    display: flex;
+    align-items: center;
+    gap: $space * 0.5;
+    padding: $space * 0.5 $space * 0.65;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: $bg-raised;
+    font-size: 0.82rem;
+
+    .keeper-view--single & {
+      background: $bg;
+    }
+
+    &.is-selected {
+      border-color: $keeper;
+      background: color-mix(in srgb, $keeper 10%, transparent);
+    }
+  }
+
+  &__round {
+    flex-shrink: 0;
+    min-width: 24px;
+    font-weight: 800;
+    font-size: 0.74rem;
+    color: $keeper;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__player {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    strong {
+      margin-right: 3px;
+      color: $text-muted;
+      font-size: 0.74rem;
+    }
+  }
+
+  &__check {
+    flex-shrink: 0;
+    color: $keeper;
+    font-size: 1rem !important;
+  }
+}

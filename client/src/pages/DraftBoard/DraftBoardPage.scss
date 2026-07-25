@@ -661,7 +661,13 @@
   &__staging-status {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    // Wrap + center: on a narrow top bar there isn't room for the label AND
+    // both count badges on one line — without this, the label text itself
+    // was the thing squeezed into wrapping mid-word instead. Letting the
+    // whole counts group drop to its own line reads much cleaner.
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 4px 8px;
     font-weight: 700;
 
     :root[data-theme='light'] & {
@@ -784,6 +790,38 @@
     }
   }
 
+  // "View all" sits beside &__staging-cta — outlined instead of filled so
+  // the two don't compete for attention. Compound selector + the per-theme
+  // rule nested one level deeper than &__staging-cta's own (0,3,0 vs. 0,2,0)
+  // so this always outranks the filled base regardless of file order — see
+  // css-specificity-order-trap in memory for why that's written out longhand
+  // instead of just adding another same-specificity override.
+  &__staging-cta.draft__staging-cta--ghost {
+    background: none;
+
+    :root[data-theme='light'] & {
+      background: none;
+      border: 1px solid $primary;
+      color: $primary;
+
+      &:hover {
+        background: rgba($primary, 0.12);
+        box-shadow: none;
+      }
+    }
+
+    :root[data-theme='dark'] & {
+      background: none;
+      border: 1px solid $accent;
+      color: $accent;
+
+      &:hover {
+        background: rgba($accent, 0.12);
+        box-shadow: none;
+      }
+    }
+  }
+
   &__body {
     position: relative; // anchor for the desktop team-results drawer
     display: flex;
@@ -882,6 +920,29 @@
   &__results-summary-chevron {
     flex-shrink: 0;
     color: $text-muted;
+  }
+
+  // Roster tab, staging: "View keepers" for whichever team is selected in
+  // the dropdown above — read-only pool viewer (KeeperOptionsViewModal).
+  &__view-keepers-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    padding: $space * 0.75;
+    border: 1px solid color-mix(in srgb, $keeper 45%, transparent);
+    border-radius: $radius-sm;
+    background: color-mix(in srgb, $keeper 10%, transparent);
+    color: $keeper;
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+
+    &:hover {
+      background: color-mix(in srgb, $keeper 16%, transparent);
+    }
   }
 
   &__results {

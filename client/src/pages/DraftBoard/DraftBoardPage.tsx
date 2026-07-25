@@ -24,6 +24,7 @@ import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 import GridViewOutlinedIcon from '@mui/icons-material/GridViewOutlined';
+import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
 import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
 import InsertDriveFileOutlinedIcon from '@mui/icons-material/InsertDriveFileOutlined';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
@@ -56,6 +57,7 @@ import { DraftResultsPanel } from '../../components/DraftResultsPanel/DraftResul
 import { ErrorScreen } from '../../components/ErrorScreen/ErrorScreen';
 import { GradeBadge } from '../../components/GradeBadge/GradeBadge';
 import { KeeperManagerModal } from '../../components/KeeperManager/KeeperManagerModal';
+import { KeeperOptionsViewModal } from '../../components/KeeperManager/KeeperOptionsViewModal';
 import { OwnerKeepersModal } from '../../components/KeeperManager/OwnerKeepersModal';
 import { Loader } from '../../components/Loader/Loader';
 import { LockInModal } from '../../components/LockInModal/LockInModal';
@@ -181,6 +183,8 @@ export function DraftBoardPage() {
   const [showExport, setShowExport] = useState(false);
   const [showKeepers, setShowKeepers] = useState(false);
   const [showMyKeepers, setShowMyKeepers] = useState(false);
+  const [showAllKeepers, setShowAllKeepers] = useState(false);
+  const [showTeamKeepers, setShowTeamKeepers] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   // Only meaningful in full screen (the sidebar isn't mounted there) —
   // force-closed the moment full screen exits, since the sidebar comes back.
@@ -1388,44 +1392,55 @@ export function DraftBoardPage() {
               onToggleAuto={isComplete ? undefined : toggleAuto}
               onPickClick={setPickModal}
               belowSelect={
-                isComplete &&
-                (() => {
-                  const voteCount = crownVotes.filter((v) => v.team_id === rosterTeamId).length;
-                  const teamGrades = grades.filter((g) => g.team_id === rosterTeamId);
-                  const avgGrade = mostCommonGrade(teamGrades);
-                  return (
-                    <>
-                      <span className="lineup-view__label">Report Card</span>
-                      <button
-                        type="button"
-                        className="draft__results-summary"
-                        onClick={() => {
-                          // The fullscreen modal has no room for a second
-                          // slide-in drawer on top of itself — jump to the
-                          // Results tab (already right there) instead.
-                          if (isFullscreen) setPanelTab('results');
-                          else setResultsDrawerView((v) => (v === 'closed' ? 'open' : 'closed'));
-                        }}
-                      >
-                        <GradeBadge grade={avgGrade} size={44} />
-                        <div className="draft__results-summary-main">
-                          <span className="draft__results-summary-item">
-                            <EmojiEventsOutlinedIcon fontSize="small" /> {voteCount} vote
-                            {voteCount === 1 ? '' : 's'}
-                          </span>
-                          <span className="draft__results-summary-item muted">
-                            {teamGrades.length} grade
-                            {teamGrades.length === 1 ? '' : 's'}
-                          </span>
-                        </div>
-                        <ChevronRightIcon
-                          fontSize="small"
-                          className="draft__results-summary-chevron"
-                        />
-                      </button>
-                    </>
-                  );
-                })()
+                isComplete
+                  ? (() => {
+                      const voteCount = crownVotes.filter((v) => v.team_id === rosterTeamId).length;
+                      const teamGrades = grades.filter((g) => g.team_id === rosterTeamId);
+                      const avgGrade = mostCommonGrade(teamGrades);
+                      return (
+                        <>
+                          <span className="lineup-view__label">Report Card</span>
+                          <button
+                            type="button"
+                            className="draft__results-summary"
+                            onClick={() => {
+                              // The fullscreen modal has no room for a second
+                              // slide-in drawer on top of itself — jump to the
+                              // Results tab (already right there) instead.
+                              if (isFullscreen) setPanelTab('results');
+                              else setResultsDrawerView((v) => (v === 'closed' ? 'open' : 'closed'));
+                            }}
+                          >
+                            <GradeBadge grade={avgGrade} size={44} />
+                            <div className="draft__results-summary-main">
+                              <span className="draft__results-summary-item">
+                                <EmojiEventsOutlinedIcon fontSize="small" /> {voteCount} vote
+                                {voteCount === 1 ? '' : 's'}
+                              </span>
+                              <span className="draft__results-summary-item muted">
+                                {teamGrades.length} grade
+                                {teamGrades.length === 1 ? '' : 's'}
+                              </span>
+                            </div>
+                            <ChevronRightIcon
+                              fontSize="small"
+                              className="draft__results-summary-chevron"
+                            />
+                          </button>
+                        </>
+                      );
+                    })()
+                  : isStaging && lobby.settings.keepersEnabled
+                    ? (
+                        <button
+                          type="button"
+                          className="draft__view-keepers-btn"
+                          onClick={() => setShowTeamKeepers(true)}
+                        >
+                          <LockOutlinedIcon fontSize="small" /> View keepers
+                        </button>
+                      )
+                    : undefined
               }
             />
           </div>
@@ -1655,6 +1670,15 @@ export function DraftBoardPage() {
                 : 'Your keepers'}
             </button>
           )}
+          {lobby.settings.keepersEnabled && (
+            <button
+              className="draft__staging-cta draft__staging-cta--ghost"
+              onClick={() => setShowAllKeepers(true)}
+            >
+              <GroupsOutlinedIcon fontSize="small" />
+              View all
+            </button>
+          )}
         </div>
       )}
 
@@ -1834,6 +1858,25 @@ export function DraftBoardPage() {
           options={myKeeperOptions}
           players={players}
           onClose={() => setShowMyKeepers(false)}
+        />
+      )}
+
+      {showAllKeepers && (
+        <KeeperOptionsViewModal
+          teams={teams}
+          players={players}
+          keeperOptions={keeperOptions}
+          onClose={() => setShowAllKeepers(false)}
+        />
+      )}
+
+      {showTeamKeepers && (
+        <KeeperOptionsViewModal
+          teams={teams}
+          players={players}
+          keeperOptions={keeperOptions}
+          teamId={rosterTeamId}
+          onClose={() => setShowTeamKeepers(false)}
         />
       )}
 
