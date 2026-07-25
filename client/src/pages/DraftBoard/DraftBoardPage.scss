@@ -655,14 +655,22 @@
   }
 
   // Top-bar center while staging: "Draft room open" + live seat/keeper counts.
-  // $info (not $primary) — $primary's contrast on dark mode's near-black bg
-  // is too low for text/icon use (see variables.scss's $info comment).
+  // $primary reads fine as text on light mode (~5:1) but not on dark mode's
+  // near-black bg (~2.3:1) — $accent is the reverse (great on dark, poor on
+  // light), so pick per-theme rather than reaching for one static color.
   &__staging-status {
     display: inline-flex;
     align-items: center;
     gap: 8px;
     font-weight: 700;
-    color: $info;
+
+    :root[data-theme='light'] & {
+      color: $primary;
+    }
+
+    :root[data-theme='dark'] & {
+      color: $accent;
+    }
   }
 
   &__staging-counts {
@@ -709,7 +717,8 @@
     }
   }
 
-  // Sits where the paused banner does, but reads "go" (info blue) not "warning".
+  // Sits where the paused banner does, but reads "go" not "warning". Same
+  // per-theme color as &__staging-status above.
   &__staging-banner {
     flex-shrink: 0;
     display: flex;
@@ -721,8 +730,16 @@
     text-align: center;
     font-size: 0.85rem;
     font-weight: 700;
-    background: color-mix(in srgb, $info 14%, transparent);
-    color: $info;
+
+    :root[data-theme='light'] & {
+      background: rgba($primary, 0.14);
+      color: $primary;
+    }
+
+    :root[data-theme='dark'] & {
+      background: rgba($accent, 0.14);
+      color: $accent;
+    }
   }
 
   // Owner "Choose your keepers" call-to-action inside the staging banner.
