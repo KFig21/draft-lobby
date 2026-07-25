@@ -228,6 +228,23 @@
     opacity: 0.7;
   }
 
+  &__suggest-yes {
+    margin-left: $space * 0.5;
+    padding: 0 $space * 0.6;
+    border: 1px solid $primary;
+    border-radius: 999px;
+    background: none;
+    color: $primary;
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1.6;
+    cursor: pointer;
+
+    &:hover {
+      background: color-mix(in srgb, $primary 15%, transparent);
+    }
+  }
+
   &__import-result {
     margin: 0;
     color: $text-muted;
@@ -417,15 +434,6 @@
     }
   }
 
-  // Compound selector (two classes, not one) so this always outranks the
-  // plain &__results rule below regardless of which is declared later in the
-  // file — a source-order-dependent override bit us here once already.
-  &__results.keeper-modal__results--inline {
-    position: static;
-    box-shadow: none;
-    margin-top: 0;
-  }
-
   &__count {
     display: inline-flex;
     align-items: center;
@@ -527,15 +535,14 @@
     }
   }
 
-  // Search results: absolutely positioned so they overlay the list below
-  // rather than shoving it down as you type.
+  // Search results: portaled to <body> (see PlayerSearch) with `position:
+  // fixed` coords computed from the input's own rect in JS — every usage
+  // lives inside a scrolling ancestor, so anchoring in-flow would get
+  // clipped by that ancestor's overflow regardless of context. z-index has
+  // to clear the backdrop (200) since it now renders as a body-level sibling.
   &__results {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    z-index: 5;
-    margin: 4px 0 0;
+    z-index: 1000;
+    margin: 0;
     padding: 0;
     list-style: none;
     max-height: 240px;

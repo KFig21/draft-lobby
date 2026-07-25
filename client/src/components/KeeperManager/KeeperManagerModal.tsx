@@ -4,9 +4,10 @@ import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutlineOutlined';
-import { useMemo, useState } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { createPortal } from 'react-dom';
 import { api } from '../../lib/api';
-import { KEEPER_IMPORT_EXAMPLE, parseKeeperImport } from '../../lib/keeperImport';
+import { KEEPER_IMPORT_EXAMPLE, parseKeeperImport, type ParsedKeeperRow } from '../../lib/keeperImport';
 import { useModalClose } from '../../lib/useModalClose';
 import type { KeeperOptionRow, PickRow, PlayerRow, TeamRow } from '../../lib/types';
 import './KeeperManagerModal.scss';
@@ -28,26 +29,30 @@ interface Props {
 type TopMode = 'assign' | 'offer';
 
 /** A small inline "search a player" box, reused for the manual-add form, the
- * offer-pool add-a-candidate row, and editing an existing candidate's player. */
+ * offer-pool add-a-candidate row, and editing an existing candidate's player.
+ * The results list is portaled to <body> and positioned with `fixed` coords
+ * computed from the input's own rect — every usage lives inside a scrolling
+ * ancestor (the modal itself, or the offer accordion), and an absolutely
+ * positioned dropdown gets silently clipped by that ancestor's overflow, so
+ * anchoring in-flow doesn't work regardless of context. */
 function PlayerSearch({
   players,
   excludeIds,
   value,
   onChange,
   placeholder = 'Search players…',
-  inline = false,
 }: {
   players: PlayerRow[];
   excludeIds: Set<string>;
   value: string | null;
   onChange: (playerId: string | null) => void;
   placeholder?: string;
-  /** The offer-pool accordion's rows are cramped/scrolling, so its dropdown
-   * pushes content down (static) instead of floating over neighboring rows —
-   * the manual "Add one" form has room to float (the default). */
-  inline?: boolean;
 }) {
   const [search, setSearch] = useState('');
+  const wrapRef = useRef<HTMLSpanElement>(null);
+  const [pos, setPos] = useState<{ anchor: 'below' | 'above'; y: number; left: number; width: number } | null>(
+    null,
+  );
   const playersById = useMemo(() => new Map(players.map((p) => [p.id, p])), [players]);
   const chosen = value ? playersById.get(value) : undefined;
   const matches = useMemo(() => {
@@ -55,6 +60,34 @@ function PlayerSearch({
     if (!q) return [];
     return players.filter((p) => !excludeIds.has(p.id) && p.name.toLowerCase().includes(q)).slice(0, 20);
   }, [players, excludeIds, search]);
+
+  useLayoutEffect(() => {
+    if (matches.length === 0 || !wrapRef.current) {
+      setPos(null);
+      return;
+    }
+    const update = () => {
+      const wrap = wrapRef.current;
+      if (!wrap) return;
+      const r = wrap.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - r.bottom;
+      if (spaceBelow < 160 && r.top > spaceBelow) {
+        setPos({ anchor: 'above', y: window.innerHeight - r.top + 4, left: r.left, width: r.width });
+      } else {
+        setPos({ anchor: 'below', y: r.bottom + 4, left: r.left, width: r.width });
+      }
+    };
+    update();
+    // Scroll listener needs capture:true — the modal (and the offer accordion
+    // inside it) are the elements that actually scroll, and scroll events
+    // don't bubble, so a plain window listener would never fire for them.
+    window.addEventListener('scroll', update, true);
+    window.addEventListener('resize', update);
+    return () => {
+      window.removeEventListener('scroll', update, true);
+      window.removeEventListener('resize', update);
+    };
+  }, [matches.length]);
 
   if (chosen) {
     return (
@@ -66,8 +99,13 @@ function PlayerSearch({
       </span>
     );
   }
+
+  const style: CSSProperties | undefined = pos
+    ? { position: 'fixed', left: pos.left, width: pos.width, ...(pos.anchor === 'below' ? { top: pos.y } : { bottom: pos.y }) }
+    : undefined;
+
   return (
-    <span className="keeper-modal__search-wrap">
+    <span className="keeper-modal__search-wrap" ref={wrapRef}>
       <input
         type="text"
         className="keeper-modal__add-input"
@@ -76,25 +114,28 @@ function PlayerSearch({
         onChange={(e) => setSearch(e.target.value)}
         autoFocus
       />
-      {matches.length > 0 && (
-        <ul className={`keeper-modal__results${inline ? ' keeper-modal__results--inline' : ''}`}>
-          {matches.map((p) => (
-            <li key={p.id}>
-              <button
-                type="button"
-                onClick={() => {
-                  onChange(p.id);
-                  setSearch('');
-                }}
-              >
-                <span className="keeper-modal__result-pos">{p.position}</span>
-                {p.name}
-                <span className="keeper-modal__result-team">{p.nfl_team}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+      {matches.length > 0 &&
+        pos &&
+        createPortal(
+          <ul className="keeper-modal__results" style={style}>
+            {matches.map((p) => (
+              <li key={p.id}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onChange(p.id);
+                    setSearch('');
+                  }}
+                >
+                  <span className="keeper-modal__result-pos">{p.position}</span>
+                  {p.name}
+                  <span className="keeper-modal__result-team">{p.nfl_team}</span>
+                </button>
+              </li>
+            ))}
+          </ul>,
+          document.body,
+        )}
     </span>
   );
 }
@@ -213,6 +254,20 @@ export function KeeperManagerModal({
     a.download = 'keepers-example.csv';
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  /** "Did you mean X?" → swap the mistyped name for the suggested one in the
+   * raw pasted text. Targets the first remaining occurrence of the exact
+   * mistyped text, so re-clicking the same suggestion on a duplicate row
+   * (already fixed once) correctly moves on to the next one. */
+  function applySuggestion(row: ParsedKeeperRow) {
+    if (!row.suggestion) return;
+    const fixedName = row.suggestion.name;
+    setImportText((prev) => {
+      const idx = prev.indexOf(row.player);
+      if (idx === -1) return prev;
+      return prev.slice(0, idx) + fixedName + prev.slice(idx + row.player.length);
+    });
   }
 
   async function importKeepers() {
@@ -426,6 +481,7 @@ export function KeeperManagerModal({
                 problemRows={problemRows}
                 onDownloadExample={downloadExample}
                 onImport={importKeepers}
+                onApplySuggestion={applySuggestion}
                 importBusy={importBusy}
                 importResult={importResult}
                 hint="Paste CSV or JSON with columns "
@@ -478,6 +534,7 @@ export function KeeperManagerModal({
               problemRows={problemRows}
               onDownloadExample={downloadExample}
               onImport={importOffer}
+              onApplySuggestion={applySuggestion}
               importBusy={importBusy}
               importResult={importResult}
               hint="Paste each team’s prior roster as candidates — owners choose which to keep. "
@@ -554,7 +611,6 @@ export function KeeperManagerModal({
                                       if (id) void updateOption(o.id, { playerId: id });
                                     }}
                                     placeholder="Replace with…"
-                                    inline
                                   />
                                   <button
                                     type="button"
@@ -617,7 +673,6 @@ export function KeeperManagerModal({
                             value={addPlayerId}
                             onChange={setAddPlayerId}
                             placeholder="Add a player…"
-                            inline
                           />
                           <button
                             className="keeper-modal__add-btn"
@@ -651,6 +706,7 @@ function ImportPanel({
   problemRows,
   onDownloadExample,
   onImport,
+  onApplySuggestion,
   importBusy,
   importResult,
   hint,
@@ -663,6 +719,7 @@ function ImportPanel({
   problemRows: ReturnType<typeof parseKeeperImport>['rows'];
   onDownloadExample: () => void;
   onImport: () => void;
+  onApplySuggestion: (row: ParsedKeeperRow) => void;
   importBusy: boolean;
   importResult: { added: number; skipped: number } | null;
   hint: string;
@@ -673,8 +730,9 @@ function ImportPanel({
       <div className="keeper-modal__import-head">
         <p className="keeper-modal__import-hint">
           {hint}
-          <code>team, player, position, round</code>. Team matches by name or draft position; round
-          defaults to 1 if left blank.
+          <code>team, player, position, round</code>. Team matches by name or draft position; position
+          is optional and either order works (<code>player, position</code> or{' '}
+          <code>position, player</code>); round defaults to 1 if left blank.
         </p>
         <button type="button" className="keeper-modal__example" onClick={onDownloadExample}>
           Download example
@@ -704,6 +762,15 @@ function ImportPanel({
               {problemRows.slice(0, 8).map((r, i) => (
                 <li key={i}>
                   {r.error}
+                  {r.suggestion && (
+                    <button
+                      type="button"
+                      className="keeper-modal__suggest-yes"
+                      onClick={() => onApplySuggestion(r)}
+                    >
+                      Yes
+                    </button>
+                  )}
                   <span className="keeper-modal__problem-src">
                     {r.team || '—'} / {r.player || '—'}
                   </span>

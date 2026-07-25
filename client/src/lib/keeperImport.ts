@@ -163,6 +163,38 @@ function looksLikeHeader(cols: string[]): boolean {
   return joined.includes('player') || joined.includes('team') || joined.includes('name');
 }
 
+const POSITION_TOKENS = new Set(['QB', 'RB', 'WR', 'TE', 'K', 'DEF', 'DST']);
+function looksLikePosition(raw: string): boolean {
+  return POSITION_TOKENS.has(raw.trim().toUpperCase().replace(/[^A-Z]/g, ''));
+}
+
+/**
+ * The columns after `team` can come in any order and the position column is
+ * optional — "player, position, round", "position, player, round", and
+ * "player, round" (no position) all resolve here by shape (a bare integer is
+ * the round, a known position code is the position, whatever's left is the
+ * player), so the commissioner doesn't have to match one exact column order.
+ */
+function classifyRestCols(cols: string[]): { player: string; position: string; round: string } {
+  const remaining: string[] = [];
+  let round = '';
+  for (const c of cols) {
+    if (c.trim() === '') continue;
+    if (!round && /^\d+$/.test(c.trim())) {
+      round = c;
+    } else {
+      remaining.push(c);
+    }
+  }
+  let position = '';
+  const posIdx = remaining.findIndex((c) => looksLikePosition(c));
+  if (posIdx !== -1) {
+    position = remaining[posIdx];
+    remaining.splice(posIdx, 1);
+  }
+  return { player: remaining[0] ?? '', position, round };
+}
+
 function parseRaw(text: string): { raws: RawRow[]; parseError: string | null } {
   const trimmed = text.trim();
   if (!trimmed) return { raws: [], parseError: null };
@@ -188,12 +220,8 @@ function parseRaw(text: string): { raws: RawRow[]; parseError: string | null } {
     const cols = splitCsvLine(line);
     if (i === 0 && looksLikeHeader(cols)) return;
     if (cols.every((c) => !c)) return;
-    raws.push({
-      team: cols[0] ?? '',
-      player: cols[1] ?? '',
-      position: cols[2] ?? '',
-      round: cols[3] ?? '',
-    });
+    const { player, position, round } = classifyRestCols(cols.slice(1));
+    raws.push({ team: cols[0] ?? '', player, position, round });
   });
   return { raws, parseError: null };
 }
