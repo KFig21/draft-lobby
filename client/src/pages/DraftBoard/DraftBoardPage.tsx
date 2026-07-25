@@ -13,6 +13,7 @@ import {
 } from '@draft-lobby/shared';
 import AlternateEmailIcon from '@mui/icons-material/AlternateEmail';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlined';
+import CheckIcon from '@mui/icons-material/Check';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import EmojiEventsOutlinedIcon from '@mui/icons-material/EmojiEventsOutlined';
@@ -1535,11 +1536,21 @@ export function DraftBoardPage() {
               <span className="draft__staging-status">
                 <MeetingRoomOutlinedIcon fontSize="small" /> Draft room open
                 <span className="draft__staging-counts">
-                  <span className="draft__count">
+                  <span
+                    className={`draft__count draft__count--seated${
+                      humansSeated >= lobby.settings.teamCount ? ' is-complete' : ''
+                    }`}
+                  >
+                    {humansSeated >= lobby.settings.teamCount && <CheckIcon fontSize="inherit" />}
                     {humansSeated}/{lobby.settings.teamCount} seated
                   </span>
                   {keepersExpected > 0 && (
-                    <span className="draft__count">
+                    <span
+                      className={`draft__count draft__count--keepers${
+                        keepersSelected >= keepersExpected ? ' is-complete' : ''
+                      }`}
+                    >
+                      {keepersSelected >= keepersExpected && <CheckIcon fontSize="inherit" />}
                       {keepersSelected}/{keepersExpected} keepers
                     </span>
                   )}

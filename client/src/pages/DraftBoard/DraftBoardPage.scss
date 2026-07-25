@@ -655,12 +655,14 @@
   }
 
   // Top-bar center while staging: "Draft room open" + live seat/keeper counts.
+  // $info (not $primary) — $primary's contrast on dark mode's near-black bg
+  // is too low for text/icon use (see variables.scss's $info comment).
   &__staging-status {
     display: inline-flex;
     align-items: center;
     gap: 8px;
     font-weight: 700;
-    color: $primary;
+    color: $info;
   }
 
   &__staging-counts {
@@ -669,17 +671,45 @@
     gap: 6px;
   }
 
+  // Seated vs. keepers get their own hue (blue / keeper gold) so the two
+  // counts read as distinct at a glance. Each fills solid + gets a check
+  // once its own count is complete, independent of the other.
   &__count {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
     padding: 1px $space;
     border-radius: 999px;
-    background: rgba($primary, 0.16);
-    color: $primary;
     font-size: 0.72rem;
     font-weight: 800;
     font-variant-numeric: tabular-nums;
+
+    svg {
+      font-size: 0.85rem;
+    }
+
+    &--seated {
+      background: color-mix(in srgb, $info 16%, transparent);
+      color: $info;
+
+      &.is-complete {
+        background: $info;
+        color: #05231a;
+      }
+    }
+
+    &--keepers {
+      background: color-mix(in srgb, $keeper 16%, transparent);
+      color: $keeper;
+
+      &.is-complete {
+        background: $keeper;
+        color: #05231a;
+      }
+    }
   }
 
-  // Sits where the paused banner does, but reads "go" (primary) not "warning".
+  // Sits where the paused banner does, but reads "go" (info blue) not "warning".
   &__staging-banner {
     flex-shrink: 0;
     display: flex;
@@ -691,8 +721,8 @@
     text-align: center;
     font-size: 0.85rem;
     font-weight: 700;
-    background: rgba($primary, 0.14);
-    color: $primary;
+    background: color-mix(in srgb, $info 14%, transparent);
+    color: $info;
   }
 
   // Owner "Choose your keepers" call-to-action inside the staging banner.

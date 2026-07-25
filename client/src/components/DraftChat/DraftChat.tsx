@@ -446,7 +446,7 @@ export function DraftChat({
                 )}
                 <span className="chat__pick-text">
                   <strong>{team?.name ?? 'A team'}</strong>
-                  <span>drafted</span>
+                  <span>{pick.is_keeper ? 'kept' : 'drafted'}</span>
                   {player && (
                     <span
                       className="chat__pick-pos"

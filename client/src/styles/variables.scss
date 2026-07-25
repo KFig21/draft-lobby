@@ -20,6 +20,10 @@ $warning: #f6a642;
 // --keeper): the bright dark-mode gold has ~2:1 contrast on the light theme's
 // near-white surfaces, too low to read as text/icon/border color.
 $keeper: var(--keeper);
+// Staging status text (seat count, "Draft room open") — also theme-aware for
+// the same reason: a blue bright enough to read on dark-mode's near-black bg
+// is too washed out on the light theme's near-white one.
+$info: var(--info);
 
 // Position colors — keep in sync with POSITION_COLORS in @draft-lobby/shared
 $pos-qb: #f8577d;

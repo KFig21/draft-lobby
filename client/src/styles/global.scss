@@ -14,6 +14,9 @@
   // bg) but drops to ~2.1:1 on the light theme's near-white surfaces — too low
   // to read as text/icon color. Same hue, darkened for light mode below.
   --keeper: #e0a92b;
+  // Staging status blue: same story as --keeper above (~7.3:1 here, ~2.3:1 on
+  // the light theme's near-white surfaces).
+  --info: #4aa8ff;
 }
 
 :root[data-theme='light'] {
@@ -25,6 +28,7 @@
   --text: #1a1d29;
   --text-muted: #667085;
   --keeper: #8a630f;
+  --info: #0f6fc0;
 }
 
 // ── Scrollbars (theme-aware via the CSS vars above) ──────────────────
