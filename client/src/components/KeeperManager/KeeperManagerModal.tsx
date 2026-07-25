@@ -7,7 +7,12 @@ import PersonOutlineIcon from '@mui/icons-material/PersonOutlineOutlined';
 import { useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { api } from '../../lib/api';
-import { KEEPER_IMPORT_EXAMPLE, parseKeeperImport, type ParsedKeeperRow } from '../../lib/keeperImport';
+import {
+  KEEPER_IMPORT_EXAMPLE,
+  KEEPER_IMPORT_EXAMPLE_BY_TEAM,
+  parseKeeperImport,
+  type ParsedKeeperRow,
+} from '../../lib/keeperImport';
 import { useModalClose } from '../../lib/useModalClose';
 import type { KeeperOptionRow, PickRow, PlayerRow, TeamRow } from '../../lib/types';
 import './KeeperManagerModal.scss';
@@ -181,6 +186,11 @@ export function KeeperManagerModal({
   const [importBusy, setImportBusy] = useState(false);
   const [importResult, setImportResult] = useState<{ added: number; skipped: number } | null>(null);
 
+  // Offer-pool import can be scoped to one team at a time — the team column
+  // is then dropped from the pasted text since it's already picked here.
+  const [offerImportMode, setOfferImportMode] = useState<'all' | 'team'>('all');
+  const [offerImportTeamId, setOfferImportTeamId] = useState('');
+
   // Offer-pool accordion: one team open at a time, with an inline add form
   // and an inline edit-player form (only one candidate editable at a time).
   const [expandedTeam, setExpandedTeam] = useState<string | null>(null);
@@ -188,10 +198,11 @@ export function KeeperManagerModal({
   const [addRound, setAddRound] = useState(1);
   const [editingOptionId, setEditingOptionId] = useState<string | null>(null);
 
-  const parsed = useMemo(
-    () => parseKeeperImport(importText, teams, players),
-    [importText, teams, players],
-  );
+  const teamScoped = topMode === 'offer' && offerImportMode === 'team';
+  const parsed = useMemo(() => {
+    if (teamScoped && !offerImportTeamId) return { rows: [], parseError: null };
+    return parseKeeperImport(importText, teams, players, 1, teamScoped ? offerImportTeamId : null);
+  }, [importText, teams, players, teamScoped, offerImportTeamId]);
   const readyRows = useMemo(() => parsed.rows.filter((r) => !r.error), [parsed]);
   const problemRows = useMemo(() => parsed.rows.filter((r) => r.error), [parsed]);
 
@@ -246,8 +257,8 @@ export function KeeperManagerModal({
     }
   }
 
-  function downloadExample() {
-    const blob = new Blob([KEEPER_IMPORT_EXAMPLE], { type: 'text/csv' });
+  function downloadExample(content: string) {
+    const blob = new Blob([content], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -479,12 +490,14 @@ export function KeeperManagerModal({
                 parsed={parsed}
                 readyRows={readyRows}
                 problemRows={problemRows}
-                onDownloadExample={downloadExample}
+                onDownloadExample={() => downloadExample(KEEPER_IMPORT_EXAMPLE)}
                 onImport={importKeepers}
                 onApplySuggestion={applySuggestion}
                 importBusy={importBusy}
                 importResult={importResult}
                 hint="Paste CSV or JSON with columns "
+                columnsLabel="team, player, position, round"
+                example={KEEPER_IMPORT_EXAMPLE}
                 actionLabel="keeper"
               />
             )}
@@ -526,18 +539,61 @@ export function KeeperManagerModal({
           </>
         ) : (
           <>
+            <div className="keeper-modal__import-scope">
+              <div className="keeper-modal__tabs">
+                <button
+                  type="button"
+                  className={`keeper-modal__tab${offerImportMode === 'all' ? ' is-active' : ''}`}
+                  onClick={() => setOfferImportMode('all')}
+                >
+                  Import all
+                </button>
+                <button
+                  type="button"
+                  className={`keeper-modal__tab${offerImportMode === 'team' ? ' is-active' : ''}`}
+                  onClick={() => setOfferImportMode('team')}
+                >
+                  Import by team
+                </button>
+              </div>
+              {offerImportMode === 'team' && (
+                <select
+                  className="keeper-modal__scope-team"
+                  value={offerImportTeamId}
+                  onChange={(e) => setOfferImportTeamId(e.target.value)}
+                  aria-label="Team to import candidates for"
+                >
+                  <option value="">Select team…</option>
+                  {orderedTeams.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.draft_position}. {t.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+
             <ImportPanel
               importText={importText}
               setImportText={setImportText}
               parsed={parsed}
               readyRows={readyRows}
               problemRows={problemRows}
-              onDownloadExample={downloadExample}
+              onDownloadExample={() =>
+                downloadExample(teamScoped ? KEEPER_IMPORT_EXAMPLE_BY_TEAM : KEEPER_IMPORT_EXAMPLE)
+              }
               onImport={importOffer}
               onApplySuggestion={applySuggestion}
               importBusy={importBusy}
               importResult={importResult}
-              hint="Paste each team’s prior roster as candidates — owners choose which to keep. "
+              hint={
+                teamScoped
+                  ? `Paste ${orderedTeams.find((t) => t.id === offerImportTeamId)?.name ?? 'this team'}’s prior roster as candidates — owners choose which to keep. `
+                  : 'Paste each team’s prior roster as candidates — owners choose which to keep. '
+              }
+              columnsLabel={teamScoped ? 'player, position, round' : 'team, player, position, round'}
+              example={teamScoped ? KEEPER_IMPORT_EXAMPLE_BY_TEAM : KEEPER_IMPORT_EXAMPLE}
+              blockedMessage={teamScoped && !offerImportTeamId ? 'Pick a team above to paste its roster.' : null}
               actionLabel="candidate"
             />
 
@@ -710,6 +766,9 @@ function ImportPanel({
   importBusy,
   importResult,
   hint,
+  columnsLabel,
+  example,
+  blockedMessage = null,
   actionLabel,
 }: {
   importText: string;
@@ -723,14 +782,29 @@ function ImportPanel({
   importBusy: boolean;
   importResult: { added: number; skipped: number } | null;
   hint: string;
+  columnsLabel: string;
+  example: string;
+  /** When set, the team-scoped import has no team picked yet — show this
+   * instead of the textarea/preview rather than parsing an ambiguous paste. */
+  blockedMessage?: string | null;
   actionLabel: string;
 }) {
+  if (blockedMessage) {
+    return (
+      <div className="keeper-modal__import">
+        <p className="keeper-modal__import-hint">{hint}</p>
+        <p className="keeper-modal__import-blocked">{blockedMessage}</p>
+      </div>
+    );
+  }
+
+  const hasTeamCol = columnsLabel.includes('team');
   return (
     <div className="keeper-modal__import">
       <div className="keeper-modal__import-head">
         <p className="keeper-modal__import-hint">
           {hint}
-          <code>team, player, position, round</code>. Team matches by name or draft position; position
+          <code>{columnsLabel}</code>.{hasTeamCol && ' Team matches by name or draft position;'} position
           is optional and either order works (<code>player, position</code> or{' '}
           <code>position, player</code>); round defaults to 1 if left blank.
         </p>
@@ -740,7 +814,7 @@ function ImportPanel({
       </div>
       <textarea
         className="keeper-modal__textarea"
-        placeholder={KEEPER_IMPORT_EXAMPLE}
+        placeholder={example}
         value={importText}
         onChange={(e) => setImportText(e.target.value)}
         rows={6}
@@ -748,7 +822,7 @@ function ImportPanel({
       />
       <div className="keeper-modal__example-block">
         <span className="keeper-modal__example-label">Example</span>
-        <pre>{KEEPER_IMPORT_EXAMPLE}</pre>
+        <pre>{example}</pre>
       </div>
       {parsed.parseError && <p className="keeper-modal__error">{parsed.parseError}</p>}
       {parsed.rows.length > 0 && (

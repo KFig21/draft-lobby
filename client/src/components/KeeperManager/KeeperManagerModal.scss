@@ -141,6 +141,39 @@
     }
   }
 
+  // Offer-pool import scope: "Import all" / "Import by team" tabs + the
+  // team picker that appears in the latter.
+  &__import-scope {
+    display: flex;
+    align-items: center;
+    gap: $space;
+    margin-bottom: $space * 1.5;
+
+    .keeper-modal__tabs {
+      margin-bottom: 0;
+    }
+  }
+
+  &__scope-team {
+    padding: $space * 0.5 $space * 0.75;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: $bg;
+    color: $text;
+    font: inherit;
+    font-size: 0.85rem;
+  }
+
+  &__import-blocked {
+    margin: $space * 1.5 0;
+    padding: $space * 1.5;
+    border: 1px dashed $border;
+    border-radius: $radius-sm;
+    text-align: center;
+    color: $text-muted;
+    font-size: 0.88rem;
+  }
+
   // ── Import panel ──
   &__import {
     display: flex;

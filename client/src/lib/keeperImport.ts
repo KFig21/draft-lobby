@@ -195,7 +195,7 @@ function classifyRestCols(cols: string[]): { player: string; position: string; r
   return { player: remaining[0] ?? '', position, round };
 }
 
-function parseRaw(text: string): { raws: RawRow[]; parseError: string | null } {
+function parseRaw(text: string, hasTeamColumn: boolean): { raws: RawRow[]; parseError: string | null } {
   const trimmed = text.trim();
   if (!trimmed) return { raws: [], parseError: null };
 
@@ -220,8 +220,10 @@ function parseRaw(text: string): { raws: RawRow[]; parseError: string | null } {
     const cols = splitCsvLine(line);
     if (i === 0 && looksLikeHeader(cols)) return;
     if (cols.every((c) => !c)) return;
-    const { player, position, round } = classifyRestCols(cols.slice(1));
-    raws.push({ team: cols[0] ?? '', player, position, round });
+    // Team-scoped import (a team is already picked above the textarea) drops
+    // the team column entirely — every column here is player/position/round.
+    const { player, position, round } = classifyRestCols(hasTeamColumn ? cols.slice(1) : cols);
+    raws.push({ team: hasTeamColumn ? (cols[0] ?? '') : '', player, position, round });
   });
   return { raws, parseError: null };
 }
@@ -231,23 +233,28 @@ function parseRaw(text: string): { raws: RawRow[]; parseError: string | null } {
  * lobby. Columns/keys: team, player, position, round. Round is optional and
  * falls back to `defaultRound`. Team matches by name or draft position; player
  * matches by normalized name (+ position), with D/ST and near-miss handling.
+ *
+ * `fixedTeamId`, when set, scopes the whole paste to one team: the team
+ * column is dropped from parsing entirely (every row uses `fixedTeamId`) so
+ * the pasted text only needs player/position/round.
  */
 export function parseKeeperImport(
   text: string,
   teams: TeamRow[],
   players: PlayerRow[],
   defaultRound = 1,
+  fixedTeamId: string | null = null,
 ): KeeperImportResult {
-  const { raws, parseError } = parseRaw(text);
+  const { raws, parseError } = parseRaw(text, fixedTeamId == null);
   if (parseError) return { rows: [], parseError };
 
   const teamByName = new Map(teams.map((t) => [t.name.trim().toLowerCase(), t.id]));
   const teamByPos = new Map(teams.map((t) => [String(t.draft_position), t.id]));
+  const fixedTeamName = fixedTeamId ? (teams.find((t) => t.id === fixedTeamId)?.name ?? '') : '';
   const idx = buildIndices(players);
 
   const rows = raws.map((r): ParsedKeeperRow => {
-    const teamKey = r.team.trim().toLowerCase();
-    const teamId = teamByName.get(teamKey) ?? teamByPos.get(r.team.trim()) ?? null;
+    const teamId = fixedTeamId ?? teamByName.get(r.team.trim().toLowerCase()) ?? teamByPos.get(r.team.trim()) ?? null;
 
     const rawName = r.player.trim();
     const norm = normalizeName(rawName);
@@ -276,10 +283,19 @@ export function parseKeeperImport(
     else if (!playerId) {
       error = `Player "${r.player}" not found`;
       if (suggestion) error += ` — did you mean ${suggestion.name}?`;
-    } else if (!r.team.trim()) error = 'Missing team';
-    else if (!teamId) error = `Team "${r.team}" not found`;
+    } else if (!fixedTeamId && !r.team.trim()) error = 'Missing team';
+    else if (!fixedTeamId && !teamId) error = `Team "${r.team}" not found`;
 
-    return { team: r.team, player: r.player, position: r.position, round, teamId, playerId, error, suggestion };
+    return {
+      team: fixedTeamId ? fixedTeamName : r.team,
+      player: r.player,
+      position: r.position,
+      round,
+      teamId,
+      playerId,
+      error,
+      suggestion,
+    };
   });
 
   return { rows, parseError: null };
@@ -291,3 +307,10 @@ export const KEEPER_IMPORT_EXAMPLE = `team,player,position,round
 1,Bijan Robinson,RB,1
 2,Ja'Marr Chase,WR,2
 3,Amon-Ra St. Brown,WR,8`;
+
+/** Same idea, for a team-scoped import — no team column since one team is
+ * already picked above the textarea. */
+export const KEEPER_IMPORT_EXAMPLE_BY_TEAM = `player,position,round
+Justin Jefferson,WR,3
+Bijan Robinson,RB,1
+Ja'Marr Chase,WR,2`;
