@@ -177,6 +177,7 @@ export function DraftBoardPage() {
   // continuously and the Pause button goes disabled right when it's needed.
   const [pauseBusy, setPauseBusy] = useState(false);
   const [commishError, setCommishError] = useState<string | null>(null);
+  const [keepersLockBusy, setKeepersLockBusy] = useState(false);
   const [reqPauseBusy, setReqPauseBusy] = useState(false);
   // The pick to roll back to (inclusive) — set from the toolbar's "Undo" (the
   // last pick) or from a pick modal's "Roll back to this pick" (any earlier one).
@@ -1031,7 +1032,6 @@ export function DraftBoardPage() {
 
   // Freezes everyone but the commissioner out of keep/unkeep — a deliberate
   // "everything's set" checkpoint before Start, same shape as team-names-locked.
-  const [keepersLockBusy, setKeepersLockBusy] = useState(false);
   async function toggleKeepersLocked(locked: boolean) {
     setCommishError(null);
     setKeepersLockBusy(true);
