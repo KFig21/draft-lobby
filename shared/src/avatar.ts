@@ -31,6 +31,8 @@ export const AVATAR_BG_COLORS = [
   '#e17055',
   '#0984e3',
   '#fdcb6e',
+  '#ffffff',
+  '#000000',
 ] as const;
 
 /** Handful of on-theme default emoji for the picker. */
