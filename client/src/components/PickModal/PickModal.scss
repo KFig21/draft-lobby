@@ -435,8 +435,10 @@
       font-size: 0.95rem;
       cursor: pointer;
 
-      &:hover {
-        background: $bg-hover;
+      @media (hover: hover) {
+        &:hover {
+          background: $bg-hover;
+        }
       }
     }
   }

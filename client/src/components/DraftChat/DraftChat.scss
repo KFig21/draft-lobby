@@ -527,8 +527,10 @@
       font-size: 1.05rem;
       cursor: pointer;
 
-      &:hover {
-        background: $bg-overlay;
+      @media (hover: hover) {
+        &:hover {
+          background: $bg-overlay;
+        }
       }
     }
   }
