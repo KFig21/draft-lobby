@@ -189,6 +189,20 @@
       border-color: $keeper;
       background: color-mix(in srgb, $keeper 10%, transparent);
     }
+
+    &--clickable {
+      cursor: pointer;
+
+      @media (hover: hover) {
+        &:hover {
+          border-color: $text-muted;
+        }
+
+        &.is-selected:hover {
+          border-color: $keeper;
+        }
+      }
+    }
   }
 
   &__round {

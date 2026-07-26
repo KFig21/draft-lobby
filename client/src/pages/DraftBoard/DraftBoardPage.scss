@@ -679,14 +679,24 @@
   &__staging-status {
     display: inline-flex;
     align-items: center;
-    // Wrap + center: on a narrow top bar there isn't room for the label AND
-    // both count badges on one line — without this, the label text itself
-    // was the thing squeezed into wrapping mid-word instead. Letting the
-    // whole counts group drop to its own line reads much cleaner.
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     justify-content: center;
-    gap: 4px 8px;
+    gap: 4px 6px;
     font-weight: 700;
+    // Mobile: small enough that the label + both badges fit one line instead
+    // of wrapping — full size again once there's room for it at lg.
+    font-size: 0.82rem;
+    white-space: nowrap;
+
+    @include lg {
+      gap: 4px 8px;
+      font-size: 1rem;
+      white-space: normal;
+    }
+
+    svg {
+      flex-shrink: 0;
+    }
 
     :root[data-theme='light'] & {
       color: $primary;
@@ -700,7 +710,11 @@
   &__staging-counts {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
+
+    @include lg {
+      gap: 6px;
+    }
   }
 
   // Seated vs. keepers get their own hue (blue / keeper gold) so the two
@@ -710,11 +724,16 @@
     display: inline-flex;
     align-items: center;
     gap: 3px;
-    padding: 1px $space;
+    padding: 1px $space * 0.65;
     border-radius: 999px;
-    font-size: 0.72rem;
+    font-size: 0.62rem;
     font-weight: 800;
     font-variant-numeric: tabular-nums;
+
+    @include lg {
+      padding: 1px $space;
+      font-size: 0.72rem;
+    }
 
     svg {
       font-size: 0.85rem;

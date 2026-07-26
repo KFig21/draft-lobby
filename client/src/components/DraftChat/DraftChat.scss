@@ -500,17 +500,21 @@
     }
   }
 
+  // Wraps into rows instead of one ever-widening pill now that the emoji
+  // set has grown well past what fits on one line.
   &__palette {
     position: absolute;
     bottom: 100%;
     left: 0;
     z-index: 5;
     display: flex;
+    flex-wrap: wrap;
+    max-width: 216px;
     gap: 2px;
     margin-bottom: 4px;
     padding: 4px;
     border: 1px solid $border;
-    border-radius: 999px;
+    border-radius: $radius;
     background: $bg-raised;
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
 

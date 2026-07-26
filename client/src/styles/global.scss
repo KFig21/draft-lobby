@@ -1,5 +1,6 @@
 // App-wide base styles + shared primitives. Imported once in main.tsx.
 @use 'variables' as *;
+@use 'mixins' as *;
 
 // ── Theme surfaces (flip at runtime via <html data-theme>) ──────────
 :root {
@@ -167,7 +168,8 @@ a {
 }
 
 .chip {
-  padding: $space $space * 1.5;
+  // Mobile: 6px/10px; back to the full 8px/12px once there's room at lg.
+  padding: $space * 0.75 $space * 1.25;
   border: 1px solid $border;
   border-radius: 999px;
   background: $bg;
@@ -175,6 +177,10 @@ a {
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
+
+  @include lg {
+    padding: $space $space * 1.5;
+  }
 
   &--active {
     background: $primary;

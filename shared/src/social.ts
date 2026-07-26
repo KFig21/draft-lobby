@@ -47,7 +47,27 @@ export const ACTIVITY_TYPES = [
 export type ActivityType = (typeof ACTIVITY_TYPES)[number];
 
 /** Emoji reactions available on feed items. */
-export const REACTION_EMOJIS = ['❤️', '😂', '🤮', '😡', '🏆', '🐐', '🍻', '🗑️'] as const;
+export const REACTION_EMOJIS = [
+  '❤️',
+  '😂',
+  '🤮',
+  '😡',
+  '🏆',
+  '🐐',
+  '🍻',
+  '🗑️',
+  '👀',
+  '🤬',
+  '🖕',
+  '🔥',
+  '📈',
+  '📉',
+  '🔒',
+  '‼️',
+  '❓',
+  '💯',
+  '🏥',
+] as const;
 export type ReactionEmoji = (typeof REACTION_EMOJIS)[number];
 
 /** Toggle a reaction on a feed item. */

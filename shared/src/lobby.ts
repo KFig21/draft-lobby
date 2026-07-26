@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { rosterSlotSchema } from './positions.js';
+import { SLOT_ELIGIBILITY, rosterSlotSchema, type Position } from './positions.js';
 import { DEFAULT_SCORING_RULES, scoringRulesSchema } from './scoring.js';
 import { CHAT_LOCK_MS, MAX_CHAT_LOCK_MS } from './social.js';
 
@@ -33,6 +33,24 @@ export function rosterSize(composition: RosterComposition): number {
 /** Starting spots = everything except the bench. */
 export function startingSpots(composition: RosterComposition): number {
   return composition.reduce((n, r) => (r.slot === 'BENCH' ? n : n + r.count), 0);
+}
+
+/**
+ * Which positions this league's roster can actually hold — position filter
+ * UI (player pool, keeper pickers) should only offer these, not the full
+ * POSITIONS list unconditionally. BENCH is deliberately excluded from the
+ * check even though it's technically eligible for every position (see
+ * SLOT_ELIGIBILITY) — a league that dropped K/DEF from its roster on purpose
+ * (a common "no kicker/no defense" customization) shouldn't have them show
+ * back up just because bench slots exist.
+ */
+export function draftablePositions(composition: RosterComposition): Set<Position> {
+  const positions = new Set<Position>();
+  for (const { slot, count } of composition) {
+    if (slot === 'BENCH' || count <= 0) continue;
+    for (const pos of SLOT_ELIGIBILITY[slot]) positions.add(pos);
+  }
+  return positions;
 }
 
 // ── Per-round pick timers ───────────────────────────────────────────

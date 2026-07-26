@@ -3,6 +3,7 @@ import {
   POSITIONS,
   ROLLBACK_LOCK_MS,
   defaultAvatar,
+  draftablePositions,
   draftPositionForOverall,
   extractMentionedUsernames,
   roundsForSettings,
@@ -1295,6 +1296,7 @@ export function DraftBoardPage() {
   // new component type on every render and remount the subtree, dropping
   // focus out of the search input on every keystroke.
   function renderPlayersPool() {
+    if (!lobby) return null; // already guaranteed by the guard above — narrows for TS
     // Also closes the fullscreen Players modal (no-op elsewhere) — it's
     // rendered later in the DOM than LockInModal, so left open it would
     // paint on top and hide the pick-confirm dialog behind it.
@@ -1302,6 +1304,12 @@ export function DraftBoardPage() {
       setSelected(p);
       setShowFsMenu(false);
     }
+    // Don't offer a filter chip for a position/slot this league's roster
+    // doesn't actually use (e.g. a no-kicker league shouldn't show a K chip).
+    const draftable = draftablePositions(lobby.settings.rosterComposition);
+    const flexSlots = new Set(
+      lobby.settings.rosterComposition.filter((r) => r.count > 0).map((r) => r.slot),
+    );
     return (
       <>
         {queuedPlayers.length > 0 && (
@@ -1329,7 +1337,7 @@ export function DraftBoardPage() {
               ALL
             </button>
 
-            {POSITIONS.map((pos) => (
+            {POSITIONS.filter((pos) => draftable.has(pos)).map((pos) => (
               <button
                 key={pos}
                 className={`chip ${filter === pos ? 'chip--active' : ''}`}
@@ -1340,15 +1348,17 @@ export function DraftBoardPage() {
                 <span className="chip__count">{myPosCounts[pos] ?? 0}</span>
               </button>
             ))}
-            {(['FLEX', 'SUPERFLEX'] as const).map((f) => (
-              <button
-                key={f}
-                className={`chip ${filter === f ? 'chip--active' : ''}`}
-                onClick={() => setFilter(f)}
-              >
-                {f === 'SUPERFLEX' ? 'OP' : f}
-              </button>
-            ))}
+            {(['FLEX', 'SUPERFLEX'] as const)
+              .filter((f) => flexSlots.has(f))
+              .map((f) => (
+                <button
+                  key={f}
+                  className={`chip ${filter === f ? 'chip--active' : ''}`}
+                  onClick={() => setFilter(f)}
+                >
+                  {f === 'SUPERFLEX' ? 'OP' : f}
+                </button>
+              ))}
             <button
               className={`chip chip--queue ${filter === 'QUEUE' ? 'chip--active' : ''}`}
               onClick={() => setFilter(filter === 'QUEUE' ? 'ALL' : 'QUEUE')}
@@ -1916,6 +1926,8 @@ export function DraftBoardPage() {
           teams={teams}
           players={players}
           keeperOptions={keeperOptions}
+          rosterComposition={lobby.settings.rosterComposition}
+          onOpenPlayer={setDetailPlayer}
           onClose={() => setShowAllKeepers(false)}
         />
       )}
@@ -1925,7 +1937,9 @@ export function DraftBoardPage() {
           teams={teams}
           players={players}
           keeperOptions={keeperOptions}
+          rosterComposition={lobby.settings.rosterComposition}
           teamId={rosterTeamId}
+          onOpenPlayer={setDetailPlayer}
           onClose={() => setShowTeamKeepers(false)}
         />
       )}

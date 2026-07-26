@@ -12,8 +12,10 @@
   &--clickable {
     cursor: pointer;
 
-    &:hover {
-      border-color: $primary;
+    @media (hover: hover) {
+      &:hover {
+        border-color: $primary;
+      }
     }
   }
 
@@ -81,9 +83,11 @@
     color: $text-muted;
     cursor: pointer;
 
-    &:hover {
-      background: $bg-overlay;
-      color: $text;
+    @media (hover: hover) {
+      &:hover {
+        background: $bg-overlay;
+        color: $text;
+      }
     }
 
     &--on {

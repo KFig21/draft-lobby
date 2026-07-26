@@ -153,12 +153,16 @@
     margin-top: $space * 1.5;
   }
 
+  // Wraps into rows instead of one ever-widening row now that the emoji set
+  // has grown well past what fits on one line.
   &__palette {
     position: absolute;
     bottom: calc(100% + #{$space * 0.5});
     left: 0;
     z-index: 20;
     display: flex;
+    flex-wrap: wrap;
+    max-width: 216px;
     gap: 2px;
     padding: $space * 0.5;
     background: $bg-overlay;

@@ -1,4 +1,10 @@
-import { POSITION_COLORS, POSITIONS, type Position } from '@draft-lobby/shared';
+import {
+  draftablePositions,
+  POSITION_COLORS,
+  POSITIONS,
+  type Position,
+  type RosterComposition,
+} from '@draft-lobby/shared';
 import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';
 import { useMemo, useState } from 'react';
@@ -10,9 +16,14 @@ interface Props {
   teams: TeamRow[];
   players: PlayerRow[];
   keeperOptions: KeeperOptionRow[];
+  /** Which positions get a filter pill — a league that doesn't roster K/DEF
+   * shouldn't offer them as filters. */
+  rosterComposition: RosterComposition;
   /** One team's candidates (roster tab) instead of every team's (staging
    * banner's "View all"). */
   teamId?: string;
+  /** Opens the full player-detail modal — omit to leave rows unclickable. */
+  onOpenPlayer?: (player: PlayerRow) => void;
   onClose: () => void;
 }
 
@@ -20,9 +31,18 @@ interface Props {
  * the staging banner) or one team's (from the roster tab's team select).
  * Selected candidates are highlighted; nothing here is editable — that's the
  * commissioner's Keeper Manager or the owner's own "Your keepers" modal. */
-export function KeeperOptionsViewModal({ teams, players, keeperOptions, teamId, onClose }: Props) {
+export function KeeperOptionsViewModal({
+  teams,
+  players,
+  keeperOptions,
+  rosterComposition,
+  teamId,
+  onOpenPlayer,
+  onClose,
+}: Props) {
   const { closing, requestClose } = useModalClose(onClose);
 
+  const draftable = useMemo(() => draftablePositions(rosterComposition), [rosterComposition]);
   const playersById = useMemo(() => new Map(players.map((p) => [p.id, p])), [players]);
   const orderedTeams = useMemo(
     () => [...teams].sort((a, b) => a.draft_position - b.draft_position),
@@ -82,7 +102,7 @@ export function KeeperOptionsViewModal({ teams, players, keeperOptions, teamId, 
               Every team’s offered keepers — highlighted ones are locked in.
             </p>
             <div className="keeper-view__posfilter">
-              {POSITIONS.map((pos) => (
+              {POSITIONS.filter((pos) => draftable.has(pos)).map((pos) => (
                 <button
                   key={pos}
                   type="button"
@@ -137,8 +157,27 @@ export function KeeperOptionsViewModal({ teams, players, keeperOptions, teamId, 
                   <ul className="keeper-view__list">
                     {opts.map((o) => {
                       const player = playersById.get(o.player_id);
+                      const clickable = player && onOpenPlayer;
                       return (
-                        <li key={o.id} className={`keeper-view__opt${o.selected ? ' is-selected' : ''}`}>
+                        <li
+                          key={o.id}
+                          className={`keeper-view__opt${o.selected ? ' is-selected' : ''}${
+                            clickable ? ' keeper-view__opt--clickable' : ''
+                          }`}
+                          onClick={clickable ? () => onOpenPlayer(player) : undefined}
+                          role={clickable ? 'button' : undefined}
+                          tabIndex={clickable ? 0 : undefined}
+                          onKeyDown={
+                            clickable
+                              ? (e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    onOpenPlayer(player);
+                                  }
+                                }
+                              : undefined
+                          }
+                        >
                           <span className="keeper-view__round">R{o.round}</span>
                           <span className="keeper-view__player">
                             {player ? (
