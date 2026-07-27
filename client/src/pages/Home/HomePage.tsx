@@ -133,7 +133,7 @@ export function HomePage() {
           <h2 className="home__section-title">Your active drafts</h2>
           <div className="home__pinned-grid">
             {activeLobbies.map((l) => {
-              const live = l.status === 'DRAFTING' || l.status === 'PAUSED';
+              const live = l.status === 'STAGING' || l.status === 'DRAFTING' || l.status === 'PAUSED';
               return (
                 <Link
                   key={l.id}

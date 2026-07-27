@@ -427,8 +427,8 @@ textarea {
   color: $text-muted;
 
   &--staging {
-    background: rgba($primary, 0.2);
-    color: $primary;
+    background: color-mix(in srgb, $info 20%, transparent);
+    color: $info;
   }
 
   &--drafting {
@@ -441,9 +441,17 @@ textarea {
     color: $warning;
   }
 
+  // Primary in light mode, accent in dark — same split used elsewhere for
+  // text/badges that need to stay legible against both theme surfaces.
   &--complete {
-    background: rgba($primary, 0.25);
-    color: $primary-hover;
+    :root[data-theme='light'] & {
+      background: rgba($primary, 0.25);
+      color: $primary-hover;
+    }
+    :root[data-theme='dark'] & {
+      background: rgba($accent, 0.25);
+      color: $accent;
+    }
   }
 }
 

@@ -54,7 +54,7 @@ feedRouter.get('/', async (req: AuthedRequest, res: Response) => {
         .from('lobbies')
         .select('id, name, status, settings')
         .in('id', myLobbyIds)
-        .in('status', ['SETUP', 'SCHEDULED', 'DRAFTING', 'PAUSED'])
+        .in('status', ['SETUP', 'SCHEDULED', 'STAGING', 'DRAFTING', 'PAUSED'])
         .order('created_at', { ascending: false });
       activeLobbies = data ?? [];
     }
