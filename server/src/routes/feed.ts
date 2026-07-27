@@ -31,6 +31,45 @@ async function friendIds(me: string): Promise<string[]> {
   return [...ids];
 }
 
+interface FriendProfile {
+  id: string;
+  username: string;
+  avatar: unknown;
+}
+
+/** Which of `friends` belong to each of `lobbyIds`, keyed by lobby id. */
+async function friendMembersByLobby(
+  lobbyIds: string[],
+  friends: string[],
+): Promise<Map<string, FriendProfile[]>> {
+  const byLobby = new Map<string, FriendProfile[]>();
+  if (lobbyIds.length === 0 || friends.length === 0) return byLobby;
+
+  const { data: memberships } = await supabaseAdmin
+    .from('lobby_members')
+    .select('lobby_id, user_id')
+    .in('lobby_id', lobbyIds)
+    .in('user_id', friends);
+  if (!memberships || memberships.length === 0) return byLobby;
+
+  const friendIdsInLobbies = [...new Set(memberships.map((m) => m.user_id as string))];
+  const { data: profiles } = await supabaseAdmin
+    .from('profiles')
+    .select('id, username, avatar')
+    .in('id', friendIdsInLobbies);
+  const profileMap = new Map<string, FriendProfile>();
+  for (const p of profiles ?? []) profileMap.set(p.id, p as FriendProfile);
+
+  for (const m of memberships) {
+    const profile = profileMap.get(m.user_id as string);
+    if (!profile) continue;
+    const arr = byLobby.get(m.lobby_id as string) ?? [];
+    arr.push(profile);
+    byLobby.set(m.lobby_id as string, arr);
+  }
+  return byLobby;
+}
+
 /** GET /api/feed — pinned active lobbies + a friends-and-me activity timeline. */
 feedRouter.get('/', async (req: AuthedRequest, res: Response) => {
   const me = req.user!.id;
@@ -42,6 +81,8 @@ feedRouter.get('/', async (req: AuthedRequest, res: Response) => {
 
   // ── Pinned: my own in-progress lobbies (not archived) — first page only. ──
   let activeLobbies: unknown[] = [];
+  // ── Pinned: open (public) lobbies a friend is in that I'm not — first page only. ──
+  let friendOpenLobbies: unknown[] = [];
   if (!before) {
     const { data: myMemberships } = await supabaseAdmin
       .from('lobby_members')
@@ -56,7 +97,57 @@ feedRouter.get('/', async (req: AuthedRequest, res: Response) => {
         .in('id', myLobbyIds)
         .in('status', ['SETUP', 'SCHEDULED', 'STAGING', 'DRAFTING', 'PAUSED'])
         .order('created_at', { ascending: false });
-      activeLobbies = data ?? [];
+      const friendMap = await friendMembersByLobby(myLobbyIds, friends);
+      activeLobbies = (data ?? []).map((l) => ({
+        ...l,
+        friendMembers: friendMap.get(l.id) ?? [],
+      }));
+    }
+
+    if (friends.length > 0) {
+      const { data: friendMemberships } = await supabaseAdmin
+        .from('lobby_members')
+        .select('lobby_id')
+        .in('user_id', friends)
+        .eq('archived', false);
+      const candidateIds = [
+        ...new Set((friendMemberships ?? []).map((m) => m.lobby_id as string)),
+      ].filter((lid) => !myLobbyIds.includes(lid));
+
+      if (candidateIds.length > 0) {
+        const { data: candidateLobbies } = await supabaseAdmin
+          .from('lobbies')
+          .select('id, name, status, settings, created_at')
+          .in('id', candidateIds)
+          .in('status', ['SETUP', 'SCHEDULED', 'STAGING', 'DRAFTING', 'PAUSED'])
+          .order('created_at', { ascending: false });
+        const open = (candidateLobbies ?? []).filter(
+          (l) => (l.settings as { visibility?: string }).visibility === 'OPEN',
+        );
+
+        if (open.length > 0) {
+          const openIds = open.map((l) => l.id);
+          const { data: teamRows } = await supabaseAdmin
+            .from('teams')
+            .select('lobby_id')
+            .in('lobby_id', openIds);
+          const filledCounts = new Map<string, number>();
+          for (const t of teamRows ?? []) {
+            filledCounts.set(t.lobby_id, (filledCounts.get(t.lobby_id) ?? 0) + 1);
+          }
+          const friendMap = await friendMembersByLobby(openIds, friends);
+
+          friendOpenLobbies = open.map((l) => ({
+            id: l.id,
+            name: l.name,
+            status: l.status,
+            settings: l.settings,
+            filled: filledCounts.get(l.id) ?? 0,
+            teamCount: (l.settings as { teamCount: number }).teamCount,
+            friendMembers: friendMap.get(l.id) ?? [],
+          }));
+        }
+      }
     }
   }
 
@@ -184,7 +275,7 @@ feedRouter.get('/', async (req: AuthedRequest, res: Response) => {
   const nextCursor = events.length > 0 ? events[events.length - 1].created_at : null;
   const hasMore = events.length === rawLimit;
 
-  res.json({ activeLobbies, items, nextCursor, hasMore });
+  res.json({ activeLobbies, friendOpenLobbies, items, nextCursor, hasMore });
 });
 
 /** GET /api/feed/:activityId/reactors — who reacted, grouped by emoji. */

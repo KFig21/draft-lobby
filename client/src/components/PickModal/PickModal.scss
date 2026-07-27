@@ -48,7 +48,10 @@
   &__backdrop {
     position: fixed;
     inset: 0;
-    z-index: 200;
+    // Above the generic Modal (200) — in fullscreen, this can open from a
+    // pick link inside the Menu modal's Chat tab, and needs to land on top
+    // of it rather than behind it. Same fix as PlayerDetailModal.
+    z-index: 210;
     display: grid;
     place-items: center;
     padding: $space * 2;

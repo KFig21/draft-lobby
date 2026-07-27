@@ -620,7 +620,7 @@ export function DraftChat({
       )}
 
       {reactorsModal && (
-        <ReactorsModal reactors={reactorsModal} onClose={() => setReactorsModal(null)} />
+        <ReactorsModal reactors={reactorsModal} myUserId={userId} onClose={() => setReactorsModal(null)} />
       )}
     </div>
   );

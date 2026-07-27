@@ -13,11 +13,13 @@ export interface Reactor {
 interface Props {
   /** Every reactor, keyed by emoji. */
   reactors: Record<string, Reactor[]>;
+  /** Shows "You" instead of your own username in the list. */
+  myUserId?: string;
   onClose: () => void;
 }
 
 /** Full "who reacted" list across every emoji, filterable down to one. */
-export function ReactorsModal({ reactors, onClose }: Props) {
+export function ReactorsModal({ reactors, myUserId, onClose }: Props) {
   const { closing, requestClose } = useModalClose(onClose);
   const [filter, setFilter] = useState<string | null>(null);
 
@@ -73,7 +75,9 @@ export function ReactorsModal({ reactors, onClose }: Props) {
           {rows.map((r, i) => (
             <li key={`${r.emoji}-${r.userId}-${i}`} className="reactors-modal__row">
               <Avatar avatar={r.avatar ?? defaultAvatar(r.userId)} size={26} />
-              <span className="reactors-modal__row-name">{r.username}</span>
+              <span className="reactors-modal__row-name">
+                {r.userId === myUserId ? 'You' : r.username}
+              </span>
               <span className="reactors-modal__row-emoji">{r.emoji}</span>
             </li>
           ))}

@@ -11,8 +11,10 @@ import HandshakeIcon from '@mui/icons-material/Handshake';
 import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
 import SportsFootballIcon from '@mui/icons-material/SportsFootball';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../auth/AuthContext';
 import { Avatar } from '../../components/Avatar/Avatar';
+import { HScrollRow } from '../../components/HScrollRow/HScrollRow';
 import { Loader } from '../../components/Loader/Loader';
 import { ReactorsModal, type Reactor } from '../../components/ReactorsModal/ReactorsModal';
 import { api } from '../../lib/api';
@@ -20,6 +22,7 @@ import { useInfiniteScroll } from '../../lib/useInfiniteScroll';
 import './HomePage.scss';
 
 const PAGE_SIZE = 25;
+const PINNED_LIMIT = 5;
 
 interface FeedActor {
   id: string;
@@ -44,6 +47,22 @@ interface ActiveLobby {
   name: string;
   status: LobbyStatus;
   settings: LobbySettings;
+  friendMembers: FeedActor[];
+}
+interface FriendOpenLobby {
+  id: string;
+  name: string;
+  status: LobbyStatus;
+  settings: LobbySettings;
+  filled: number;
+  teamCount: number;
+  friendMembers: FeedActor[];
+}
+
+/** "You" for the signed-in user, their actual name for everyone else. */
+function nameFor(username: string | undefined, id: string | undefined, myUserId?: string): string {
+  if (!username) return 'Someone';
+  return id && id === myUserId ? 'You' : username;
 }
 
 function timeAgo(iso: string): string {
@@ -58,9 +77,14 @@ function timeAgo(iso: string): string {
 }
 
 export function HomePage() {
+  const { session } = useAuth();
+  const myUserId = session?.user.id;
 
   const [items, setItems] = useState<FeedItem[]>([]);
   const [activeLobbies, setActiveLobbies] = useState<ActiveLobby[]>([]);
+  const [friendOpenLobbies, setFriendOpenLobbies] = useState<FriendOpenLobby[]>([]);
+  const [showAllActive, setShowAllActive] = useState(false);
+  const [showAllFriendOpen, setShowAllFriendOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -69,12 +93,14 @@ export function HomePage() {
   useEffect(() => {
     void api<{
       activeLobbies: ActiveLobby[];
+      friendOpenLobbies: FriendOpenLobby[];
       items: FeedItem[];
       nextCursor: string | null;
       hasMore: boolean;
     }>(`/feed?limit=${PAGE_SIZE}`)
-      .then(({ activeLobbies, items, nextCursor, hasMore }) => {
+      .then(({ activeLobbies, friendOpenLobbies, items, nextCursor, hasMore }) => {
         setActiveLobbies(activeLobbies);
+        setFriendOpenLobbies(friendOpenLobbies);
         setItems(items);
         cursorRef.current = nextCursor;
         setHasMore(hasMore);
@@ -121,6 +147,11 @@ export function HomePage() {
     void api(`/feed/${itemId}/react`, { method: 'POST', body: { emoji } }).catch(() => {});
   }
 
+  const visibleActive = showAllActive ? activeLobbies : activeLobbies.slice(0, PINNED_LIMIT);
+  const visibleFriendOpen = showAllFriendOpen
+    ? friendOpenLobbies
+    : friendOpenLobbies.slice(0, PINNED_LIMIT);
+
   return (
     <main className="home">
       <header className="home__top">
@@ -131,8 +162,8 @@ export function HomePage() {
       {activeLobbies.length > 0 && (
         <section className="home__pinned">
           <h2 className="home__section-title">Your active drafts</h2>
-          <div className="home__pinned-grid">
-            {activeLobbies.map((l) => {
+          <HScrollRow>
+            {visibleActive.map((l) => {
               const live = l.status === 'STAGING' || l.status === 'DRAFTING' || l.status === 'PAUSED';
               return (
                 <Link
@@ -144,20 +175,57 @@ export function HomePage() {
                     {l.status}
                   </span>
                   <span className="pinned-card__name">{l.name}</span>
+                  {l.friendMembers.length > 0 && (
+                    <div className="pinned-card__friends">
+                      {l.friendMembers.slice(0, 4).map((f) => (
+                        <Avatar key={f.id} avatar={f.avatar ?? defaultAvatar(f.id)} size={22} />
+                      ))}
+                    </div>
+                  )}
                   <span className="muted">
                     {l.settings.teamCount} teams · {l.settings.draftType === 'SNAKE' ? 'Snake' : 'Straight'}
                   </span>
                 </Link>
               );
             })}
-          </div>
+            {!showAllActive && activeLobbies.length > PINNED_LIMIT && (
+              <button
+                type="button"
+                className="pinned-card pinned-card--more"
+                onClick={() => setShowAllActive(true)}
+              >
+                See more
+                <span className="muted">+{activeLobbies.length - PINNED_LIMIT}</span>
+              </button>
+            )}
+          </HScrollRow>
+        </section>
+      )}
+
+      {/* Pinned: public lobbies friends are in that you haven't joined. */}
+      {friendOpenLobbies.length > 0 && (
+        <section className="home__pinned">
+          <h2 className="home__section-title">Friends in open lobbies</h2>
+          <HScrollRow>
+            {visibleFriendOpen.map((l) => (
+              <FriendOpenCard key={l.id} lobby={l} />
+            ))}
+            {!showAllFriendOpen && friendOpenLobbies.length > PINNED_LIMIT && (
+              <button
+                type="button"
+                className="pinned-card pinned-card--more"
+                onClick={() => setShowAllFriendOpen(true)}
+              >
+                See more
+                <span className="muted">+{friendOpenLobbies.length - PINNED_LIMIT}</span>
+              </button>
+            )}
+          </HScrollRow>
         </section>
       )}
 
       {/* Timeline */}
       <section className="home__feed">
-        {/* @ claude - please delete this and the associated SCSS to remove bloat */}
-        {/* <h2 className="home__section-title">Timeline</h2> */}
         {loading ? (
           <div className="section-loading">
             <Loader label="Loading your feed…" />
@@ -171,7 +239,7 @@ export function HomePage() {
           <>
             <ul className="feed">
               {items.map((it) => (
-                <FeedCard key={it.id} item={it} onReact={toggleReaction} />
+                <FeedCard key={it.id} item={it} myUserId={myUserId} onReact={toggleReaction} />
               ))}
             </ul>
             <div ref={sentinelRef} />
@@ -187,11 +255,72 @@ export function HomePage() {
   );
 }
 
+function FriendOpenCard({ lobby }: { lobby: FriendOpenLobby }) {
+  const navigate = useNavigate();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const live = lobby.status !== 'SETUP' && lobby.status !== 'SCHEDULED';
+  const isFull = lobby.filled >= lobby.teamCount;
+  const canJoin = !live && !isFull;
+
+  async function join() {
+    setBusy(true);
+    setError(null);
+    try {
+      await api('/lobbies/join', { method: 'POST', body: { lobbyId: lobby.id } });
+      navigate(`/lobby/${lobby.id}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to join');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="pinned-card pinned-card--friend-open">
+      <span className={`status-pill status-pill--${lobby.status.toLowerCase()}`}>
+        {lobby.status}
+      </span>
+      <span className="pinned-card__name">{lobby.name}</span>
+      {lobby.friendMembers.length > 0 && (
+        <div className="pinned-card__friends">
+          {lobby.friendMembers.slice(0, 4).map((f) => (
+            <Avatar key={f.id} avatar={f.avatar ?? defaultAvatar(f.id)} size={22} />
+          ))}
+        </div>
+      )}
+      <span className="muted">
+        {lobby.filled}/{lobby.teamCount} teams
+      </span>
+      {canJoin ? (
+        <button
+          type="button"
+          className="button button--sm button--primary pinned-card__action"
+          disabled={busy}
+          onClick={join}
+        >
+          {busy ? 'Joining…' : 'Join'}
+        </button>
+      ) : (
+        <Link
+          className="button button--sm pinned-card__action"
+          to={live ? `/lobby/${lobby.id}/draft` : `/lobby/${lobby.id}`}
+        >
+          View
+        </Link>
+      )}
+      {error && <p className="pinned-card__error">{error}</p>}
+    </div>
+  );
+}
+
 function FeedCard({
   item,
+  myUserId,
   onReact,
 }: {
   item: FeedItem;
+  myUserId: string | undefined;
   onReact: (id: string, emoji: string) => void;
 }) {
   const lead = item.actors[0];
@@ -208,7 +337,7 @@ function FeedCard({
         <p className="feed-card__text">
           {item.type === 'DRAFT_COMPLETED' && (
             <>
-              <strong>{lead?.username ?? 'Someone'}</strong>
+              <strong>{nameFor(lead?.username, lead?.id, myUserId)}</strong>
               {extra > 0 && ` & ${extra} other${extra > 1 ? 's' : ''}`} completed{' '}
               {item.lobbyName ? <strong>{item.lobbyName}</strong> : 'a draft'}{' '}
               <SportsFootballIcon className="feed-card__icon" sx={{ fontSize: 17 }} />
@@ -216,14 +345,14 @@ function FeedCard({
           )}
           {item.type === 'FRIEND_ACCEPTED' && (
             <>
-              <strong>{lead?.username ?? 'Someone'}</strong> and{' '}
-              <strong>{item.subject?.username ?? 'someone'}</strong> are now friends{' '}
-              <HandshakeIcon className="feed-card__icon" sx={{ fontSize: 17 }} />
+              <strong>{nameFor(lead?.username, lead?.id, myUserId)}</strong> and{' '}
+              <strong>{nameFor(item.subject?.username, item.subject?.id, myUserId)}</strong> are
+              now friends <HandshakeIcon className="feed-card__icon" sx={{ fontSize: 17 }} />
             </>
           )}
           {item.type === 'OPEN_LOBBY_CREATED' && (
             <>
-              <strong>{lead?.username ?? 'Someone'}</strong> opened{' '}
+              <strong>{nameFor(lead?.username, lead?.id, myUserId)}</strong> opened{' '}
               <strong>{item.lobbyName ?? 'a lobby'}</strong>
               {/* Only offer to join if the draft hasn't started yet. */}
               {item.lobbyId &&
@@ -250,7 +379,7 @@ function FeedCard({
           )}
         </div>
 
-        <FeedReactions item={item} onReact={onReact} />
+        <FeedReactions item={item} myUserId={myUserId} onReact={onReact} />
       </div>
     </li>
   );
@@ -258,9 +387,11 @@ function FeedCard({
 
 function FeedReactions({
   item,
+  myUserId,
   onReact,
 }: {
   item: FeedItem;
+  myUserId: string | undefined;
   onReact: (id: string, emoji: string) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -328,7 +459,11 @@ function FeedReactions({
         </div>
       )}
       {reactorsModal && (
-        <ReactorsModal reactors={reactorsModal} onClose={() => setReactorsModal(null)} />
+        <ReactorsModal
+          reactors={reactorsModal}
+          myUserId={myUserId}
+          onClose={() => setReactorsModal(null)}
+        />
       )}
     </div>
   );

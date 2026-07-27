@@ -2012,6 +2012,7 @@ export function DraftBoardPage() {
               reactionsLocked={reactionsLocked || !isMember}
               onClose={() => setPickModal(null)}
               isCommish={isCommish}
+              myUserId={userId}
               onRollbackTo={
                 rollbackLocked
                   ? undefined

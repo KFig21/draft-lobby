@@ -47,15 +47,6 @@
     color: $text-muted;
   }
 
-  &__pinned-grid {
-    display: grid;
-    gap: $space;
-    grid-template-columns: 1fr;
-
-    @include md {
-      grid-template-columns: 1fr 1fr;
-    }
-  }
 }
 
 .pinned-card {
@@ -63,6 +54,12 @@
   flex-direction: column;
   gap: $space * 0.5;
   align-items: flex-start;
+  width: 220px;
+  // Also used on a <button> (the "see more" card) and a plain <div> (the
+  // friend-open-lobby card) alongside its original <Link> — normalize both.
+  font: inherit;
+  text-align: left;
+  color: inherit;
   @include card-surface;
   padding: $space * 1.5;
   // Active drafts get a green border to stand out in the timeline.
@@ -76,6 +73,48 @@
   &__name {
     font-weight: 700;
     font-size: 1.05rem;
+  }
+
+  // Small overlapped avatar stack — friends already in this draft/lobby.
+  &__friends {
+    display: flex;
+
+    > * + * {
+      margin-left: -8px;
+    }
+
+    .avatar {
+      border: 2px solid $bg-raised;
+    }
+  }
+
+  &__action {
+    margin-top: $space * 0.25;
+    width: 100%;
+    justify-content: center;
+  }
+
+  &__error {
+    color: $danger;
+    font-size: 0.78rem;
+  }
+
+  // Trailing "see more" card — same shape as the others, dashed to read as
+  // an action rather than another draft/lobby.
+  &--more {
+    justify-content: center;
+    align-items: center;
+    gap: 2px;
+    border-style: dashed;
+    background: none;
+    color: $text-muted;
+    font-weight: 700;
+    cursor: pointer;
+
+    &:hover {
+      color: $text;
+      border-color: $accent;
+    }
   }
 }
 

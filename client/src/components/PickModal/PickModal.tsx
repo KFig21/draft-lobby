@@ -62,6 +62,8 @@ interface Props {
   /** Commissioner-only: offers "Roll back to this pick" when provided. */
   isCommish?: boolean;
   onRollbackTo?: () => void;
+  /** Shows "You" instead of your own username in the reactions list. */
+  myUserId?: string;
 }
 
 function formatTime(iso: string): string {
@@ -85,6 +87,7 @@ export function PickModal({
   onClose,
   isCommish = false,
   onRollbackTo,
+  myUserId,
 }: Props) {
   const { closing, requestClose } = useModalClose(onClose);
   const pickInRound = pick.overall - (pick.round - 1) * teamCount;
@@ -278,7 +281,11 @@ export function PickModal({
           block for this modal's `position: fixed` backdrop and trap it
           inside the card's box instead of covering the viewport. */}
       {reactorsModal && (
-        <ReactorsModal reactors={reactorsModal} onClose={() => setReactorsModal(null)} />
+        <ReactorsModal
+          reactors={reactorsModal}
+          myUserId={myUserId}
+          onClose={() => setReactorsModal(null)}
+        />
       )}
     </div>
   );
