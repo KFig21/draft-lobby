@@ -75,19 +75,24 @@ export function BoldPickCell({
       {/* Same indicators as the default style, but badged into the bottom-right
           corner (like a notification dot) rather than inline — there's no
           spare row of space in this fill-the-cell layout to put them next to.
-          Each gets its own chip, bordered in the cell's own position color so
-          it reads as "cut into" the cell rather than a mismatched overlay. */}
+          Each chip borders in the cell's own position color and fills with a
+          faded tint of it (CSS color-mix, off the --flag-color custom prop
+          set here), so it reads as "cut into" the cell instead of a
+          mismatched overlay. */}
       {(active.length > 0 || hasComment) && (
         <span className="bold-pick-cell__flags" aria-hidden>
           {hasComment && (
-            <span className="bold-pick-cell__flag-chip" style={{ borderColor: posColor }}>
-              <ChatBubbleOutlineIcon sx={{ fontSize: 10 }} />
+            <span
+              className="bold-pick-cell__flag-chip"
+              style={{ ['--flag-color' as string]: posColor }}
+            >
+              <ChatBubbleOutlineIcon sx={{ fontSize: 9 }} />
             </span>
           )}
           {active.length > 0 && (
             <span
               className="bold-pick-cell__flag-chip bold-pick-cell__react-flag"
-              style={{ borderColor: posColor }}
+              style={{ ['--flag-color' as string]: posColor }}
             >
               !!
             </span>

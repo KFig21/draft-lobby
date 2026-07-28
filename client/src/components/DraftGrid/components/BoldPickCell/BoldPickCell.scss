@@ -77,13 +77,16 @@
     min-width: 16px;
     height: 16px;
     padding: 0 3px;
-    // border-color set inline per-cell (BoldPickCell.tsx) to match the
-    // cell's own position color — reads as "cut into" the cell rather than
-    // a mismatched ring; this is just the width/style fallback.
-    border: 1px solid $bg-raised;
     border-radius: 999px;
-    background: $bg-raised;
-    color: $text;
+    // --flag-color is set inline per-cell (BoldPickCell.tsx) to the cell's
+    // own position color. Border = that color at full strength; background
+    // = a faded (white-mixed) tint of the same color, so the chip reads as
+    // "cut into" the cell instead of a mismatched overlay. Text stays a
+    // fixed dark color (not $text) since it sits on a light tint regardless
+    // of the app's own light/dark theme.
+    border: 1px solid var(--flag-color, #{$bg-raised});
+    background: color-mix(in srgb, var(--flag-color, #{$bg-raised}) 35%, white);
+    color: #1a1a1a;
   }
 
   &__react-flag {
@@ -186,7 +189,7 @@ td.bold-pick-cell {
     height: calc(14px * var(--fs-scale));
 
     svg {
-      font-size: calc(10px * var(--fs-scale));
+      font-size: calc(9px * var(--fs-scale));
     }
   }
 
