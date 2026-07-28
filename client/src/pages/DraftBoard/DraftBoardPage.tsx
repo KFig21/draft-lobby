@@ -52,6 +52,7 @@ import {
   useSearchParams,
 } from 'react-router-dom';
 import { Avatar } from '../../components/Avatar/Avatar';
+import { ChampionBadge } from '../../components/ChampionBadge/ChampionBadge';
 import { ConfirmModal } from '../../components/ConfirmModal/ConfirmModal';
 import { DraftChat } from '../../components/DraftChat/DraftChat';
 import { DraftGrid, type ReactionEntry } from '../../components/DraftGrid/DraftGrid';
@@ -81,7 +82,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { useLobby } from '../../hooks/useLobby';
 import { usePlayers } from '../../hooks/usePlayers';
 import { api } from '../../lib/api';
-import { getDraftCellStyle } from '../../lib/draftCellStyle';
+import { getDraftCellStyle, getShowCellReactions } from '../../lib/draftCellStyle';
 import { mostCommonGrade } from '../../lib/draftGrade';
 import { exportDraftCsv, exportDraftExcel } from '../../lib/exportDraft';
 import { avatarForTeam } from '../../lib/teamAvatar';
@@ -157,6 +158,7 @@ export function DraftBoardPage() {
   // Personal display preference (Settings > Draft board), not per-lobby —
   // read once on mount, same as toastPrefs.
   const [cellStyle] = useState(() => getDraftCellStyle());
+  const [showCellReactions] = useState(() => getShowCellReactions());
   const [filter, setFilter] = useState<Filter>('ALL');
   const [search, setSearch] = useState('');
   const [mobileTab, setMobileTab] = useState<MobileTab>('board');
@@ -329,6 +331,14 @@ export function DraftBoardPage() {
     return m;
   }, [teams]);
 
+  // Users whose team is marked as last season's defending champion — badged
+  // wherever their name shows up (chat, comments, reactions, toasts). Keyed
+  // by userId (not teamId) since most of those spots only have a userId.
+  const championUserIds = useMemo(
+    () => new Set(teams.filter((t) => t.is_prev_champion && t.owner_id).map((t) => t.owner_id!)),
+    [teams],
+  );
+
   // Realtime handlers below live in effects that only re-subscribe on
   // [id, userId, isCommish] — refs keep them reading fresh picks/teams/
   // members/players without resubscribing every time any of that changes
@@ -343,6 +353,20 @@ export function DraftBoardPage() {
   membersRef.current = members;
   const playersByIdRef = useRef(playersById);
   playersByIdRef.current = playersById;
+  const championUserIdsRef = useRef(championUserIds);
+  championUserIdsRef.current = championUserIds;
+
+  /** Username, badged with the trophy icon if that user is a defending
+   * champion — for realtime toast titles built outside React's render path. */
+  function championTitle(uid: string, suffix: string) {
+    return (
+      <>
+        {memberUsername(uid)}
+        {championUserIdsRef.current.has(uid) && <ChampionBadge size={12} />}
+        {suffix}
+      </>
+    );
+  }
 
   /** The pick, if it exists and belongs to my team — for realtime toasts. */
   function myPick(pickId: string): PickRow | null {
@@ -400,7 +424,7 @@ export function DraftBoardPage() {
             if (!pick) return;
             const player = playersByIdRef.current.get(pick.player_id);
             showToast({
-              title: `${memberUsername(row.user_id)} reacted ${row.emoji} to your pick`,
+              title: championTitle(row.user_id, ` reacted ${row.emoji} to your pick`),
               pick: player
                 ? {
                     position: player.position,
@@ -424,7 +448,7 @@ export function DraftBoardPage() {
           const pick = picksRef.current.find((p) => p.id === comment.reply_to_pick_id) ?? null;
           const replyPlayer = pick ? playersByIdRef.current.get(pick.player_id) : undefined;
           showToast({
-            title: `${memberUsername(row.user_id)} reacted ${row.emoji} to your reply`,
+            title: championTitle(row.user_id, ` reacted ${row.emoji} to your reply`),
             pick:
               pick && replyPlayer
                 ? {
@@ -485,7 +509,7 @@ export function DraftBoardPage() {
           const myTeam = teamsRef.current.find((t) => t.owner_id === userId);
           if (!myTeam || row.team_id !== myTeam.id) return;
           showToast({
-            title: `${memberUsername(row.rater_id)} graded your roster`,
+            title: championTitle(row.rater_id, ' graded your roster'),
             body: row.comment,
             tone: 'info',
             avatar: memberAvatar(row.rater_id),
@@ -788,7 +812,7 @@ export function DraftBoardPage() {
             if (isMyPick && repliedPick) {
               const player = playersByIdRef.current.get(repliedPick.player_id);
               showToast({
-                title: `${memberUsername(row.user_id)} commented on your pick`,
+                title: championTitle(row.user_id, ' commented on your pick'),
                 titleIcon: <ChatBubbleOutlineIcon fontSize="inherit" />,
                 pick: player
                   ? {
@@ -1757,10 +1781,10 @@ export function DraftBoardPage() {
             currentRound={round}
             draftType={lobby.settings.draftType}
             onTeamClick={openTeamRoster}
-            reactionsByPick={reactionsByPick}
+            reactionsByPick={showCellReactions ? reactionsByPick : undefined}
             onReactPick={isMember ? reactPick : undefined}
             onPickClick={setPickModal}
-            commentsByPick={commentsByPick}
+            commentsByPick={showCellReactions ? commentsByPick : undefined}
             cellStyle={cellStyle}
             fill={isFullscreen}
             fillRowHeight={fsRowHeight}
@@ -1987,6 +2011,7 @@ export function DraftBoardPage() {
             }
             return {
               id: c.id,
+              userId: c.user_id,
               author: usernameById.get(c.user_id) ?? 'Player',
               avatar: memberAvatar(c.user_id),
               body: c.body,
@@ -2013,6 +2038,7 @@ export function DraftBoardPage() {
               onClose={() => setPickModal(null)}
               isCommish={isCommish}
               myUserId={userId}
+              championUserIds={championUserIds}
               onRollbackTo={
                 rollbackLocked
                   ? undefined

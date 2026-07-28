@@ -15,6 +15,7 @@ import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import EmojiEventsOutlinedIcon from '@mui/icons-material/EmojiEventsOutlined';
 import FormatListNumberedIcon from '@mui/icons-material/FormatListNumbered';
 import HowToRegOutlinedIcon from '@mui/icons-material/HowToRegOutlined';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
@@ -25,13 +26,14 @@ import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
 import AddModeratorOutlinedIcon from '@mui/icons-material/AddModeratorOutlined';
 import PersonRemoveOutlinedIcon from '@mui/icons-material/PersonRemoveOutlined';
 import RemoveModeratorOutlinedIcon from '@mui/icons-material/RemoveModeratorOutlined';
-import ShieldOutlinedIcon from '@mui/icons-material/ShieldOutlined';
 import ShuffleIcon from '@mui/icons-material/Shuffle';
 import SmartToyOutlinedIcon from '@mui/icons-material/SmartToyOutlined';
 import { clockSummary } from '../../lib/format';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Avatar } from '../../components/Avatar/Avatar';
+import { ChampionBadge } from '../../components/ChampionBadge/ChampionBadge';
+import { CommissionerBadge } from '../../components/CommissionerBadge/CommissionerBadge';
 import { ConfirmModal } from '../../components/ConfirmModal/ConfirmModal';
 import { DraftChat } from '../../components/DraftChat/DraftChat';
 import { ErrorScreen } from '../../components/ErrorScreen/ErrorScreen';
@@ -851,6 +853,20 @@ export function LobbyRoomPage() {
                             <span className="team-list__you">you</span>
                           )}
                           {team.is_bot && <span className="team-list__chip muted">Bot</span>}
+                          {isCommish && (
+                            <button
+                              type="button"
+                              className={`team-list__champion-toggle${
+                                team.is_prev_champion ? ' is-active' : ''
+                              }`}
+                              aria-pressed={team.is_prev_champion}
+                              disabled={championBusy === team.id}
+                              onClick={() => toggleChampion(team.id, !team.is_prev_champion)}
+                            >
+                              <EmojiEventsOutlinedIcon fontSize="small" />
+                              Defending champion
+                            </button>
+                          )}
                           <span className="team-list__spacer" />
                           <button
                             type="submit"
@@ -876,6 +892,11 @@ export function LobbyRoomPage() {
                     {!editing && (
                       <>
                         {/* Status chips sit right next to the team name. */}
+                        {!team.is_bot && ownerUsername(team.owner_id) && (
+                          <span className="team-list__chip team-list__chip--owner">
+                            {ownerUsername(team.owner_id)}
+                          </span>
+                        )}
                         {team.owner_id === userId && (
                           <span className="team-list__you">you</span>
                         )}
@@ -893,44 +914,9 @@ export function LobbyRoomPage() {
                         )}
                         {team.is_bot && <span className="team-list__chip muted">Bot</span>}
                         {(ownerRole === 'COMMISSIONER' || ownerRole === 'SUB_COMMISSIONER') && (
-                          <span
-                            className={`team-list__role-badge${
-                              ownerRole === 'SUB_COMMISSIONER' ? ' team-list__role-badge--sub' : ''
-                            }`}
-                            title={ownerRole === 'COMMISSIONER' ? 'Commissioner' : 'Co-commissioner'}
-                          >
-                            <ShieldOutlinedIcon sx={{ fontSize: 15 }} />
-                          </span>
+                          <CommissionerBadge role={ownerRole} size={15} />
                         )}
-                        {team.is_prev_champion ? (
-                          isHeadCommish ? (
-                            <button
-                              type="button"
-                              className="team-list__icon team-list__crown-btn is-active"
-                              aria-label={`Remove ${team.name} as last year's champion`}
-                              title="Defending champion — click to remove"
-                              disabled={championBusy === team.id}
-                              onClick={() => toggleChampion(team.id, false)}
-                            >
-                              👑
-                            </button>
-                          ) : (
-                            <span title="Defending champion">👑</span>
-                          )
-                        ) : (
-                          isHeadCommish && (
-                            <button
-                              type="button"
-                              className="team-list__icon team-list__crown-btn"
-                              aria-label={`Mark ${team.name} as last year's champion`}
-                              title="Mark as last year's champion"
-                              disabled={championBusy === team.id}
-                              onClick={() => toggleChampion(team.id, true)}
-                            >
-                              👑
-                            </button>
-                          )
-                        )}
+                        {team.is_prev_champion && <ChampionBadge />}
 
                         <span className="team-list__spacer" />
 

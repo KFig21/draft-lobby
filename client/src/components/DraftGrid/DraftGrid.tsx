@@ -6,6 +6,7 @@ import type { DraftCellStyle } from '../../lib/draftCellStyle';
 import { avatarForTeam } from '../../lib/teamAvatar';
 import type { ChatMessageRow, MemberRow, PickRow, PlayerRow, TeamRow } from '../../lib/types';
 import { Avatar } from '../Avatar/Avatar';
+import { ChampionBadge } from '../ChampionBadge/ChampionBadge';
 import { BoldPickCell } from './components/BoldPickCell/BoldPickCell';
 import { PickCell, type ReactionEntry } from './components/PickCell/PickCell';
 import './DraftGrid.scss';
@@ -116,6 +117,7 @@ export function DraftGrid({
                     <Avatar avatar={avatarForTeam(team, members)} size={16} />
                   </span>
                   {team.name}
+                  {team.is_prev_champion && <ChampionBadge size={13} />}
                 </button>
               </th>
             ))}

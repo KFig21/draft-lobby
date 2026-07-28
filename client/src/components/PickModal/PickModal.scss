@@ -130,16 +130,30 @@
   }
 
   // Wraps a section label together with an inline action (e.g. the "see who
-  // reacted" icon) so the icon sits beside the header instead of trailing
-  // after the last reaction chip.
+  // reacted" icon) so the icon sits right beside the header text instead of
+  // trailing after the last reaction chip.
   &__section-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: $space;
+    gap: $space * 0.5;
+    // The label's own margin-top/bottom moved here — left on the label
+    // itself, a flex item's margin still pushes the row's own box (it
+    // doesn't collapse into the container the way block margins do),
+    // inflating this row well past the label's actual text height.
+    margin-top: $space * 2.5;
+    margin-bottom: $space;
 
     .pick-modal__section-label {
+      margin-top: 0;
       margin-bottom: 0;
+    }
+
+    // Smaller than the default 30px button — sitting right next to a
+    // 0.72rem label, the full size read as oversized.
+    .pick-modal__react-viewall {
+      width: 22px;
+      height: 22px;
+      flex-shrink: 0;
     }
   }
 

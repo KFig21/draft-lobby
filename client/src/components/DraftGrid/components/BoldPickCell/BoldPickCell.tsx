@@ -53,13 +53,14 @@ export function BoldPickCell({
   onLeave?: () => void;
 }) {
   const active = entry ? Object.keys(entry.counts) : [];
+  const posColor = POSITION_COLORS[player.position as Position];
 
   return (
     <td
       className={`draft-grid__cell bold-pick-cell${
         pick.is_keeper ? ' draft-grid__cell--keeper' : ''
       }`}
-      style={{ background: POSITION_COLORS[player.position as Position] }}
+      style={{ background: posColor }}
       onClick={() => onClick?.(pick)}
       onMouseEnter={onEnter}
       onMouseLeave={onLeave}
@@ -73,11 +74,24 @@ export function BoldPickCell({
 
       {/* Same indicators as the default style, but badged into the bottom-right
           corner (like a notification dot) rather than inline — there's no
-          spare row of space in this fill-the-cell layout to put them next to. */}
+          spare row of space in this fill-the-cell layout to put them next to.
+          Each gets its own chip, bordered in the cell's own position color so
+          it reads as "cut into" the cell rather than a mismatched overlay. */}
       {(active.length > 0 || hasComment) && (
         <span className="bold-pick-cell__flags" aria-hidden>
-          {hasComment && <ChatBubbleOutlineIcon sx={{ fontSize: 11 }} />}
-          {active.length > 0 && <span className="bold-pick-cell__react-flag">!!</span>}
+          {hasComment && (
+            <span className="bold-pick-cell__flag-chip" style={{ borderColor: posColor }}>
+              <ChatBubbleOutlineIcon sx={{ fontSize: 10 }} />
+            </span>
+          )}
+          {active.length > 0 && (
+            <span
+              className="bold-pick-cell__flag-chip bold-pick-cell__react-flag"
+              style={{ borderColor: posColor }}
+            >
+              !!
+            </span>
+          )}
         </span>
       )}
 

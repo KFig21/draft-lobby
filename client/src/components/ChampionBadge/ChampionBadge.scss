@@ -1,0 +1,15 @@
+@use 'variables' as *;
+
+.champion-badge {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  // Where this sits inside plain flowing text (not an explicit flex
+  // container with its own align-items, e.g. the reaction/grade lines in
+  // chat) an inline-flex element's default baseline reads as "float above
+  // the text" — middle keeps it level with the surrounding line instead.
+  vertical-align: middle;
+  // Same gold token as keeper cell outlines — the codebase's one
+  // "prestige" color, theme-aware so it stays legible on both themes.
+  color: $keeper;
+}

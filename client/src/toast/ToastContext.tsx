@@ -18,7 +18,9 @@ export interface ToastAction {
 }
 
 export interface ToastInput {
-  title: string;
+  /** Usually a plain string, but can be a small fragment (e.g. a username
+   * followed by a champion badge) when the title needs to embed more than text. */
+  title: ReactNode;
   /** Small icon shown before the title text (e.g. a comment bubble for
    * "commented on your pick"). */
   titleIcon?: ReactNode;

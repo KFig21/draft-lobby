@@ -30,6 +30,7 @@ import type {
   TeamRow,
 } from '../../lib/types';
 import { Avatar } from '../Avatar/Avatar';
+import { ChampionBadge } from '../ChampionBadge/ChampionBadge';
 import { GradeBadge } from '../GradeBadge/GradeBadge';
 import { MentionInput } from '../MentionInput/MentionInput';
 import { ReactorsModal, type Reactor } from '../ReactorsModal/ReactorsModal';
@@ -197,6 +198,16 @@ export function DraftChat({
     () => members.map((m) => m.profiles?.username).filter((u): u is string => !!u),
     [members],
   );
+
+  // Users whose team is last season's defending champion — badged wherever
+  // their name shows up below (messages, reactions, grades).
+  const championUserIds = useMemo(() => {
+    const s = new Set<string>();
+    for (const t of teamsById.values()) {
+      if (t.is_prev_champion && t.owner_id) s.add(t.owner_id);
+    }
+    return s;
+  }, [teamsById]);
 
   // Merge chat + picks into one time-ordered timeline.
   const items = useMemo<Item[]>(() => {
@@ -393,8 +404,9 @@ export function DraftChat({
             const u = userMap.get(it.userId);
             const label = (
               <>
-                <strong>{u?.username ?? 'Someone'}</strong> {it.emoji}&rsquo;d to{' '}
-                <strong>{team?.name ?? 'a team'}</strong>
+                <strong>{u?.username ?? 'Someone'}</strong>
+                {championUserIds.has(it.userId) && <ChampionBadge size={12} />} {it.emoji}&rsquo;d
+                to <strong>{team?.name ?? 'a team'}</strong>
                 {player ? ` — ${player.name}` : ''}
                 <span className="muted"> · Pick {pick.overall}</span>
               </>
@@ -424,7 +436,8 @@ export function DraftChat({
               <div key={it.id} className="chat__grade">
                 <Avatar avatar={rater?.avatar ?? defaultAvatar(it.raterId)} size={20} />
                 <span className="chat__grade-text">
-                  <strong>{rater?.username ?? 'Someone'}</strong> graded{' '}
+                  <strong>{rater?.username ?? 'Someone'}</strong>
+                  {championUserIds.has(it.raterId) && <ChampionBadge size={12} />} graded{' '}
                   <strong>{team?.name ?? 'a team'}</strong>&rsquo;s roster{' '}
                   <GradeBadge grade={it.grade} size={16} />
                   {it.comment ? ` — ${it.comment}` : ''}
@@ -517,7 +530,10 @@ export function DraftChat({
               <Avatar avatar={u?.avatar ?? defaultAvatar(it.userId)} size={28} />
               <div className="chat__msg-body">
                 <div className="chat__msg-head">
-                  <span className="chat__msg-name">{u?.username ?? 'Player'}</span>
+                  <span className="chat__msg-name">
+                    <span className="chat__msg-name-text">{u?.username ?? 'Player'}</span>
+                    {championUserIds.has(it.userId) && <ChampionBadge size={12} />}
+                  </span>
                   <span className="chat__msg-time">{formatTime(it.at)}</span>
                 </div>
                 {repliedPick &&
@@ -620,7 +636,12 @@ export function DraftChat({
       )}
 
       {reactorsModal && (
-        <ReactorsModal reactors={reactorsModal} myUserId={userId} onClose={() => setReactorsModal(null)} />
+        <ReactorsModal
+          reactors={reactorsModal}
+          myUserId={userId}
+          championUserIds={championUserIds}
+          onClose={() => setReactorsModal(null)}
+        />
       )}
     </div>
   );

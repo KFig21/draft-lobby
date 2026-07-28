@@ -396,7 +396,7 @@
   &__row {
     display: flex;
     align-items: center;
-    gap: $space * 1.5;
+    gap: $space * 1.5 - 2px;
     background: $bg-raised;
     border: 1px solid $border;
     border-radius: $radius-sm;
@@ -455,32 +455,36 @@
     }
   }
 
-  // Shield icon marking the commissioner / co-commissioner — a role badge
-  // rather than a chip, since it sits right next to the "you"/friend/bot
-  // chips but carries no label text of its own (the title attr has that).
-  &__role-badge {
+  // Defending-champion toggle — lives in the rename form (commissioner/
+  // co-commissioner only), not as a separate always-visible control in the
+  // row itself.
+  &__champion-toggle {
     display: inline-flex;
+    align-items: center;
+    gap: 4px;
     flex-shrink: 0;
-    color: $primary-hover;
-
-    &--sub {
-      opacity: 0.6;
-    }
-  }
-
-  // The defending-champion crown — dimmed until hovered when it's an actual
-  // toggle button (head commissioner only); a plain, undimmed emoji span for
-  // everyone else viewing an already-set champion.
-  &__crown-btn {
-    opacity: 0.35;
-    font-size: 0.95rem;
+    padding: 2px 8px;
+    border: 1px solid $border;
+    border-radius: 999px;
+    background: none;
+    color: $text-muted;
+    font-size: 0.72rem;
+    font-weight: 700;
+    cursor: pointer;
 
     &:hover {
-      opacity: 1;
+      color: $text;
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
     }
 
     &.is-active {
-      opacity: 1;
+      border-color: $keeper;
+      color: $keeper;
+      background: color-mix(in srgb, $keeper 14%, transparent);
     }
   }
 
@@ -569,6 +573,7 @@
   &__edit-meta {
     flex-basis: 100%;
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: $space * 0.5;
   }

@@ -1,0 +1,12 @@
+@use 'variables' as *;
+
+.commissioner-badge {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  color: $primary-hover;
+
+  &--sub {
+    opacity: 0.6;
+  }
+}

@@ -12,6 +12,7 @@ import { avatarForTeam } from '../../lib/teamAvatar';
 import { useModalClose } from '../../lib/useModalClose';
 import type { MemberRow, PickRow, PlayerRow, TeamRow } from '../../lib/types';
 import { Avatar } from '../Avatar/Avatar';
+import { ChampionBadge } from '../ChampionBadge/ChampionBadge';
 import type { ReactionEntry } from '../DraftGrid/DraftGrid';
 import { MentionInput } from '../MentionInput/MentionInput';
 import { PlayerHeader, PlayerStatGrid } from '../PlayerStatBlock/PlayerStatBlock';
@@ -20,6 +21,7 @@ import './PickModal.scss';
 
 export interface PickComment {
   id: string;
+  userId: string;
   author: string;
   avatar: AvatarData;
   body: string;
@@ -64,6 +66,9 @@ interface Props {
   onRollbackTo?: () => void;
   /** Shows "You" instead of your own username in the reactions list. */
   myUserId?: string;
+  /** Users whose team is last season's defending champion — badges their
+   * name in the header and comment list. */
+  championUserIds?: Set<string>;
 }
 
 function formatTime(iso: string): string {
@@ -88,6 +93,7 @@ export function PickModal({
   isCommish = false,
   onRollbackTo,
   myUserId,
+  championUserIds,
 }: Props) {
   const { closing, requestClose } = useModalClose(onClose);
   const pickInRound = pick.overall - (pick.round - 1) * teamCount;
@@ -150,8 +156,9 @@ export function PickModal({
           <div className="pick-modal__drafted">
             {team && <Avatar avatar={avatarForTeam(team, members)} size={18} />}
             <span>
-              <strong>{team?.name ?? 'A team'}</strong> · Pick {pick.overall} · Round{' '}
-              {pick.round}.{pickInRound}
+              <strong>{team?.name ?? 'A team'}</strong>
+              {team?.owner_id && championUserIds?.has(team.owner_id) && <ChampionBadge size={13} />}{' '}
+              · Pick {pick.overall} · Round {pick.round}.{pickInRound}
               {pick.is_auto_pick && <span className="pick-modal__auto"> · auto</span>}
             </span>
           </div>
@@ -224,6 +231,7 @@ export function PickModal({
                 <div className="pick-modal__comment-main">
                   <div className="pick-modal__comment-head">
                     <span className="pick-modal__comment-author">{c.author}</span>
+                    {championUserIds?.has(c.userId) && <ChampionBadge size={12} />}
                     <span className="pick-modal__comment-time">{formatTime(c.at)}</span>
                   </div>
                   <p className="pick-modal__comment-body">
@@ -286,6 +294,7 @@ export function PickModal({
         <ReactorsModal
           reactors={reactorsModal}
           myUserId={myUserId}
+          championUserIds={championUserIds}
           onClose={() => setReactorsModal(null)}
         />
       )}

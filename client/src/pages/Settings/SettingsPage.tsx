@@ -16,6 +16,8 @@ import { DraftCellStylePicker } from '../../components/DraftGrid/DraftCellStyleP
 import {
   getDraftCellStyle,
   setDraftCellStyle,
+  getShowCellReactions,
+  setShowCellReactions,
   type DraftCellStyle,
 } from '../../lib/draftCellStyle';
 import { useTheme } from '../../theme/ThemeContext';
@@ -52,10 +54,16 @@ export function SettingsPage() {
   const [leagues, setLeagues] = useState<LeagueRow[]>([]);
   const [toastPrefs, setToastPrefsState] = useState(() => getToastPrefs());
   const [cellStyle, setCellStyleState] = useState<DraftCellStyle>(() => getDraftCellStyle());
+  const [showCellReactions, setShowCellReactionsState] = useState(() => getShowCellReactions());
 
   function updateCellStyle(style: DraftCellStyle) {
     setDraftCellStyle(style);
     setCellStyleState(style);
+  }
+
+  function updateShowCellReactions(show: boolean) {
+    setShowCellReactions(show);
+    setShowCellReactionsState(show);
   }
 
   function updateToastsEnabled(enabled: boolean) {
@@ -119,6 +127,17 @@ export function SettingsPage() {
           </div>
         </div>
         <DraftCellStylePicker value={cellStyle} onChange={updateCellStyle} />
+        <div className="settings__row">
+          <div className="settings__row-main">
+            <span className="settings__row-name">Reactions on cells</span>
+            <span className="muted">Show comment/reaction indicators on drafted cells</span>
+          </div>
+          <ToggleSwitch
+            label="Toggle reactions on cells"
+            checked={showCellReactions}
+            onChange={updateShowCellReactions}
+          />
+        </div>
       </section>
 
       {/* Notifications */}

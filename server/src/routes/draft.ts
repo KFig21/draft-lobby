@@ -2401,9 +2401,9 @@ draftRouter.post('/:id/demote', async (req: AuthedRequest, res: Response) => {
   res.json({ ok: true });
 });
 
-/** POST /api/lobbies/:id/champion — head commissioner marks (or unmarks) a
- * team as last season's defending champion, shown as a crown badge in the
- * roster. */
+/** POST /api/lobbies/:id/champion — commissioner (or co-commissioner) marks
+ * (or unmarks) a team as last season's defending champion, shown as a badge
+ * in the roster. */
 draftRouter.post('/:id/champion', async (req: AuthedRequest, res: Response) => {
   const lobbyId = req.params.id;
   const userId = req.user!.id;
@@ -2414,16 +2414,8 @@ draftRouter.post('/:id/champion', async (req: AuthedRequest, res: Response) => {
     return;
   }
 
-  const { data: lobby } = await supabaseAdmin
-    .from('lobbies')
-    .select('commissioner_id')
-    .eq('id', lobbyId)
-    .maybeSingle();
-  if (!lobby) {
-    res.status(404).json({ error: 'Lobby not found' });
-    return;
-  }
-  if (lobby.commissioner_id !== userId) {
+  const role = await getRole(lobbyId, userId);
+  if (!isCommish(role)) {
     res.status(403).json({ error: 'Only the commissioner can set the defending champion' });
     return;
   }

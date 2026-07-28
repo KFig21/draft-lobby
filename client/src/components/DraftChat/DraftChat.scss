@@ -283,12 +283,22 @@
   }
 
   &__msg-name {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    min-width: 0;
+    font-weight: 700;
+    font-size: 0.85rem;
+  }
+
+  // The username text itself — split out from &__msg-name so text-overflow
+  // truncation still works (it can't apply to a flex container holding both
+  // the name and the champion badge).
+  &__msg-name-text {
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-weight: 700;
-    font-size: 0.85rem;
   }
 
   &__msg-time {

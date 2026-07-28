@@ -9,7 +9,11 @@
   cursor: pointer;
   text-align: center;
   padding: $space * 0.5;
-  overflow: hidden;
+  // Not hidden: the corner flags below intentionally hang half outside this
+  // box, and the hover reactions tray unfolds below it — the name's own
+  // overflow:hidden (on &__name, for -webkit-line-clamp) doesn't depend on
+  // this element clipping too.
+  overflow: visible;
   transition:
     transform 300ms ease;
 
@@ -20,10 +24,6 @@
       transform: scale(1.07);
       box-shadow: none;
       z-index: 4;
-      // The reactions pop-out needs to spill past this cell's own bounds —
-      // only relaxed on hover so the name-clamp clipping (scoped to
-      // &__name, not this element) is unaffected at rest.
-      overflow: visible;
 
       // border: solid transparent (not none) — .draft-grid__cell's base border
       // is 1px solid, so dropping the border on hover shrank this box's
@@ -43,7 +43,7 @@
 
       // The static corner badge gives way to the unfolded reactions below.
       .bold-pick-cell__flags {
-        display: none;
+        // display: none;
       }
 
       .bold-pick-cell__react-pop {
@@ -52,36 +52,54 @@
     }
   }
 
-  // Comment/reaction indicator — a small circular badge in the bottom-right
-  // corner (like a notification dot), since the cell is otherwise a solid
-  // color block with no spare row to put inline flags in.
+  // Comment/reaction indicator — each gets its own chip (background +
+  // border), hanging half off the bottom-right corner. A bare icon read as
+  // an unreadable smudge against brighter position colors (e.g. RB teal, TE
+  // orange) — the chip gives it contrast independent of the cell's own
+  // fill. row-reverse anchors the first icon right at the corner and stacks
+  // any second one to its left.
   &__flags {
     position: absolute;
-    bottom: 4px;
-    right: 4px;
+    bottom: -4px;
+    right: -4px;
+    z-index: 2;
     display: flex;
+    flex-direction: row-reverse;
     align-items: center;
     gap: 2px;
-    min-width: 16px;
-    height: 16px;
-    padding: 0 3px;
-    border-radius: 999px;
-    background: rgba(0, 0, 0, 0.55);
-    color: #fff;
     pointer-events: none;
   }
 
+  &__flag-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 3px;
+    // border-color set inline per-cell (BoldPickCell.tsx) to match the
+    // cell's own position color — reads as "cut into" the cell rather than
+    // a mismatched ring; this is just the width/style fallback.
+    border: 1px solid $bg-raised;
+    border-radius: 999px;
+    background: $bg-raised;
+    color: $text;
+  }
+
   &__react-flag {
-    font-size: 0.55rem;
+    font-size: 0.6rem;
     font-weight: 900;
     line-height: 1;
   }
 
-  // Hidden until hover reveals it from the same corner the badge sat in.
+  // Hidden until hover reveals it — unfolds below the cell, same as the
+  // default style's popover, rather than staying pinned to the corner: once
+  // the whole cell is scaled up on hover, a corner-anchored tray read as
+  // overlapping the cell's own border/outline instead of sitting apart from it.
   &__react-pop {
     position: absolute;
-    bottom: 4px;
-    right: 4px;
+    top: calc(100% + 10px);
+    left: 0;
     z-index: 30;
     display: none;
     align-items: center;
@@ -159,13 +177,17 @@ td.bold-pick-cell {
 }
 
 .draft-grid--fill {
-  .bold-pick-cell__flags {
-    height: calc(16px * var(--fs-scale));
-    min-width: calc(16px * var(--fs-scale));
+  .bold-pick-cell__react-flag {
+    font-size: calc(0.6rem * var(--fs-scale));
   }
 
-  .bold-pick-cell__react-flag {
-    font-size: calc(0.55rem * var(--fs-scale));
+  .bold-pick-cell__flag-chip {
+    min-width: calc(14px * var(--fs-scale));
+    height: calc(14px * var(--fs-scale));
+
+    svg {
+      font-size: calc(10px * var(--fs-scale));
+    }
   }
 
   .bold-pick-cell__rchip {

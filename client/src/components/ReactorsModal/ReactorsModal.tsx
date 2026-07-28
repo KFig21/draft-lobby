@@ -2,6 +2,7 @@ import { REACTION_EMOJIS, defaultAvatar, type Avatar as AvatarData } from '@draf
 import { useMemo, useState } from 'react';
 import { useModalClose } from '../../lib/useModalClose';
 import { Avatar } from '../Avatar/Avatar';
+import { ChampionBadge } from '../ChampionBadge/ChampionBadge';
 import './ReactorsModal.scss';
 
 export interface Reactor {
@@ -15,11 +16,14 @@ interface Props {
   reactors: Record<string, Reactor[]>;
   /** Shows "You" instead of your own username in the list. */
   myUserId?: string;
+  /** Users whose team is last season's defending champion — badges their
+   * name in the list. */
+  championUserIds?: Set<string>;
   onClose: () => void;
 }
 
 /** Full "who reacted" list across every emoji, filterable down to one. */
-export function ReactorsModal({ reactors, myUserId, onClose }: Props) {
+export function ReactorsModal({ reactors, myUserId, championUserIds, onClose }: Props) {
   const { closing, requestClose } = useModalClose(onClose);
   const [filter, setFilter] = useState<string | null>(null);
 
@@ -78,6 +82,7 @@ export function ReactorsModal({ reactors, myUserId, onClose }: Props) {
               <span className="reactors-modal__row-name">
                 {r.userId === myUserId ? 'You' : r.username}
               </span>
+              {championUserIds?.has(r.userId) && <ChampionBadge size={12} />}
               <span className="reactors-modal__row-emoji">{r.emoji}</span>
             </li>
           ))}

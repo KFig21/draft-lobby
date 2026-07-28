@@ -17,3 +17,21 @@ export function getDraftCellStyle(): DraftCellStyle {
 export function setDraftCellStyle(style: DraftCellStyle): void {
   localStorage.setItem(STORAGE_KEY, style);
 }
+
+/** Whether comment/reaction indicators show on drafted cells on the board —
+ * per-device preference (not synced), same pattern as the cell style above.
+ * Reactions/comments still work everywhere else (pick modal, chat) when off;
+ * this only hides the on-cell indicators/popover. */
+const REACTIONS_STORAGE_KEY = 'showCellReactions';
+
+export function getShowCellReactions(): boolean {
+  try {
+    return localStorage.getItem(REACTIONS_STORAGE_KEY) !== '0';
+  } catch {
+    return true;
+  }
+}
+
+export function setShowCellReactions(show: boolean): void {
+  localStorage.setItem(REACTIONS_STORAGE_KEY, show ? '1' : '0');
+}
