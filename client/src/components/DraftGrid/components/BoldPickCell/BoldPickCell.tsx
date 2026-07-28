@@ -1,5 +1,7 @@
 import { POSITION_COLORS, type Position } from '@draft-lobby/shared';
+import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlined';
 import type { PickRow, PlayerRow } from '../../../../lib/types';
+import type { ReactionEntry } from '../PickCell/PickCell';
 // Same reasoning as PickCell.tsx's identical import: this component also
 // renders standalone in Settings' cell-style picker, a separate lazy-loaded
 // route that would otherwise never load DraftGrid.scss's base .draft-grid__cell.
@@ -33,17 +35,25 @@ function nameScale(name: string): number {
 export function BoldPickCell({
   pick,
   player,
+  entry,
+  hasComment,
+  onReact,
   onClick,
   onEnter,
   onLeave,
 }: {
   pick: PickRow;
   player: PlayerRow;
+  entry?: ReactionEntry;
+  hasComment?: boolean;
+  onReact?: (pickId: string, emoji: string) => void;
   onClick?: (pick: PickRow) => void;
   /** Cross-highlights this pick's team header + round number, same as PickCell. */
   onEnter?: () => void;
   onLeave?: () => void;
 }) {
+  const active = entry ? Object.keys(entry.counts) : [];
+
   return (
     <td
       className={`draft-grid__cell bold-pick-cell${
@@ -60,6 +70,35 @@ export function BoldPickCell({
       >
         {player.name}
       </span>
+
+      {/* Same indicators as the default style, but badged into the bottom-right
+          corner (like a notification dot) rather than inline — there's no
+          spare row of space in this fill-the-cell layout to put them next to. */}
+      {(active.length > 0 || hasComment) && (
+        <span className="bold-pick-cell__flags" aria-hidden>
+          {hasComment && <ChatBubbleOutlineIcon sx={{ fontSize: 11 }} />}
+          {active.length > 0 && <span className="bold-pick-cell__react-flag">!!</span>}
+        </span>
+      )}
+
+      {/* On hover, reactions unfold from that same bottom-right corner —
+          anchoring to an edge already inside the cell's hover-scale growth,
+          instead of a detached popover below it like the default style uses. */}
+      {active.length > 0 && (
+        <div className="bold-pick-cell__react-pop" onClick={(e) => e.stopPropagation()}>
+          {active.map((e) => (
+            <button
+              key={e}
+              type="button"
+              className={`bold-pick-cell__rchip${entry?.mine.has(e) ? ' is-mine' : ''}`}
+              onClick={() => onReact?.(pick.id, e)}
+            >
+              {e}
+              {(entry?.counts[e] ?? 0) > 1 ? entry?.counts[e] : ''}
+            </button>
+          ))}
+        </div>
+      )}
     </td>
   );
 }

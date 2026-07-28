@@ -20,6 +20,10 @@
       transform: scale(1.07);
       box-shadow: none;
       z-index: 4;
+      // The reactions pop-out needs to spill past this cell's own bounds —
+      // only relaxed on hover so the name-clamp clipping (scoped to
+      // &__name, not this element) is unaffected at rest.
+      overflow: visible;
 
       // border: solid transparent (not none) — .draft-grid__cell's base border
       // is 1px solid, so dropping the border on hover shrank this box's
@@ -36,6 +40,80 @@
         border: 1px solid transparent;
         box-shadow: 0 0 0 6px black, 0 0 0 8px white;
       }
+
+      // The static corner badge gives way to the unfolded reactions below.
+      .bold-pick-cell__flags {
+        display: none;
+      }
+
+      .bold-pick-cell__react-pop {
+        display: flex;
+      }
+    }
+  }
+
+  // Comment/reaction indicator — a small circular badge in the bottom-right
+  // corner (like a notification dot), since the cell is otherwise a solid
+  // color block with no spare row to put inline flags in.
+  &__flags {
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 3px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.55);
+    color: #fff;
+    pointer-events: none;
+  }
+
+  &__react-flag {
+    font-size: 0.55rem;
+    font-weight: 900;
+    line-height: 1;
+  }
+
+  // Hidden until hover reveals it from the same corner the badge sat in.
+  &__react-pop {
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+    z-index: 30;
+    display: none;
+    align-items: center;
+    gap: 2px;
+    padding: 3px 4px;
+    background: $bg-raised;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.5);
+    white-space: nowrap;
+  }
+
+  &__rchip {
+    display: inline-flex;
+    align-items: center;
+    gap: 1px;
+    padding: 1px 5px;
+    border: none;
+    border-radius: 999px;
+    background: $bg-overlay;
+    color: $text;
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1.4;
+    cursor: pointer;
+
+    &:hover {
+      background: $bg-hover;
+    }
+
+    &.is-mine {
+      background: rgba($accent, 0.25);
     }
   }
 
@@ -78,4 +156,19 @@ td.bold-pick-cell {
 // length on top of that (--name-scale, set inline per cell).
 .draft-grid--fill .bold-pick-cell__name {
   font-size: calc(1.1rem * var(--fs-scale) * var(--name-scale, 1));
+}
+
+.draft-grid--fill {
+  .bold-pick-cell__flags {
+    height: calc(16px * var(--fs-scale));
+    min-width: calc(16px * var(--fs-scale));
+  }
+
+  .bold-pick-cell__react-flag {
+    font-size: calc(0.55rem * var(--fs-scale));
+  }
+
+  .bold-pick-cell__rchip {
+    font-size: calc(0.72rem * var(--fs-scale));
+  }
 }

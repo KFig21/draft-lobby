@@ -455,6 +455,35 @@
     }
   }
 
+  // Shield icon marking the commissioner / co-commissioner — a role badge
+  // rather than a chip, since it sits right next to the "you"/friend/bot
+  // chips but carries no label text of its own (the title attr has that).
+  &__role-badge {
+    display: inline-flex;
+    flex-shrink: 0;
+    color: $primary-hover;
+
+    &--sub {
+      opacity: 0.6;
+    }
+  }
+
+  // The defending-champion crown — dimmed until hovered when it's an actual
+  // toggle button (head commissioner only); a plain, undimmed emoji span for
+  // everyone else viewing an already-set champion.
+  &__crown-btn {
+    opacity: 0.35;
+    font-size: 0.95rem;
+
+    &:hover {
+      opacity: 1;
+    }
+
+    &.is-active {
+      opacity: 1;
+    }
+  }
+
   // Pushes the action buttons to the right so chips hug the name.
   &__spacer {
     flex: 1;

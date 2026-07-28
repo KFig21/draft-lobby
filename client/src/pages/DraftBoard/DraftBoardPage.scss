@@ -1015,16 +1015,19 @@
     padding: $space * 1.25 $space * 0.5;
     background: none;
     border: none;
-    border-bottom: 2px solid transparent;
+    border-radius: $radius-sm $radius-sm 0 0;
     color: $text-muted;
     font-size: 0.8rem;
     font-weight: 700;
     cursor: pointer;
     white-space: nowrap;
+    transition: background-color 120ms ease, color 120ms ease;
 
+    // A faded fill instead of a hard outline — same treatment as the app
+    // sidebar's active nav link.
     &.is-active {
       color: $text;
-      border-bottom-color: $primary;
+      background: rgba($primary, 0.16);
     }
   }
 

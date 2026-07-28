@@ -172,7 +172,20 @@ export function PickModal({
         <div className="pick-modal__scroll">
           <PlayerStatGrid player={player} />
 
-          <div className="pick-modal__section-label">Reactions</div>
+          <div className="pick-modal__section-header">
+            <div className="pick-modal__section-label">Reactions</div>
+            {entry && Object.keys(entry.counts).length > 0 && (
+              <button
+                type="button"
+                className="pick-modal__react-viewall"
+                aria-label="See who reacted"
+                title="See who reacted"
+                onClick={() => setReactorsModal(reactors ?? {})}
+              >
+                <PeopleAltOutlinedIcon sx={{ fontSize: 16 }} />
+              </button>
+            )}
+          </div>
           <div className="pick-modal__reactions">
             {REACTION_EMOJIS.map((emoji) => {
               const count = entry?.counts[emoji] ?? 0;
@@ -191,17 +204,6 @@ export function PickModal({
                 />
               );
             })}
-            {entry && Object.keys(entry.counts).length > 0 && (
-              <button
-                type="button"
-                className="pick-modal__react-viewall"
-                aria-label="See who reacted"
-                title="See who reacted"
-                onClick={() => setReactorsModal(reactors ?? {})}
-              >
-                <PeopleAltOutlinedIcon sx={{ fontSize: 16 }} />
-              </button>
-            )}
           </div>
           {reactionsLocked && (
             <span className="bot-badge bot-badge--warn pick-modal__locked-badge">

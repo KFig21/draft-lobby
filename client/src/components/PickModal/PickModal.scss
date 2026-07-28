@@ -129,6 +129,20 @@
     color: $text-muted;
   }
 
+  // Wraps a section label together with an inline action (e.g. the "see who
+  // reacted" icon) so the icon sits beside the header instead of trailing
+  // after the last reaction chip.
+  &__section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $space;
+
+    .pick-modal__section-label {
+      margin-bottom: 0;
+    }
+  }
+
   &__reactions {
     display: flex;
     flex-wrap: wrap;

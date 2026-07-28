@@ -22,7 +22,10 @@ import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import LockIcon from '@mui/icons-material/Lock';
 import LockOpenOutlinedIcon from '@mui/icons-material/LockOpenOutlined';
 import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
+import AddModeratorOutlinedIcon from '@mui/icons-material/AddModeratorOutlined';
 import PersonRemoveOutlinedIcon from '@mui/icons-material/PersonRemoveOutlined';
+import RemoveModeratorOutlinedIcon from '@mui/icons-material/RemoveModeratorOutlined';
+import ShieldOutlinedIcon from '@mui/icons-material/ShieldOutlined';
 import ShuffleIcon from '@mui/icons-material/Shuffle';
 import SmartToyOutlinedIcon from '@mui/icons-material/SmartToyOutlined';
 import { clockSummary } from '../../lib/format';
@@ -61,6 +64,8 @@ export function LobbyRoomPage() {
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [kickTarget, setKickTarget] = useState<{ userId: string; name: string } | null>(null);
   const [kicking, setKicking] = useState(false);
+  const [roleBusy, setRoleBusy] = useState<string | null>(null);
+  const [championBusy, setChampionBusy] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
@@ -201,6 +206,11 @@ export function LobbyRoomPage() {
       (m) => m.user_id === userId && m.role === 'SUB_COMMISSIONER',
     );
   }, [userId, lobby, members]);
+
+  // Distinct from isCommish (which also includes co-commissioners) — granting/
+  // revoking co-commissioner privileges and setting the defending champion
+  // are reserved for the original head commissioner only.
+  const isHeadCommish = !!userId && lobby?.commissioner_id === userId;
 
   // Accepted friends (for the invite list).
   const friends = useMemo(
@@ -364,6 +374,51 @@ export function LobbyRoomPage() {
       setActionError(err instanceof Error ? err.message : 'Failed to remove member');
     } finally {
       setKicking(false);
+    }
+  }
+  async function promote(targetUserId: string) {
+    setRoleBusy(targetUserId);
+    setActionError(null);
+    try {
+      await api(`/lobbies/${id}/promote`, { method: 'POST', body: { userId: targetUserId } });
+      refetch();
+    } catch (err) {
+      setActionError(
+        err instanceof Error ? err.message : 'Failed to grant co-commissioner privileges',
+      );
+    } finally {
+      setRoleBusy(null);
+    }
+  }
+  async function demote(targetUserId: string) {
+    setRoleBusy(targetUserId);
+    setActionError(null);
+    try {
+      await api(`/lobbies/${id}/demote`, { method: 'POST', body: { userId: targetUserId } });
+      refetch();
+    } catch (err) {
+      setActionError(
+        err instanceof Error ? err.message : 'Failed to revoke co-commissioner privileges',
+      );
+    } finally {
+      setRoleBusy(null);
+    }
+  }
+  async function toggleChampion(teamId: string, next: boolean) {
+    setChampionBusy(teamId);
+    setActionError(null);
+    try {
+      await api(`/lobbies/${id}/champion`, {
+        method: 'POST',
+        body: { teamId, isPrevChampion: next },
+      });
+      refetch();
+    } catch (err) {
+      setActionError(
+        err instanceof Error ? err.message : 'Failed to update the defending champion',
+      );
+    } finally {
+      setChampionBusy(null);
     }
   }
 
@@ -759,6 +814,9 @@ export function LobbyRoomPage() {
                 const otherUserId =
                   team.owner_id && team.owner_id !== userId ? team.owner_id : null;
                 const rel = otherUserId ? relations.get(otherUserId) : undefined;
+                const ownerRole = team.owner_id
+                  ? members.find((m) => m.user_id === team.owner_id)?.role
+                  : undefined;
                 return (
                   <li key={team.id} className="team-list__row">
                     <span className="team-list__pos">{team.draft_position}</span>
@@ -834,8 +892,44 @@ export function LobbyRoomPage() {
                           <span className="team-list__chip muted">Requested</span>
                         )}
                         {team.is_bot && <span className="team-list__chip muted">Bot</span>}
-                        {team.is_prev_champion && (
-                          <span title="Defending champion">👑</span>
+                        {(ownerRole === 'COMMISSIONER' || ownerRole === 'SUB_COMMISSIONER') && (
+                          <span
+                            className={`team-list__role-badge${
+                              ownerRole === 'SUB_COMMISSIONER' ? ' team-list__role-badge--sub' : ''
+                            }`}
+                            title={ownerRole === 'COMMISSIONER' ? 'Commissioner' : 'Co-commissioner'}
+                          >
+                            <ShieldOutlinedIcon sx={{ fontSize: 15 }} />
+                          </span>
+                        )}
+                        {team.is_prev_champion ? (
+                          isHeadCommish ? (
+                            <button
+                              type="button"
+                              className="team-list__icon team-list__crown-btn is-active"
+                              aria-label={`Remove ${team.name} as last year's champion`}
+                              title="Defending champion — click to remove"
+                              disabled={championBusy === team.id}
+                              onClick={() => toggleChampion(team.id, false)}
+                            >
+                              👑
+                            </button>
+                          ) : (
+                            <span title="Defending champion">👑</span>
+                          )
+                        ) : (
+                          isHeadCommish && (
+                            <button
+                              type="button"
+                              className="team-list__icon team-list__crown-btn"
+                              aria-label={`Mark ${team.name} as last year's champion`}
+                              title="Mark as last year's champion"
+                              disabled={championBusy === team.id}
+                              onClick={() => toggleChampion(team.id, true)}
+                            >
+                              👑
+                            </button>
+                          )
                         )}
 
                         <span className="team-list__spacer" />
@@ -878,6 +972,33 @@ export function LobbyRoomPage() {
                               <PersonRemoveOutlinedIcon fontSize="small" />
                             </button>
                           )}
+                        {!team.is_bot &&
+                          isHeadCommish &&
+                          team.owner_id &&
+                          team.owner_id !== lobby.commissioner_id &&
+                          (ownerRole === 'SUB_COMMISSIONER' ? (
+                            <button
+                              type="button"
+                              className="team-list__icon"
+                              aria-label={`Revoke ${team.name}'s co-commissioner privileges`}
+                              title="Revoke co-commissioner privileges"
+                              disabled={roleBusy === team.owner_id}
+                              onClick={() => demote(team.owner_id!)}
+                            >
+                              <RemoveModeratorOutlinedIcon fontSize="small" />
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className="team-list__icon"
+                              aria-label={`Make ${team.name} a co-commissioner`}
+                              title="Make co-commissioner"
+                              disabled={roleBusy === team.owner_id}
+                              onClick={() => promote(team.owner_id!)}
+                            >
+                              <AddModeratorOutlinedIcon fontSize="small" />
+                            </button>
+                          ))}
                         {otherUserId && rel === 'incoming' && (
                           <button
                             type="button"

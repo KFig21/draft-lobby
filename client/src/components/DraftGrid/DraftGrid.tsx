@@ -159,6 +159,9 @@ export function DraftGrid({
                           key={team.id}
                           pick={pick}
                           player={player}
+                          entry={reactionsByPick?.get(pick.id)}
+                          hasComment={(commentsByPick?.get(pick.id)?.length ?? 0) > 0}
+                          onReact={onReactPick}
                           onClick={onPickClick}
                           onEnter={() => setHover({ round, teamId: team.id })}
                           onLeave={() =>

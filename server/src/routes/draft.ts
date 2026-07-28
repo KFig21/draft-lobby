@@ -2317,6 +2317,132 @@ draftRouter.post('/:id/kick', async (req: AuthedRequest, res: Response) => {
   res.json({ ok: true });
 });
 
+/** POST /api/lobbies/:id/promote — head commissioner grants a member
+ * co-commissioner (SUB_COMMISSIONER) privileges. Only the head commissioner
+ * (lobbies.commissioner_id) can do this — a co-commissioner can't chain-grant
+ * more of themselves. */
+draftRouter.post('/:id/promote', async (req: AuthedRequest, res: Response) => {
+  const lobbyId = req.params.id;
+  const userId = req.user!.id;
+  const targetId = typeof req.body?.userId === 'string' ? req.body.userId : null;
+  if (!targetId) {
+    res.status(400).json({ error: 'userId is required' });
+    return;
+  }
+
+  const { data: lobby } = await supabaseAdmin
+    .from('lobbies')
+    .select('commissioner_id')
+    .eq('id', lobbyId)
+    .maybeSingle();
+  if (!lobby) {
+    res.status(404).json({ error: 'Lobby not found' });
+    return;
+  }
+  if (lobby.commissioner_id !== userId) {
+    res.status(403).json({ error: 'Only the commissioner can grant co-commissioner privileges' });
+    return;
+  }
+  if (targetId === userId) {
+    res.status(409).json({ error: 'You are already the commissioner' });
+    return;
+  }
+
+  const { data: member } = await supabaseAdmin
+    .from('lobby_members')
+    .select('role')
+    .eq('lobby_id', lobbyId)
+    .eq('user_id', targetId)
+    .maybeSingle();
+  if (!member) {
+    res.status(404).json({ error: 'That user is not a member of this lobby' });
+    return;
+  }
+
+  await supabaseAdmin
+    .from('lobby_members')
+    .update({ role: 'SUB_COMMISSIONER' })
+    .eq('lobby_id', lobbyId)
+    .eq('user_id', targetId);
+  res.json({ ok: true });
+});
+
+/** POST /api/lobbies/:id/demote — head commissioner revokes a co-commissioner's
+ * privileges, dropping them back to a regular member. */
+draftRouter.post('/:id/demote', async (req: AuthedRequest, res: Response) => {
+  const lobbyId = req.params.id;
+  const userId = req.user!.id;
+  const targetId = typeof req.body?.userId === 'string' ? req.body.userId : null;
+  if (!targetId) {
+    res.status(400).json({ error: 'userId is required' });
+    return;
+  }
+
+  const { data: lobby } = await supabaseAdmin
+    .from('lobbies')
+    .select('commissioner_id')
+    .eq('id', lobbyId)
+    .maybeSingle();
+  if (!lobby) {
+    res.status(404).json({ error: 'Lobby not found' });
+    return;
+  }
+  if (lobby.commissioner_id !== userId) {
+    res.status(403).json({ error: 'Only the commissioner can revoke co-commissioner privileges' });
+    return;
+  }
+
+  await supabaseAdmin
+    .from('lobby_members')
+    .update({ role: 'MEMBER' })
+    .eq('lobby_id', lobbyId)
+    .eq('user_id', targetId)
+    .eq('role', 'SUB_COMMISSIONER');
+  res.json({ ok: true });
+});
+
+/** POST /api/lobbies/:id/champion — head commissioner marks (or unmarks) a
+ * team as last season's defending champion, shown as a crown badge in the
+ * roster. */
+draftRouter.post('/:id/champion', async (req: AuthedRequest, res: Response) => {
+  const lobbyId = req.params.id;
+  const userId = req.user!.id;
+  const teamId = typeof req.body?.teamId === 'string' ? req.body.teamId : null;
+  const isPrevChampion = req.body?.isPrevChampion === true;
+  if (!teamId) {
+    res.status(400).json({ error: 'teamId is required' });
+    return;
+  }
+
+  const { data: lobby } = await supabaseAdmin
+    .from('lobbies')
+    .select('commissioner_id')
+    .eq('id', lobbyId)
+    .maybeSingle();
+  if (!lobby) {
+    res.status(404).json({ error: 'Lobby not found' });
+    return;
+  }
+  if (lobby.commissioner_id !== userId) {
+    res.status(403).json({ error: 'Only the commissioner can set the defending champion' });
+    return;
+  }
+
+  const { data: team } = await supabaseAdmin
+    .from('teams')
+    .select('id')
+    .eq('id', teamId)
+    .eq('lobby_id', lobbyId)
+    .maybeSingle();
+  if (!team) {
+    res.status(404).json({ error: 'Team not found' });
+    return;
+  }
+
+  await supabaseAdmin.from('teams').update({ is_prev_champion: isPrevChampion }).eq('id', teamId);
+  res.json({ ok: true, isPrevChampion });
+});
+
 /** The signed-in user's own team in a lobby, if they have one. */
 async function myTeamId(lobbyId: string, userId: string): Promise<string | null> {
   const { data } = await supabaseAdmin
