@@ -109,6 +109,12 @@ export const lobbySettingsSchema = z.object({
   rosterComposition: rosterCompositionSchema,
   /** Per-round pick clock. */
   pickTiers: pickTiersSchema,
+  /** When on, a team that lets its clock expire is SKIPPED (the next team comes
+   * on the clock) instead of auto-picked — the skipped team can still pick any
+   * time afterward. Off = today's behavior (auto-pick on timeout). The skip cap
+   * is `timeoutAllowance` (below): once a team is skipped that many times it's
+   * auto-picked instead. */
+  allowSkips: z.boolean().default(false),
   /** Number of times a team may let the clock expire before auto-picks kick in. Null = unlimited. */
   timeoutAllowance: z.number().int().min(0).nullable().default(null),
   keepersEnabled: z.boolean().default(false),
@@ -145,6 +151,7 @@ export const DEFAULT_LOBBY_SETTINGS: LobbySettings = {
   draftMode: 'LIVE',
   rosterComposition: DEFAULT_ROSTER,
   pickTiers: DEFAULT_PICK_TIERS,
+  allowSkips: false,
   timeoutAllowance: null,
   keepersEnabled: false,
   scheduledStart: null,

@@ -9,11 +9,13 @@ import {
   chatReactSchema,
   containsSlur,
   crownVoteSchema,
+  draftPositionForOverall,
   extractMentionedUsernames,
   gradeTeamSchema,
   inviteToLobbySchema,
   makePickSchema,
   offerKeeperOptionsSchema,
+  openSlots,
   overallForDraftPosition,
   pickCommentSchema,
   postChatSchema,
@@ -1179,7 +1181,20 @@ draftRouter.delete('/:id', async (req: AuthedRequest, res: Response) => {
   res.json({ ok: true });
 });
 
-/** POST /api/lobbies/:id/pick — make the pick for whoever is on the clock. */
+/**
+ * POST /api/lobbies/:id/pick — make a pick. With skips on, more than one team
+ * can be pickable at once (the team on the clock + any skipped teams still
+ * owing a pick), so we resolve which team is picking and which slot they fill
+ * rather than assuming the single frontier:
+ *   - `onBehalfOfTeamId` set  → commissioner picks for that specific team.
+ *   - otherwise               → the caller's own team if it has an open slot;
+ *                               failing that, a commissioner falls back to the
+ *                               team on the clock (the classic "commish makes
+ *                               the pick" behavior).
+ * The team always fills its EARLIEST open slot (oldest obligation first). If
+ * that slot is the frontier, applyPick advances the clock; if it's an earlier
+ * skipped slot, the clock is left untouched.
+ */
 draftRouter.post('/:id/pick', async (req: AuthedRequest, res: Response) => {
   const lobbyId = req.params.id;
   const userId = req.user!.id;
@@ -1189,7 +1204,7 @@ draftRouter.post('/:id/pick', async (req: AuthedRequest, res: Response) => {
     res.status(400).json({ error: parsed.error.flatten() });
     return;
   }
-  const { playerId } = parsed.data;
+  const { playerId, onBehalfOfTeamId } = parsed.data;
 
   const { data: lobby, error } = await supabaseAdmin
     .from('lobbies')
@@ -1200,30 +1215,87 @@ draftRouter.post('/:id/pick', async (req: AuthedRequest, res: Response) => {
     res.status(404).json({ error: 'Lobby not found' });
     return;
   }
+  // PAUSED (and any non-active status) blocks all picking, skipped teams included.
   if (lobby.status !== 'DRAFTING') {
     res.status(409).json({ error: 'Draft is not active' });
     return;
   }
 
   const settings = lobby.settings as LobbySettings;
-  const overall = lobby.current_overall as number;
-  const round = Math.floor((overall - 1) / settings.teamCount) + 1;
+  const frontier = lobby.current_overall as number;
+  const totalPicks = settings.teamCount * roundsForSettings(settings);
+  // In end-game the frontier parks past the last slot (totalPicks + 1); clamp
+  // so openSlots never walks past the board.
+  const frontierClamped = Math.min(frontier, totalPicks);
 
-  const team = await onClockTeam(lobbyId, settings, overall);
-  if (!team) {
-    res.status(409).json({ error: 'No team is on the clock' });
-    return;
-  }
-
-  // Authorize: you own the team on the clock, or you're a commissioner.
   const role = await getRole(lobbyId, userId);
-  const ownsTeam = team.owner_id === userId;
-  if (!ownsTeam && !isCommish(role)) {
+  const commish = isCommish(role);
+
+  const { data: teamRows } = await supabaseAdmin
+    .from('teams')
+    .select('id, owner_id, is_bot, auto_draft, draft_position, timeouts')
+    .eq('lobby_id', lobbyId);
+  const teams = teamRows ?? [];
+  const { data: pickRows } = await supabaseAdmin
+    .from('picks')
+    .select('overall')
+    .eq('lobby_id', lobbyId);
+  const taken = new Set((pickRows ?? []).map((p) => p.overall as number));
+
+  // Every open, pickable slot right now (ascending). First match for a given
+  // draft position is that team's earliest obligation.
+  const allOpen = openSlots(taken, frontierClamped, settings.teamCount, settings.draftType);
+  const earliestOpenFor = (draftPosition: number): number | null =>
+    allOpen.find((s) => s.position === draftPosition)?.overall ?? null;
+
+  // Resolve which team is picking.
+  let target: (typeof teams)[number] | undefined;
+  if (onBehalfOfTeamId) {
+    if (!commish) {
+      res.status(403).json({ error: 'Only the commissioner can pick for another team' });
+      return;
+    }
+    target = teams.find((t) => t.id === onBehalfOfTeamId);
+    if (!target) {
+      res.status(404).json({ error: 'Team not found' });
+      return;
+    }
+  } else {
+    const own = teams.find((t) => t.owner_id === userId);
+    if (own && earliestOpenFor(own.draft_position) !== null) {
+      target = own; // picking for yourself
+    } else if (commish && frontier <= totalPicks) {
+      // Fall back to the team on the clock (frontier).
+      const pos = draftPositionForOverall(frontier, settings.teamCount, settings.draftType);
+      target = teams.find((t) => t.draft_position === pos);
+    }
+  }
+  if (!target) {
     res.status(403).json({ error: "It's not your turn" });
     return;
   }
 
-  const result = await applyPick(lobbyId, settings, overall, team, playerId, false);
+  const targetOverall = earliestOpenFor(target.draft_position);
+  if (targetOverall === null) {
+    res.status(409).json({ error: 'That team has no open pick' });
+    return;
+  }
+  const round = Math.floor((targetOverall - 1) / settings.teamCount) + 1;
+
+  const result = await applyPick(
+    lobbyId,
+    settings,
+    targetOverall,
+    {
+      id: target.id,
+      owner_id: target.owner_id,
+      is_bot: target.is_bot,
+      auto_draft: target.auto_draft,
+      timeouts: target.timeouts,
+    },
+    playerId,
+    false,
+  );
   if (!result.ok) {
     if (result.error === 'taken') {
       res.status(409).json({ error: 'That player is already drafted' });
@@ -1233,7 +1305,7 @@ draftRouter.post('/:id/pick', async (req: AuthedRequest, res: Response) => {
     return;
   }
 
-  res.json({ ok: true, overall, round, complete: result.complete });
+  res.json({ ok: true, overall: targetOverall, round, complete: result.complete });
 });
 
 /** POST /api/lobbies/:id/fast-forward — commissioner burns through consecutive bot picks. */
@@ -1291,6 +1363,81 @@ draftRouter.post('/:id/fast-forward', async (req: AuthedRequest, res: Response) 
     await new Promise((resolve) => setTimeout(resolve, 200));
   }
   if (aborted) return; // connection's gone — nothing to respond to
+  res.json({ ok: true, picks: made });
+});
+
+/**
+ * POST /api/lobbies/:id/autopick-skipped — commissioner auto-picks every
+ * skipped team's outstanding slot (the open slots behind the frontier). The
+ * manual backstop for an abandoned team when the timeout allowance is
+ * unlimited; also drains the end-game once the clock has run off the board.
+ * Leaves the live on-the-clock slot to its owner/clock.
+ */
+draftRouter.post('/:id/autopick-skipped', async (req: AuthedRequest, res: Response) => {
+  const lobbyId = req.params.id;
+  const role = await getRole(lobbyId, req.user!.id);
+  if (!isCommish(role)) {
+    res.status(403).json({ error: 'Only the commissioner can auto-pick skipped teams' });
+    return;
+  }
+
+  const { data: lobby } = await supabaseAdmin
+    .from('lobbies')
+    .select('status, settings, current_overall')
+    .eq('id', lobbyId)
+    .maybeSingle();
+  if (!lobby || lobby.status !== 'DRAFTING') {
+    res.status(409).json({ error: 'Draft is not active' });
+    return;
+  }
+
+  const settings = lobby.settings as LobbySettings;
+  const totalPicks = settings.teamCount * roundsForSettings(settings);
+  const frontier = lobby.current_overall as number;
+  const frontierClamped = Math.min(frontier, totalPicks);
+
+  const { data: pickRows } = await supabaseAdmin
+    .from('picks')
+    .select('overall')
+    .eq('lobby_id', lobbyId);
+  const taken = new Set((pickRows ?? []).map((p) => p.overall as number));
+  // Every open slot behind the frontier (skipped) — exclude the frontier slot,
+  // which belongs to the team on the clock.
+  const behind = openSlots(taken, frontierClamped, settings.teamCount, settings.draftType).filter(
+    (s) => s.overall !== frontier,
+  );
+
+  const { data: teamRows } = await supabaseAdmin
+    .from('teams')
+    .select('id, owner_id, is_bot, auto_draft, draft_position, timeouts')
+    .eq('lobby_id', lobbyId);
+  const teamByPos = new Map((teamRows ?? []).map((t) => [t.draft_position as number, t]));
+
+  let made = 0;
+  for (const slot of behind) {
+    const t = teamByPos.get(slot.position);
+    if (!t) continue;
+    const playerId = await choosePlayer(lobbyId, settings, t.id as string);
+    if (!playerId) continue;
+    const result = await applyPick(
+      lobbyId,
+      settings,
+      slot.overall,
+      {
+        id: t.id as string,
+        owner_id: t.owner_id as string | null,
+        is_bot: t.is_bot as boolean,
+        auto_draft: t.auto_draft as boolean,
+        timeouts: t.timeouts as number,
+      },
+      playerId,
+      true,
+    );
+    if (result.ok) made++;
+    // Pace so a big backlog doesn't fire a burst of realtime updates at once
+    // (same reason fast-forward paces its bot picks).
+    await new Promise((resolve) => setTimeout(resolve, 150));
+  }
   res.json({ ok: true, picks: made });
 });
 
@@ -1471,6 +1618,12 @@ draftRouter.post('/:id/rollback-to', async (req: AuthedRequest, res: Response) =
     res.status(500).json({ error: updateError.message });
     return;
   }
+  // Skip counters are cumulative and can't be attributed to specific rolled-back
+  // slots, so a rollback gives every team a clean skip allowance from here. (An
+  // auto_draft flag a team earned by exhausting its allowance is left as-is —
+  // it's indistinguishable from an intentional one; the commissioner can toggle
+  // it back off.)
+  await supabaseAdmin.from('teams').update({ timeouts: 0 }).eq('lobby_id', lobbyId);
   const who = await usernameOf(req.user!.id);
   const count = removed?.length ?? 1;
   const what = rolledPlayer?.name ? ` (${rolledPlayer.name})` : '';

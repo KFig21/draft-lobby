@@ -6,6 +6,7 @@ import {
   draftablePositions,
   draftPositionForOverall,
   extractMentionedUsernames,
+  openSlots,
   roundsForSettings,
   secondsForRound,
   type Avatar as AvatarData,
@@ -36,6 +37,7 @@ import MenuIcon from '@mui/icons-material/Menu';
 import PauseIcon from '@mui/icons-material/Pause';
 import PauseCircleOutlineIcon from '@mui/icons-material/PauseCircleOutlineOutlined';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import SkipNextIcon from '@mui/icons-material/SkipNext';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
 import SmartToyOutlinedIcon from '@mui/icons-material/SmartToyOutlined';
 import SportsFootballIcon from '@mui/icons-material/SportsFootball';
@@ -179,6 +181,7 @@ export function DraftBoardPage() {
   // through a streak of bot picks, commishBusy stays true almost
   // continuously and the Pause button goes disabled right when it's needed.
   const [pauseBusy, setPauseBusy] = useState(false);
+  const [autopickBusy, setAutopickBusy] = useState(false);
   const [commishError, setCommishError] = useState<string | null>(null);
   const [keepersLockBusy, setKeepersLockBusy] = useState(false);
   const [reqPauseBusy, setReqPauseBusy] = useState(false);
@@ -764,16 +767,62 @@ export function DraftBoardPage() {
     const s = lobby.settings;
     const overall = lobby.current_overall;
     const round = Math.floor((overall - 1) / s.teamCount) + 1;
-    const onClockPosition = draftPositionForOverall(overall, s.teamCount, s.draftType);
-    const onClockTeam = teams.find((t) => t.draft_position === onClockPosition) ?? null;
-    return { s, overall, round, onClockTeam };
-  }, [lobby, teams]);
+    const totalPicks = s.teamCount * roundsForSettings(s);
+    // The frontier parks past the last slot in end-game; clamp so openSlots
+    // never walks off the board.
+    const frontierClamped = Math.min(overall, totalPicks);
+    const taken = new Set(picks.map((p) => p.overall));
+    const open = openSlots(taken, frontierClamped, s.teamCount, s.draftType);
+    const teamByPos = new Map(teams.map((t) => [t.draft_position, t]));
+    // The single timed slot's team (none once the frontier is past the board).
+    const onClockTeam =
+      overall <= totalPicks
+        ? teamByPos.get(draftPositionForOverall(overall, s.teamCount, s.draftType)) ?? null
+        : null;
+    // Skipped, still-open slots (behind the frontier) with their team + round.
+    const skipped = open
+      .filter((sl) => sl.overall !== overall)
+      .map((sl) => ({
+        overall: sl.overall,
+        round: Math.floor((sl.overall - 1) / s.teamCount) + 1,
+        team: teamByPos.get(sl.position) ?? null,
+      }))
+      .filter((x): x is { overall: number; round: number; team: TeamRow } => !!x.team);
+    // Every open slot the signed-in user owns (frontier and/or skipped), ascending.
+    const myOpen = open
+      .filter((sl) => teamByPos.get(sl.position)?.owner_id === userId)
+      .map((sl) => sl.overall)
+      .sort((a, b) => a - b);
+    return { s, overall, round, onClockTeam, totalPicks, skipped, myOpen };
+  }, [lobby, teams, picks, userId]);
 
   const isCommish = useMemo(() => {
     if (!userId || !lobby) return false;
     if (lobby.commissioner_id === userId) return true;
     return members.some((m) => m.user_id === userId && m.role === 'SUB_COMMISSIONER');
   }, [userId, lobby, members]);
+
+  // Toast the moment YOU get skipped — your slot stays open, so it's easy to
+  // miss. Fires only on the false→true transition (not every re-render).
+  const wasSkippedRef = useRef(false);
+  useEffect(() => {
+    if (!derived || lobby?.status !== 'DRAFTING') {
+      wasSkippedRef.current = false;
+      return;
+    }
+    const frontierMine =
+      derived.onClockTeam?.owner_id === userId ? derived.overall : null;
+    const skippedNow = derived.myOpen.some((o) => o !== frontierMine);
+    if (skippedNow && !wasSkippedRef.current) {
+      showToast({
+        title: 'You were skipped',
+        titleIcon: <SkipNextIcon fontSize="inherit" />,
+        body: 'Your clock ran out — your slot stays open, pick whenever you’re ready.',
+        tone: 'warning',
+      });
+    }
+    wasSkippedRef.current = skippedNow;
+  }, [derived, userId, lobby?.status, showToast]);
 
   // While "Skip bots" is toggled on, auto-fast-forward whenever a bot lands on
   // the clock — re-fires each time the on-the-clock team changes, so it keeps
@@ -942,7 +991,7 @@ export function DraftBoardPage() {
   if (lobby.status === 'SETUP' || lobby.status === 'SCHEDULED')
     return <Navigate to={`/lobby/${id}`} replace />;
 
-  const { round, onClockTeam } = derived!;
+  const { round, onClockTeam, skipped, myOpen } = derived!;
   const totalRounds = roundsForSettings(lobby.settings);
   const isComplete = lobby.status === 'COMPLETE';
   const isPaused = lobby.status === 'PAUSED';
@@ -968,8 +1017,26 @@ export function DraftBoardPage() {
   const resultsLocked =
     !!endedAt && clockNow >= new Date(endedAt).getTime() + DRAFT_RESULTS_LOCK_MS;
   const isMyTurn = !isStaging && !!onClockTeam && onClockTeam.owner_id === userId;
-  const canPick = !isStaging && !isComplete && !isPaused && (isMyTurn || isCommish);
-  const pickingForTeam = !isMyTurn && onClockTeam ? onClockTeam.name : null;
+  // I own an open slot behind the frontier — I was skipped but can still pick.
+  const myFrontierOverall = onClockTeam?.owner_id === userId ? derived!.overall : null;
+  const iAmSkipped = !isStaging && myOpen.some((o) => o !== myFrontierOverall);
+  // I can pick if I own ANY open slot (on the clock OR skipped), or I'm a commish.
+  const iOwnAnOpenSlot = !isStaging && myOpen.length > 0;
+  const canPick = !isStaging && !isComplete && !isPaused && (iOwnAnOpenSlot || isCommish);
+  // My earliest open slot's round — what a pick will fill next.
+  const myNextOverall = myOpen.length ? myOpen[0] : null;
+  const myNextRound = myNextOverall
+    ? Math.floor((myNextOverall - 1) / lobby.settings.teamCount) + 1
+    : null;
+  // Only show "picking for X" when the caller doesn't own an open slot (a
+  // commissioner covering the team on the clock) — never when picking your own.
+  const pickingForTeam = !iOwnAnOpenSlot && onClockTeam ? onClockTeam.name : null;
+  // Board highlight: `${round}:${teamId}` for every skipped, still-open slot.
+  const skippedCellKeys = new Set(skipped.map((sl) => `${sl.round}:${sl.team.id}`));
+  // Distinct skipped team names (a team may owe more than one) for the banner.
+  const skippedTeamNames = Array.from(
+    new Map(skipped.map((sl) => [sl.team.id, sl.team.name])).values(),
+  );
   // Staging counters: humans seated, and keepers placed vs. the total allowance
   // (sum of each team's keeper_count) when keepers are enabled.
   const humansSeated = teams.filter((t) => t.owner_id && !t.is_bot).length;
@@ -1038,6 +1105,20 @@ export function DraftBoardPage() {
       setCommishError(err instanceof Error ? err.message : 'Action failed');
     } finally {
       setPauseBusy(false);
+    }
+  }
+
+  // Commissioner backstop: auto-pick every skipped team's outstanding slot at
+  // once (an abandoned team on an unlimited allowance, or the end-game).
+  async function autopickSkipped() {
+    setCommishError(null);
+    setAutopickBusy(true);
+    try {
+      await api(`/lobbies/${id}/autopick-skipped`, { method: 'POST' });
+    } catch (err) {
+      setCommishError(err instanceof Error ? err.message : 'Failed to auto-pick skipped teams');
+    } finally {
+      setAutopickBusy(false);
     }
   }
 
@@ -1286,6 +1367,16 @@ export function DraftBoardPage() {
           <FastForwardIcon fontSize="small" /> Skip bots
           {autoSkipBots ? ' · On' : ''}
         </button>
+        {skipped.length > 0 && (
+          <button
+            className="draft__tool-btn"
+            onClick={autopickSkipped}
+            disabled={autopickBusy}
+            title="Auto-pick for every skipped team's outstanding slot"
+          >
+            <SkipNextIcon fontSize="small" /> Auto-pick skipped · {skipped.length}
+          </button>
+        )}
         {commishError && <span className="draft__commish-error">{commishError}</span>}
       </>
     );
@@ -1665,15 +1756,31 @@ export function DraftBoardPage() {
                       />
                     </span>
                   )}
-                  {onClockTeam ? onClockTeam.name : 'Waiting…'}
+                  {onClockTeam
+                    ? onClockTeam.name
+                    : skipped.length > 0
+                      ? 'Waiting on skipped picks'
+                      : 'Waiting…'}
                   {isMyTurn && !isPaused && (
                     <span className="draft__yourturn">Your pick</span>
                   )}
+                  {!isMyTurn && iAmSkipped && !isPaused && (
+                    <span className="draft__yourturn draft__yourturn--skipped">
+                      You can still pick{myNextRound ? ` · R${myNextRound}` : ''}
+                    </span>
+                  )}
                   {isPaused && <span className="draft__paused-pill">Paused</span>}
                 </span>
-                <span className="muted">
-                  Round {round} · Pick {lobby.current_overall}
-                </span>
+                {onClockTeam && (
+                  <span className="muted">
+                    Round {round} · Pick {lobby.current_overall}
+                  </span>
+                )}
+                {skippedTeamNames.length > 0 && (
+                  <span className="draft__skipped-line" title="Skipped — still on the board">
+                    <SkipNextIcon fontSize="inherit" /> Skipped: {skippedTeamNames.join(', ')}
+                  </span>
+                )}
               </>
             )}
           </div>
@@ -1796,6 +1903,7 @@ export function DraftBoardPage() {
             onClockUrgency={onClockCellUrgency}
             onClockFlashing={onClockCellFlashing}
             onClockElapsedPct={onClockCellElapsedPct}
+            skippedCells={isComplete || isStaging ? undefined : skippedCellKeys}
           />
         </section>
 

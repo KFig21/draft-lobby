@@ -1,4 +1,5 @@
 import type { DraftType } from '@draft-lobby/shared';
+import SkipNextIcon from '@mui/icons-material/SkipNext';
 import TimerOutlinedIcon from '@mui/icons-material/TimerOutlined';
 import TouchAppIcon from '@mui/icons-material/TouchApp';
 import { useState } from 'react';
@@ -52,6 +53,10 @@ interface Props {
   /** 0-1: how much of the current pick's clock has elapsed — grows the
    * on-the-clock cell's progress fill left to right. */
   onClockElapsedPct?: number | null;
+  /** `${round}:${teamId}` keys for open slots whose team was SKIPPED — still
+   * pickable, but with no live clock (skip-on-timeout). Rendered distinctly
+   * from the single timed on-the-clock cell. */
+  skippedCells?: Set<string>;
 }
 
 /**
@@ -81,6 +86,7 @@ export function DraftGrid({
   onClockUrgency,
   onClockFlashing,
   onClockElapsedPct,
+  skippedCells,
 }: Props) {
   // Index picks by "round:teamId" for O(1) cell lookup.
   const byCell = new Map<string, PickRow>();
@@ -150,10 +156,15 @@ export function DraftGrid({
                   const player = pick ? playersById.get(pick.player_id) : undefined;
                   const isOnClock =
                     !pick && round === currentRound && team.id === onClockTeamId;
-                  // The viewer's own on-the-clock cell doubles as a shortcut
-                  // into the Players tab, in every layout (board, sidebar,
-                  // mobile tabs, fullscreen).
+                  // Skipped: an open slot behind the frontier — still pickable,
+                  // but no live clock. Never overlaps the timed on-clock cell.
+                  const isSkipped = !pick && !isOnClock && !!skippedCells?.has(`${round}:${team.id}`);
+                  // The viewer's own on-the-clock (or skipped) cell doubles as a
+                  // shortcut into the Players tab, in every layout (board,
+                  // sidebar, mobile tabs, fullscreen).
                   const isMyClock = isOnClock && team.id === myTeamId;
+                  const isMySkipped = isSkipped && team.id === myTeamId;
+                  const isMyPickable = isMyClock || isMySkipped;
                   if (pick && player) {
                     if (cellStyle === 'bold') {
                       return (
@@ -199,12 +210,14 @@ export function DraftGrid({
                         isOnClock ? 'draft-grid__cell--onclock' : ''
                       }${isMyClock ? ' draft-grid__cell--onclock-mine' : ''}${
                         isOnClock && onClockUrgency ? ` draft-grid__cell--${onClockUrgency}` : ''
-                      }${isOnClock && onClockFlashing ? ' draft-grid__cell--flash' : ''}`}
-                      onClick={isMyClock ? onMyClockCellClick : undefined}
-                      role={isMyClock ? 'button' : undefined}
-                      tabIndex={isMyClock ? 0 : undefined}
+                      }${isOnClock && onClockFlashing ? ' draft-grid__cell--flash' : ''}${
+                        isSkipped ? ' draft-grid__cell--skipped' : ''
+                      }${isMySkipped ? ' draft-grid__cell--skipped-mine' : ''}`}
+                      onClick={isMyPickable ? onMyClockCellClick : undefined}
+                      role={isMyPickable ? 'button' : undefined}
+                      tabIndex={isMyPickable ? 0 : undefined}
                       onKeyDown={
-                        isMyClock
+                        isMyPickable
                           ? (e) => {
                               if (e.key === 'Enter' || e.key === ' ') {
                                 e.preventDefault();
@@ -235,6 +248,22 @@ export function DraftGrid({
                           <span className="draft-grid__onclock-label">
                             <TimerOutlinedIcon className="draft-grid__onclock-icon" />
                             On the clock
+                          </span>
+                        ))}
+                      {isSkipped &&
+                        (isMySkipped ? (
+                          <span className="draft-grid__onclock-label">
+                            <span className="draft-grid__onclock-title">
+                              <TouchAppIcon fontSize="inherit" /> You were skipped
+                            </span>
+                            <span className="draft-grid__onclock-sub">
+                              Click here — you can still pick
+                            </span>
+                          </span>
+                        ) : (
+                          <span className="draft-grid__onclock-label draft-grid__skipped-label">
+                            <SkipNextIcon className="draft-grid__onclock-icon" />
+                            Skipped
                           </span>
                         ))}
                     </td>

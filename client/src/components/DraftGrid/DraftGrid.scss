@@ -235,6 +235,35 @@
         }
       }
     }
+
+    // A skipped team's still-open slot: pickable, but with no live clock —
+    // a dashed amber border (distinct from the solid, colored on-clock cell)
+    // says "action needed, untimed".
+    &--skipped {
+      border-width: 2px;
+      border-style: dashed;
+      border-color: $warning;
+      text-align: center;
+      vertical-align: middle;
+      overflow: hidden;
+    }
+
+    // The viewer's own skipped slot: same faint "it's on you" tint + pointer
+    // as the own-on-clock cell, in amber.
+    &--skipped-mine {
+      background: rgba($warning, 0.14);
+      cursor: pointer;
+
+      @media (hover: hover) {
+        &:hover {
+          background: rgba($warning, 0.22);
+        }
+      }
+    }
+  }
+
+  &__skipped-label {
+    color: $warning;
   }
 
   // Grows left-to-right as the pick clock counts down (percentage width set

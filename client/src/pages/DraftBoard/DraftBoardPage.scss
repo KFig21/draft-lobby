@@ -573,6 +573,26 @@
     padding: 2px 6px;
     border-radius: 4px;
     font-weight: 800;
+
+    // "You can still pick" (a skipped slot of yours) — amber, matching the
+    // dashed skipped cells on the board rather than the green live-clock pill.
+    &--skipped {
+      background: rgba($warning, 0.25);
+      color: $warning;
+    }
+  }
+
+  // "Skipped: TeamA, TeamB" — a compact awareness line under the on-clock info.
+  &__skipped-line {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.72rem;
+    color: $warning;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   &__complete {

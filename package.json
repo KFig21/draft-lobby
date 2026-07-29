@@ -14,6 +14,7 @@
     "typecheck": "npm run typecheck -w shared && npm run typecheck -w server && npm run typecheck -w client",
     "lint": "eslint .",
     "format": "prettier --write .",
+    "test:skip": "tsx scripts/skip-qa.ts",
     "db:migrate": "node --experimental-strip-types scripts/migrate.ts",
     "db:seed": "node --experimental-strip-types scripts/import-players.ts"
   },

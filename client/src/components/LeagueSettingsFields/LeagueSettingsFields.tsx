@@ -271,10 +271,27 @@ export function LeagueSettingsFields({ settings, onChange, nameField }: Props) {
         <button type="button" className="button timer-tiers__add" onClick={addTier}>
           + Add a tier
         </button>
+        <label className="toggle">
+          <input
+            type="checkbox"
+            checked={settings.allowSkips}
+            onChange={(e) => set('allowSkips', e.target.checked)}
+          />
+          <span>
+            Skip on timeout{' '}
+            <em className="muted">
+              (a team that runs out of time is skipped, not auto-picked — they can still pick
+              afterward)
+            </em>
+          </span>
+        </label>
         <label className="field">
           <span>
-            Timeout allowance{' '}
-            <em className="muted">(missed clocks before auto-pick; blank = unlimited)</em>
+            {settings.allowSkips ? 'Skip allowance' : 'Timeout allowance'}{' '}
+            <em className="muted">
+              ({settings.allowSkips ? 'skips' : 'missed clocks'} before auto-pick; blank ={' '}
+              unlimited)
+            </em>
           </span>
           <input
             type="number"

@@ -63,6 +63,8 @@ export interface TeamRow {
   auto_draft: boolean;
   /** How many keepers this team may select (owner-choice flow). Default 1. */
   keeper_count: number;
+  /** Times this team's pick clock has expired (been skipped). Skip-on-timeout. */
+  timeouts: number;
 }
 
 export interface MemberRow {

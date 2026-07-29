@@ -17,6 +17,9 @@ export const teamSchema = z.object({
   draftPosition: z.number().int().min(1), // 1-indexed slot in the draft order
   color: z.string().default('#4aa8ff'),
   isPrevChampion: z.boolean().default(false),
+  /** Times this team's pick clock has expired (been skipped) — capped by the
+   * lobby's `timeoutAllowance`. See skip-on-timeout feature. */
+  timeouts: z.number().int().min(0).default(0),
 });
 export type Team = z.infer<typeof teamSchema>;
 
@@ -204,4 +207,39 @@ export function overallForDraftPosition(
       ? draftPosition - 1
       : teamCount - draftPosition; // reversed round for snake
   return roundIndex * teamCount + indexInRound + 1;
+}
+
+/** An open, pickable slot: its overall and the 1-indexed draft position (and
+ * therefore team) it belongs to. */
+export interface OpenSlot {
+  overall: number;
+  position: number;
+}
+
+/**
+ * Every open (unfilled) slot at or before the clock frontier — the full set of
+ * slots that can be picked into right now. A slot BELOW the frontier that's
+ * still open means its team was skipped and can still catch up; the frontier
+ * slot itself is the one live/timed pick. Slots past the frontier are never
+ * open in this sense (teams only ever fill their own slots, all of which are
+ * <= the frontier), so callers pass the frontier clamped to the last slot.
+ *
+ * `takenOveralls` is every overall that already has a pick (keepers included).
+ * The frontier is NOT distinguished here — a caller that needs to separate the
+ * timed slot from skipped ones compares `overall === frontier` itself. Pure and
+ * shared by the engine (whose turn resolution) and the client (board state).
+ */
+export function openSlots(
+  takenOveralls: Iterable<number>,
+  frontier: number,
+  teamCount: number,
+  draftType: 'SNAKE' | 'STRAIGHT',
+): OpenSlot[] {
+  const taken = takenOveralls instanceof Set ? takenOveralls : new Set(takenOveralls);
+  const out: OpenSlot[] = [];
+  for (let overall = 1; overall <= frontier; overall++) {
+    if (taken.has(overall)) continue;
+    out.push({ overall, position: draftPositionForOverall(overall, teamCount, draftType) });
+  }
+  return out;
 }
