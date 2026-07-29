@@ -84,9 +84,10 @@
     // "cut into" the cell instead of a mismatched overlay. Text stays a
     // fixed dark color (not $text) since it sits on a light tint regardless
     // of the app's own light/dark theme.
-    border: 1px solid var(--flag-color, #{$bg-raised});
-    background: color-mix(in srgb, var(--flag-color, #{$bg-raised}) 35%, white);
+    background: var(--flag-color);
     color: #1a1a1a;
+    // box-shadow: 0px 0px 5px 2px #0000002b;
+    // border: solid 1px, #00000024;
   }
 
   &__react-flag {
