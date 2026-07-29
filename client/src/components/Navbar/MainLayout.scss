@@ -39,13 +39,13 @@
       height: 36px;
       border: none;
       border-radius: $radius-sm;
-      background: $bg-raised;
+      background: transparent;
       color: $text-muted;
       cursor: pointer;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+      // box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
 
       &:hover {
-        background: $bg-overlay;
+        background: $bg-raised;
         color: $text;
       }
     }
