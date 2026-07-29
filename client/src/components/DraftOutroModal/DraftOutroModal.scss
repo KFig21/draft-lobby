@@ -15,7 +15,13 @@
   &__backdrop {
     position: fixed;
     inset: 0;
-    z-index: 200;
+    // Above the generic Modal (200) — this can pop open on its own the
+    // instant the draft completes (a realtime effect, not something the user
+    // clicked), which can coincide with the user already sitting inside the
+    // fullscreen Menu modal — needs to land on top of it rather than behind
+    // it. Same fix as PlayerDetailModal/PickModal/KeeperOptionsViewModal/
+    // ConfirmModal.
+    z-index: 205;
     display: grid;
     place-items: center;
     padding: $space * 2;

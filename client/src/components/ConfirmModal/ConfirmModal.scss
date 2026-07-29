@@ -11,7 +11,13 @@
   &__backdrop {
     position: fixed;
     inset: 0;
-    z-index: 200;
+    // Above the generic Modal (200) — in fullscreen, "Roll back to this pick"
+    // (from an open PickModal, itself at 210) closes PickModal and opens this
+    // instead, but leaves the Menu modal open behind it if that's how the
+    // pick was reached (Chat/Roster tab) — needs to land on top of it rather
+    // than behind it. Same fix as PlayerDetailModal/PickModal/
+    // KeeperOptionsViewModal.
+    z-index: 205;
     display: grid;
     place-items: center;
     padding: $space * 2;

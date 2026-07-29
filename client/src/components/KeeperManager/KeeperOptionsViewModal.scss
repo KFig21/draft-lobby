@@ -23,7 +23,13 @@
   &__backdrop {
     position: fixed;
     inset: 0;
-    z-index: 200;
+    // Above the generic Modal (200) — in fullscreen, "View keepers" on the
+    // Roster tab can open this from inside the Menu modal, and needs to land
+    // on top of it rather than behind it. Same fix as PlayerDetailModal/
+    // PickModal, but 205 (not 210) — this modal's own onOpenPlayer can open
+    // PlayerDetailModal on top of ITSELF while staying open, and 210 would
+    // have tied with that instead of staying under it.
+    z-index: 205;
     display: grid;
     place-items: center;
     padding: $space * 2;
