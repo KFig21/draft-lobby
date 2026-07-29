@@ -1448,7 +1448,8 @@ export function DraftBoardPage() {
           onClick={() => lastPick && setRollbackTarget(lastPick)}
           disabled={commishBusy || !lastPick}
         >
-          <UndoIcon fontSize="small" /> Undo
+          <UndoIcon fontSize="small" />
+          <span className="draft__btn-label">Undo</span>
         </button>
         <button
           className={`draft__tool-btn draft__skipbots-btn${autoSkipBots ? ' is-on' : ''}`}
