@@ -1811,8 +1811,14 @@ export function DraftBoardPage() {
           </div>
           {!isComplete && (
             <div className="draft__commish-tools">
-              <CommishTools />
-              <RequestPauseButton />
+              {/* Called as functions, NOT <CommishTools /> — a component
+                  defined inside this one has a fresh identity every render, so
+                  as JSX it would remount its whole button subtree on every
+                  clock tick (recreating the DOM nodes and re-triggering their
+                  label transitions). Same reason renderPlayersPool() is a
+                  plain call. */}
+              {CommishTools()}
+              {RequestPauseButton({})}
             </div>
           )}
         </div>
@@ -1896,7 +1902,7 @@ export function DraftBoardPage() {
               <span className="draft__btn-label">Export</span>
             </button>
           )}
-          {!isComplete && <RequestPauseButton compact />}
+          {!isComplete && RequestPauseButton({ compact: true })}
           {myTeam && !myTeam.is_bot && !isComplete && (
             <button
               className={`draft__icon-btn draft__auto-btn${myTeam.auto_draft ? ' is-on' : ''}`}
@@ -2039,7 +2045,7 @@ export function DraftBoardPage() {
           button in the top bar instead, so this bar is commissioner-only. */}
       {isCommish && !isComplete && (
         <div className="draft__mobile-commish">
-          <CommishTools />
+          {CommishTools()}
         </div>
       )}
 
