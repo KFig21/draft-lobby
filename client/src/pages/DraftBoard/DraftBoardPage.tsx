@@ -822,14 +822,23 @@ export function DraftBoardPage() {
   useLayoutEffect(() => {
     const el = topbarRef.current;
     if (!el) return;
-    // A group wraps if its buttons/links don't all share one offsetTop row.
+    // A group wraps if its buttons/links don't all sit on one row. Compare
+    // each item's vertical CENTER, not offsetTop: the rows use
+    // align-items:center, so items of different heights on the SAME row — e.g.
+    // the fixed-size square icon buttons next to the text "Menu" button on the
+    // right — have different offsetTops. offsetTop alone misread that as a
+    // wrap and collapsed the bar even with tons of free space (and, since
+    // "Menu" only exists in fullscreen, it collapsed on every fullscreen).
+    // Centers are equal across a centered row and differ by ~a row height only
+    // on a genuine wrap.
     const multiRow = (group: Element | null): boolean => {
       if (!group) return false;
       const items = group.querySelectorAll<HTMLElement>('button, a');
-      let top: number | null = null;
+      let firstCenter: number | null = null;
       for (const it of items) {
-        if (top === null) top = it.offsetTop;
-        else if (Math.abs(it.offsetTop - top) > 2) return true;
+        const center = it.offsetTop + it.offsetHeight / 2;
+        if (firstCenter === null) firstCenter = center;
+        else if (Math.abs(center - firstCenter) > 4) return true;
       }
       return false;
     };
