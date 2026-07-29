@@ -45,35 +45,39 @@ export function PlayerDetailModal({
           <CloseIcon fontSize="small" />
         </button>
 
-        <PlayerHeader player={player} />
-        <PlayerStatGrid player={player} />
-
-        {(onQueue || onPick) && (
-          <div className="player-detail__actions">
-            {onQueue && (
+        <PlayerHeader
+          player={player}
+          action={
+            onQueue ? (
               <button
                 type="button"
-                className={`button player-detail__queue${queued ? ' is-on' : ''}`}
+                className={`player-detail__queue-toggle${queued ? ' is-on' : ''}`}
                 onClick={onQueue}
+                aria-pressed={queued}
+                aria-label={queued ? 'Remove from queue' : 'Add to queue'}
+                title={queued ? 'Remove from queue' : 'Add to queue'}
               >
                 {queued ? (
                   <BookmarkIcon fontSize="small" />
                 ) : (
                   <BookmarkBorderIcon fontSize="small" />
                 )}
-                {queued ? 'Queued' : 'Add to queue'}
               </button>
-            )}
-            {onPick && (
-              <button
-                type="button"
-                className="button button--primary player-detail__draft"
-                onClick={onPick}
-                disabled={disabled}
-              >
-                Draft {player.name}
-              </button>
-            )}
+            ) : undefined
+          }
+        />
+        <PlayerStatGrid player={player} />
+
+        {onPick && (
+          <div className="player-detail__actions">
+            <button
+              type="button"
+              className="button button--primary player-detail__draft"
+              onClick={onPick}
+              disabled={disabled}
+            >
+              Draft {player.name}
+            </button>
           </div>
         )}
       </div>

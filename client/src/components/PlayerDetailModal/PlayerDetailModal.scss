@@ -57,12 +57,32 @@
     gap: $space;
   }
 
-  &__queue {
-    flex-shrink: 0;
+  // Bookmark toggle sitting inline right after the player's name (rendered via
+  // PlayerHeader's `action` slot). Bare icon — no button chrome — so it reads
+  // as part of the title, filling in / tinting to the accent once queued.
+  &__queue-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    vertical-align: middle;
+    margin-left: 8px;
+    padding: 2px;
+    border: none;
+    background: none;
+    color: $text-muted;
+    cursor: pointer;
+    transition: color 120ms ease;
+
+    &:hover {
+      color: $text;
+    }
 
     &.is-on {
-      border-color: $accent;
       color: $accent;
+
+      &:hover {
+        color: $accent;
+      }
     }
   }
 

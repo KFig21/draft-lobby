@@ -1,4 +1,5 @@
 import {
+  DRAFT_RESULTS_LOCK_MS,
   defaultAvatar,
   extractMentionedUsernames,
   roundsForSettings,
@@ -73,6 +74,12 @@ export function LobbyRoomPage() {
   const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [savingName, setSavingName] = useState(false);
+  // Renaming the draft/lobby itself (distinct from a team's name) — the h1 in
+  // the pinned header. Own state from the team-name edit above, since either
+  // could be open independently.
+  const [editingLobbyName, setEditingLobbyName] = useState(false);
+  const [lobbyNameEdit, setLobbyNameEdit] = useState('');
+  const [savingLobbyName, setSavingLobbyName] = useState(false);
   const [friendships, setFriendships] = useState<FriendshipRow[]>([]);
   const [invitedIds, setInvitedIds] = useState<Set<string>>(new Set());
   const [inviteBusy, setInviteBusy] = useState<string | null>(null);
@@ -490,6 +497,28 @@ export function LobbyRoomPage() {
     }
   }
 
+  function startEditLobbyName() {
+    setActionError(null);
+    setLobbyNameEdit(lobby?.name ?? '');
+    setEditingLobbyName(true);
+  }
+
+  async function saveLobbyName() {
+    const name = lobbyNameEdit.trim();
+    if (!name) return;
+    setSavingLobbyName(true);
+    setActionError(null);
+    try {
+      await api(`/lobbies/${id}/rename`, { method: 'POST', body: { name } });
+      setEditingLobbyName(false);
+      refetch();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Failed to rename the draft');
+    } finally {
+      setSavingLobbyName(false);
+    }
+  }
+
   async function invite(friendId: string) {
     setInviteBusy(friendId);
     setActionError(null);
@@ -566,6 +595,11 @@ export function LobbyRoomPage() {
   // Team names lock for everyone but the commissioner once the draft is
   // complete — keeps rosters stable while the commissioner reviews.
   const isComplete = lobby.status === 'COMPLETE';
+  // Renaming the draft itself locks DRAFT_RESULTS_LOCK_MS (24h) after it ends —
+  // same window as the crown vote/grading lock (server enforces this too).
+  const renameLocked =
+    isComplete && !!lobby.completed_at &&
+    Date.now() > new Date(lobby.completed_at).getTime() + DRAFT_RESULTS_LOCK_MS;
   const memberIds = new Set(members.map((m) => m.user_id));
   const teamById = new Map(teams.map((t) => [t.id, t]));
 
@@ -590,7 +624,53 @@ export function LobbyRoomPage() {
             <ArrowBackIcon fontSize="small" />
           </button>
           <div className="room__title">
-            <h1>{lobby.name}</h1>
+            {editingLobbyName ? (
+              <form
+                className="room__title-edit"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void saveLobbyName();
+                }}
+              >
+                <input
+                  autoFocus
+                  value={lobbyNameEdit}
+                  maxLength={60}
+                  onChange={(e) => setLobbyNameEdit(e.target.value)}
+                />
+                <button
+                  type="submit"
+                  className="room__title-icon"
+                  aria-label="Save draft name"
+                  disabled={savingLobbyName || !lobbyNameEdit.trim()}
+                >
+                  <CheckIcon fontSize="small" />
+                </button>
+                <button
+                  type="button"
+                  className="room__title-icon"
+                  aria-label="Cancel"
+                  onClick={() => setEditingLobbyName(false)}
+                >
+                  <CloseIcon fontSize="small" />
+                </button>
+              </form>
+            ) : (
+              <>
+                <h1>{lobby.name}</h1>
+                {isCommish && !renameLocked && (
+                  <button
+                    type="button"
+                    className="room__title-icon"
+                    aria-label="Rename draft"
+                    title="Rename this draft"
+                    onClick={startEditLobbyName}
+                  >
+                    <EditOutlinedIcon fontSize="small" />
+                  </button>
+                )}
+              </>
+            )}
             <span className={`status-pill status-pill--${lobby.status.toLowerCase()}`}>
               {lobby.status}
             </span>

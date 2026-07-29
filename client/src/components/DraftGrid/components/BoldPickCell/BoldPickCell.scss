@@ -140,6 +140,14 @@
   }
 
   &__name {
+    // A positioned element with its own z-index paints above the flag chips
+    // (&__flags, position: absolute, z-index: 2) regardless of DOM order —
+    // without this, a long 3-line name that reaches the bottom-right corner
+    // gets its last line partly covered by the chip's background. Lifting
+    // the name to a higher z-index (within .draft-grid__cell's own
+    // position: relative, DraftGrid.scss) puts the text on top instead.
+    position: relative;
+    z-index: 3;
     display: -webkit-box;
     -webkit-line-clamp: 3;
     line-clamp: 3;

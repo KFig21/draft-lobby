@@ -1191,9 +1191,10 @@ draftRouter.delete('/:id', async (req: AuthedRequest, res: Response) => {
  *                               failing that, a commissioner falls back to the
  *                               team on the clock (the classic "commish makes
  *                               the pick" behavior).
- * The team always fills its EARLIEST open slot (oldest obligation first). If
- * that slot is the frontier, applyPick advances the clock; if it's an earlier
- * skipped slot, the clock is left untouched.
+ * The team fills its EARLIEST open slot by default (oldest obligation first);
+ * a picker owing more than one slot (the snake turn) may name a specific
+ * `overall` instead. If that slot is the frontier, applyPick advances the
+ * clock; if it's an earlier skipped slot, the clock is left untouched.
  */
 draftRouter.post('/:id/pick', async (req: AuthedRequest, res: Response) => {
   const lobbyId = req.params.id;
@@ -1204,7 +1205,7 @@ draftRouter.post('/:id/pick', async (req: AuthedRequest, res: Response) => {
     res.status(400).json({ error: parsed.error.flatten() });
     return;
   }
-  const { playerId, onBehalfOfTeamId } = parsed.data;
+  const { playerId, onBehalfOfTeamId, overall: requestedOverall } = parsed.data;
 
   const { data: lobby, error } = await supabaseAdmin
     .from('lobbies')
@@ -1275,10 +1276,24 @@ draftRouter.post('/:id/pick', async (req: AuthedRequest, res: Response) => {
     return;
   }
 
-  const targetOverall = earliestOpenFor(target.draft_position);
+  let targetOverall = earliestOpenFor(target.draft_position);
   if (targetOverall === null) {
     res.status(409).json({ error: 'That team has no open pick' });
     return;
+  }
+  // The picker chose a specific slot (only meaningful when they owe more than
+  // one): honour it if it's genuinely one of this team's open slots, otherwise
+  // fall through to the earliest. Guards against a stale client requesting a
+  // slot that's since been filled or that belongs to a different team.
+  if (requestedOverall != null && requestedOverall !== targetOverall) {
+    const ownsIt = allOpen.some(
+      (s) => s.overall === requestedOverall && s.position === target.draft_position,
+    );
+    if (!ownsIt) {
+      res.status(409).json({ error: 'That pick slot is no longer open' });
+      return;
+    }
+    targetOverall = requestedOverall;
   }
   const round = Math.floor((targetOverall - 1) / settings.teamCount) + 1;
 

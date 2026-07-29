@@ -43,6 +43,14 @@ export const makePickSchema = z.object({
   playerId: z.string().uuid(),
   /** Set only when a commissioner picks on behalf of another team. */
   onBehalfOfTeamId: z.string().uuid().optional(),
+  /**
+   * Which specific open slot (overall) to fill. A team that was skipped and is
+   * up again owns more than one open slot (e.g. the snake turn: the round it was
+   * skipped in, plus its next round now on the clock) — this lets the picker
+   * choose which one this player goes into. Omit to fill the team's EARLIEST
+   * open slot (the default, and the only option when a team owns a single slot).
+   */
+  overall: z.number().int().min(1).optional(),
 });
 export type MakePickInput = z.infer<typeof makePickSchema>;
 

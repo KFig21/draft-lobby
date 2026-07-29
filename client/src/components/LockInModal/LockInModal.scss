@@ -62,3 +62,42 @@
     justify-content: flex-end;
   }
 }
+
+// Slot-choice mode: one full-width button per open pick the picker owns (a
+// skipped team that's up again on the snake turn), stacked so each round/pick
+// label reads clearly, with Cancel below them.
+.lockin {
+  &__choose-hint {
+    margin-top: -$space;
+    font-size: 0.9rem;
+    color: $text-muted;
+  }
+
+  &__slots {
+    display: flex;
+    flex-direction: column;
+    gap: $space;
+  }
+
+  &__slot-btn {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: $space * 0.75;
+    padding: $space * 1.25 $space * 1.5;
+    font-size: 1rem;
+  }
+
+  &__slot-round {
+    font-weight: 800;
+  }
+
+  &__slot-pick {
+    font-size: 0.85rem;
+    opacity: 0.85;
+  }
+
+  &__slot-cancel {
+    align-self: center;
+  }
+}

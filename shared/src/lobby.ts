@@ -182,6 +182,16 @@ export const createLobbySchema = z.object({
 });
 export type CreateLobbyInput = z.infer<typeof createLobbySchema>;
 
+/**
+ * Commissioner renames the draft/lobby itself (distinct from a team's name).
+ * Allowed at any time up until DRAFT_RESULTS_LOCK_MS (24h) after the draft
+ * completes — enforced server-side against `completed_at`.
+ */
+export const renameLobbySchema = z.object({
+  name: z.string().trim().min(1).max(60),
+});
+export type RenameLobbyInput = z.infer<typeof renameLobbySchema>;
+
 export const joinLobbySchema = z.object({
   lobbyId: z.string().uuid(),
   // Optional: OPEN lobbies don't require a password.

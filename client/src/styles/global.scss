@@ -28,7 +28,7 @@
   --border: #d4d8e2;
   --text: #1a1d29;
   --text-muted: #667085;
-  --keeper: #8a630f;
+  --keeper: #c39124;
   --info: #0f6fc0;
 }
 
@@ -448,6 +448,7 @@ textarea {
       background: rgba($primary, 0.25);
       color: $primary-hover;
     }
+
     :root[data-theme='dark'] & {
       background: rgba($accent, 0.25);
       color: $accent;

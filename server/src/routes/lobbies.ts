@@ -1,6 +1,12 @@
 import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 import { Router, type Response } from 'express';
-import { createLobbySchema, joinLobbySchema } from '@draft-lobby/shared';
+import {
+  DRAFT_RESULTS_LOCK_MS,
+  createLobbySchema,
+  joinLobbySchema,
+  renameLobbySchema,
+  type LobbySettings,
+} from '@draft-lobby/shared';
 import { requireAuth, type AuthedRequest } from '../middleware/auth.js';
 import { claimSeat, usernameOf } from '../draftEngine.js';
 import { supabaseAdmin } from '../supabase.js';
@@ -87,6 +93,70 @@ lobbiesRouter.post('/', async (req: AuthedRequest, res: Response) => {
   }
 
   res.status(201).json({ lobby });
+});
+
+/**
+ * POST /api/lobbies/:id/rename — commissioner renames the draft/lobby itself
+ * (distinct from a team's name, see draft.ts's /team-name). Allowed any time
+ * up until DRAFT_RESULTS_LOCK_MS (24h) after the draft completes — the same
+ * window as the crown vote/grading lock, after which the lobby's identity is
+ * considered final.
+ */
+lobbiesRouter.post('/:id/rename', async (req: AuthedRequest, res: Response) => {
+  const lobbyId = req.params.id;
+  const userId = req.user!.id;
+
+  const parsed = renameLobbySchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.flatten() });
+    return;
+  }
+  const { name } = parsed.data;
+
+  const { data: member } = await supabaseAdmin
+    .from('lobby_members')
+    .select('role')
+    .eq('lobby_id', lobbyId)
+    .eq('user_id', userId)
+    .maybeSingle();
+  const role = member?.role as string | undefined;
+  if (role !== 'COMMISSIONER' && role !== 'SUB_COMMISSIONER') {
+    res.status(403).json({ error: 'Only the commissioner can rename the draft' });
+    return;
+  }
+
+  const { data: lobby } = await supabaseAdmin
+    .from('lobbies')
+    .select('status, completed_at, settings')
+    .eq('id', lobbyId)
+    .maybeSingle();
+  if (!lobby) {
+    res.status(404).json({ error: 'Lobby not found' });
+    return;
+  }
+  if (lobby.status === 'COMPLETE' && lobby.completed_at) {
+    const locked =
+      Date.now() > new Date(lobby.completed_at as string).getTime() + DRAFT_RESULTS_LOCK_MS;
+    if (locked) {
+      res.status(409).json({
+        error: 'The draft can no longer be renamed — it’s been over 24h since it ended',
+      });
+      return;
+    }
+  }
+
+  // Keep the top-level column and the settings blob's own `name` in sync —
+  // other code (e.g. the completion activity event) reads settings.name.
+  const settings = { ...(lobby.settings as LobbySettings), name };
+  const { error } = await supabaseAdmin
+    .from('lobbies')
+    .update({ name, settings })
+    .eq('id', lobbyId);
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
+  res.json({ ok: true, name });
 });
 
 /** GET /api/lobbies/open — browsable lobbies anyone can join (pre-draft, not full). */

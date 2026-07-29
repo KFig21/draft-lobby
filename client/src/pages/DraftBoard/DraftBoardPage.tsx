@@ -44,7 +44,7 @@ import SportsFootballIcon from '@mui/icons-material/SportsFootball';
 import TableChartOutlinedIcon from '@mui/icons-material/TableChartOutlined';
 import UndoIcon from '@mui/icons-material/Undo';
 import type { SvgIconComponent } from '@mui/icons-material';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   Link,
   Navigate,
@@ -275,6 +275,19 @@ export function DraftBoardPage() {
     ro.observe(el);
     return () => ro.disconnect();
   }, [isFullscreen, lobby]);
+
+  // ── Top bar overflow → icon-only tools ──
+  // The bar keeps a symmetric grid so the clock/pick stays dead-center; when
+  // the button groups would spill onto a second line (most often in fullscreen
+  // TV mode, where everything scales up), collapse the text-buttons to
+  // icon-only instead — each reveals its label on hover (CSS). Detected by
+  // measuring, not a width guess, since the button set varies (member vs.
+  // commissioner, staging, skip backlog…). The measuring effect itself lives
+  // lower down, once the values that change the button set are in scope.
+  const topbarRef = useRef<HTMLElement>(null);
+  const [topbarCompact, setTopbarCompact] = useState(false);
+  const topbarCompactRef = useRef(topbarCompact);
+  topbarCompactRef.current = topbarCompact;
 
   // Resizable sidebar (desktop). Persisted across sessions.
   const [sidebarWidth, setSidebarWidth] = useState(() => {
@@ -802,6 +815,66 @@ export function DraftBoardPage() {
     return members.some((m) => m.user_id === userId && m.role === 'SUB_COMMISSIONER');
   }, [userId, lobby, members]);
 
+  // Collapse the top bar's text-buttons to icon-only whenever a button group
+  // would wrap to a second line — measured, not guessed (see the topbarRef
+  // declaration above for why). Runs before paint so a spilled row never
+  // flashes, and re-runs on resize + whenever the rendered button set changes.
+  useLayoutEffect(() => {
+    const el = topbarRef.current;
+    if (!el) return;
+    // A group wraps if its buttons/links don't all share one offsetTop row.
+    const multiRow = (group: Element | null): boolean => {
+      if (!group) return false;
+      const items = group.querySelectorAll<HTMLElement>('button, a');
+      let top: number | null = null;
+      for (const it of items) {
+        if (top === null) top = it.offsetTop;
+        else if (Math.abs(it.offsetTop - top) > 2) return true;
+      }
+      return false;
+    };
+    const measure = () => {
+      // Always measure the EXPANDED layout — strip the compact class first so
+      // the reading reflects full-text widths even when we're already
+      // collapsed, then restore it so nothing repaints mid-measurement. The
+      // --measuring class freezes label transitions across this swap so it can
+      // never replay the reveal/collapse animation (the real state-driven
+      // collapse still animates, since --measuring isn't present then).
+      const wasCompact = el.classList.contains('draft__topbar--compact');
+      el.classList.add('draft__topbar--measuring');
+      el.classList.remove('draft__topbar--compact');
+      const need =
+        multiRow(el.querySelector('.draft__left')) ||
+        multiRow(el.querySelector('.draft__right'));
+      if (wasCompact) el.classList.add('draft__topbar--compact');
+      el.classList.remove('draft__topbar--measuring');
+      if (need !== topbarCompactRef.current) setTopbarCompact(need);
+    };
+    measure();
+    // Only the bar's WIDTH decides whether the tools fit; its height changes
+    // every second as the clock ticks (and when we collapse), which would
+    // otherwise re-run measure() constantly and — before the --measuring guard
+    // above — flicker the labels once a second. Skip same-width callbacks.
+    let lastWidth = el.offsetWidth;
+    const ro = new ResizeObserver(() => {
+      const w = el.offsetWidth;
+      if (w === lastWidth) return;
+      lastWidth = w;
+      measure();
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [
+    isFullscreen,
+    isCommish,
+    lobby?.status,
+    autoSkipBots,
+    derived?.skipped.length,
+    lobby?.settings.keepersEnabled,
+    lobby?.keepers_locked,
+    lastPick?.id,
+  ]);
+
   // Toast the moment YOU get skipped — your slot stays open, so it's easy to
   // miss. Fires only on the false→true transition (not every re-render).
   const wasSkippedRef = useRef(false);
@@ -1028,15 +1101,25 @@ export function DraftBoardPage() {
   const myNextRound = myNextOverall
     ? Math.floor((myNextOverall - 1) / lobby.settings.teamCount) + 1
     : null;
+  // Every open slot I own, as { overall, round } — when I owe more than one
+  // (skipped and up again, e.g. the snake turn), the LockInModal offers a
+  // button per slot so I choose which round/pick this player fills.
+  const myOpenSlots = myOpen.map((o) => ({
+    overall: o,
+    round: Math.floor((o - 1) / lobby.settings.teamCount) + 1,
+  }));
   // Only show "picking for X" when the caller doesn't own an open slot (a
   // commissioner covering the team on the clock) — never when picking your own.
   const pickingForTeam = !iOwnAnOpenSlot && onClockTeam ? onClockTeam.name : null;
   // Board highlight: `${round}:${teamId}` for every skipped, still-open slot.
   const skippedCellKeys = new Set(skipped.map((sl) => `${sl.round}:${sl.team.id}`));
-  // Distinct skipped team names (a team may owe more than one) for the banner.
-  const skippedTeamNames = Array.from(
-    new Map(skipped.map((sl) => [sl.team.id, sl.team.name])).values(),
-  );
+  // Distinct skipped team names (a team may owe more than one) for the banner —
+  // commented out alongside the center "Skipped: …" line it fed, to keep the
+  // clock/pick uncluttered (skips still surface via the board cells, the
+  // self-skip toast, and the commissioner's "Auto-pick skipped" button).
+  // const skippedTeamNames = Array.from(
+  //   new Map(skipped.map((sl) => [sl.team.id, sl.team.name])).values(),
+  // );
   // Staging counters: humans seated, and keepers placed vs. the total allowance
   // (sum of each team's keeper_count) when keepers are enabled.
   const humansSeated = teams.filter((t) => t.owner_id && !t.is_bot).length;
@@ -1082,12 +1165,18 @@ export function DraftBoardPage() {
     setMobileTab('roster');
   }
 
-  async function confirmPick() {
+  // `overall` names a specific open slot to fill — set only when a skipped
+  // picker who's up again chose which of their slots this player goes into
+  // (see LockInModal). Omitted → the server fills their earliest open slot.
+  async function confirmPick(overall?: number) {
     if (!selected) return;
     setPickError(null);
     setPickBusy(true);
     try {
-      await api(`/lobbies/${id}/pick`, { method: 'POST', body: { playerId: selected.id } });
+      await api(`/lobbies/${id}/pick`, {
+        method: 'POST',
+        body: { playerId: selected.id, ...(overall != null ? { overall } : {}) },
+      });
       setSelected(null);
     } catch (err) {
       setPickError(err instanceof Error ? err.message : 'Pick failed');
@@ -1277,7 +1366,8 @@ export function DraftBoardPage() {
             onClick={() => setRollbackTarget(lastPick)}
             disabled={commishBusy}
           >
-            <UndoIcon fontSize="small" /> Undo
+            <UndoIcon fontSize="small" />
+            <span className="draft__btn-label">Undo</span>
           </button>
           {commishError && <span className="draft__commish-error">{commishError}</span>}
         </>
@@ -1293,7 +1383,8 @@ export function DraftBoardPage() {
               onClick={() => setShowKeepers(true)}
               disabled={commishBusy}
             >
-              <LockOutlinedIcon fontSize="small" /> Keepers
+              <LockOutlinedIcon fontSize="small" />
+              <span className="draft__btn-label">Keepers</span>
             </button>
           )}
           {lobby?.settings.keepersEnabled && (
@@ -1314,7 +1405,9 @@ export function DraftBoardPage() {
               ) : (
                 <LockOpenOutlinedIcon fontSize="small" />
               )}
-              {lobby.keepers_locked ? 'Keepers locked' : 'Lock keepers'}
+              <span className="draft__btn-label">
+                {lobby.keepers_locked ? 'Keepers locked' : 'Lock keepers'}
+              </span>
             </button>
           )}
           <button
@@ -1322,7 +1415,8 @@ export function DraftBoardPage() {
             onClick={startDraft}
             disabled={commishBusy}
           >
-            <PlayArrowIcon fontSize="small" /> Start draft
+            <PlayArrowIcon fontSize="small" />
+            <span className="draft__btn-label">Start draft</span>
           </button>
           {commishError && <span className="draft__commish-error">{commishError}</span>}
         </>
@@ -1336,7 +1430,8 @@ export function DraftBoardPage() {
             onClick={() => commishAction('resume')}
             disabled={pauseBusy}
           >
-            <PlayArrowIcon fontSize="small" /> Resume
+            <PlayArrowIcon fontSize="small" />
+            <span className="draft__btn-label">Resume</span>
           </button>
         ) : (
           <button
@@ -1344,7 +1439,8 @@ export function DraftBoardPage() {
             onClick={() => commishAction('pause')}
             disabled={pauseBusy}
           >
-            <PauseIcon fontSize="small" /> Pause
+            <PauseIcon fontSize="small" />
+            <span className="draft__btn-label">Pause</span>
           </button>
         )}
         <button
@@ -1364,8 +1460,8 @@ export function DraftBoardPage() {
           }
           title="Automatically skip bot picks as they come on the clock"
         >
-          <FastForwardIcon fontSize="small" /> Skip bots
-          {autoSkipBots ? ' · On' : ''}
+          <FastForwardIcon fontSize="small" />
+          <span className="draft__btn-label">Skip bots{autoSkipBots ? ' · On' : ''}</span>
         </button>
         {skipped.length > 0 && (
           <button
@@ -1374,7 +1470,8 @@ export function DraftBoardPage() {
             disabled={autopickBusy}
             title="Auto-pick for every skipped team's outstanding slot"
           >
-            <SkipNextIcon fontSize="small" /> Auto-pick skipped · {skipped.length}
+            <SkipNextIcon fontSize="small" />
+            <span className="draft__btn-label">Auto-pick skipped · {skipped.length}</span>
           </button>
         )}
         {commishError && <span className="draft__commish-error">{commishError}</span>}
@@ -1398,7 +1495,8 @@ export function DraftBoardPage() {
           <PauseIcon fontSize="small" />
         ) : (
           <>
-            <PauseIcon fontSize="small" /> Request pause
+            <PauseIcon fontSize="small" />
+            <span className="draft__btn-label">Request pause</span>
           </>
         )}
       </button>
@@ -1680,11 +1778,12 @@ export function DraftBoardPage() {
   return (
     <div className="draft">
       <header
+        ref={topbarRef}
         className={`draft__topbar${isFullscreen ? ' draft__topbar--fill' : ''}${
-          myTurnHighlight ? ' draft__topbar--myturn' : ''
-        }${myTurnUrgency ? ` draft__topbar--${myTurnUrgency}` : ''}${
-          myTurnFlashing ? ' draft__topbar--flash' : ''
-        }`}
+          topbarCompact ? ' draft__topbar--compact' : ''
+        }${myTurnHighlight ? ' draft__topbar--myturn' : ''}${
+          myTurnUrgency ? ` draft__topbar--${myTurnUrgency}` : ''
+        }${myTurnFlashing ? ' draft__topbar--flash' : ''}`}
       >
         {onClockCellElapsedPct != null && (
           <span
@@ -1700,11 +1799,13 @@ export function DraftBoardPage() {
               className="draft__home-btn"
               onClick={() => navigate('/home')}
             >
-              <HomeOutlinedIcon fontSize="small" /> Home
+              <HomeOutlinedIcon fontSize="small" />
+              <span className="draft__btn-label">Home</span>
             </button>
             {isMember && (
               <Link to={`/lobby/${id}`} className="draft__room-btn">
-                <MeetingRoomOutlinedIcon fontSize="small" /> Room
+                <MeetingRoomOutlinedIcon fontSize="small" />
+                <span className="draft__btn-label">Room</span>
               </Link>
             )}
           </div>
@@ -1776,11 +1877,11 @@ export function DraftBoardPage() {
                     Round {round} · Pick {lobby.current_overall}
                   </span>
                 )}
-                {skippedTeamNames.length > 0 && (
+                {/* {skippedTeamNames.length > 0 && (
                   <span className="draft__skipped-line" title="Skipped — still on the board">
                     <SkipNextIcon fontSize="inherit" /> Skipped: {skippedTeamNames.join(', ')}
                   </span>
-                )}
+                )} */}
               </>
             )}
           </div>
@@ -1791,7 +1892,8 @@ export function DraftBoardPage() {
         <div className="draft__right">
           {isComplete && (
             <button className="draft__export-btn" onClick={() => setShowExport(true)}>
-              <FileDownloadOutlinedIcon fontSize="small" /> Export
+              <FileDownloadOutlinedIcon fontSize="small" />
+              <span className="draft__btn-label">Export</span>
             </button>
           )}
           {!isComplete && <RequestPauseButton compact />}
@@ -1816,7 +1918,8 @@ export function DraftBoardPage() {
               aria-label="Menu"
               title="Players, roster, chat & results"
             >
-              <MenuIcon fontSize="small" /> Menu
+              <MenuIcon fontSize="small" />
+              <span className="draft__btn-label">Menu</span>
             </button>
           )}
           <button
@@ -1979,6 +2082,7 @@ export function DraftBoardPage() {
           busy={pickBusy}
           error={pickError}
           onBehalfOfTeam={pickingForTeam}
+          slots={myOpenSlots}
         />
       )}
 

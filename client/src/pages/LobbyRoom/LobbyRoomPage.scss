@@ -66,6 +66,53 @@
     }
   }
 
+  // Renaming the draft itself — same input + icon-button shape as
+  // .team-list__edit/&__icon, sized for the header instead of a list row.
+  &__title-edit {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: $space * 0.5;
+    min-width: 0;
+
+    input {
+      flex: 1;
+      min-width: 0;
+      padding: $space * 0.4 $space * 0.75;
+      border: 1px solid $border;
+      border-radius: $radius-sm;
+      background: $bg;
+      color: $text;
+      font-size: 1.15rem;
+      font-weight: 700;
+    }
+  }
+
+  &__title-icon {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+    border: none;
+    border-radius: $radius-sm;
+    background: none;
+    color: $text-muted;
+    cursor: pointer;
+    opacity: 0.55;
+
+    &:hover {
+      opacity: 1;
+      background: $bg-overlay;
+      color: $text;
+    }
+
+    &:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+  }
+
   &__meta {
     display: flex;
     flex-wrap: wrap;

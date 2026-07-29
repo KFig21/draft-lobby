@@ -3,14 +3,27 @@ import { useModalClose } from '../../lib/useModalClose';
 import type { PlayerRow } from '../../lib/types';
 import './LockInModal.scss';
 
+/** An open slot the picker can assign this player to. */
+export interface LockInSlot {
+  overall: number;
+  round: number;
+}
+
 interface Props {
   player: PlayerRow;
-  onConfirm: () => void;
+  /** `overall` names the chosen slot; omitted → the server fills the earliest. */
+  onConfirm: (overall?: number) => void;
   onCancel: () => void;
   busy?: boolean;
   error?: string | null;
   /** Set when a commissioner is picking on behalf of another team. */
   onBehalfOfTeam?: string | null;
+  /**
+   * The open slots the picker owns. 2+ (a skipped team that's up again, e.g. on
+   * the snake turn) renders one "lock it in" button per slot so they choose
+   * which round/pick this player fills; 0–1 renders a single button.
+   */
+  slots?: LockInSlot[];
 }
 
 /** Confirmation modal shown before a pick is locked in. */
@@ -21,8 +34,11 @@ export function LockInModal({
   busy,
   error,
   onBehalfOfTeam,
+  slots,
 }: Props) {
   const { closing, requestClose } = useModalClose(onCancel);
+  // Only offer a choice when the picker genuinely owns more than one open slot.
+  const choose = (slots?.length ?? 0) >= 2;
   return (
     <div
       className={`modal-overlay modal-anim-backdrop${closing ? ' is-closing' : ''}`}
@@ -32,10 +48,15 @@ export function LockInModal({
         className={`modal modal-anim-card${closing ? ' is-closing' : ''}`}
         onClick={(e) => e.stopPropagation()}
       >
-        <h2>{onBehalfOfTeam ? 'Make this pick?' : 'Lock in your pick?'}</h2>
+        <h2>{choose ? 'Which pick is this?' : onBehalfOfTeam ? 'Make this pick?' : 'Lock in your pick?'}</h2>
         {onBehalfOfTeam && (
           <p className="modal__on-behalf">
             Picking for <strong>{onBehalfOfTeam}</strong> as commissioner
+          </p>
+        )}
+        {choose && (
+          <p className="lockin__choose-hint">
+            You’ve got more than one open pick — choose which slot this player fills.
           </p>
         )}
         <div className="modal__player">
@@ -54,14 +75,37 @@ export function LockInModal({
           </div>
         </div>
         {error && <p className="modal__error">{error}</p>}
-        <div className="modal__actions">
-          <button className="button" onClick={requestClose} disabled={busy}>
-            Cancel
-          </button>
-          <button className="button button--primary" onClick={onConfirm} disabled={busy}>
-            {busy ? 'Drafting…' : onBehalfOfTeam ? 'Make pick' : 'Lock it in'}
-          </button>
-        </div>
+        {choose ? (
+          <div className="lockin__slots">
+            {slots!.map((s) => (
+              <button
+                key={s.overall}
+                className="button button--primary lockin__slot-btn"
+                onClick={() => onConfirm(s.overall)}
+                disabled={busy}
+              >
+                <span className="lockin__slot-round">Round {s.round}</span>
+                <span className="lockin__slot-pick">Pick {s.overall}</span>
+              </button>
+            ))}
+            <button className="button lockin__slot-cancel" onClick={requestClose} disabled={busy}>
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <div className="modal__actions">
+            <button className="button" onClick={requestClose} disabled={busy}>
+              Cancel
+            </button>
+            <button
+              className="button button--primary"
+              onClick={() => onConfirm(slots?.[0]?.overall)}
+              disabled={busy}
+            >
+              {busy ? 'Drafting…' : onBehalfOfTeam ? 'Make pick' : 'Lock it in'}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

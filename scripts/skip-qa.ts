@@ -176,6 +176,22 @@ class Draft {
     return overall;
   }
 
+  /**
+   * A team fills a SPECIFIC open slot it owns — the LockInModal slot choice a
+   * skipped-then-up-again picker gets. Mirrors the route's guard that `overall`
+   * is genuinely one of that team's open slots. Filling the frontier advances
+   * the clock; filling an earlier skipped slot leaves it untouched (applyPick).
+   */
+  humanPickAt(pos: number, overall: number): number {
+    const cap = Math.min(this.frontier, this.total);
+    const owns = openSlots(this.taken, cap, this.teamCount, this.draftType).some(
+      (s) => s.overall === overall && s.position === pos,
+    );
+    assert.ok(owns, `pos ${pos} does not own open slot ${overall}`);
+    this.applyPick(overall);
+    return overall;
+  }
+
   /** The frontier clock expires: skip or auto-pick, mirroring resolveExpiry. */
   expire(): 'skip' | 'autopick' | 'noop' {
     if (this.frontier > this.total) return 'noop'; // end-game, no clock
@@ -334,6 +350,45 @@ check('snake turn: BOTH back-to-back picks can be skipped, then caught up', () =
   d.humanPick(4); // p4 fills o5
   while (!d.complete) d.humanPick(d.onClockPos()!);
   d.assertComplete();
+});
+
+check('slot choice: skipped-then-up picker can fill the frontier slot first', () => {
+  // The LockInModal slot choice. p4 (4-team snake turn) is skipped on o4 and
+  // now up again on o5. Instead of the default (earliest o4 first), they pick
+  // INTO the frontier o5 — that advances the clock and leaves o4 owed behind.
+  const d = new Draft({ teamCount: 4, rounds: 2, draftType: 'SNAKE' });
+  d.humanPick(1);
+  d.humanPick(2);
+  d.humanPick(3); // frontier 4 (p4, round-1 turn pick)
+  assert.equal(d.expire(), 'skip'); // skip o4 → frontier 5 (still p4)
+  assert.equal(d.onClockPos(), 4);
+  assert.deepEqual(d.openBehindFrontier(), [4], 'o4 owed behind the frontier');
+
+  // Choose the on-the-clock slot (o5), not the earlier o4.
+  assert.equal(d.humanPickAt(4, 5), 5);
+  assert.equal(d.frontier, 6, 'filling the frontier advanced the clock');
+  assert.equal(d.onClockPos(), 3, 'p3 (round 2) now on the clock');
+  assert.deepEqual(d.openBehindFrontier(), [4], 'o4 still owed — untouched by the choice');
+
+  // Later, p4 catches up o4 (behind the frontier) — clock must not move.
+  assert.equal(d.humanPickAt(4, 4), 4);
+  assert.equal(d.frontier, 6, 'catching up the skipped slot left the clock alone');
+  while (!d.complete) d.humanPick(d.onClockPos()!);
+  d.assertComplete(); // integrity: every slot still owned by its snake team
+});
+
+check('slot choice: requesting a slot you do not own is rejected', () => {
+  // The route rejects an overall that is not one of the target team's open
+  // slots (a stale/forged client). Mirror that guard here.
+  const d = new Draft({ teamCount: 4, rounds: 2, draftType: 'SNAKE' });
+  d.humanPick(1);
+  d.humanPick(2);
+  d.humanPick(3); // frontier 4 (p4)
+  d.expire(); // skip o4 → frontier 5 (p4)
+  // o4 and o5 are p4's; o6 belongs to p3 — p4 must not be able to fill it.
+  assert.throws(() => d.humanPickAt(4, 6), /does not own open slot 6/);
+  // And a slot that isn't open at all (already picked) is rejected too.
+  assert.throws(() => d.humanPickAt(1, 1), /does not own open slot 1/);
 });
 
 check('snake end-game: frontier runs off the board, commissioner drains stragglers', () => {

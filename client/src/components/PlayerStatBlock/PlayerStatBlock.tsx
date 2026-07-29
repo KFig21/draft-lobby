@@ -1,4 +1,5 @@
 import { POSITION_COLORS, type Position } from '@draft-lobby/shared';
+import type { ReactNode } from 'react';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import TrendingFlatIcon from '@mui/icons-material/TrendingFlat';
@@ -13,11 +14,17 @@ interface Props {
   isKeeper?: boolean;
 }
 
+interface HeaderProps extends Props {
+  /** Optional control rendered inline right after the name (e.g. a queue
+   * bookmark toggle in PlayerDetailModal). */
+  action?: ReactNode;
+}
+
 /** Position badge + name/team/bye/injury — shared between PickModal and
  * PlayerDetailModal. PickModal renders its pick-specific info (drafted by,
  * round/pick, rollback) between this and <PlayerStatGrid>; PlayerDetailModal
  * renders them back-to-back since there's no pick yet to describe. */
-export function PlayerHeader({ player, isKeeper }: Props) {
+export function PlayerHeader({ player, isKeeper, action }: HeaderProps) {
   const pos = player.position as Position;
   const injury = INJURY_ABBR[player.injury_status];
   return (
@@ -33,6 +40,7 @@ export function PlayerHeader({ player, isKeeper }: Props) {
               <LockOutlinedIcon sx={{ fontSize: 13 }} /> Keeper
             </span>
           )}
+          {action}
         </h3>
         <div className="player-stat-block__subtitle">
           <span className="muted">
