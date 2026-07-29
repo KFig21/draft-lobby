@@ -4,7 +4,6 @@ import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
 import { useNotifications } from '../../notifications/NotificationsContext';
 import { Avatar } from '../Avatar/Avatar';
-import { ThemeToggle } from '../ThemeToggle/ThemeToggle';
 import { NAV_ITEMS } from './NavDrawer';
 import './Sidebar.scss';
 
@@ -52,7 +51,6 @@ export function Sidebar() {
           <Avatar avatar={profile?.avatar ?? defaultAvatar(userId)} size={36} />
           <span className="sidebar__me-name">{username}</span>
         </NavLink>
-        <ThemeToggle className="sidebar__iconbtn" />
       </div>
     </aside>
   );

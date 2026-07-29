@@ -19,4 +19,35 @@
       padding-bottom: 0;
     }
   }
+
+  // Desktop-only top-right theme toggle (mobile keeps its own row in the nav
+  // drawer instead — see Navbar.tsx/NavDrawer.tsx). Fixed at the shell level,
+  // not any one page's own header, since the pages sharing this shell (Home,
+  // Settings, Friends…) don't all have the same header shape — one spot here
+  // covers all of them instead of adding it to each page individually.
+  &__theme-toggle {
+    display: none;
+
+    @include md {
+      display: grid;
+      place-items: center;
+      position: fixed;
+      top: $space * 1.5;
+      right: $space * 1.5;
+      z-index: 40;
+      width: 36px;
+      height: 36px;
+      border: none;
+      border-radius: $radius-sm;
+      background: $bg-raised;
+      color: $text-muted;
+      cursor: pointer;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+
+      &:hover {
+        background: $bg-overlay;
+        color: $text;
+      }
+    }
+  }
 }

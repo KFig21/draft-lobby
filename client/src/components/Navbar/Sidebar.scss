@@ -94,7 +94,12 @@
     display: flex;
     align-items: center;
     gap: $space;
-    padding-top: $space;
+    // Bleeds through .sidebar's own horizontal padding ($space*1.5 each side)
+    // so border-top spans the rail's full width instead of stopping short at
+    // the same inset as the nav links above it — padding-inline restores the
+    // content's horizontal position so nothing else here visually shifts.
+    margin-inline: -$space * 1.5;
+    padding: $space $space * 1.5 0;
     border-top: 1px solid $border;
   }
 
@@ -118,24 +123,6 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
-
-  &__iconbtn {
-    display: grid;
-    place-items: center;
-    width: 36px;
-    height: 36px;
-    flex-shrink: 0;
-    border: none;
-    border-radius: $radius-sm;
-    background: none;
-    color: $text-muted;
-    cursor: pointer;
-
-    &:hover {
-      background: $bg-overlay;
-      color: $text;
-    }
   }
 
   &__signout:hover {
