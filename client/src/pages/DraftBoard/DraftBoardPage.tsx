@@ -21,6 +21,7 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import EmojiEventsOutlinedIcon from '@mui/icons-material/EmojiEventsOutlined';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutlineOutlined';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
 import FastForwardIcon from '@mui/icons-material/FastForward';
 import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
@@ -37,6 +38,7 @@ import MenuIcon from '@mui/icons-material/Menu';
 import PauseIcon from '@mui/icons-material/Pause';
 import PauseCircleOutlineIcon from '@mui/icons-material/PauseCircleOutlineOutlined';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import SkipNextIcon from '@mui/icons-material/SkipNext';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
 import SmartToyOutlinedIcon from '@mui/icons-material/SmartToyOutlined';
@@ -60,6 +62,7 @@ import { DraftChat } from '../../components/DraftChat/DraftChat';
 import { DraftGrid, type ReactionEntry } from '../../components/DraftGrid/DraftGrid';
 import { DraftOutroModal } from '../../components/DraftOutroModal/DraftOutroModal';
 import { DraftResultsPanel } from '../../components/DraftResultsPanel/DraftResultsPanel';
+import { DraftUserSettingsModal } from '../../components/DraftUserSettingsModal/DraftUserSettingsModal';
 import { ErrorScreen } from '../../components/ErrorScreen/ErrorScreen';
 import { GradeBadge } from '../../components/GradeBadge/GradeBadge';
 import { KeeperManagerModal } from '../../components/KeeperManager/KeeperManagerModal';
@@ -84,12 +87,24 @@ import { useAuth } from '../../auth/AuthContext';
 import { useLobby } from '../../hooks/useLobby';
 import { usePlayers } from '../../hooks/usePlayers';
 import { api } from '../../lib/api';
-import { getDraftCellStyle, getShowCellReactions } from '../../lib/draftCellStyle';
+import {
+  getDraftCellStyle,
+  getShowCellReactions,
+  setDraftCellStyle,
+  setShowCellReactions,
+  type DraftCellStyle,
+} from '../../lib/draftCellStyle';
 import { mostCommonGrade } from '../../lib/draftGrade';
 import { exportDraftCsv, exportDraftExcel } from '../../lib/exportDraft';
 import { avatarForTeam } from '../../lib/teamAvatar';
 import { supabase } from '../../supabase';
 import { useToast } from '../../toast/ToastContext';
+import {
+  getToastPrefs,
+  setToastCategoryEnabled,
+  setToastsEnabled,
+  type ToastCategory,
+} from '../../toast/toastPrefs';
 import type {
   ChatMessageRow,
   ChatReactionRow,
@@ -157,12 +172,62 @@ export function DraftBoardPage() {
   const { lobby, teams, members, picks, keeperOptions, loading } = useLobby(id);
   const { players, loading: playersLoading } = usePlayers();
 
-  // Personal display preference (Settings > Draft board), not per-lobby —
-  // read once on mount, same as toastPrefs.
-  const [cellStyle] = useState(() => getDraftCellStyle());
-  const [showCellReactions] = useState(() => getShowCellReactions());
+  // Personal preferences (also editable from Settings directly) — read once
+  // on mount, then kept live so the gear-icon settings modal below (see
+  // showUserSettings) can update them without a page refresh.
+  const [cellStyle, setCellStyleState] = useState(() => getDraftCellStyle());
+  const [showCellReactions, setShowCellReactionsState] = useState(() => getShowCellReactions());
+  const [toastPrefs, setToastPrefsState] = useState(() => getToastPrefs());
+  const [showUserSettings, setShowUserSettings] = useState(false);
+
+  function updateCellStyle(style: DraftCellStyle) {
+    setDraftCellStyle(style);
+    setCellStyleState(style);
+  }
+  function updateShowCellReactions(show: boolean) {
+    setShowCellReactions(show);
+    setShowCellReactionsState(show);
+  }
+  function updateToastsEnabled(enabled: boolean) {
+    setToastsEnabled(enabled);
+    setToastPrefsState((p) => ({ ...p, enabled }));
+  }
+  function updateToastCategory(category: ToastCategory, enabled: boolean) {
+    setToastCategoryEnabled(category, enabled);
+    setToastPrefsState((p) => ({ ...p, categories: { ...p.categories, [category]: enabled } }));
+  }
   const [filter, setFilter] = useState<Filter>('ALL');
   const [search, setSearch] = useState('');
+  // Bye weeks to hide from the player pool (desktop/fullscreen only) — a set
+  // rather than a single value since a bye-heavy roster may want to dodge
+  // more than one week at once. Tucked behind a dropdown (not a chip row)
+  // since up to 18 weeks of chips would dominate the filter bar.
+  const [excludedByeWeeks, setExcludedByeWeeks] = useState<Set<number>>(new Set());
+  const [byeDropdownOpen, setByeDropdownOpen] = useState(false);
+  const byeDropdownRef = useRef<HTMLDivElement>(null);
+  function toggleByeWeekFilter(week: number) {
+    setExcludedByeWeeks((prev) => {
+      const next = new Set(prev);
+      if (next.has(week)) next.delete(week);
+      else next.add(week);
+      return next;
+    });
+  }
+  useEffect(() => {
+    if (!byeDropdownOpen) return;
+    function onPointerDown(e: MouseEvent) {
+      if (!byeDropdownRef.current?.contains(e.target as Node)) setByeDropdownOpen(false);
+    }
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') setByeDropdownOpen(false);
+    }
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [byeDropdownOpen]);
   const [mobileTab, setMobileTab] = useState<MobileTab>('board');
   const [panelTab, setPanelTab] = useState<PanelTab>('players');
   const [rosterTeamSel, setRosterTeamSel] = useState<string | null>(null);
@@ -1058,10 +1123,21 @@ export function DraftBoardPage() {
       } else if (filter !== 'ALL' && p.position !== filter) {
         return false;
       }
+      if (p.bye_week != null && excludedByeWeeks.has(p.bye_week)) return false;
       if (q && !p.name.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [players, draftedIds, filter, search, queue]);
+  }, [players, draftedIds, filter, search, queue, excludedByeWeeks]);
+  // Only offer bye weeks that actually appear in the pool right now (not a
+  // fixed 1-18 list) — so the filter row shrinks as the board fills up.
+  const availableByeWeeks = useMemo(() => {
+    const weeks = new Set<number>();
+    for (const p of players) {
+      if (draftedIds.has(p.id)) continue;
+      if (p.bye_week != null) weeks.add(p.bye_week);
+    }
+    return Array.from(weeks).sort((a, b) => a - b);
+  }, [players, draftedIds]);
 
   if (loading || playersLoading)
     return (
@@ -1172,6 +1248,10 @@ export function DraftBoardPage() {
     setRosterTeamSel(teamId);
     setPanelTab('roster');
     setMobileTab('roster');
+    // In fullscreen the sidebar itself isn't rendered — the Roster panel only
+    // becomes visible inside the Menu modal, so switching tabs alone would be
+    // a silent no-op from the user's perspective.
+    if (isFullscreen) setShowFsMenu(true);
   }
 
   // `overall` names a specific open slot to fill — set only when a skipped
@@ -1533,6 +1613,49 @@ export function DraftBoardPage() {
     const flexSlots = new Set(
       lobby.settings.rosterComposition.filter((r) => r.count > 0).map((r) => r.slot),
     );
+    // Same dropdown either way — only its position in the layout changes.
+    // Next to the chips there's room to spare on the desktop sidebar, but in
+    // the fullscreen Menu modal the chip row is already tight, so it moves
+    // down next to the search box instead.
+    const byeFilter = availableByeWeeks.length > 0 && (
+      <div className="pool__byefilter" ref={byeDropdownRef}>
+        <button
+          type="button"
+          className={`pool__byefilter-btn ${excludedByeWeeks.size > 0 ? 'is-active' : ''}`}
+          onClick={() => setByeDropdownOpen((o) => !o)}
+          aria-expanded={byeDropdownOpen}
+        >
+          Hide byes
+          {excludedByeWeeks.size > 0 && (
+            <span className="pool__byefilter-count">{excludedByeWeeks.size}</span>
+          )}
+          <ExpandMoreIcon fontSize="small" />
+        </button>
+        {byeDropdownOpen && (
+          <div className="pool__byefilter-panel">
+            {availableByeWeeks.map((week) => (
+              <label key={week} className="pool__byefilter-opt">
+                <input
+                  type="checkbox"
+                  checked={excludedByeWeeks.has(week)}
+                  onChange={() => toggleByeWeekFilter(week)}
+                />
+                Week {week}
+              </label>
+            ))}
+            {excludedByeWeeks.size > 0 && (
+              <button
+                type="button"
+                className="pool__byefilter-clear"
+                onClick={() => setExcludedByeWeeks(new Set())}
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    );
     return (
       <>
         {queuedPlayers.length > 0 && (
@@ -1590,13 +1713,22 @@ export function DraftBoardPage() {
               <span className="chip__dot"> · </span>
               <span className="chip__count">{queuedPlayers.length}</span>
             </button>
+            {!isFullscreen && byeFilter && (
+              <>
+                <span className="pool__filters-divider" aria-hidden />
+                {byeFilter}
+              </>
+            )}
           </div>
-          <input
-            className="pool__search"
-            placeholder="Search players…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+          <div className="pool__searchrow">
+            <input
+              className="pool__search"
+              placeholder="Search players…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            {isFullscreen && byeFilter}
+          </div>
         </div>
         <div className="pool__list">
           {available.slice(0, 200).map((p) => (
@@ -1864,30 +1996,41 @@ export function DraftBoardPage() {
               </span>
             ) : (
               <>
-                <span className="draft__onclock-team">
-                  {onClockTeam && (
+                {onClockTeam ? (
+                  <button
+                    type="button"
+                    className="draft__onclock-team draft__onclock-team--btn"
+                    onClick={() => openTeamRoster(onClockTeam.id)}
+                    title={`View ${onClockTeam.name}'s lineup`}
+                  >
                     <span className="draft__onclock-avatar">
                       <Avatar
                         avatar={avatarForTeam(onClockTeam, members)}
                         size={isFullscreen ? 30 : 20}
                       />
                     </span>
-                  )}
-                  {onClockTeam
-                    ? onClockTeam.name
-                    : skipped.length > 0
-                      ? 'Waiting on skipped picks'
-                      : 'Waiting…'}
-                  {isMyTurn && !isPaused && (
-                    <span className="draft__yourturn">Your pick</span>
-                  )}
-                  {!isMyTurn && iAmSkipped && !isPaused && (
-                    <span className="draft__yourturn draft__yourturn--skipped">
-                      You can still pick{myNextRound ? ` · R${myNextRound}` : ''}
-                    </span>
-                  )}
-                  {isPaused && <span className="draft__paused-pill">Paused</span>}
-                </span>
+                    {onClockTeam.name}
+                    {isMyTurn && !isPaused && (
+                      <span className="draft__yourturn">Your pick</span>
+                    )}
+                    {!isMyTurn && iAmSkipped && !isPaused && (
+                      <span className="draft__yourturn draft__yourturn--skipped">
+                        You can still pick{myNextRound ? ` · R${myNextRound}` : ''}
+                      </span>
+                    )}
+                    {isPaused && <span className="draft__paused-pill">Paused</span>}
+                  </button>
+                ) : (
+                  <span className="draft__onclock-team">
+                    {skipped.length > 0 ? 'Waiting on skipped picks' : 'Waiting…'}
+                    {!isMyTurn && iAmSkipped && !isPaused && (
+                      <span className="draft__yourturn draft__yourturn--skipped">
+                        You can still pick{myNextRound ? ` · R${myNextRound}` : ''}
+                      </span>
+                    )}
+                    {isPaused && <span className="draft__paused-pill">Paused</span>}
+                  </span>
+                )}
                 {onClockTeam && (
                   <span className="muted">
                     Round {round} · Pick {lobby.current_overall}
@@ -1949,6 +2092,17 @@ export function DraftBoardPage() {
             ) : (
               <FullscreenIcon fontSize="small" />
             )}
+          </button>
+          {/* Desktop/fullscreen only (see &__settings-btn) — personal
+              draft-board + notification prefs without leaving the room.
+              Mobile already reaches these via the nav drawer -> Settings. */}
+          <button
+            className="draft__icon-btn draft__settings-btn"
+            onClick={() => setShowUserSettings(true)}
+            aria-label="Your settings"
+            title="Your settings"
+          >
+            <SettingsOutlinedIcon fontSize="small" />
           </button>
           <ThemeToggle className="draft__icon-btn draft__theme-btn" />
         </div>
@@ -2375,6 +2529,19 @@ export function DraftBoardPage() {
         >
           <div className="draft__fs-sidebar">{renderSidebarPanels()}</div>
         </Modal>
+      )}
+
+      {showUserSettings && (
+        <DraftUserSettingsModal
+          onClose={() => setShowUserSettings(false)}
+          cellStyle={cellStyle}
+          onCellStyleChange={updateCellStyle}
+          showCellReactions={showCellReactions}
+          onShowCellReactionsChange={updateShowCellReactions}
+          toastPrefs={toastPrefs}
+          onToastsEnabledChange={updateToastsEnabled}
+          onToastCategoryChange={updateToastCategory}
+        />
       )}
     </div>
   );

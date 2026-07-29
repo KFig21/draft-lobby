@@ -1,0 +1,59 @@
+@use 'variables' as *;
+
+// Standalone re-implementation of SettingsPage.scss's row/toggle-category
+// look, not a shared import — this renders from a different lazy-loaded
+// route (the draft board) than Settings, so its own stylesheet keeps the two
+// pages' bundles independent instead of coupling them together.
+.draft-user-settings {
+  display: flex;
+  flex-direction: column;
+  gap: $space * 2.5;
+
+  &__section {
+    h3 {
+      font-size: 1.05rem;
+      margin-bottom: $space * 0.5;
+    }
+  }
+
+  &__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $space;
+    padding: $space * 1.25 0;
+    border-top: 1px solid $border;
+  }
+
+  &__row-main {
+    display: flex;
+    align-items: baseline;
+    gap: $space;
+    min-width: 0;
+  }
+
+  &__row-name {
+    font-weight: 600;
+    font-size: 1rem;
+  }
+
+  &__toast-categories {
+    display: flex;
+    flex-direction: column;
+    gap: $space * 1.25;
+    padding: $space 0 $space * 1.5 $space * 2;
+    transition: opacity 150ms ease;
+
+    &.is-disabled {
+      opacity: 0.45;
+    }
+  }
+
+  &__toast-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $space;
+    font-size: 0.92rem;
+  }
+}

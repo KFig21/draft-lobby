@@ -67,6 +67,16 @@
   overflow: hidden;
   background: $bg; // fills correctly in fullscreen (TV mode)
 
+  // Light mode: the board reads as its own distinct white canvas rather than
+  // blending into the app's general page-grey ($bg elsewhere is used for
+  // Home/Settings/etc, which is a deliberately different, slightly-grey
+  // surface) — without this, every cell style looked washed out regardless
+  // of which one was picked. Dark mode's near-black canvas already reads
+  // fine as-is, so left alone.
+  :root[data-theme='light'] & {
+    background: $bg-raised;
+  }
+
   &__topbar {
     position: relative; // anchors &__topbar-fill
     display: flex;
@@ -535,6 +545,17 @@
     }
   }
 
+  // Personal draft-board/notification settings (DraftUserSettingsModal) —
+  // desktop/fullscreen only, same as &__fs-btn/&__theme-btn above; mobile
+  // already reaches the same prefs via the nav drawer -> Settings.
+  &__settings-btn {
+    display: none;
+
+    @include lg {
+      display: grid;
+    }
+  }
+
   // Hidden on mobile, shown desktop-only.
   &__export-btn {
     @extend %draft-chip-btn;
@@ -629,6 +650,21 @@
     align-items: center;
     gap: $space;
     font-weight: 700;
+  }
+
+  &__onclock-team--btn {
+    border: none;
+    background: none;
+    padding: 0;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    font-weight: 700;
+
+    &:hover,
+    &:focus-visible {
+      color: $primary-hover;
+    }
   }
 
   &__onclock-avatar {
@@ -1229,6 +1265,7 @@
 
 // Player pool
 .pool {
+
   // On mobile the dedicated queue block ate too much vertical space above an
   // already-cramped player list — the "Bookmarked" filter chip below covers
   // the same need without it. Desktop/fullscreen (both only ever @include lg
@@ -1277,6 +1314,129 @@
     }
   }
 
+  // Separates the position chips from the bye-week dropdown — hidden
+  // whenever the dropdown itself is (mobile), so it never strands a lone
+  // divider with nothing after it.
+  &__filters-divider {
+    display: none;
+
+    @include lg {
+      display: block;
+      align-self: stretch;
+      width: 1px;
+      margin: 2px 0;
+      background: $border;
+    }
+  }
+
+  // Bye-week exclusion — a dropdown rather than a chip per week (up to 18 of
+  // them) so it doesn't dominate the filter bar. Desktop/fullscreen only; on
+  // mobile the position chips above already cover most of what a cramped
+  // player list needs to be narrowed by.
+  &__byefilter {
+    display: none;
+    position: relative;
+    align-self: center;
+
+    @include lg {
+      display: block;
+    }
+  }
+
+  &__byefilter-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: $space * 0.6 $space * 1;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: $bg;
+    color: $text-muted;
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+
+    svg {
+      font-size: 1.1rem;
+    }
+
+    &:hover {
+      border-color: $text-muted;
+      color: $text;
+    }
+
+    // Warning (not the usual active/primary accent) — this is an exclusion
+    // filter, so "active" reads as "something is being hidden right now".
+    &.is-active {
+      border-color: $warning;
+      color: $warning;
+    }
+  }
+
+  &__byefilter-count {
+    display: inline-grid;
+    place-items: center;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 999px;
+    background: $warning;
+    color: #05231a;
+    font-size: 0.68rem;
+  }
+
+  &__byefilter-panel {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    gap: $space * 0.4;
+    width: max-content;
+    max-height: 260px;
+    overflow-y: auto;
+    padding: $space;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: $bg-raised;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
+  }
+
+  &__byefilter-opt {
+    display: flex;
+    align-items: center;
+    gap: $space * 0.6;
+    font-size: 0.82rem;
+    cursor: pointer;
+    white-space: nowrap;
+
+    input {
+      width: 15px;
+      height: 15px;
+    }
+  }
+
+  &__byefilter-clear {
+    align-self: stretch;
+    margin-top: $space * 0.4;
+    padding-top: $space * 0.6;
+    border: none;
+    border-top: 1px solid $border;
+    background: none;
+    color: $text-muted;
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover {
+      color: $text;
+    }
+  }
+
   // Pick count on a position filter chip, e.g. "QB · 2".
   .chip__dot {
     margin: 0 4px;
@@ -1287,7 +1447,18 @@
     font-weight: 800;
   }
 
+  // Plain wrapper the rest of the time — only actually a flex row in
+  // fullscreen, where the bye-week dropdown lives here instead of the (much
+  // tighter) chip row above.
+  &__searchrow {
+    display: flex;
+    gap: $space;
+    align-items: flex-start;
+  }
+
   &__search {
+    flex: 1;
+    min-width: 0;
     padding: $space;
     border: 1px solid $border;
     border-radius: $radius-sm;

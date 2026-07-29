@@ -84,6 +84,10 @@
     &--bench::before {
       background: $text-muted;
     }
+
+    &--bye::before {
+      background: $warning;
+    }
   }
 
   &__section-count {
@@ -134,6 +138,82 @@
     padding: 3px 8px;
     background: color-mix(in srgb, var(--pos) 26%, transparent);
     color: $text;
+  }
+}
+
+// Bye-week groupings for the selected team's drafted players — flags a
+// pile-up (2+ starters/bench sharing an off week) rather than just listing them.
+.bye-breakdown {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: $space * 0.6;
+
+  &__row {
+    display: flex;
+    align-items: baseline;
+    gap: $space * 0.75;
+    padding: $space * 0.6 $space * 0.85;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: $bg;
+    font-size: 0.82rem;
+
+    &--stacked {
+      border-color: rgba($warning, 0.45);
+      background: color-mix(in srgb, $warning 8%, $bg);
+    }
+  }
+
+  &__week {
+    flex-shrink: 0;
+    width: 2.6rem; // fixed so "Wk 7" and "Wk 12" both line up with the count/players columns
+    font-weight: 800;
+    font-size: 0.74rem;
+    font-variant-numeric: tabular-nums;
+    text-transform: uppercase;
+    color: $text-muted;
+
+    .bye-breakdown__row--stacked & {
+      color: $warning;
+    }
+  }
+
+  &__count {
+    flex-shrink: 0;
+    display: inline-grid;
+    place-items: center;
+    width: 20px; // fixed (not min-width) so every count badge is the same size
+    height: 20px;
+    border-radius: 999px;
+    background: $bg-overlay;
+    font-weight: 800;
+    font-size: 0.72rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__players {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: $space * 0.4 $space * 0.75;
+  }
+
+  &__player {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: $text-muted;
+    white-space: nowrap;
+  }
+
+  &__dot {
+    flex-shrink: 0;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--pos);
   }
 }
 

@@ -113,6 +113,19 @@ export function TeamLineup({
   const rows = buildLineup(selectedTeamId, picks, playersById, settings);
   const starters = rows.filter((r) => r.slot !== 'BENCH');
   const bench = rows.filter((r) => r.slot === 'BENCH');
+
+  // Group every drafted player (starter or bench) by bye week, so an owner
+  // can spot a pile-up of players sharing the same off week at a glance.
+  const byeMap = new Map<number, PlayerRow[]>();
+  for (const r of rows) {
+    if (!r.player || r.player.bye_week == null) continue;
+    const group = byeMap.get(r.player.bye_week);
+    if (group) group.push(r.player);
+    else byeMap.set(r.player.bye_week, [r.player]);
+  }
+  const byeGroups = Array.from(byeMap.entries())
+    .sort(([a], [b]) => a - b)
+    .map(([week, byePlayers]) => ({ week, players: byePlayers }));
   const selectedTeam = teams.find((t) => t.id === selectedTeamId);
   const canToggleAuto =
     !!onToggleAuto &&
@@ -205,6 +218,39 @@ export function TeamLineup({
           <ul className="lineup-view__rows">
             {bench.map((r, i) => (
               <LineupSlot key={`b${i}`} row={r} onPickClick={onPickClick} />
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {byeGroups.length > 0 && (
+        <section className="lineup-view__section">
+          <h4 className="lineup-view__section-title lineup-view__section-title--bye">
+            <span>Bye week breakdown</span>
+            <span className="lineup-view__section-count">{byeGroups.length}</span>
+          </h4>
+          <ul className="bye-breakdown">
+            {byeGroups.map(({ week, players: byePlayers }) => (
+              <li
+                key={week}
+                className={`bye-breakdown__row${
+                  byePlayers.length > 1 ? ' bye-breakdown__row--stacked' : ''
+                }`}
+              >
+                <span className="bye-breakdown__week">Wk {week}</span>
+                <span className="bye-breakdown__count">{byePlayers.length}</span>
+                <span className="bye-breakdown__players">
+                  {byePlayers.map((p) => (
+                    <span key={p.id} className="bye-breakdown__player">
+                      <span
+                        className="bye-breakdown__dot"
+                        style={{ ['--pos' as string]: POSITION_COLORS[p.position as Position] }}
+                      />
+                      {p.name}
+                    </span>
+                  ))}
+                </span>
+              </li>
             ))}
           </ul>
         </section>
