@@ -295,6 +295,47 @@ check('same team skipped twice → two open slots, earliest filled first', () =>
   d.assertComplete();
 });
 
+check('snake turn: skipping the last pick of a round lands you on your own next pick', () => {
+  // 4 teams snake: p4 has back-to-back picks — overall 4 (r1 last) and overall
+  // 5 (r2 first). Skipping o4 must move the clock onto o5, which is ALSO p4.
+  const d = new Draft({ teamCount: 4, rounds: 2, draftType: 'SNAKE' });
+  d.humanPick(1);
+  d.humanPick(2);
+  d.humanPick(3); // frontier now 4, p4 on the clock (round-1 turn pick)
+  assert.equal(d.frontier, 4);
+  assert.equal(d.onClockPos(), 4);
+
+  assert.equal(d.expire(), 'skip'); // p4 stalls on o4 → skipped
+  assert.equal(d.frontier, 5, 'clock moved to the next pick');
+  assert.equal(d.onClockPos(), 4, 'which is STILL p4 (the snake turn) — fresh clock');
+  assert.equal(d.team(4).timeouts, 1);
+  assert.deepEqual(d.openBehindFrontier(), [4], 'their round-1 slot stays open');
+
+  // They keep thinking and now make BOTH picks in slot order.
+  assert.equal(d.humanPick(4), 4, 'first pick fills the earlier (skipped) slot');
+  assert.equal(d.frontier, 5, 'still on the clock for their round-2 pick');
+  assert.equal(d.humanPick(4), 5, 'second pick fills the on-clock slot');
+  assert.equal(d.onClockPos(), 3, 'clock now advances to the next team (p3, round 2)');
+});
+
+check('snake turn: BOTH back-to-back picks can be skipped, then caught up', () => {
+  const d = new Draft({ teamCount: 4, rounds: 2, draftType: 'SNAKE' });
+  d.humanPick(1);
+  d.humanPick(2);
+  d.humanPick(3); // frontier 4 (p4)
+  assert.equal(d.expire(), 'skip'); // skip o4 → frontier 5 (still p4)
+  assert.equal(d.expire(), 'skip'); // skip o5 too → frontier 6 (p3)
+  assert.equal(d.team(4).timeouts, 2);
+  assert.equal(d.onClockPos(), 3, 'p3 now on the clock (round 2)');
+  assert.deepEqual(d.openBehindFrontier(), [4, 5], 'p4 owes two open slots');
+
+  // p3 and everyone else finish; p4 catches up its two whenever.
+  d.humanPick(4); // p4 fills o4
+  d.humanPick(4); // p4 fills o5
+  while (!d.complete) d.humanPick(d.onClockPos()!);
+  d.assertComplete();
+});
+
 check('snake end-game: frontier runs off the board, commissioner drains stragglers', () => {
   const d = new Draft({ teamCount: 3, rounds: 2, draftType: 'SNAKE' });
   for (let i = 0; i < 6; i++) d.expire(); // skip all six slots
