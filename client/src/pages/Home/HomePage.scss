@@ -128,9 +128,18 @@
 
 .feed-card {
   display: flex;
-  gap: $space * 1.5;
+  flex-direction: column;
   @include card-surface;
   padding: $space * 2;
+
+  // Avatars + text content, side by side — what &__reactions used to sit
+  // inside (as part of &__body). Its own row so &__lower (below) always
+  // starts flush at the card's left edge, instead of drifting right by
+  // however many avatars happen to be stacked here.
+  &__upper {
+    display: flex;
+    gap: $space * 1.5;
+  }
 
   &__avatars {
     display: flex;
@@ -149,6 +158,10 @@
   &__body {
     flex: 1;
     min-width: 0;
+  }
+
+  &__lower {
+    margin-top: $space * 1.5;
   }
 
   &__text {
@@ -189,7 +202,6 @@
     flex-wrap: wrap;
     align-items: center;
     gap: $space * 0.5;
-    margin-top: $space * 1.5;
   }
 
   // Wraps into rows instead of one ever-widening row now that the emoji set

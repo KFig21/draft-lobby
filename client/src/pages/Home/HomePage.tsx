@@ -328,57 +328,65 @@ function FeedCard({
 
   return (
     <li className="feed-card">
-      <div className="feed-card__avatars">
-        {item.actors.slice(0, 3).map((a) => (
-          <Avatar key={a.id} avatar={a.avatar ?? defaultAvatar(a.id)} size={40} />
-        ))}
-      </div>
-      <div className="feed-card__body">
-        <p className="feed-card__text">
-          {item.type === 'DRAFT_COMPLETED' && (
-            <>
-              <strong>{nameFor(lead?.username, lead?.id, myUserId)}</strong>
-              {extra > 0 && ` & ${extra} other${extra > 1 ? 's' : ''}`} completed{' '}
-              {item.lobbyName ? <strong>{item.lobbyName}</strong> : 'a draft'}{' '}
-              <SportsFootballIcon className="feed-card__icon" sx={{ fontSize: 17 }} />
-            </>
-          )}
-          {item.type === 'FRIEND_ACCEPTED' && (
-            <>
-              <strong>{nameFor(lead?.username, lead?.id, myUserId)}</strong> and{' '}
-              <strong>{nameFor(item.subject?.username, item.subject?.id, myUserId)}</strong> are
-              now friends <HandshakeIcon className="feed-card__icon" sx={{ fontSize: 17 }} />
-            </>
-          )}
-          {item.type === 'OPEN_LOBBY_CREATED' && (
-            <>
-              <strong>{nameFor(lead?.username, lead?.id, myUserId)}</strong> opened{' '}
-              <strong>{item.lobbyName ?? 'a lobby'}</strong>
-              {/* Only offer to join if the draft hasn't started yet. */}
-              {item.lobbyId &&
-              (item.lobbyStatus === 'SETUP' || item.lobbyStatus === 'SCHEDULED') ? (
-                <>
-                  {' '}—{' '}
-                  <Link to={`/lobby/${item.lobbyId}`} className="feed-card__link">
-                    join up →
-                  </Link>
-                </>
-              ) : (
-                item.lobbyStatus && ' — draft already started'
-              )}
-            </>
-          )}
-        </p>
-        <div className="feed-card__foot">
-          <span className="feed-card__time">{timeAgo(item.createdAt)}</span>
-          {/* Drafts the user is part of link straight to the lobby. */}
-          {item.isMember && item.lobbyId && item.type !== 'OPEN_LOBBY_CREATED' && (
-            <Link to={`/lobby/${item.lobbyId}/draft`} className="feed-card__link">
-              View draft →
-            </Link>
-          )}
+      {/* Upper: avatars + text content, side by side. */}
+      <div className="feed-card__upper">
+        <div className="feed-card__avatars">
+          {item.actors.slice(0, 3).map((a) => (
+            <Avatar key={a.id} avatar={a.avatar ?? defaultAvatar(a.id)} size={40} />
+          ))}
         </div>
+        <div className="feed-card__body">
+          <p className="feed-card__text">
+            {item.type === 'DRAFT_COMPLETED' && (
+              <>
+                <strong>{nameFor(lead?.username, lead?.id, myUserId)}</strong>
+                {extra > 0 && ` & ${extra} other${extra > 1 ? 's' : ''}`} completed{' '}
+                {item.lobbyName ? <strong>{item.lobbyName}</strong> : 'a draft'}{' '}
+                <SportsFootballIcon className="feed-card__icon" sx={{ fontSize: 17 }} />
+              </>
+            )}
+            {item.type === 'FRIEND_ACCEPTED' && (
+              <>
+                <strong>{nameFor(lead?.username, lead?.id, myUserId)}</strong> and{' '}
+                <strong>{nameFor(item.subject?.username, item.subject?.id, myUserId)}</strong> are
+                now friends <HandshakeIcon className="feed-card__icon" sx={{ fontSize: 17 }} />
+              </>
+            )}
+            {item.type === 'OPEN_LOBBY_CREATED' && (
+              <>
+                <strong>{nameFor(lead?.username, lead?.id, myUserId)}</strong> opened{' '}
+                <strong>{item.lobbyName ?? 'a lobby'}</strong>
+                {/* Only offer to join if the draft hasn't started yet. */}
+                {item.lobbyId &&
+                (item.lobbyStatus === 'SETUP' || item.lobbyStatus === 'SCHEDULED') ? (
+                  <>
+                    {' '}—{' '}
+                    <Link to={`/lobby/${item.lobbyId}`} className="feed-card__link">
+                      join up →
+                    </Link>
+                  </>
+                ) : (
+                  item.lobbyStatus && ' — draft already started'
+                )}
+              </>
+            )}
+          </p>
+          <div className="feed-card__foot">
+            <span className="feed-card__time">{timeAgo(item.createdAt)}</span>
+            {/* Drafts the user is part of link straight to the lobby. */}
+            {item.isMember && item.lobbyId && item.type !== 'OPEN_LOBBY_CREATED' && (
+              <Link to={`/lobby/${item.lobbyId}/draft`} className="feed-card__link">
+                View draft →
+              </Link>
+            )}
+          </div>
+        </div>
+      </div>
 
+      {/* Lower: reactions — its own full-width row so its left edge is
+          consistent card to card, instead of drifting with however many
+          avatars happen to be stacked in &__upper above it. */}
+      <div className="feed-card__lower">
         <FeedReactions item={item} myUserId={myUserId} onReact={onReact} />
       </div>
     </li>
@@ -411,6 +419,13 @@ function FeedReactions({
 
   return (
     <div className="feed-card__reactions">
+      <button
+        className="reaction reaction--add"
+        aria-label="Add reaction"
+        onClick={() => setOpen((o) => !o)}
+      >
+        <AddReactionIcon sx={{ fontSize: 18 }} />
+      </button>
       {active.map((emoji) => {
         const count = item.reactions[emoji] ?? 0;
         const mine = item.myReactions.includes(emoji);
@@ -436,13 +451,6 @@ function FeedReactions({
           <PeopleAltOutlinedIcon sx={{ fontSize: 15 }} />
         </button>
       )}
-      <button
-        className="reaction reaction--add"
-        aria-label="Add reaction"
-        onClick={() => setOpen((o) => !o)}
-      >
-        <AddReactionIcon sx={{ fontSize: 18 }} />
-      </button>
       {open && (
         <div className="feed-card__palette">
           {REACTION_EMOJIS.map((emoji) => (
