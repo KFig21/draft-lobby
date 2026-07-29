@@ -126,7 +126,11 @@ export function SettingsPage() {
             <span className="muted">How a drafted pick looks on the board</span>
           </div>
         </div>
-        <DraftCellStylePicker value={cellStyle} onChange={updateCellStyle} />
+        <DraftCellStylePicker
+          value={cellStyle}
+          onChange={updateCellStyle}
+          showReactions={showCellReactions}
+        />
         <div className="settings__row">
           <div className="settings__row-main">
             <span className="settings__row-name">Reactions on cells</span>

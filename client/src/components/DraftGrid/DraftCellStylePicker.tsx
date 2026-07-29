@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { DraftCellStyle } from '../../lib/draftCellStyle';
 import type { PickRow } from '../../lib/types';
 import { BoldPickCell } from './components/BoldPickCell/BoldPickCell';
+import type { ReactionEntry } from './components/PickCell/PickCell';
 import { PickCell } from './components/PickCell/PickCell';
 import { randomSamplePlayer } from './samplePlayers';
 import './DraftCellStylePicker.scss';
@@ -18,6 +19,10 @@ const SAMPLE_PICK: PickRow = {
   picked_at: new Date().toISOString(),
 };
 
+// Fake reaction/comment data for the swatch preview — only meaningful when
+// showReactions is on (see the Props comment below).
+const SAMPLE_ENTRY: ReactionEntry = { counts: { '🔥': 2 }, mine: new Set() };
+
 const OPTIONS: { value: DraftCellStyle; label: string }[] = [
   { value: 'default', label: 'Default' },
   { value: 'bold', label: 'Big screen' },
@@ -29,9 +34,14 @@ const OPTIONS: { value: DraftCellStyle; label: string }[] = [
 export function DraftCellStylePicker({
   value,
   onChange,
+  showReactions,
 }: {
   value: DraftCellStyle;
   onChange: (style: DraftCellStyle) => void;
+  /** Mirrors the "Reactions on cells" setting — shows a sample reaction/
+   * comment flag-chip on the previews when on, so this control's own effect
+   * is visible right next to it instead of only on the real board. */
+  showReactions: boolean;
 }) {
   // Picked once per page load, not per render — the point is a fun surprise
   // each visit to Settings, not a different player on every re-render.
@@ -63,13 +73,18 @@ export function DraftCellStylePicker({
               <tbody>
                 <tr>
                   {opt.value === 'bold' ? (
-                    <BoldPickCell pick={SAMPLE_PICK} player={player} />
+                    <BoldPickCell
+                      pick={SAMPLE_PICK}
+                      player={player}
+                      entry={showReactions ? SAMPLE_ENTRY : undefined}
+                      hasComment={showReactions}
+                    />
                   ) : (
                     <PickCell
                       pick={SAMPLE_PICK}
                       player={player}
-                      entry={undefined}
-                      hasComment={false}
+                      entry={showReactions ? SAMPLE_ENTRY : undefined}
+                      hasComment={showReactions}
                       onEnter={() => {}}
                       onLeave={() => {}}
                     />

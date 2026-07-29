@@ -11,6 +11,13 @@
   --border: #2e3347;
   --text: #e8eaf2;
   --text-muted: #8a94a6;
+  // A drafted pick's own background in the "Default" board cell style — its
+  // own dedicated token (not --bg/--bg-raised) so it can be tuned without
+  // affecting the app's general page/card surfaces. Dark mode's default cells
+  // already read fine blended into the board (see --bg above) — same value
+  // here on purpose, so dark mode is unchanged; only light mode (below) needed
+  // its own distinct value.
+  --cell-bg: #12141d;
   // Keeper gold: bright #e0a92b reads fine here (8.6:1 against this near-black
   // bg) but drops to ~2.1:1 on the light theme's near-white surfaces — too low
   // to read as text/icon color. Same hue, darkened for light mode below.

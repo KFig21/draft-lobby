@@ -152,6 +152,13 @@
     left: 0;
     z-index: 3; // top-left corner sits above both sticky header and round column
     background: $bg;
+
+    // Matches the board canvas's own light-mode override (DraftBoardPage.scss
+    // — the corner otherwise sits on the sticky header, not the canvas behind
+    // it, so it needs its own copy of that override to stay in sync).
+    :root[data-theme='light'] & {
+      background: $bg-raised;
+    }
   }
 
   &__cell {

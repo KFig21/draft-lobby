@@ -9,6 +9,9 @@ $bg-hover: var(--bg-hover);
 $border: var(--border);
 $text: var(--text);
 $text-muted: var(--text-muted);
+// A drafted pick's own background in the "Default" board cell style — see
+// --cell-bg in global.scss for why this isn't just $bg or $bg-raised.
+$cell-bg: var(--cell-bg);
 
 $primary: #137a83;
 $primary-hover: #178691;

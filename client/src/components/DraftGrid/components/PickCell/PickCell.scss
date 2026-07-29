@@ -1,8 +1,15 @@
 @use 'variables' as *;
 
 // Made picks: clickable, and lift on hover (desktop). Touch has no hover.
-.draft-grid__cell--pick {
+// Compound selector (not just .draft-grid__cell--pick) so this reliably beats
+// .draft-grid__cell's own background (DraftGrid.scss) regardless of which
+// stylesheet the bundler happens to emit later — same tied-specificity trap
+// documented elsewhere in this codebase; two classes here always outranks one.
+.draft-grid__cell.draft-grid__cell--pick {
   cursor: pointer;
+  // Its own dedicated surface (distinct from an empty cell's $bg) — a made
+  // pick used to blend right into an unfilled slot, both sharing $bg.
+  background: $cell-bg;
   transition:
     transform 190ms ease,
     box-shadow 190ms ease,
