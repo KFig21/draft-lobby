@@ -9,7 +9,7 @@
 
   // Body sections are centred to a readable column; the pinned header below
   // overrides this to span the full width of the content container.
-  > * {
+  >* {
     width: 100%;
     max-width: 640px;
     margin-inline: auto;
@@ -28,7 +28,7 @@
     gap: $space * 2;
     min-height: 56px;
     padding: $space $space * 3;
-    background: $bg;
+    background: $bg-raised;
     border-bottom: 1px solid $border;
 
     h1 {
@@ -79,7 +79,7 @@
   &__friends {
     display: flex;
 
-    > * + * {
+    >*+* {
       margin-left: -8px;
     }
 
@@ -137,7 +137,7 @@
     flex-shrink: 0;
 
     // Overlap stacked avatars.
-    > * + * {
+    >*+* {
       margin-left: -14px;
     }
 

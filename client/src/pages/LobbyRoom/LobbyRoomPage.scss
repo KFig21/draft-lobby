@@ -23,7 +23,7 @@
 
     // Body sections are centred to a readable column; the pinned header
     // (below) overrides this to span the full width of the main column.
-    > * {
+    >* {
       width: 100%;
       max-width: 820px;
       margin-inline: auto;
@@ -47,7 +47,7 @@
     min-height: 56px;
     padding-inline: $space * 3;
     padding-block: $space;
-    background: $bg;
+    background: $bg-raised;
     border-bottom: 1px solid $border;
   }
 

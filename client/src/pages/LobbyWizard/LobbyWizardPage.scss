@@ -9,7 +9,7 @@
 
   // Centre the form body; the header (below) spans the full container width.
   // Scoped to the form so inline-rendered modal overlays aren't constrained.
-  > .wizard__form {
+  >.wizard__form {
     width: 100%;
     max-width: 640px;
     margin-inline: auto;
@@ -26,7 +26,7 @@
     gap: $space;
     min-height: 56px;
     padding: $space $space * 3;
-    background: $bg;
+    background: $bg-raised;
     border-bottom: 1px solid $border;
 
     h1 {
@@ -290,6 +290,7 @@
     &:hover:not(:disabled) {
       border-color: $primary;
     }
+
     &:disabled {
       opacity: 0.4;
       cursor: not-allowed;

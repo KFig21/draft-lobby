@@ -6,7 +6,7 @@
   flex-direction: column;
   gap: $space * 3;
 
-  > * {
+  >* {
     width: 100%;
     max-width: 640px;
     margin-inline: auto;
@@ -23,7 +23,7 @@
     align-items: center;
     min-height: 56px;
     padding: $space $space * 3;
-    background: $bg;
+    background: $bg-raised;
     border-bottom: 1px solid $border;
 
     h1 {
