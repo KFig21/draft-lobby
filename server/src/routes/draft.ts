@@ -1590,12 +1590,20 @@ draftRouter.post('/:id/rollback-to', async (req: AuthedRequest, res: Response) =
 
   const { data: targetPick } = await supabaseAdmin
     .from('picks')
-    .select('id, player_id')
+    .select('id, player_id, is_keeper')
     .eq('lobby_id', lobbyId)
     .eq('overall', targetOverall)
     .maybeSingle();
   if (!targetPick) {
     res.status(409).json({ error: 'That pick no longer exists' });
+    return;
+  }
+  // Keepers are pre-placed picks that belong to the team regardless of draft
+  // order — there's nothing to "re-pick" at a keeper slot, and rolling one back
+  // would strand the kept player back in the pool. Reject it outright (the UI
+  // also hides the option on keepers; this is the server-side backstop).
+  if (targetPick.is_keeper) {
+    res.status(409).json({ error: "Keepers can't be rolled back" });
     return;
   }
 
@@ -1605,10 +1613,15 @@ draftRouter.post('/:id/rollback-to', async (req: AuthedRequest, res: Response) =
     .eq('id', targetPick.player_id)
     .maybeSingle();
 
+  // Delete only real (non-keeper) picks at/after the target. Keepers sitting in
+  // later rounds must survive: deleting them would free their kept player back
+  // into the pool AND turn their slot into an open pick the clock would stop on,
+  // letting that team unwittingly re-draft over their own keeper.
   const { data: removed, error: delError } = await supabaseAdmin
     .from('picks')
     .delete()
     .eq('lobby_id', lobbyId)
+    .eq('is_keeper', false)
     .gte('overall', targetOverall)
     .select('id');
   if (delError) {
@@ -1616,15 +1629,19 @@ draftRouter.post('/:id/rollback-to', async (req: AuthedRequest, res: Response) =
     return;
   }
 
-  // The rolled-back slot is now on the clock again; reopen the draft if it had ended.
+  // Resume on the first genuinely open slot at/after the target — not blindly on
+  // targetOverall, which could be (or sit just before) a surviving keeper slot
+  // the engine would otherwise stall the clock on. Same rule /start uses.
   const settings = lobby.settings as LobbySettings;
+  const total = settings.teamCount * roundsForSettings(settings);
+  const resumeOverall = (await nextOpenOverall(lobbyId, targetOverall, total)) ?? targetOverall;
   const wasPaused = lobby.status === 'PAUSED';
-  const deadline = wasPaused ? null : await computeDeadline(lobbyId, settings, targetOverall);
+  const deadline = wasPaused ? null : await computeDeadline(lobbyId, settings, resumeOverall);
 
   const { error: updateError } = await supabaseAdmin
     .from('lobbies')
     .update({
-      current_overall: targetOverall,
+      current_overall: resumeOverall,
       status: wasPaused ? 'PAUSED' : 'DRAFTING',
       pick_deadline: deadline,
     })

@@ -401,8 +401,18 @@ export function DraftBoardPage() {
 
   const draftedIds = useMemo(() => new Set(picks.map((p) => p.player_id)), [picks]);
 
+  // Most recent *real* pick (what the top-bar "Undo" rolls back to). Excludes
+  // keepers: those are pre-placed at their round slot, so a late-round keeper
+  // can be the highest-overall pick on the board even before any real pick is
+  // made — undoing "the last pick" must never target one.
   const lastPick = useMemo(
-    () => picks.reduce<PickRow | null>((latest, p) => (!latest || p.overall > latest.overall ? p : latest), null),
+    () =>
+      picks
+        .filter((p) => !p.is_keeper)
+        .reduce<PickRow | null>(
+          (latest, p) => (!latest || p.overall > latest.overall ? p : latest),
+          null,
+        ),
     [picks],
   );
 
@@ -2422,7 +2432,9 @@ export function DraftBoardPage() {
               myUserId={userId}
               championUserIds={championUserIds}
               onRollbackTo={
-                rollbackLocked
+                // Keepers can't be rolled back (see the server route) — there's
+                // nothing to re-pick at a keeper slot, so don't offer it.
+                rollbackLocked || pickModal.is_keeper
                   ? undefined
                   : () => {
                       setRollbackTarget(pickModal);
@@ -2438,7 +2450,9 @@ export function DraftBoardPage() {
           const target = rollbackTarget;
           const player = playersById.get(target.player_id);
           const team = teamsById.get(target.team_id);
-          const count = picks.filter((p) => p.overall >= target.overall).length;
+          // Only real picks are deleted (keepers at/after the target survive
+          // server-side), so the count the user sees must exclude them too.
+          const count = picks.filter((p) => p.overall >= target.overall && !p.is_keeper).length;
           const multi = count > 1;
           const confirmWord = 'ROLLBACK';
           return (

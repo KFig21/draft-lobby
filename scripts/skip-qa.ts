@@ -99,6 +99,7 @@ class Draft {
   total: number;
   frontier: number;
   taken = new Set<number>();
+  keepers = new Set<number>(); // pre-placed keeper slots (a subset of `taken`)
   pickBy = new Map<number, number>(); // overall -> position that filled it
   teams: SimTeam[];
   complete = false;
@@ -111,6 +112,7 @@ class Draft {
     allowSkips?: boolean;
     allowance?: number | null;
     bots?: number[]; // positions that are bots
+    keepers?: number[]; // overalls pre-filled as keepers before the draft starts
   }) {
     this.teamCount = opts.teamCount;
     this.rounds = opts.rounds;
@@ -124,6 +126,13 @@ class Draft {
       autoDraft: (opts.bots ?? []).includes(i + 1),
       timeouts: 0,
     }));
+    // Keepers are picks placed before the draft starts — filled slots the
+    // engine walks past, exactly like a made pick (see nextOpenOverall).
+    for (const o of opts.keepers ?? []) {
+      this.taken.add(o);
+      this.keepers.add(o);
+      this.pickBy.set(o, this.posOf(o));
+    }
     this.frontier = this.nextOpen(1) ?? this.total + 1;
   }
 
@@ -233,6 +242,31 @@ class Draft {
       made++;
     }
     return made;
+  }
+
+  /**
+   * Commissioner rollback to (and including) `overall`. Mirrors the server
+   * route: deletes only NON-keeper picks at/after the target — keepers in
+   * later rounds survive — then reopens on the first genuinely open slot at/
+   * after the target (nextOpen skips the surviving keepers). Returns how many
+   * real picks were removed.
+   */
+  rollbackTo(overall: number): number {
+    assert.ok(!this.keepers.has(overall), `cannot roll back to a keeper slot (${overall})`);
+    let removed = 0;
+    for (let o = overall; o <= this.total; o++) {
+      if (this.taken.has(o) && !this.keepers.has(o)) {
+        this.taken.delete(o);
+        this.pickBy.delete(o);
+        removed++;
+      }
+    }
+    // Reopening the draft: the next time it fills up is a fresh, legitimate
+    // completion (assertComplete expects exactly one per continuous draft).
+    this.complete = false;
+    this.completions = 0;
+    this.frontier = this.nextOpen(overall) ?? this.total + 1;
+    return removed;
   }
 
   onClockPos(): number | null {
@@ -515,6 +549,61 @@ check('fuzz: random skip/pick sequences always finish with full slot integrity',
     assert.ok(d.complete, `trial ${trial} completed`);
     d.assertComplete();
   }
+});
+
+check('rollback preserves a later-round keeper and removes only real picks', () => {
+  // 4-team snake, 3 rounds. Round 3 (odd) → overalls 9,10,11,12 = positions
+  // 1,2,3,4, so overall 10 is p2's round-3 keeper.
+  const d = new Draft({ teamCount: 4, rounds: 3, draftType: 'SNAKE', keepers: [10] });
+  assert.ok(d.keepers.has(10) && d.taken.has(10), 'keeper pre-placed at o10');
+
+  // Make the first six real picks (overalls 1..6 on the clock in turn).
+  for (let i = 0; i < 6; i++) d.humanPick(d.onClockPos()!);
+  assert.deepEqual([...d.taken].sort((a, b) => a - b), [1, 2, 3, 4, 5, 6, 10]);
+
+  const removed = d.rollbackTo(3);
+  assert.equal(removed, 4, 'removed exactly the 4 real picks o3..o6');
+  assert.ok(d.taken.has(1) && d.taken.has(2), 'picks before the target survive');
+  assert.ok(!d.taken.has(4) && !d.taken.has(5) && !d.taken.has(6), 'real picks after target gone');
+  assert.ok(d.keepers.has(10) && d.taken.has(10), 'the keeper is untouched by the rollback');
+  assert.equal(d.frontier, 3, 'clock reopens on the target slot');
+});
+
+check('rollback resume walks past a keeper sitting after the target', () => {
+  // Keeper at o5. Fill o1..o4, engine skips o5, fill o6,o7. Roll back to o6:
+  // only o6,o7 are real (o5 stays), and the resume slot is o6 itself.
+  const d = new Draft({ teamCount: 5, rounds: 2, draftType: 'STRAIGHT', keepers: [5] });
+  for (const _ of [1, 2, 3, 4]) d.humanPick(d.onClockPos()!); // o1..o4
+  assert.equal(d.frontier, 6, 'frontier skipped the keeper at o5');
+  d.humanPick(d.onClockPos()!); // o6
+  d.humanPick(d.onClockPos()!); // o7
+  const removed = d.rollbackTo(6);
+  assert.equal(removed, 2, 'only o6,o7 removed');
+  assert.ok(d.keepers.has(5) && d.taken.has(5), 'keeper before the frontier stays put');
+  assert.equal(d.frontier, 6, 'resumes on o6, having stepped over the o5 keeper');
+});
+
+check('rollback then re-draft to completion: keeper intact, full slot integrity', () => {
+  const d = new Draft({ teamCount: 4, rounds: 3, draftType: 'SNAKE', keepers: [10] });
+  const drive = () => {
+    let guard = 0;
+    while (!d.complete && guard++ < 500) {
+      if (d.onClockPos() === null) d.autopickSkipped();
+      else d.humanPick(d.onClockPos()!);
+    }
+  };
+  drive();
+  d.assertComplete();
+  assert.ok(d.keepers.has(10) && d.pickBy.get(10) === d.posOf(10), 'keeper filled its own slot');
+
+  const removed = d.rollbackTo(3);
+  assert.ok(removed >= 8, 'rolled back most of the board');
+  assert.ok(d.keepers.has(10) && d.taken.has(10), 'keeper survived the rollback');
+  assert.ok(!d.complete, 'draft reopened');
+
+  drive(); // re-draft everything from the target forward
+  d.assertComplete(); // every slot owned by its snake team — keeper included
+  assert.ok(d.taken.has(10) && d.pickBy.get(10) === d.posOf(10), 'keeper still at its slot');
 });
 
 console.log(`\nAll ${passed} checks passed ✅`);
