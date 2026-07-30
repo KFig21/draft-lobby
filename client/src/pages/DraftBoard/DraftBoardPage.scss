@@ -565,6 +565,16 @@
     }
   }
 
+  // Full league rules (LeagueRulesModal) — desktop/fullscreen only, sits
+  // between the fullscreen and settings buttons; mobile uses the nav drawer.
+  &__rules-btn {
+    display: none;
+
+    @include lg {
+      display: grid;
+    }
+  }
+
   // Hidden on mobile, shown desktop-only.
   &__export-btn {
     @extend %draft-chip-btn;
@@ -1318,9 +1328,10 @@
     border-bottom: 1px solid $border;
   }
 
-  // "Bookmarked" chip needs icon+text alignment the plain text-only chips
-  // (global.scss's .chip) never had to account for.
-  .chip--queue {
+  // "Bookmarked"/"favorites" chips need icon+text alignment the plain
+  // text-only chips (global.scss's .chip) never had to account for.
+  .chip--queue,
+  .chip--fav {
     display: inline-flex;
     align-items: center;
     gap: 4px;
@@ -1328,6 +1339,12 @@
     svg {
       font-size: 0.9rem;
     }
+  }
+
+  // The favorites star chip reads gold when active, matching the star it
+  // filters by (keeper gold, same as the card/modal stars).
+  .chip--fav.chip--active svg {
+    color: $keeper;
   }
 
   // Separates the position chips from the bye-week dropdown — hidden

@@ -16,6 +16,7 @@ import {
 } from '@draft-lobby/shared';
 import AlternateEmailIcon from '@mui/icons-material/AlternateEmail';
 import BookmarkIcon from '@mui/icons-material/Bookmark';
+import StarIcon from '@mui/icons-material/Star';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlined';
 import CheckIcon from '@mui/icons-material/Check';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
@@ -36,6 +37,7 @@ import LockOpenOutlinedIcon from '@mui/icons-material/LockOpenOutlined';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import MeetingRoomOutlinedIcon from '@mui/icons-material/MeetingRoomOutlined';
 import MenuIcon from '@mui/icons-material/Menu';
+import MenuBookOutlinedIcon from '@mui/icons-material/MenuBookOutlined';
 import PauseIcon from '@mui/icons-material/Pause';
 import PauseCircleOutlineIcon from '@mui/icons-material/PauseCircleOutlineOutlined';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
@@ -78,6 +80,7 @@ import { PickModal, type PickComment } from '../../components/PickModal/PickModa
 import type { Reactor } from '../../components/ReactorsModal/ReactorsModal';
 import { PlayerCard } from '../../components/PlayerCard/PlayerCard';
 import { PlayerDetailModal } from '../../components/PlayerDetailModal/PlayerDetailModal';
+import { LeagueRulesModal } from '../../components/LeagueRulesModal/LeagueRulesModal';
 import { TeamLineup } from '../../components/TeamLineup/TeamLineup';
 import {
   TeamResultsDrawer,
@@ -87,6 +90,7 @@ import { ThemeToggle } from '../../components/ThemeToggle/ThemeToggle';
 import { useAuth } from '../../auth/AuthContext';
 import { useLobby } from '../../hooks/useLobby';
 import { usePlayers } from '../../hooks/usePlayers';
+import { useFavorites } from '../../hooks/useFavorites';
 import { scorePlayers } from '../../lib/playerPoints';
 import { api } from '../../lib/api';
 import { byeClashCountsForWeek, byeClashLookup } from '../../lib/byeClashes';
@@ -121,7 +125,7 @@ import type {
 } from '../../lib/types';
 import './DraftBoardPage.scss';
 
-type Filter = 'ALL' | Position | 'FLEX' | 'SUPERFLEX' | 'QUEUE';
+type Filter = 'ALL' | Position | 'FLEX' | 'SUPERFLEX' | 'QUEUE' | 'FAVORITES';
 type PanelTab = 'players' | 'roster' | 'chat' | 'results';
 type MobileTab = 'board' | PanelTab;
 
@@ -193,6 +197,7 @@ export function DraftBoardPage() {
   const [showByeClashes, setShowByeClashesState] = useState(() => getShowByeClashes());
   const [toastPrefs, setToastPrefsState] = useState(() => getToastPrefs());
   const [showUserSettings, setShowUserSettings] = useState(false);
+  const [showRules, setShowRules] = useState(false);
 
   function updateCellStyle(style: DraftCellStyle) {
     setDraftCellStyle(style);
@@ -251,6 +256,7 @@ export function DraftBoardPage() {
   const [rosterTeamSel, setRosterTeamSel] = useState<string | null>(null);
   const [resultsDrawerView, setResultsDrawerView] = useState<ResultsDrawerView>('closed');
   const [queue, setQueue] = useState<string[]>([]);
+  const { favoriteIds, toggleFavorite, canFavorite } = useFavorites();
   const [selected, setSelected] = useState<PlayerRow | null>(null);
   // Set when a player row is clicked in the pool — a closer look before
   // deciding to draft/queue, separate from the pick-confirm flow (`selected`).
@@ -1162,6 +1168,8 @@ export function DraftBoardPage() {
       if (draftedIds.has(p.id)) return false;
       if (filter === 'QUEUE') {
         if (!queue.includes(p.id)) return false;
+      } else if (filter === 'FAVORITES') {
+        if (!favoriteIds?.has(p.id)) return false;
       } else if (filter === 'FLEX') {
         if (!(FLEX_POS as string[]).includes(p.position)) return false;
       } else if (filter === 'SUPERFLEX') {
@@ -1173,7 +1181,7 @@ export function DraftBoardPage() {
       if (q && !p.name.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [players, draftedIds, filter, search, queue, excludedByeWeeks]);
+  }, [players, draftedIds, filter, search, queue, favoriteIds, excludedByeWeeks]);
   // Only offer bye weeks that actually appear in the pool right now (not a
   // fixed 1-18 list) — so the filter row shrinks as the board fills up.
   const availableByeWeeks = useMemo(() => {
@@ -1720,6 +1728,8 @@ export function DraftBoardPage() {
                 player={p}
                 queued
                 onQueue={() => toggleQueue(p.id)}
+                onFavorite={canFavorite ? () => toggleFavorite(p.id) : undefined}
+                favorited={favoriteIds?.has(p.id) ?? false}
                 onPick={canPick ? () => pick(p) : undefined}
                 disabled={!canPick}
                 onOpenDetail={() => setDetailPlayer(p)}
@@ -1769,6 +1779,17 @@ export function DraftBoardPage() {
               <span className="chip__dot"> · </span>
               <span className="chip__count">{queuedPlayers.length}</span>
             </button>
+            {canFavorite && (
+              <button
+                className={`chip chip--fav ${filter === 'FAVORITES' ? 'chip--active' : ''}`}
+                onClick={() => setFilter(filter === 'FAVORITES' ? 'ALL' : 'FAVORITES')}
+                title="Your favorites"
+              >
+                <StarIcon fontSize="inherit" />
+                <span className="chip__dot"> · </span>
+                <span className="chip__count">{favoriteIds?.size ?? 0}</span>
+              </button>
+            )}
             {!isFullscreen && byeFilter && (
               <>
                 <span className="pool__filters-divider" aria-hidden />
@@ -1795,6 +1816,8 @@ export function DraftBoardPage() {
               disabled={!canPick}
               onQueue={() => toggleQueue(p.id)}
               queued={queue.includes(p.id)}
+              onFavorite={canFavorite ? () => toggleFavorite(p.id) : undefined}
+              favorited={favoriteIds?.has(p.id) ?? false}
               onOpenDetail={() => setDetailPlayer(p)}
               byeClashCount={
                 p.bye_week != null ? byeLookup.get(`${p.position}:${p.bye_week}`) : undefined
@@ -2152,6 +2175,16 @@ export function DraftBoardPage() {
               <FullscreenIcon fontSize="small" />
             )}
           </button>
+          {/* Desktop/fullscreen only (see &__rules-btn) — full league rules.
+              Mobile reaches it via the nav drawer instead. */}
+          <button
+            className="draft__icon-btn draft__rules-btn"
+            onClick={() => setShowRules(true)}
+            aria-label="League rules"
+            title="League rules"
+          >
+            <MenuBookOutlinedIcon fontSize="small" />
+          </button>
           {/* Desktop/fullscreen only (see &__settings-btn) — personal
               draft-board + notification prefs without leaving the room.
               Mobile already reaches these via the nav drawer -> Settings. */}
@@ -2331,7 +2364,17 @@ export function DraftBoardPage() {
           disabled={!canPick}
           onQueue={() => toggleQueue(detailPlayer.id)}
           queued={queue.includes(detailPlayer.id)}
+          onFavorite={() => toggleFavorite(detailPlayer.id)}
+          favorited={favoriteIds?.has(detailPlayer.id) ?? false}
           byeClashCounts={byeClashCountsForWeek(detailPlayer.bye_week, byeLookup)}
+        />
+      )}
+
+      {showRules && (
+        <LeagueRulesModal
+          settings={lobby.settings}
+          defaultName={lobby.name}
+          onClose={() => setShowRules(false)}
         />
       )}
 
@@ -2342,25 +2385,38 @@ export function DraftBoardPage() {
           { to: `/lobby/${id}`, label: 'Lobby room', Icon: MeetingRoomOutlinedIcon },
         ]}
         extraContent={
-          myTeam && !myTeam.is_bot && !isComplete ? (
+          <>
             <button
               type="button"
               className="navbar-drawer__link"
-              onClick={() => toggleAuto(myTeam.id, !myTeam.auto_draft)}
+              onClick={() => {
+                setShowRules(true);
+                setDrawerOpen(false);
+              }}
             >
-              {myTeam.auto_draft ? (
-                <SmartToyIcon fontSize="small" />
-              ) : (
-                <SmartToyOutlinedIcon fontSize="small" />
-              )}
-              Auto-draft
-              <span
-                className={`navbar-drawer__toggle-pill${myTeam.auto_draft ? ' is-on' : ''}`}
-              >
-                {myTeam.auto_draft ? 'On' : 'Off'}
-              </span>
+              <MenuBookOutlinedIcon fontSize="small" />
+              League rules
             </button>
-          ) : undefined
+            {myTeam && !myTeam.is_bot && !isComplete ? (
+              <button
+                type="button"
+                className="navbar-drawer__link"
+                onClick={() => toggleAuto(myTeam.id, !myTeam.auto_draft)}
+              >
+                {myTeam.auto_draft ? (
+                  <SmartToyIcon fontSize="small" />
+                ) : (
+                  <SmartToyOutlinedIcon fontSize="small" />
+                )}
+                Auto-draft
+                <span
+                  className={`navbar-drawer__toggle-pill${myTeam.auto_draft ? ' is-on' : ''}`}
+                >
+                  {myTeam.auto_draft ? 'On' : 'Off'}
+                </span>
+              </button>
+            ) : null}
+          </>
         }
       />
 
@@ -2503,6 +2559,8 @@ export function DraftBoardPage() {
                     }
               }
               byeClashCounts={byeClashCountsForWeek(player.bye_week, pickTeamByeLookup)}
+              onFavorite={() => toggleFavorite(player.id)}
+              favorited={favoriteIds?.has(player.id) ?? false}
             />
           );
         })()}
