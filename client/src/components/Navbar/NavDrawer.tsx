@@ -2,6 +2,7 @@ import AccountCircleOutlinedIcon from '@mui/icons-material/AccountCircleOutlined
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutlined';
 import CloseIcon from '@mui/icons-material/Close';
 import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
+import LeaderboardOutlinedIcon from '@mui/icons-material/LeaderboardOutlined';
 import ListAltOutlinedIcon from '@mui/icons-material/ListAltOutlined';
 import LoginIcon from '@mui/icons-material/Login';
 import NotificationsNoneOutlinedIcon from '@mui/icons-material/NotificationsNoneOutlined';
@@ -18,6 +19,7 @@ import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
 import { useNotifications } from '../../notifications/NotificationsContext';
 import { useTheme } from '../../theme/ThemeContext';
+import { useBodyScrollLock } from '../../lib/useBodyScrollLock';
 import { supabase } from '../../supabase';
 import { Avatar } from '../Avatar/Avatar';
 
@@ -33,6 +35,7 @@ export const NAV_ITEMS: NavItem[] = [
   { to: '/lobby/new', label: 'Create', Icon: AddCircleOutlineIcon },
   { to: '/lobby/join', label: 'Join', Icon: LoginIcon },
   { to: '/drafts', label: 'My drafts', Icon: ListAltOutlinedIcon },
+  { to: '/rankings', label: 'Rankings', Icon: LeaderboardOutlinedIcon },
   { to: '/friends', label: 'Friends', Icon: PeopleAltOutlinedIcon },
   { to: '/notifications', label: 'Notifications', Icon: NotificationsNoneOutlinedIcon },
   { to: '/settings', label: 'Settings', Icon: SettingsOutlinedIcon },
@@ -75,6 +78,7 @@ export function NavDrawer({ open, onClose, extraItems, extraContent }: NavDrawer
     session?.user.email ??
     'drafter';
   const [liveDrafts, setLiveDrafts] = useState<LiveDraft[]>([]);
+  useBodyScrollLock(open);
 
   // Surface the user's active drafts (pre-draft and in-progress) at the top.
   useEffect(() => {
