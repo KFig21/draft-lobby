@@ -9,14 +9,16 @@ import {
 } from '@draft-lobby/shared';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
+import CloseIcon from '@mui/icons-material/Close';
+import TuneIcon from '@mui/icons-material/Tune';
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import { useEffect, useMemo, useState } from 'react';
-import { useAuth } from '../../auth/AuthContext';
 import { Loader } from '../../components/Loader/Loader';
 import { Modal } from '../../components/Modal/Modal';
 import { PlayerDetailModal } from '../../components/PlayerDetailModal/PlayerDetailModal';
 import { usePlayers } from '../../hooks/usePlayers';
+import { useFavorites } from '../../hooks/useFavorites';
 import { getDefaultScoringChoice } from '../../lib/defaultScoring';
 import { INJURY_ABBR, INJURY_SEVERITY } from '../../lib/injuryStatus';
 import { scorePlayers } from '../../lib/playerPoints';
@@ -42,9 +44,8 @@ const CURRENT_YEAR = new Date().getUTCFullYear();
  * either this season's projections or last season's actual results — with
  * a per-user "favorite" star that follows across every draft. */
 export function RankingsPage() {
-  const { session } = useAuth();
-  const userId = session?.user.id;
   const { players: rawPlayers, loading: playersLoading } = usePlayers();
+  const { favoriteIds, toggleFavorite, canFavorite } = useFavorites();
 
   const [scoringFormats, setScoringFormats] = useState<SavedScoringFormat[]>([]);
   const [rulesetChoice, setRulesetChoice] = useState(() => getDefaultScoringChoice());
@@ -53,10 +54,12 @@ export function RankingsPage() {
   const [filter, setFilter] = useState<Filter>('ALL');
   const [search, setSearch] = useState('');
   const [favoritesOnly, setFavoritesOnly] = useState(false);
-  const [favoriteIds, setFavoriteIds] = useState<Set<string> | null>(null);
   const [detailPlayer, setDetailPlayer] = useState<PlayerRow | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>('points');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
+  // Mobile only: the filters live in a slide-up bottom sheet (desktop shows
+  // them inline). Closed by default so the table gets the full screen.
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   useEffect(() => {
     void supabase
@@ -65,15 +68,6 @@ export function RankingsPage() {
       .order('created_at')
       .then(({ data }) => setScoringFormats((data ?? []) as SavedScoringFormat[]));
   }, []);
-
-  useEffect(() => {
-    if (!userId) return;
-    void supabase
-      .from('favorite_players')
-      .select('player_id')
-      .eq('user_id', userId)
-      .then(({ data }) => setFavoriteIds(new Set((data ?? []).map((r) => r.player_id as string))));
-  }, [userId]);
 
   const rules: ScoringRules = useMemo(() => {
     const [kind, key] = rulesetChoice.split(':');
@@ -91,27 +85,6 @@ export function RankingsPage() {
     setScoringFormats((prev) => [...prev.filter((f) => f.id !== fmt.id), fmt]);
     setRulesetChoice(`format:${fmt.id}`);
     setShowScoringModal(false);
-  }
-
-  async function toggleFavorite(playerId: string) {
-    if (!userId || !favoriteIds) return;
-    const isFav = favoriteIds.has(playerId);
-    // Optimistic — this is single-user personal data, nothing to reconcile.
-    setFavoriteIds((prev) => {
-      const next = new Set(prev);
-      if (isFav) next.delete(playerId);
-      else next.add(playerId);
-      return next;
-    });
-    if (isFav) {
-      await supabase
-        .from('favorite_players')
-        .delete()
-        .eq('user_id', userId)
-        .eq('player_id', playerId);
-    } else {
-      await supabase.from('favorite_players').insert({ user_id: userId, player_id: playerId });
-    }
   }
 
   // Clicking the active column again flips direction; switching columns
@@ -183,9 +156,38 @@ export function RankingsPage() {
       <div className="rankings__scroll">
         <header className="rankings__header">
           <h1>Player Rankings</h1>
+          {/* Mobile only — opens the filters bottom sheet (see &__filters). */}
+          <button
+            type="button"
+            className="rankings__filters-btn"
+            onClick={() => setFiltersOpen(true)}
+            aria-label="Filters"
+          >
+            <TuneIcon fontSize="small" /> Filters
+          </button>
         </header>
 
-        <section className="rankings__filters">
+        {/* Mobile: tapping the backdrop closes the filters sheet. */}
+        {filtersOpen && (
+          <div
+            className="rankings__filters-scrim"
+            onClick={() => setFiltersOpen(false)}
+            aria-hidden
+          />
+        )}
+
+        <section className={`rankings__filters${filtersOpen ? ' is-open' : ''}`}>
+        <div className="rankings__filters-grip" aria-hidden />
+        <div className="rankings__filters-head">
+          <span>Filters</span>
+          <button
+            type="button"
+            className="rankings__filters-done"
+            onClick={() => setFiltersOpen(false)}
+          >
+            <CloseIcon fontSize="small" />
+          </button>
+        </div>
         <div className="rankings__controls">
           <select
             className="rankings__ruleset"
@@ -320,10 +322,10 @@ export function RankingsPage() {
                         className={`rankings-table__fav${isFav ? ' is-on' : ''}`}
                         onClick={(e) => {
                           e.stopPropagation();
-                          void toggleFavorite(p.id);
+                          toggleFavorite(p.id);
                         }}
                         aria-label={isFav ? 'Remove from favorites' : 'Add to favorites'}
-                        disabled={!userId}
+                        disabled={!canFavorite}
                       >
                         {isFav ? <StarIcon fontSize="small" /> : <StarBorderIcon fontSize="small" />}
                       </button>
@@ -377,7 +379,12 @@ export function RankingsPage() {
       </div>
 
       {detailPlayer && (
-        <PlayerDetailModal player={detailPlayer} onClose={() => setDetailPlayer(null)} />
+        <PlayerDetailModal
+          player={detailPlayer}
+          onClose={() => setDetailPlayer(null)}
+          onFavorite={() => toggleFavorite(detailPlayer.id)}
+          favorited={favoriteIds?.has(detailPlayer.id) ?? false}
+        />
       )}
 
       {showScoringModal && (
