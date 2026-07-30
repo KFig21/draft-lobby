@@ -16,10 +16,12 @@ function sample(
     proj_points: null,
     proj_rank: null,
     proj_stat_line: null,
+    proj_stats: null,
     adp: null,
     prev_points: null,
     prev_rank: null,
     prev_stat_line: null,
+    prev_stats: null,
   };
 }
 

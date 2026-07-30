@@ -2,9 +2,15 @@
  * Imports a real NFL player pool:
  *   • Fantasy Football Calculator ADP  → real names, positions, teams, ADP, bye weeks
  *   • Sleeper /players/nfl             → injury status + depth players beyond the ADP list
- *   • Sleeper /stats/.../{lastSeason}  → real prev_points/prev_rank (PPR) + prev_stat_line
- *   • Sleeper /projections/.../{season} → real proj_points + proj_stat_line; proj_rank computed
- *     from final proj_points; ADP-rank estimate fills any proj_points gaps
+ *   • Sleeper /stats/.../{lastSeason}  → real prev_points/prev_rank (PPR) + prev_stat_line +
+ *     prev_stats (raw per-category line, QB/RB/WR/TE — see toStatLine)
+ *   • Sleeper /projections/.../{season} → real proj_points + proj_stat_line + proj_stats;
+ *     proj_rank computed from final proj_points; ADP-rank estimate fills any proj_points gaps
+ *
+ * proj_stats/prev_stats let the app compute fantasy points under ANY scoring
+ * format (shared/src/scoring.ts computeFantasyPoints) instead of only ever
+ * showing Sleeper's own flat PPR total — used by bot draft picks, lineup
+ * sort, player cards, and the rankings page alike.
  *
  * Usage: npm run db:seed  (reads server/.env for Supabase credentials)
  */
@@ -36,10 +42,12 @@ interface PoolPlayer {
   proj_points: number | null;
   proj_rank: number | null;
   proj_stat_line: string | null;
+  proj_stats: Record<string, number> | null;
   adp: number | null;
   prev_points: number | null;
   prev_rank: number | null;
   prev_stat_line: string | null;
+  prev_stats: Record<string, number> | null;
 }
 
 const normalize = (s: string) =>
@@ -125,9 +133,12 @@ async function fetchSleeper(): Promise<SleeperPlayer[] | null> {
   }
 }
 
-// Sleeper's own PPR fantasy points + positional PPR rank — no need to hand-roll
-// a stats→points calculator, they already compute it the same way we score by
-// default. The raw counting stats are only used for the compact stat-line text.
+// Sleeper's own PPR fantasy points + positional PPR rank fill proj_points/
+// prev_points as a fallback (used as-is for K/DEF, and for anyone missing a
+// raw stat line below). The raw counting stats are the real payload now:
+// persisted into proj_stats/prev_stats (via toStatLine below) so the app's
+// own scoring engine (shared/src/scoring.ts computeFantasyPoints) can score
+// every skill-position player under any lobby's actual rules, not just PPR.
 interface SleeperStatLine {
   pts_ppr?: number;
   pos_rank_ppr?: number;
@@ -139,8 +150,38 @@ interface SleeperStatLine {
   rec?: number;
   rec_yd?: number;
   rec_td?: number;
+  fum_lost?: number;
   fgm?: number;
   xpm?: number;
+}
+
+// Maps Sleeper's raw counting stats onto FOOTBALL_CATALOG keys (shared/src/
+// scoring.ts) for QB/RB/WR/TE. K and DEF are left out on purpose: Sleeper's
+// kicking line is a flat make/miss count while our catalog scores field
+// goals in distance buckets Sleeper doesn't break out here, and Sleeper keys
+// DST stats differently entirely — both keep using the flat pts_ppr fallback
+// (proj_points/prev_points) instead of a guessed, likely-wrong mapping.
+function toStatLine(pos: Pos, s: SleeperStatLine): Record<string, number> | null {
+  switch (pos) {
+    case 'QB':
+    case 'RB':
+    case 'WR':
+    case 'TE':
+      return {
+        passingYards: s.pass_yd ?? 0,
+        passingTd: s.pass_td ?? 0,
+        interception: s.pass_int ?? 0,
+        rushingYards: s.rush_yd ?? 0,
+        rushingTd: s.rush_td ?? 0,
+        reception: s.rec ?? 0,
+        receivingYards: s.rec_yd ?? 0,
+        receivingTd: s.rec_td ?? 0,
+        fumbleLost: s.fum_lost ?? 0,
+      };
+    case 'K':
+    case 'DEF':
+      return null;
+  }
 }
 
 async function fetchSleeperStatsOrProjections(
@@ -232,10 +273,12 @@ async function main() {
       proj_points: null,
       proj_rank: null,
       proj_stat_line: null,
+      proj_stats: null,
       adp: p.adp,
       prev_points: null,
       prev_rank: null,
       prev_stat_line: null,
+      prev_stats: null,
     });
   }
 
@@ -257,10 +300,12 @@ async function main() {
       proj_points: null,
       proj_rank: null,
       proj_stat_line: null,
+      proj_stats: null,
       adp: null,
       prev_points: null,
       prev_rank: null,
       prev_stat_line: null,
+      prev_stats: null,
     });
     defsAdded++;
   }
@@ -300,10 +345,12 @@ async function main() {
           proj_points: null,
           proj_rank: null,
           proj_stat_line: null,
+          proj_stats: null,
           adp: null,
           prev_points: null,
           prev_rank: null,
           prev_stat_line: null,
+          prev_stats: null,
         });
         depthAdded++;
       }
@@ -337,12 +384,14 @@ async function main() {
         p.prev_points = Math.round(prev.pts_ppr * 10) / 10;
         p.prev_rank = prev.pos_rank_ppr ?? null;
         p.prev_stat_line = formatStatLine(p.position, prev);
+        p.prev_stats = toStatLine(p.position, prev);
         realPrevCount++;
       }
       const proj = projections?.[sleeperId];
       if (proj?.pts_ppr != null) {
         p.proj_points = Math.round(proj.pts_ppr * 10) / 10;
         p.proj_stat_line = formatStatLine(p.position, proj);
+        p.proj_stats = toStatLine(p.position, proj);
         realProjCount++;
       }
     }

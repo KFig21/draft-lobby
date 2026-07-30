@@ -1,4 +1,5 @@
 import {
+  DEFAULT_SCORING_RULES,
   DRAFT_RESULTS_LOCK_MS,
   POSITIONS,
   ROLLBACK_LOCK_MS,
@@ -86,6 +87,7 @@ import { ThemeToggle } from '../../components/ThemeToggle/ThemeToggle';
 import { useAuth } from '../../auth/AuthContext';
 import { useLobby } from '../../hooks/useLobby';
 import { usePlayers } from '../../hooks/usePlayers';
+import { scorePlayers } from '../../lib/playerPoints';
 import { api } from '../../lib/api';
 import { byeClashCountsForWeek, byeClashLookup } from '../../lib/byeClashes';
 import {
@@ -173,7 +175,15 @@ export function DraftBoardPage() {
   const { session } = useAuth();
   const { showToast } = useToast();
   const { lobby, teams, members, picks, keeperOptions, loading } = useLobby(id);
-  const { players, loading: playersLoading } = usePlayers();
+  const { players: rawPlayers, loading: playersLoading } = usePlayers();
+  // Recomputed from each player's raw stat line under this lobby's own
+  // scoring rules — so bot picks, lineup order, and every player card here
+  // agree with each other and with the lobby's actual scoring format,
+  // instead of everyone independently trusting Sleeper's flat PPR total.
+  const players = useMemo(
+    () => scorePlayers(rawPlayers, lobby?.settings.scoring ?? DEFAULT_SCORING_RULES),
+    [rawPlayers, lobby?.settings.scoring],
+  );
 
   // Personal preferences (also editable from Settings directly) — read once
   // on mount, then kept live so the gear-icon settings modal below (see

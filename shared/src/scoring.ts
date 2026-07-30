@@ -173,6 +173,36 @@ export function formatScoringRule(key: string, value: ScoringRuleValue): string 
   return value > 0 ? `+${value}` : `${value}`;
 }
 
+// ── Stats → fantasy points ──────────────────────────────────────────
+// A raw per-stat line, keyed by FOOTBALL_CATALOG category (e.g.
+// { passingYards: 4102, passingTd: 28, reception: 0 }) — what a lobby's
+// scoring rules actually get applied against, instead of trusting a single
+// pre-baked point total computed under someone else's scoring assumptions.
+export type StatLine = Partial<Record<string, number>>;
+
+/**
+ * The one function that turns a stat line into fantasy points under an
+ * arbitrary scoring format — used identically by bot draft picks, lineup
+ * sorting, and player displays, so all three always agree with each other
+ * and with whatever scoring format the lobby actually configured (rather
+ * than each independently trusting a flat Sleeper PPR number).
+ */
+export function computeFantasyPoints(
+  stats: StatLine,
+  rules: ScoringRules,
+  position?: string,
+): number {
+  let total = 0;
+  for (const [key, count] of Object.entries(stats)) {
+    if (!count) continue;
+    const overrideKey = position ? `${key}${POSITION_OVERRIDE_SEP}${position}` : undefined;
+    const rule = (overrideKey ? rules[overrideKey] : undefined) ?? rules[key];
+    if (rule === undefined) continue;
+    total += count * ruleToPointsPerUnit(rule);
+  }
+  return Math.round(total * 10) / 10;
+}
+
 // ── Validation for saved formats ────────────────────────────────────
 export const createScoringFormatSchema = z
   .object({

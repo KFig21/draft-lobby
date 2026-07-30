@@ -162,8 +162,10 @@ export interface PlayerRow {
   proj_points: number | null;
   proj_rank: number | null;
   proj_stat_line: string | null;
+  proj_stats: Record<string, number> | null;
   adp: number | null;
   prev_points: number | null;
   prev_rank: number | null;
   prev_stat_line: string | null;
+  prev_stats: Record<string, number> | null;
 }

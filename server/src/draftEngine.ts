@@ -1,5 +1,6 @@
 import {
   AUTO_PICK_SECONDS,
+  computeFantasyPoints,
   draftPositionForOverall,
   openSlots,
   overallForDraftPosition,
@@ -7,6 +8,7 @@ import {
   secondsForRound,
   type LobbySettings,
   type Position,
+  type StatLine,
 } from '@draft-lobby/shared';
 import { supabaseAdmin } from './supabase.js';
 
@@ -242,6 +244,7 @@ interface PoolPlayer {
   id: string;
   position: Position;
   proj_points: number | null;
+  proj_stats: StatLine | null;
   adp: number | null;
 }
 
@@ -257,7 +260,7 @@ export async function choosePlayer(
 ): Promise<string | null> {
   const [{ data: allPicks }, { data: allPlayers }] = await Promise.all([
     supabaseAdmin.from('picks').select('player_id, team_id').eq('lobby_id', lobbyId),
-    supabaseAdmin.from('players').select('id, position, proj_points, adp'),
+    supabaseAdmin.from('players').select('id, position, proj_points, proj_stats, adp'),
   ]);
 
   const drafted = new Set((allPicks ?? []).map((p) => p.player_id as string));
@@ -272,10 +275,17 @@ export async function choosePlayer(
     if (pos) have[pos] += 1;
   }
 
+  // Ranked by points under THIS lobby's own scoring rules — not Sleeper's
+  // flat PPR total — so a non-PPR/custom league's bots value players the
+  // way that league actually scores them. Falls back to the stored
+  // proj_points for anyone with no raw stat line (e.g. D/ST).
+  const pointsFor = (p: PoolPlayer) =>
+    p.proj_stats ? computeFantasyPoints(p.proj_stats, settings.scoring, p.position) : p.proj_points ?? 0;
+
   const available = players
     .filter((p) => !drafted.has(p.id))
     .sort((a, b) => {
-      const pd = (b.proj_points ?? 0) - (a.proj_points ?? 0);
+      const pd = pointsFor(b) - pointsFor(a);
       if (pd !== 0) return pd;
       return (a.adp ?? 9999) - (b.adp ?? 9999);
     });
