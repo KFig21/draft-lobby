@@ -56,10 +56,29 @@
       display: none;
     }
   }
+
+  // &__keeper-flag (below) is its own element pinned to this same corner —
+  // when a keeper pick also has comments/reactions, shift this group left so
+  // it doesn't sit underneath the lock icon.
+  .draft-grid__cell--keeper & {
+    right: 18px;
+  }
 }
 
 .draft-grid__comment-flag {
   color: $text-muted;
+}
+
+// Deliberately its own always-visible element (not part of &__flags above,
+// which hides on hover to make room for the reactions popover) — pinned to
+// the cell's bottom-right corner, outermost of the two, so it never
+// disappears just because the pick also has comments/reactions.
+.draft-grid__keeper-flag {
+  position: absolute;
+  bottom: 2px;
+  right: 4px;
+  color: $keeper;
+  opacity: 0.85;
 }
 
 .draft-grid__react-flag {

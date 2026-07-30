@@ -35,6 +35,11 @@
   --border: #d4d8e2;
   --text: #1a1d29;
   --text-muted: #667085;
+  // Missing here, this fell back to :root's near-black default — dark mode's
+  // own --text (light) reads fine on that, but light mode's --text (near-
+  // black, above) on a near-black cell was almost illegible: exactly the
+  // washed-out "Default" cell style bug.
+  --cell-bg: #ffffff;
   --keeper: #c39124;
   --info: #0f6fc0;
 }

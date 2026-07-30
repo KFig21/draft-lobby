@@ -1,5 +1,6 @@
 import { POSITION_COLORS, type Position } from '@draft-lobby/shared';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlined';
+import LockIcon from '@mui/icons-material/Lock';
 import type { PickRow, PlayerRow } from '../../../../lib/types';
 import type { ReactionEntry } from '../PickCell/PickCell';
 // Same reasoning as PickCell.tsx's identical import: this component also
@@ -79,8 +80,16 @@ export function BoldPickCell({
           faded tint of it (CSS color-mix, off the --flag-color custom prop
           set here), so it reads as "cut into" the cell instead of a
           mismatched overlay. */}
-      {(active.length > 0 || hasComment) && (
+      {(pick.is_keeper || active.length > 0 || hasComment) && (
         <span className="bold-pick-cell__flags" aria-hidden>
+          {/* First in DOM = rightmost corner (row-reverse) — keeper status
+              always anchors there, comment/reaction chips stack to its left,
+              instead of shuffling position depending on which are present. */}
+          {pick.is_keeper && (
+            <span className="bold-pick-cell__flag-chip bold-pick-cell__keeper-flag">
+              <LockIcon sx={{ fontSize: 9 }} />
+            </span>
+          )}
           {hasComment && (
             <span
               className="bold-pick-cell__flag-chip"

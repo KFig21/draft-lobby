@@ -28,12 +28,18 @@
   &__round,
   &__corner {
     position: sticky;
-    z-index: 1;
+    // Above 10: PickCell/BoldPickCell lift their own <td> to z-index: 4 on
+    // hover (so it rises above its unhovered neighbors), which used to also
+    // outrank these sticky headers — hovering a pick under the frozen team
+    // row or round column made its name paint over the header instead of
+    // staying beneath it. Kept well clear of that range instead of the two
+    // ranges nearly colliding again the next time either one moves.
+    z-index: 11;
   }
 
   &__team {
     top: 0;
-    z-index: 2; // header row rides above the sticky round column
+    z-index: 12; // header row rides above the sticky round column
     background: $bg-overlay;
     padding: $space;
     border-radius: $radius-sm;
@@ -150,7 +156,7 @@
   &__corner {
     top: 0;
     left: 0;
-    z-index: 3; // top-left corner sits above both sticky header and round column
+    z-index: 13; // top-left corner sits above both sticky header and round column
     background: $bg;
 
     // Matches the board canvas's own light-mode override (DraftBoardPage.scss

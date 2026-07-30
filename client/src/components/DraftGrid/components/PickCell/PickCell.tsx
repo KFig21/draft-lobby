@@ -1,5 +1,6 @@
 import { POSITION_COLORS, type Position } from '@draft-lobby/shared';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlined';
+import LockIcon from '@mui/icons-material/Lock';
 import type { PickRow, PlayerRow } from '../../../../lib/types';
 import type { Reactor } from '../../../ReactorsModal/ReactorsModal';
 // The base .draft-grid__cell box (size/border/padding) lives in DraftGrid.scss
@@ -62,6 +63,12 @@ export function PickCell({
           {player.bye_week ? ` · ${player.bye_week}` : ''}
         </span>
       </div>
+
+      {/* Own corner, own element — unlike &__flags below, this never gives way
+          to the hover reactions popover. Keeper is a persistent fact about
+          the pick, not an activity indicator, so it always stays put in the
+          cell's top-right corner. */}
+      {pick.is_keeper && <LockIcon className="draft-grid__keeper-flag" sx={{ fontSize: 11 }} />}
 
       {/* Subtle, uncluttered indicators for reactions / comments on this pick. */}
       {(active.length > 0 || hasComment) && (

@@ -640,9 +640,16 @@
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     line-height: 1.3;
     text-align: center;
     min-width: 0;
+    // Only the active-drafting state ("on the clock" + a "Round X · Pick Y"
+    // line beneath it) is ever two lines tall — staging ("Draft room open"),
+    // waiting, and complete are all one line. Without a reserved minimum, the
+    // whole top bar visibly grew/shrank switching between them (most jarring
+    // on mobile, where there's no extra padding to absorb the difference).
+    min-height: 2.5rem;
   }
 
   &__onclock-team {
