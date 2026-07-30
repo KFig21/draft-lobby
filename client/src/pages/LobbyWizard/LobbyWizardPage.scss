@@ -85,6 +85,14 @@
     }
   }
 
+  &__toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $space * 1.5;
+    font-weight: 600;
+  }
+
   &__grid {
     display: grid;
     grid-template-columns: 1fr;

@@ -210,6 +210,12 @@
       background: rgba($accent, 0.16);
     }
 
+    // Someone (not you) has reacted — a more visible border than the default
+    // so it reads apart from the untouched (0-count) chips in this same row.
+    &.has-count {
+      border-color: $text-muted;
+    }
+
     // Discord-style tooltip: who reacted with this emoji.
     &:hover .pick-modal__react-tip {
       opacity: 1;
@@ -440,7 +446,11 @@
   }
 
   // Wraps into rows instead of one ever-widening pill now that the emoji
-  // set has grown well past what fits on one line.
+  // set has grown well past what fits on one line. This popover's
+  // containing block (`.pick-modal__comment-add`) is only as wide as the
+  // add-reaction button itself, so an explicit width (not just max-width)
+  // is required — otherwise the shrink-to-fit calculation collapses it
+  // down to a single column.
   &__comment-palette {
     position: absolute;
     bottom: 100%;
@@ -448,7 +458,7 @@
     z-index: 10;
     display: flex;
     flex-wrap: wrap;
-    max-width: 192px;
+    width: 192px;
     gap: 2px;
     margin-bottom: 4px;
     padding: 4px;

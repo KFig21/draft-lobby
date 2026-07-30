@@ -20,6 +20,7 @@ import { supabase } from '../../supabase';
 import { sortReactionEmojis } from '../../lib/reactions';
 import { avatarForTeam } from '../../lib/teamAvatar';
 import { renderMentionText } from '../../lib/renderMentions';
+import { useClickOutside } from '../../lib/useClickOutside';
 import type {
   ChatMessageRow,
   ChatReactionRow,
@@ -125,6 +126,10 @@ export function DraftChat({
   // Set when the user hits "reply" on a pick line — the next send posts as a
   // pick comment instead of a plain message.
   const [replyTarget, setReplyTarget] = useState<PickRow | null>(null);
+  // Which reaction row's add-reaction palette is open, keyed the same way as
+  // reactionsByTarget (`PICK:id` / `MESSAGE:id`) — lifted up here so opening
+  // one closes any other that was already open.
+  const [openPalette, setOpenPalette] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const composeRef = useRef<HTMLInputElement>(null);
@@ -494,6 +499,11 @@ export function DraftChat({
                       setReactorsModal(reactionsByTarget.get(`PICK:${pick.id}`)?.reactors ?? {})
                     }
                     disabled={reactionsLocked}
+                    open={openPalette === `PICK:${pick.id}`}
+                    onToggleOpen={() =>
+                      setOpenPalette((k) => (k === `PICK:${pick.id}` ? null : `PICK:${pick.id}`))
+                    }
+                    onCloseOpen={() => setOpenPalette(null)}
                   />
                   {!locked && (
                     <button
@@ -568,6 +578,11 @@ export function DraftChat({
                     setReactorsModal(reactionsByTarget.get(`MESSAGE:${it.id}`)?.reactors ?? {})
                   }
                   disabled={reactionsLocked}
+                  open={openPalette === `MESSAGE:${it.id}`}
+                  onToggleOpen={() =>
+                    setOpenPalette((k) => (k === `MESSAGE:${it.id}` ? null : `MESSAGE:${it.id}`))
+                  }
+                  onCloseOpen={() => setOpenPalette(null)}
                 />
               </div>
             </div>
@@ -577,7 +592,11 @@ export function DraftChat({
       </div>
 
       {!atBottom && (
-        <button type="button" className="chat__jump" onClick={jumpToLive}>
+        <button
+          type="button"
+          className={`chat__jump${replyTarget ? ' chat__jump--replying' : ''}`}
+          onClick={jumpToLive}
+        >
           ↓ Scroll to live
         </button>
       )}
@@ -652,17 +671,26 @@ function ReactionBar({
   onReact,
   onShowAllReactions,
   disabled = false,
+  open,
+  onToggleOpen,
+  onCloseOpen,
 }: {
   entry: ReactionEntry | undefined;
   onReact: (emoji: string) => void;
   onShowAllReactions: () => void;
   disabled?: boolean;
+  open: boolean;
+  onToggleOpen: () => void;
+  onCloseOpen: () => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const active = entry ? Object.keys(entry.counts) : [];
+  const barRef = useRef<HTMLDivElement>(null);
+  useClickOutside(barRef, onCloseOpen, open);
+  const active = entry
+    ? sortReactionEmojis(entry.counts).filter((e) => (entry.counts[e] ?? 0) > 0)
+    : [];
 
   return (
-    <div className="chat-react">
+    <div className="chat-react" ref={barRef}>
       {active.map((e) => {
         const names = (entry?.reactors[e] ?? []).map((r) => r.username);
         return (
@@ -696,7 +724,7 @@ function ReactionBar({
       {!disabled && (
         <button
           className="chat-react__add"
-          onClick={() => setOpen((o) => !o)}
+          onClick={onToggleOpen}
           aria-label="Add reaction"
         >
           <AddReactionOutlinedIcon sx={{ fontSize: 16 }} />
@@ -709,7 +737,7 @@ function ReactionBar({
               key={e}
               onClick={() => {
                 onReact(e);
-                setOpen(false);
+                onCloseOpen();
               }}
             >
               {e}

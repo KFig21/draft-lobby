@@ -13,6 +13,7 @@ import { useMemo, useRef, useState, type FormEvent } from 'react';
 import { api } from '../../lib/api';
 import { sortReactionEmojis } from '../../lib/reactions';
 import { renderMentionText } from '../../lib/renderMentions';
+import { useClickOutside } from '../../lib/useClickOutside';
 import { avatarForTeam } from '../../lib/teamAvatar';
 import { useModalClose } from '../../lib/useModalClose';
 import type { MemberRow, PickRow, PlayerRow, TeamRow } from '../../lib/types';
@@ -114,6 +115,10 @@ export function PickModal({
   // Set when the "who reacted" icon is clicked — shows the full reactions modal.
   const [reactorsModal, setReactorsModal] = useState<Record<string, Reactor[]> | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Which comment's add-reaction palette is open — lifted up here (rather
+  // than local state per comment) so opening one closes any other that was
+  // already open, instead of stacking multiple palettes at once.
+  const [openPalette, setOpenPalette] = useState<string | null>(null);
   const commentInputRef = useRef<HTMLInputElement>(null);
 
   const memberUsernames = useMemo(
@@ -256,6 +261,11 @@ export function PickModal({
                     disabled={reactionsLocked}
                     onReact={(emoji) => onReactComment(c.id, emoji)}
                     onShowAllReactions={() => setReactorsModal(c.reactors)}
+                    open={openPalette === c.id}
+                    onToggleOpen={() =>
+                      setOpenPalette((id) => (id === c.id ? null : c.id))
+                    }
+                    onCloseOpen={() => setOpenPalette(null)}
                   />
                 </div>
               </div>
@@ -315,22 +325,33 @@ export function PickModal({
   );
 }
 
-/** Compact reaction row for a single comment — existing chips + an add button. */
+/** Compact reaction row for a single comment — existing chips + an add button.
+ * `open`/`onToggleOpen`/`onCloseOpen` are lifted to PickModal so opening one
+ * comment's palette closes any other that was already open. */
 function CommentReactions({
   entry,
   reactors,
   onReact,
   onShowAllReactions,
   disabled,
+  open,
+  onToggleOpen,
+  onCloseOpen,
 }: {
   entry: ReactionEntry | undefined;
   reactors: Record<string, Reactor[]>;
   onReact: (emoji: string) => void;
   onShowAllReactions: () => void;
   disabled: boolean;
+  open: boolean;
+  onToggleOpen: () => void;
+  onCloseOpen: () => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const active = entry ? Object.keys(entry.counts) : [];
+  const addRef = useRef<HTMLDivElement>(null);
+  useClickOutside(addRef, onCloseOpen, open);
+  const active = entry
+    ? sortReactionEmojis(entry.counts).filter((e) => (entry.counts[e] ?? 0) > 0)
+    : [];
 
   return (
     <div className="pick-modal__comment-react">
@@ -357,12 +378,12 @@ function CommentReactions({
         </button>
       )}
       {!disabled && (
-        <div className="pick-modal__comment-add">
+        <div className="pick-modal__comment-add" ref={addRef}>
           <button
             type="button"
             className="pick-modal__comment-add-btn"
             aria-label="Add reaction"
-            onClick={() => setOpen((o) => !o)}
+            onClick={onToggleOpen}
           >
             <AddReactionOutlinedIcon sx={{ fontSize: 14 }} />
           </button>
@@ -374,7 +395,7 @@ function CommentReactions({
                   type="button"
                   onClick={() => {
                     onReact(e);
-                    setOpen(false);
+                    onCloseOpen();
                   }}
                 >
                   {e}
@@ -410,7 +431,7 @@ function ReactionChip({
 }) {
   return (
     <button
-      className={`${className}${mine ? ' is-mine' : ''}`}
+      className={`${className}${mine ? ' is-mine' : count > 0 ? ' has-count' : ''}`}
       onClick={onReact}
       disabled={disabled}
     >

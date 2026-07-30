@@ -20,6 +20,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { formatSeconds } from '../../lib/format';
 import { supabase } from '../../supabase';
 import { Modal } from '../Modal/Modal';
+import { ToggleSwitch } from '../ToggleSwitch/ToggleSwitch';
 import {
   ScoringFormatCreatorPage,
   type SavedScoringFormat,
@@ -164,6 +165,52 @@ export function LeagueSettingsFields({ settings, onChange, nameField }: Props) {
             </select>
           </label>
         </div>
+        <div className="wizard__toggle-row">
+          <span>Enable keepers</span>
+          <ToggleSwitch
+            label="Enable keepers"
+            checked={settings.keepersEnabled}
+            onChange={(checked) => set('keepersEnabled', checked)}
+          />
+        </div>
+      </section>
+
+      {/* Scoring */}
+      <section className="wizard__section">
+        <div className="wizard__section-head">
+          <h2>Scoring format</h2>
+          <span className="scoring-badge">🎯 {scoringLabel}</span>
+        </div>
+        <select
+          className="wizard__scoring-select"
+          value={currentScoringChoice}
+          onChange={(e) => setScoringByChoice(e.target.value)}
+        >
+          <optgroup label="Presets">
+            {(Object.keys(SCORING_PRESETS) as (keyof typeof SCORING_PRESETS)[]).map((p) => (
+              <option key={p} value={`preset:${p}`}>
+                {SCORING_PRESETS[p].label}
+              </option>
+            ))}
+          </optgroup>
+          {scoringFormats.length > 0 && (
+            <optgroup label="Your saved formats">
+              {scoringFormats.map((f) => (
+                <option key={f.id} value={`format:${f.id}`}>
+                  {f.name} (custom)
+                </option>
+              ))}
+            </optgroup>
+          )}
+          {currentScoringChoice === 'custom' && <option value="custom">Custom</option>}
+        </select>
+        <button
+          type="button"
+          className="wizard__link"
+          onClick={() => setShowScoringModal(true)}
+        >
+          + Create a custom scoring format
+        </button>
       </section>
 
       {/* Lineup */}
@@ -302,57 +349,6 @@ export function LeagueSettingsFields({ settings, onChange, nameField }: Props) {
             }
             placeholder="Unlimited"
           />
-        </label>
-      </section>
-
-      {/* Scoring */}
-      <section className="wizard__section">
-        <div className="wizard__section-head">
-          <h2>Scoring format</h2>
-          <span className="scoring-badge">🎯 {scoringLabel}</span>
-        </div>
-        <select
-          className="wizard__scoring-select"
-          value={currentScoringChoice}
-          onChange={(e) => setScoringByChoice(e.target.value)}
-        >
-          <optgroup label="Presets">
-            {(Object.keys(SCORING_PRESETS) as (keyof typeof SCORING_PRESETS)[]).map((p) => (
-              <option key={p} value={`preset:${p}`}>
-                {SCORING_PRESETS[p].label}
-              </option>
-            ))}
-          </optgroup>
-          {scoringFormats.length > 0 && (
-            <optgroup label="Your saved formats">
-              {scoringFormats.map((f) => (
-                <option key={f.id} value={`format:${f.id}`}>
-                  {f.name} (custom)
-                </option>
-              ))}
-            </optgroup>
-          )}
-          {currentScoringChoice === 'custom' && <option value="custom">Custom</option>}
-        </select>
-        <button
-          type="button"
-          className="wizard__link"
-          onClick={() => setShowScoringModal(true)}
-        >
-          + Create a custom scoring format
-        </button>
-      </section>
-
-      {/* Extras */}
-      <section className="wizard__section">
-        <h2>Extras</h2>
-        <label className="toggle">
-          <input
-            type="checkbox"
-            checked={settings.keepersEnabled}
-            onChange={(e) => set('keepersEnabled', e.target.checked)}
-          />
-          <span>Enable keepers</span>
         </label>
       </section>
 

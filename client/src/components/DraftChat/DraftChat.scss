@@ -27,6 +27,13 @@
     &:hover {
       background: color-mix(in srgb, $accent 88%, white);
     }
+
+    // The reply banner adds its own row above the compose form, pushing
+    // everything below this button down — bump it up by roughly that
+    // banner's height so it doesn't sit on top of the reply context text.
+    &--replying {
+      bottom: 104px;
+    }
   }
 
   &__scroll {
@@ -510,8 +517,12 @@
     }
   }
 
-  // Wraps into rows instead of one ever-widening pill now that the emoji
-  // set has grown well past what fits on one line.
+  // Wraps into rows instead of one ever-widening pill now that the emoji set
+  // has grown well past what fits on one line. This popover's containing
+  // block is `.chat-react` — for a message with no existing reaction chips
+  // yet, that's just the (~22px) add button, since a flex item with no
+  // siblings shrinks to fit its own content. An explicit width (not just
+  // max-width) keeps this from collapsing to a single column in that case.
   &__palette {
     position: absolute;
     bottom: 100%;
@@ -519,7 +530,7 @@
     z-index: 5;
     display: flex;
     flex-wrap: wrap;
-    max-width: 216px;
+    width: 216px;
     gap: 2px;
     margin-bottom: 4px;
     padding: 4px;

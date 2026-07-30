@@ -1,5 +1,4 @@
 import {
-  REACTION_EMOJIS,
   defaultAvatar,
   type ActivityType,
   type Avatar as AvatarData,
@@ -19,6 +18,7 @@ import { Loader } from '../../components/Loader/Loader';
 import { ReactorsModal, type Reactor } from '../../components/ReactorsModal/ReactorsModal';
 import { api } from '../../lib/api';
 import { sortReactionEmojis } from '../../lib/reactions';
+import { useClickOutside } from '../../lib/useClickOutside';
 import { useInfiniteScroll } from '../../lib/useInfiniteScroll';
 import './HomePage.scss';
 
@@ -403,7 +403,9 @@ function FeedReactions({
 }) {
   const [open, setOpen] = useState(false);
   const [reactorsModal, setReactorsModal] = useState<Record<string, Reactor[]> | null>(null);
-  const active = REACTION_EMOJIS.filter((e) => (item.reactions[e] ?? 0) > 0);
+  const reactionsRef = useRef<HTMLDivElement>(null);
+  useClickOutside(reactionsRef, () => setOpen(false), open);
+  const active = sortReactionEmojis(item.reactions).filter((e) => (item.reactions[e] ?? 0) > 0);
 
   async function showReactors() {
     try {
@@ -417,7 +419,7 @@ function FeedReactions({
   }
 
   return (
-    <div className="feed-card__reactions">
+    <div className="feed-card__reactions" ref={reactionsRef}>
       <button
         className="reaction reaction--add"
         aria-label="Add reaction"
