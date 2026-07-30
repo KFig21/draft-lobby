@@ -394,6 +394,15 @@
     }
   }
 
+  // Applied for the single frame a pick change snaps the fill back to ~0 —
+  // without it, the 1s width transition above animates that reset too, sweeping
+  // the fill right→left before it re-grows. Compound selector (both classes) so
+  // it deterministically outranks the base rule's transition regardless of
+  // source order (the tied-specificity trap documented throughout this repo).
+  &__topbar-fill.draft__topbar-fill--reset {
+    transition: none;
+  }
+
   &__left {
     position: relative;
     z-index: 1;

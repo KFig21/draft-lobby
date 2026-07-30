@@ -354,6 +354,24 @@ export function DraftBoardPage() {
   const topbarCompactRef = useRef(topbarCompact);
   topbarCompactRef.current = topbarCompact;
 
+  // The top-bar countdown fill grows via a CSS `width` transition (matched to
+  // the 1s clock tick). When the pick changes, the elapsed% snaps back near 0
+  // — but that same transition would animate the *reset* too, sweeping the
+  // fill quickly right→left before it starts growing again. Kill the
+  // transition for the one frame the reset lands on, then restore it so the
+  // normal per-second growth still animates.
+  const [fillResetting, setFillResetting] = useState(false);
+  const prevOverallRef = useRef<number | null>(null);
+  useLayoutEffect(() => {
+    const overall = lobby?.current_overall ?? null;
+    const changed = prevOverallRef.current !== null && prevOverallRef.current !== overall;
+    prevOverallRef.current = overall;
+    if (!changed) return;
+    setFillResetting(true);
+    const raf = requestAnimationFrame(() => setFillResetting(false));
+    return () => cancelAnimationFrame(raf);
+  }, [lobby?.current_overall]);
+
   // Resizable sidebar (desktop). Persisted across sessions.
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const saved = Number(localStorage.getItem('draftSidebarWidth'));
@@ -1939,7 +1957,7 @@ export function DraftBoardPage() {
       >
         {onClockCellElapsedPct != null && (
           <span
-            className="draft__topbar-fill"
+            className={`draft__topbar-fill${fillResetting ? ' draft__topbar-fill--reset' : ''}`}
             style={{ width: `${onClockCellElapsedPct * 100}%` }}
             aria-hidden
           />
