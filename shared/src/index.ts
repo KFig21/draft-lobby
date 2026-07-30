@@ -5,4 +5,5 @@ export * from './scoring.js';
 export * from './lobby.js';
 export * from './draft.js';
 export * from './social.js';
+export * from './rulesets.js';
 export * from './moderation.js';

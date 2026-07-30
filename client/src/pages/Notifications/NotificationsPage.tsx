@@ -5,7 +5,9 @@ import { Avatar } from '../../components/Avatar/Avatar';
 import { GradeBadge } from '../../components/GradeBadge/GradeBadge';
 import { Loader } from '../../components/Loader/Loader';
 import { useNotifications } from '../../notifications/NotificationsContext';
+import { useAuth } from '../../auth/AuthContext';
 import { api } from '../../lib/api';
+import { fetchSharedRuleset, importSharedRuleset } from '../../lib/importRuleset';
 import { useInfiniteScroll } from '../../lib/useInfiniteScroll';
 import type { NotificationRow } from '../../lib/types';
 import './NotificationsPage.scss';
@@ -35,6 +37,7 @@ function timeAgo(iso: string): string {
 export function NotificationsPage() {
   const { notifications, loading, loadingMore, hasMore, loadMore, markAllRead, refetch } =
     useNotifications();
+  const { session } = useAuth();
   const navigate = useNavigate();
   const [handled, setHandled] = useState<Record<string, string>>({});
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -62,6 +65,23 @@ export function NotificationsPage() {
         body: { requesterId: n.actor_id, accept },
       });
       setHandled((h) => ({ ...h, [n.id]: accept ? 'Accepted' : 'Declined' }));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function importShare(n: NotificationRow) {
+    const userId = session?.user.id;
+    if (!n.shared_ruleset_id || !userId) return;
+    setBusyId(n.id);
+    try {
+      const shared = await fetchSharedRuleset(n.shared_ruleset_id);
+      if (!shared) {
+        setHandled((h) => ({ ...h, [n.id]: 'Unavailable' }));
+        return;
+      }
+      await importSharedRuleset(shared, userId);
+      setHandled((h) => ({ ...h, [n.id]: 'Imported' }));
     } finally {
       setBusyId(null);
     }
@@ -193,6 +213,18 @@ export function NotificationsPage() {
                 <strong>{n.lobby_name ?? 'a draft'}</strong>
               </>
             )}
+            {n.type === 'RULESET_SHARE' && (
+              <>
+                <strong>{name}</strong> shared a ruleset with you
+                {n.snippet ? (
+                  <>
+                    : <strong>{n.snippet}</strong>
+                  </>
+                ) : (
+                  ''
+                )}
+              </>
+            )}
           </p>
           <span className="notifs__time">{timeAgo(n.created_at)}</span>
         </div>
@@ -231,6 +263,16 @@ export function NotificationsPage() {
               onClick={() => respondInvite(n, false)}
             >
               Decline
+            </button>
+          </div>
+        ) : n.type === 'RULESET_SHARE' ? (
+          <div className="notifs__actions">
+            <button
+              className="button button--primary notifs__btn"
+              disabled={busy || !n.shared_ruleset_id}
+              onClick={() => importShare(n)}
+            >
+              Import
             </button>
           </div>
         ) : null}

@@ -1,7 +1,9 @@
 import {
   DRAFT_RESULTS_LOCK_MS,
+  SCORING_PRESETS,
   defaultAvatar,
   extractMentionedUsernames,
+  matchPreset,
   roundsForSettings,
   type Avatar as AvatarData,
 } from '@draft-lobby/shared';
@@ -18,6 +20,7 @@ import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import EmojiEventsOutlinedIcon from '@mui/icons-material/EmojiEventsOutlined';
 import FormatListNumberedIcon from '@mui/icons-material/FormatListNumbered';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import HowToRegOutlinedIcon from '@mui/icons-material/HowToRegOutlined';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
@@ -38,6 +41,7 @@ import { CommissionerBadge } from '../../components/CommissionerBadge/Commission
 import { ConfirmModal } from '../../components/ConfirmModal/ConfirmModal';
 import { DraftChat } from '../../components/DraftChat/DraftChat';
 import { ErrorScreen } from '../../components/ErrorScreen/ErrorScreen';
+import { LeagueRulesModal } from '../../components/LeagueRulesModal/LeagueRulesModal';
 import { Loader } from '../../components/Loader/Loader';
 import { useAuth } from '../../auth/AuthContext';
 import { useLobby } from '../../hooks/useLobby';
@@ -59,6 +63,7 @@ export function LobbyRoomPage() {
   const { lobby, teams, members, picks, loading, error, refetch } = useLobby(id);
   const { players } = usePlayers();
   const [starting, setStarting] = useState(false);
+  const [showRules, setShowRules] = useState(false);
   const [botBusy, setBotBusy] = useState(false);
   const [namesLockBusy, setNamesLockBusy] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -682,8 +687,20 @@ export function LobbyRoomPage() {
           <span>{s.draftType === 'SNAKE' ? 'Snake' : 'Straight'}</span>
           <span>{roundsForSettings(s)} rounds</span>
           <span>{clockSummary(s.pickTiers)}/pick</span>
+          <span className="room__meta-scoring">
+            {matchPreset(s.scoring) ? SCORING_PRESETS[matchPreset(s.scoring)!].label : 'Custom'}
+          </span>
           {s.draftMode === 'MOCK' && <span>🤖 Mock</span>}
           {s.keepersEnabled && <span>Keepers</span>}
+          {/* Only this pill is interactive — opens the full rules modal. */}
+          <button
+            type="button"
+            className="room__meta-rules"
+            onClick={() => setShowRules(true)}
+            title="View full league rules"
+          >
+            <InfoOutlinedIcon fontSize="inherit" /> Rules
+          </button>
         </div>
 
         <section className="room__invite card">
@@ -1290,6 +1307,14 @@ export function LobbyRoomPage() {
           <strong>{kickTarget.name}</strong> will lose their draft slot and have to be
           re-invited to rejoin.
         </ConfirmModal>
+      )}
+
+      {showRules && (
+        <LeagueRulesModal
+          settings={s}
+          defaultName={lobby.name}
+          onClose={() => setShowRules(false)}
+        />
       )}
     </main>
   );

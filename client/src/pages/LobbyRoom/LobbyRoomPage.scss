@@ -128,6 +128,34 @@
     }
   }
 
+  // Scoring pill gets a touch of the brand color so it reads as the format,
+  // not just another neutral fact. (Info only — not clickable.)
+  &__meta-scoring {
+    color: $primary !important;
+    font-weight: 700;
+  }
+
+  // The ONLY interactive pill in the meta row — a filled accent button that
+  // opens the full rules modal. Self-contained pill styling (it's a <button>,
+  // not one of the info <span>s), and hover affects only itself.
+  &__meta-rules {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: $space * 0.5 $space * 1.5;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    background: color-mix(in srgb, $primary 16%, transparent);
+    color: $primary;
+    font-size: 0.8rem;
+    font-weight: 800;
+    cursor: pointer;
+
+    &:hover {
+      background: color-mix(in srgb, $primary 26%, transparent);
+    }
+  }
+
   &__invite {
     display: flex;
     flex-direction: column;

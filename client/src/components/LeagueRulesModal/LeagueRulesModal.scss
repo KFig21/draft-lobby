@@ -1,0 +1,194 @@
+@use 'variables' as *;
+
+.rules-modal {
+  display: flex;
+  flex-direction: column;
+  gap: $space * 2.5;
+
+  &__section {
+    display: flex;
+    flex-direction: column;
+    gap: $space;
+
+    h3 {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: $space;
+      font-size: 1rem;
+    }
+  }
+
+  &__h-sub {
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+
+  // Overview key/value grid.
+  &__grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: $space $space * 2;
+
+    dt {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: $text-muted;
+      font-weight: 700;
+    }
+
+    dd {
+      font-weight: 700;
+      font-size: 0.95rem;
+    }
+  }
+
+  &__note {
+    font-size: 0.8rem;
+  }
+
+  &__lineup {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: $space;
+
+    li {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 5px;
+      padding: $space * 0.5 $space;
+      background: $bg;
+      border: 1px solid $border;
+      border-radius: $radius-sm;
+    }
+  }
+
+  &__lineup-count {
+    font-weight: 800;
+    color: $primary;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__lineup-label {
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+
+  &__lineup-hint {
+    font-size: 0.75rem;
+  }
+
+  &__scoregroup {
+    h4 {
+      margin: $space * 0.5 0 2px;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: $text-muted;
+    }
+  }
+
+  &__scorelist {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+
+    li {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: $space;
+      padding: $space * 0.6 0;
+      border-bottom: 1px solid $border;
+      font-size: 0.9rem;
+
+      &:last-child {
+        border-bottom: none;
+      }
+    }
+  }
+
+  &__scoreval {
+    flex-shrink: 0;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__error {
+    color: $danger;
+    font-size: 0.9rem;
+  }
+
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $space;
+
+    .button {
+      flex: 1;
+      min-width: 150px;
+      gap: 6px;
+    }
+  }
+
+  &__friends {
+    display: flex;
+    flex-direction: column;
+    gap: $space * 0.5;
+    padding: $space;
+    background: $bg;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+  }
+
+  &__friends-empty {
+    font-size: 0.85rem;
+    padding: $space * 0.5;
+  }
+
+  &__friend {
+    display: flex;
+    align-items: center;
+    gap: $space;
+    padding: $space * 0.75 $space;
+    border: none;
+    border-radius: $radius-sm;
+    background: none;
+    color: $text;
+    cursor: pointer;
+    text-align: left;
+
+    &:hover:not(:disabled) {
+      background: $bg-overlay;
+    }
+
+    &:disabled {
+      cursor: default;
+    }
+  }
+
+  &__friend-name {
+    flex: 1;
+    min-width: 0;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__friend-cta {
+    font-size: 0.85rem;
+    font-weight: 700;
+  }
+
+  &__friend-sent {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    color: $accent;
+    font-size: 0.85rem;
+    font-weight: 700;
+  }
+}

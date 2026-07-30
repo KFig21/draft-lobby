@@ -8,6 +8,7 @@ import { draftRouter } from './routes/draft.js';
 import { socialRouter } from './routes/social.js';
 import { feedRouter } from './routes/feed.js';
 import { usersRouter } from './routes/users.js';
+import { rulesetsRouter } from './routes/rulesets.js';
 
 const app = express();
 
@@ -24,6 +25,7 @@ app.use('/api/lobbies', draftRouter);
 app.use('/api/friends', socialRouter);
 app.use('/api/feed', feedRouter);
 app.use('/api/users', usersRouter);
+app.use('/api/rulesets', rulesetsRouter);
 
 app.listen(env.PORT, () => {
   console.log(`⚡ draft-lobby server listening on http://localhost:${env.PORT}`);

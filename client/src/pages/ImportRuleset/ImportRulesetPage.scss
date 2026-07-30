@@ -1,0 +1,105 @@
+@use 'variables' as *;
+
+.import-ruleset {
+  padding: 0 0 $space * 3;
+  display: flex;
+  flex-direction: column;
+  gap: $space * 3;
+
+  > * {
+    width: 100%;
+    max-width: 560px;
+    margin-inline: auto;
+    padding-inline: $space * 3;
+  }
+
+  &__header {
+    max-width: none;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    min-height: 56px;
+    padding: $space $space * 3;
+    background: $bg-raised;
+    border-bottom: 1px solid $border;
+
+    h1 {
+      font-size: 1.3rem;
+    }
+  }
+
+  &__card {
+    display: flex;
+    flex-direction: column;
+    gap: $space * 1.5;
+    padding: $space * 3;
+    background: $bg-raised;
+    border: 1px solid $border;
+    border-radius: $radius;
+
+    h2 {
+      font-size: 1.4rem;
+    }
+  }
+
+  &__kind {
+    align-self: flex-start;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: color-mix(in srgb, $primary 16%, transparent);
+    color: $primary;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  &__meta {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: $space $space * 2;
+
+    dt {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: $text-muted;
+      font-weight: 700;
+    }
+
+    dd {
+      font-weight: 700;
+      font-size: 1rem;
+    }
+  }
+
+  &__cta {
+    margin-top: $space * 0.5;
+  }
+
+  &__error {
+    color: $danger;
+    font-size: 0.9rem;
+  }
+
+  &__done {
+    display: inline-flex;
+    align-items: center;
+    gap: $space * 0.5;
+    color: $accent;
+    font-size: 1.3rem;
+    font-weight: 800;
+
+    svg {
+      font-size: 1.6rem;
+    }
+  }
+
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $space;
+  }
+}

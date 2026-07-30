@@ -42,6 +42,9 @@ const NotificationsPage = lazy(() =>
   import('./pages/Notifications/NotificationsPage').then((m) => ({ default: m.NotificationsPage })),
 );
 const ProfilePage = lazy(() => import('./pages/Profile/ProfilePage').then((m) => ({ default: m.ProfilePage })));
+const ImportRulesetPage = lazy(() =>
+  import('./pages/ImportRuleset/ImportRulesetPage').then((m) => ({ default: m.ImportRulesetPage })),
+);
 const RankingsPage = lazy(() =>
   import('./pages/Rankings/RankingsPage').then((m) => ({ default: m.RankingsPage })),
 );
@@ -157,6 +160,7 @@ export default function App() {
             <Route path="/profile/:userId" element={<ProfilePage />} />
             <Route path="/drafts" element={<MyDraftsPage />} />
             <Route path="/rankings" element={<RankingsPage />} />
+            <Route path="/import/ruleset/:token" element={<ImportRulesetPage />} />
             <Route path="/friends" element={<FriendsPage />} />
             <Route path="/notifications" element={<NotificationsPage />} />
             <Route path="/settings" element={<SettingsPage />} />

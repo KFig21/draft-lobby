@@ -142,6 +142,8 @@ export interface NotificationRow {
   lobby_name: string | null;
   target_type: NotificationTargetType | null;
   target_id: string | null;
+  /** For RULESET_SHARE: the shared_rulesets row to import (name is in snippet). */
+  shared_ruleset_id: string | null;
   count: number;
   snippet: string | null;
   emoji: string | null;

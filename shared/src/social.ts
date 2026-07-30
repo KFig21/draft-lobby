@@ -9,6 +9,7 @@ export const NOTIFICATION_TYPES = [
   'PICK_REPLY',
   'MENTION',
   'DRAFT_GRADE',
+  'RULESET_SHARE',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
