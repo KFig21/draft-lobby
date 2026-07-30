@@ -57,6 +57,42 @@
     gap: $space;
   }
 
+  // Favorite (cross-draft, star) + queue (per-draft, bookmark) toggles sitting
+  // inline right after the player's name (PlayerHeader's `action` slot).
+  &__toggles {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+
+  // The favorite star mirrors the queue toggle's bare-icon styling, but tints
+  // to the "keeper" gold once on (matching the Rankings table's star).
+  &__fav-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px;
+    border: none;
+    background: none;
+    color: $text-muted;
+    cursor: pointer;
+    transition: color 120ms ease;
+
+    &:hover {
+      color: $text;
+    }
+
+    &.is-on {
+      color: $keeper;
+
+      &:hover {
+        color: $keeper;
+      }
+    }
+  }
+
   // Bookmark toggle sitting inline right after the player's name (rendered via
   // PlayerHeader's `action` slot). Bare icon — no button chrome — so it reads
   // as part of the title, filling in / tinting to the accent once queued.
@@ -65,7 +101,6 @@
     align-items: center;
     justify-content: center;
     vertical-align: middle;
-    margin-left: 8px;
     padding: 2px;
     border: none;
     background: none;

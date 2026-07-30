@@ -8,6 +8,8 @@ import CloseIcon from '@mui/icons-material/Close';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
 import SendIcon from '@mui/icons-material/Send';
+import StarIcon from '@mui/icons-material/Star';
+import StarBorderIcon from '@mui/icons-material/StarBorder';
 import UndoIcon from '@mui/icons-material/Undo';
 import { useMemo, useRef, useState, type FormEvent } from 'react';
 import { api } from '../../lib/api';
@@ -82,6 +84,11 @@ interface Props {
    * share this pick's bye week — same "bye week clashes" section as
    * PlayerDetailModal. Omit (or leave empty) to hide it. */
   byeClashCounts?: Partial<Record<Position, number>>;
+  /** Cross-draft favorite star (favorite_players) — favorites span the whole
+   * app, so a drafted player can still be favorited/unfavorited from here.
+   * Omit to hide the star. */
+  onFavorite?: () => void;
+  favorited?: boolean;
 }
 
 function formatTime(iso: string): string {
@@ -108,6 +115,8 @@ export function PickModal({
   myUserId,
   championUserIds,
   byeClashCounts,
+  onFavorite,
+  favorited,
 }: Props) {
   const { closing, requestClose } = useModalClose(onClose);
   const pickInRound = pick.overall - (pick.round - 1) * teamCount;
@@ -169,7 +178,24 @@ export function PickModal({
 
         {/* Player data + pick data stay pinned; everything else scrolls. */}
         <div className="pick-modal__top">
-          <PlayerHeader player={player} isKeeper={pick.is_keeper} />
+          <PlayerHeader
+            player={player}
+            isKeeper={pick.is_keeper}
+            action={
+              onFavorite ? (
+                <button
+                  type="button"
+                  className={`pick-modal__fav-toggle${favorited ? ' is-on' : ''}`}
+                  onClick={onFavorite}
+                  aria-pressed={favorited}
+                  aria-label={favorited ? 'Remove from favorites' : 'Add to favorites'}
+                  title={favorited ? 'Remove from favorites' : 'Add to favorites'}
+                >
+                  {favorited ? <StarIcon fontSize="small" /> : <StarBorderIcon fontSize="small" />}
+                </button>
+              ) : undefined
+            }
+          />
 
           <div className="pick-modal__drafted">
             {team && (

@@ -2,6 +2,8 @@ import type { Position } from '@draft-lobby/shared';
 import BookmarkIcon from '@mui/icons-material/Bookmark';
 import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder';
 import CloseIcon from '@mui/icons-material/Close';
+import StarIcon from '@mui/icons-material/Star';
+import StarBorderIcon from '@mui/icons-material/StarBorder';
 import { useModalClose } from '../../lib/useModalClose';
 import type { PlayerRow } from '../../lib/types';
 import { ByeClashes } from '../ByeClashes/ByeClashes';
@@ -16,6 +18,11 @@ interface Props {
   disabled?: boolean;
   onQueue?: () => void;
   queued?: boolean;
+  /** Cross-draft "favorite" star (favorite_players). Separate from the queue
+   * (which is per-draft): a favorite follows the user across every lobby and
+   * the Rankings page. Omit to hide the star. */
+  onFavorite?: () => void;
+  favorited?: boolean;
   /** How many of the viewer's own drafted players at each position already
    * share this player's bye week — drives the "bye week clashes" list below
    * the stats. Omit (or leave empty) to hide that section entirely. */
@@ -33,9 +40,41 @@ export function PlayerDetailModal({
   disabled,
   onQueue,
   queued,
+  onFavorite,
+  favorited,
   byeClashCounts,
 }: Props) {
   const { closing, requestClose } = useModalClose(onClose);
+
+  const headerAction =
+    onFavorite || onQueue ? (
+      <span className="player-detail__toggles">
+        {onFavorite && (
+          <button
+            type="button"
+            className={`player-detail__fav-toggle${favorited ? ' is-on' : ''}`}
+            onClick={onFavorite}
+            aria-pressed={favorited}
+            aria-label={favorited ? 'Remove from favorites' : 'Add to favorites'}
+            title={favorited ? 'Remove from favorites' : 'Add to favorites'}
+          >
+            {favorited ? <StarIcon fontSize="small" /> : <StarBorderIcon fontSize="small" />}
+          </button>
+        )}
+        {onQueue && (
+          <button
+            type="button"
+            className={`player-detail__queue-toggle${queued ? ' is-on' : ''}`}
+            onClick={onQueue}
+            aria-pressed={queued}
+            aria-label={queued ? 'Remove from queue' : 'Add to queue'}
+            title={queued ? 'Remove from queue' : 'Add to queue'}
+          >
+            {queued ? <BookmarkIcon fontSize="small" /> : <BookmarkBorderIcon fontSize="small" />}
+          </button>
+        )}
+      </span>
+    ) : undefined;
 
   return (
     <div
@@ -52,27 +91,7 @@ export function PlayerDetailModal({
           <CloseIcon fontSize="small" />
         </button>
 
-        <PlayerHeader
-          player={player}
-          action={
-            onQueue ? (
-              <button
-                type="button"
-                className={`player-detail__queue-toggle${queued ? ' is-on' : ''}`}
-                onClick={onQueue}
-                aria-pressed={queued}
-                aria-label={queued ? 'Remove from queue' : 'Add to queue'}
-                title={queued ? 'Remove from queue' : 'Add to queue'}
-              >
-                {queued ? (
-                  <BookmarkIcon fontSize="small" />
-                ) : (
-                  <BookmarkBorderIcon fontSize="small" />
-                )}
-              </button>
-            ) : undefined
-          }
-        />
+        <PlayerHeader player={player} action={headerAction} />
         <PlayerStatGrid player={player} />
 
         <ByeClashes byeWeek={player.bye_week} counts={byeClashCounts} />

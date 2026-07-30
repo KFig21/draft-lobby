@@ -77,6 +77,34 @@
     }
   }
 
+  // Cross-draft favorite star, inline after the player's name (PlayerHeader's
+  // `action` slot). Gold when on, matching the star everywhere else.
+  &__fav-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    vertical-align: middle;
+    margin-left: 6px;
+    padding: 2px;
+    border: none;
+    background: none;
+    color: $text-muted;
+    cursor: pointer;
+    transition: color 120ms ease;
+
+    &:hover {
+      color: $text;
+    }
+
+    &.is-on {
+      color: $keeper;
+
+      &:hover {
+        color: $keeper;
+      }
+    }
+  }
+
   &__drafted {
     display: flex;
     align-items: center;

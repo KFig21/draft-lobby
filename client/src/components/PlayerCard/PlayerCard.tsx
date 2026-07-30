@@ -2,6 +2,8 @@ import { POSITION_COLORS, type Position } from '@draft-lobby/shared';
 import BookmarkIcon from '@mui/icons-material/Bookmark';
 import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import StarIcon from '@mui/icons-material/Star';
+import StarBorderIcon from '@mui/icons-material/StarBorder';
 import { INJURY_ABBR, INJURY_SEVERITY } from '../../lib/injuryStatus';
 import type { PlayerRow } from '../../lib/types';
 import './PlayerCard.scss';
@@ -12,7 +14,11 @@ interface Props {
   disabled?: boolean;
   onQueue?: () => void;
   queued?: boolean;
-  /** Opens the full player-detail modal. Clicking the queue/draft buttons
+  /** Cross-draft favorite star (favorite_players) — separate from the
+   * per-draft queue bookmark. Omit to hide the star. */
+  onFavorite?: () => void;
+  favorited?: boolean;
+  /** Opens the full player-detail modal. Clicking the star/queue/draft buttons
    * themselves doesn't trigger it (they stopPropagation). */
   onOpenDetail?: () => void;
   /** This pick was a kept player, not a normal draft selection. */
@@ -30,6 +36,8 @@ export function PlayerCard({
   disabled,
   onQueue,
   queued,
+  onFavorite,
+  favorited,
   onOpenDetail,
   isKeeper,
   byeClashCount,
@@ -98,22 +106,39 @@ export function PlayerCard({
           <span className="player-card__adp">ADP {player.adp.toFixed(1)}</span>
         )}
       </div>
-      {onQueue && (
-        <button
-          className={`player-card__queue${queued ? ' player-card__queue--on' : ''}`}
-          onClick={(e) => {
-            e.stopPropagation();
-            onQueue();
-          }}
-          aria-label={queued ? 'Remove from queue' : 'Add to queue'}
-          title={queued ? 'Remove from queue' : 'Add to queue'}
-        >
-          {queued ? (
-            <BookmarkIcon fontSize="small" />
-          ) : (
-            <BookmarkBorderIcon fontSize="small" />
+      {(onFavorite || onQueue) && (
+        <div className="player-card__marks">
+          {onFavorite && (
+            <button
+              className={`player-card__fav${favorited ? ' player-card__fav--on' : ''}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                onFavorite();
+              }}
+              aria-label={favorited ? 'Remove from favorites' : 'Add to favorites'}
+              title={favorited ? 'Remove from favorites' : 'Add to favorites'}
+            >
+              {favorited ? <StarIcon fontSize="small" /> : <StarBorderIcon fontSize="small" />}
+            </button>
           )}
-        </button>
+          {onQueue && (
+            <button
+              className={`player-card__queue${queued ? ' player-card__queue--on' : ''}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                onQueue();
+              }}
+              aria-label={queued ? 'Remove from queue' : 'Add to queue'}
+              title={queued ? 'Remove from queue' : 'Add to queue'}
+            >
+              {queued ? (
+                <BookmarkIcon fontSize="small" />
+              ) : (
+                <BookmarkBorderIcon fontSize="small" />
+              )}
+            </button>
+          )}
+        </div>
       )}
       {onPick && (
         <button
