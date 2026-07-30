@@ -81,9 +81,18 @@
     font-weight: 600;
   }
 
+  // flex:1 here (not on the username span) is what pushes the trailing
+  // reaction emoji to the row's far edge — the badge sits inside this
+  // container so it hugs the name instead of drifting over next to the emoji.
   &__row-name {
     flex: 1;
     min-width: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  &__row-username {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

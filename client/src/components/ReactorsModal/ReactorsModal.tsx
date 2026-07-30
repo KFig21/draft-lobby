@@ -80,9 +80,11 @@ export function ReactorsModal({ reactors, myUserId, championUserIds, onClose }: 
             <li key={`${r.emoji}-${r.userId}-${i}`} className="reactors-modal__row">
               <Avatar avatar={r.avatar ?? defaultAvatar(r.userId)} size={26} />
               <span className="reactors-modal__row-name">
-                {r.userId === myUserId ? 'You' : r.username}
+                <span className="reactors-modal__row-username">
+                  {r.userId === myUserId ? 'You' : r.username}
+                </span>
+                {championUserIds?.has(r.userId) && <ChampionBadge size={12} />}
               </span>
-              {championUserIds?.has(r.userId) && <ChampionBadge size={12} />}
               <span className="reactors-modal__row-emoji">{r.emoji}</span>
             </li>
           ))}
