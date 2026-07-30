@@ -186,13 +186,12 @@ export function DraftGrid({
                         />
                       );
                     }
-                    if (cellStyle === 'hybrid') {
+                    if (cellStyle === 'clean') {
                       return (
-                        <HybridPickCell
+                        <PickCell
                           key={team.id}
                           pick={pick}
                           player={player}
-                          teamCount={teams.length}
                           entry={reactionsByPick?.get(pick.id)}
                           hasComment={(commentsByPick?.get(pick.id)?.length ?? 0) > 0}
                           onReact={onReactPick}
@@ -206,11 +205,13 @@ export function DraftGrid({
                         />
                       );
                     }
+                    // 'default' — see draftCellStyle.ts's comment for why this is Hybrid.
                     return (
-                      <PickCell
+                      <HybridPickCell
                         key={team.id}
                         pick={pick}
                         player={player}
+                        teamCount={teams.length}
                         entry={reactionsByPick?.get(pick.id)}
                         hasComment={(commentsByPick?.get(pick.id)?.length ?? 0) > 0}
                         onReact={onReactPick}

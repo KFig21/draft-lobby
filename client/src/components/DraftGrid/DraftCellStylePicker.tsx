@@ -31,7 +31,7 @@ const SAMPLE_TEAM_COUNT = 12;
 const OPTIONS: { value: DraftCellStyle; label: string }[] = [
   { value: 'default', label: 'Default' },
   { value: 'bold', label: 'Big screen' },
-  { value: 'hybrid', label: 'Hybrid' },
+  { value: 'clean', label: 'Clean' },
 ];
 
 /** Lets the user pick a draft cell style by showing a real, live-rendered
@@ -85,15 +85,7 @@ export function DraftCellStylePicker({
                       entry={showReactions ? SAMPLE_ENTRY : undefined}
                       hasComment={showReactions}
                     />
-                  ) : opt.value === 'hybrid' ? (
-                    <HybridPickCell
-                      pick={SAMPLE_PICK}
-                      player={player}
-                      teamCount={SAMPLE_TEAM_COUNT}
-                      entry={showReactions ? SAMPLE_ENTRY : undefined}
-                      hasComment={showReactions}
-                    />
-                  ) : (
+                  ) : opt.value === 'clean' ? (
                     <PickCell
                       pick={SAMPLE_PICK}
                       player={player}
@@ -101,6 +93,14 @@ export function DraftCellStylePicker({
                       hasComment={showReactions}
                       onEnter={() => {}}
                       onLeave={() => {}}
+                    />
+                  ) : (
+                    <HybridPickCell
+                      pick={SAMPLE_PICK}
+                      player={player}
+                      teamCount={SAMPLE_TEAM_COUNT}
+                      entry={showReactions ? SAMPLE_ENTRY : undefined}
+                      hasComment={showReactions}
                     />
                   )}
                 </tr>

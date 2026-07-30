@@ -1,13 +1,14 @@
-/** How a drafted pick renders on the draft board. 'bold' is meant for a big
- * screen viewed from across the room — a solid position-colored fill with
- * just the player's name, large. 'hybrid' keeps that same position-colored
- * fill but lays it out for reading up close: an abbreviated name pinned to
- * the top corner with position/team/bye underneath. Per-device preference
- * (not synced), same pattern as toastPrefs. */
-export type DraftCellStyle = 'default' | 'bold' | 'hybrid';
+/** How a drafted pick renders on the draft board. 'default' (formerly
+ * "hybrid") is a position-colored fill with an abbreviated name pinned to
+ * the top corner and team/bye/round underneath — laid out for reading up
+ * close. 'bold' is meant for a big screen viewed from across the room — the
+ * same fill, but just the player's name, large. 'clean' (formerly
+ * "default") is the plain, uncolored board look. Per-device preference (not
+ * synced), same pattern as toastPrefs. */
+export type DraftCellStyle = 'default' | 'bold' | 'clean';
 
 const STORAGE_KEY = 'draftCellStyle';
-const VALID_STYLES: DraftCellStyle[] = ['default', 'bold', 'hybrid'];
+const VALID_STYLES: DraftCellStyle[] = ['default', 'bold', 'clean'];
 
 export function getDraftCellStyle(): DraftCellStyle {
   try {

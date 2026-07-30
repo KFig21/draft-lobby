@@ -55,13 +55,13 @@
     border-collapse: separate;
     border-spacing: 0;
 
-    // Both styles otherwise share .draft-grid__cell's normal 52px height,
-    // but Default's 3-line layout (position/name/team-bye) still needs more
-    // room than that and grows the cell taller — Big screen's 1-2 lines
-    // don't, so the two swatches ended up different heights, pushing the
-    // "Default"/"Big screen" labels below them out of alignment. Pinned to
-    // one fixed height (bigger than either style needs) so every card's
-    // label lands at the same spot regardless of which style renders taller.
+    // These styles otherwise share .draft-grid__cell's normal 52px height,
+    // but Clean's 3-line layout (position/name/team-bye) and Default's
+    // (Hybrid's) 3-line layout both need more room than that and grow the
+    // cell taller — Big screen's 1-2 lines don't, so the swatches ended up
+    // different heights, pushing the labels below them out of alignment.
+    // Pinned to one fixed height (bigger than any style needs) so every
+    // card's label lands at the same spot regardless of which renders taller.
     .draft-grid__cell {
       height: 70px;
     }
