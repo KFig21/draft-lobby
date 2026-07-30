@@ -149,9 +149,6 @@ export function LeagueWizardPage({ embedded = false, onSaved, onCancel }: Props 
   return (
     <main className="wizard">
       <header className="wizard__header">
-        <button className="back-link" onClick={() => navigate('/settings')}>
-          ← Settings
-        </button>
         <h1>{editId ? 'Edit league' : 'New league'}</h1>
       </header>
       {form}

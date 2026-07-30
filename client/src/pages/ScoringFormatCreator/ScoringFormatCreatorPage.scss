@@ -2,32 +2,41 @@
 @use 'variables' as *;
 
 .scoring {
-  &__page-header {
+  display: flex;
+  flex-direction: column;
+
+  // Centre the form body; the header (below) spans the full container width.
+  // Scoped to the form so the embedded (in-modal) render isn't reconstrained.
+  > .scoring__form {
+    width: 100%;
     max-width: 680px;
-    margin: 0 auto;
-    padding: $space * 3 $space * 3 0;
+    margin-inline: auto;
+    padding-inline: $space * 3;
+  }
+
+  // Pinned page header with a full-width bottom border — same shape as every
+  // other page's own header (Settings, Friends, …).
+  &__page-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
     display: flex;
-    flex-direction: column;
-    gap: $space;
+    align-items: center;
+    min-height: 56px;
+    padding: $space $space * 3;
+    background: $bg-raised;
+    border-bottom: 1px solid $border;
 
     h1 {
-      font-size: 1.5rem;
-    }
-
-    .back-link {
-      background: none;
-      border: none;
-      cursor: pointer;
+      font-size: 1.3rem;
     }
   }
 
   &__form {
-    max-width: 680px;
-    margin: 0 auto;
     display: flex;
     flex-direction: column;
     gap: $space * 1.5;
-    padding: $space * 2 $space * 3 $space * 3;
+    padding-block: $space * 2 $space * 3;
   }
 
   &__name,

@@ -308,9 +308,6 @@ export function ScoringFormatCreatorPage({ embedded = false, onSaved }: Props = 
     <div className="scoring">
       {!embedded && (
         <header className="scoring__page-header">
-          <button className="back-link" onClick={() => navigate('/settings')}>
-            ← Settings
-          </button>
           <h1>{editId ? 'Edit scoring format' : 'New scoring format'}</h1>
         </header>
       )}
