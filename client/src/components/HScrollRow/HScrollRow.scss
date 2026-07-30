@@ -2,18 +2,69 @@
 
 .hscroll {
   display: flex;
-  align-items: center;
-  gap: $space * 0.5;
+  flex-direction: column;
+
+  // Title (optional) + controls share one line — title on the left, the
+  // prev/next cluster on the right, only rendered when there's actually
+  // something for it to hold.
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $space;
+    margin-bottom: $space * 1.5;
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: $text-muted;
+  }
+
+  // A small control cluster (not an overlay on the track) — never covers a
+  // card, and only rendered once the row actually overflows, so a short list
+  // just shows its cards flush left with no controls at all.
+  &__controls {
+    display: flex;
+    flex-shrink: 0;
+    gap: $space * 0.5;
+  }
+
+  &__btn {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border: 1px solid $border;
+    border-radius: 999px;
+    background: $bg-overlay;
+    color: $text;
+    cursor: pointer;
+    transition:
+      background 120ms ease,
+      opacity 120ms ease;
+
+    &:hover:not(:disabled) {
+      background: $bg-hover;
+    }
+
+    // Reached the end in that direction — dim instead of hiding, so the
+    // control cluster doesn't jump around as you scroll.
+    &:disabled {
+      opacity: 0.35;
+      cursor: default;
+    }
+  }
 
   &__track {
-    flex: 1;
-    min-width: 0;
     display: flex;
     gap: $space;
     overflow-x: auto;
     scroll-snap-type: x proximity;
-    // The buttons are the intended affordance — hide the native scrollbar,
-    // drag/trackpad scroll still works underneath.
+    // The buttons are the intended affordance on desktop — hide the native
+    // scrollbar; drag/trackpad/touch scroll still works underneath.
     scrollbar-width: none;
     &::-webkit-scrollbar {
       display: none;
@@ -22,23 +73,6 @@
     > * {
       scroll-snap-align: start;
       flex-shrink: 0;
-    }
-  }
-
-  &__btn {
-    display: grid;
-    place-items: center;
-    flex-shrink: 0;
-    width: 30px;
-    height: 30px;
-    border: 1px solid $border;
-    border-radius: 999px;
-    background: $bg-overlay;
-    color: $text;
-    cursor: pointer;
-
-    &:hover {
-      background: $bg-hover;
     }
   }
 }

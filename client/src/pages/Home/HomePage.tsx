@@ -161,8 +161,7 @@ export function HomePage() {
       {/* Pinned active drafts */}
       {activeLobbies.length > 0 && (
         <section className="home__pinned">
-          <h2 className="home__section-title">Your active drafts</h2>
-          <HScrollRow>
+          <HScrollRow title="Your active drafts">
             {visibleActive.map((l) => {
               const live = l.status === 'STAGING' || l.status === 'DRAFTING' || l.status === 'PAUSED';
               return (
@@ -205,8 +204,7 @@ export function HomePage() {
       {/* Pinned: public lobbies friends are in that you haven't joined. */}
       {friendOpenLobbies.length > 0 && (
         <section className="home__pinned">
-          <h2 className="home__section-title">Friends in open lobbies</h2>
-          <HScrollRow>
+          <HScrollRow title="Friends in open lobbies">
             {visibleFriendOpen.map((l) => (
               <FriendOpenCard key={l.id} lobby={l} />
             ))}
