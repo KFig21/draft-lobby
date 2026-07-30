@@ -14,3 +14,12 @@ export function clockSummary(tiers: PickTier[]): string {
   if (tiers.length === 1) return formatSeconds(first);
   return `${formatSeconds(first)} → ${formatSeconds(last)}`;
 }
+
+/** "Round.pick" label — e.g. round 5, 2nd pick of the round. Zero-padded to
+ * 2 digits once a draft has 10+ teams (round 5's 2nd pick reads as "5.02",
+ * not "5.2", once picks-in-round can reach double digits); below that,
+ * plain "5.2" is unambiguous on its own. */
+export function formatRoundPick(round: number, pickInRound: number, teamCount: number): string {
+  const pad = teamCount >= 10 ? 2 : 1;
+  return `${round}.${String(pickInRound).padStart(pad, '0')}`;
+}

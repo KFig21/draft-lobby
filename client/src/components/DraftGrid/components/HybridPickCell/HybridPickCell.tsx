@@ -1,0 +1,142 @@
+import { POSITION_COLORS, type Position } from '@draft-lobby/shared';
+import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlined';
+import LockIcon from '@mui/icons-material/Lock';
+import { formatRoundPick } from '../../../../lib/format';
+import type { PickRow, PlayerRow } from '../../../../lib/types';
+import type { ReactionEntry } from '../PickCell/PickCell';
+// Same reasoning as PickCell.tsx's identical import: this component also
+// renders standalone in Settings' cell-style picker, a separate lazy-loaded
+// route that would otherwise never load DraftGrid.scss's base .draft-grid__cell.
+import '../../DraftGrid.scss';
+import './HybridPickCell.scss';
+
+// "First initial. Last name" — but a first name that's already initials
+// (C.J., A.J., T.J., D.J., ...) loses real information if trimmed down to
+// just its first letter ("C.J. Stroud" -> "C. Stroud" reads like a
+// different player), so those are kept whole instead. D/ST entries
+// ("BAL D/ST") aren't personal names at all — left alone.
+function abbreviateName(name: string, position: string): string {
+  if (position === 'DEF') return name;
+  const parts = name.trim().split(/\s+/);
+  if (parts.length < 2) return name;
+  const [first, ...rest] = parts;
+  if (/^([A-Z]\.){2,}$/.test(first)) return `${first} ${rest.join(' ')}`;
+  return `${first[0]?.toUpperCase() ?? ''}. ${rest.join(' ')}`;
+}
+
+/**
+ * "Hybrid" draft cell style (Settings > Draft board): Big screen's
+ * position-colored fill and corner flags/hover, but laid out for reading up
+ * close rather than across a room — an abbreviated name pinned to the top
+ * corner, team/bye underneath, and the round.pick (e.g. "5.02") on a third
+ * line, instead of just a large name. Position is already the cell's own
+ * fill color, so it's dropped from the text.
+ *
+ * Its own component + stylesheet, not a mode of BoldPickCell — same reason
+ * BoldPickCell split from PickCell (see its own comment): keeping each
+ * style's selectors independent rules out any hover/specificity fights
+ * between them for good.
+ */
+export function HybridPickCell({
+  pick,
+  player,
+  teamCount,
+  entry,
+  hasComment,
+  onReact,
+  onClick,
+  onEnter,
+  onLeave,
+}: {
+  pick: PickRow;
+  player: PlayerRow;
+  /** Number of teams in the draft — derives the "round.pick" line (e.g.
+   * "5.02" for the 2nd pick of round 5 in a 10+ team draft). */
+  teamCount: number;
+  entry?: ReactionEntry;
+  hasComment?: boolean;
+  onReact?: (pickId: string, emoji: string) => void;
+  onClick?: (pick: PickRow) => void;
+  /** Cross-highlights this pick's team header + round number, same as PickCell. */
+  onEnter?: () => void;
+  onLeave?: () => void;
+}) {
+  const active = entry ? Object.keys(entry.counts) : [];
+  const posColor = POSITION_COLORS[player.position as Position];
+  const pickInRound = pick.overall - (pick.round - 1) * teamCount;
+
+  return (
+    <td
+      className={`draft-grid__cell hybrid-pick-cell${
+        pick.is_keeper ? ' draft-grid__cell--keeper' : ''
+      }`}
+      style={{ background: posColor }}
+      onClick={() => onClick?.(pick)}
+      onMouseEnter={onEnter}
+      onMouseLeave={onLeave}
+    >
+      <div className="hybrid-pick-cell__info">
+        <span className="hybrid-pick-cell__name">
+          {abbreviateName(player.name, player.position)}
+        </span>
+        <span className="hybrid-pick-cell__meta">
+          {player.nfl_team}
+          {player.bye_week != null && (
+            <>
+              <span className="hybrid-pick-cell__dot" aria-hidden>
+                ·
+              </span>
+              Bye {player.bye_week}
+            </>
+          )}
+        </span>
+        <span className="hybrid-pick-cell__round">
+          {formatRoundPick(pick.round, pickInRound, teamCount)}
+        </span>
+      </div>
+
+      {/* Same corner-badge treatment as Big screen (see BoldPickCell.tsx). */}
+      {(pick.is_keeper || active.length > 0 || hasComment) && (
+        <span className="hybrid-pick-cell__flags" aria-hidden>
+          {pick.is_keeper && (
+            <span className="hybrid-pick-cell__flag-chip hybrid-pick-cell__keeper-flag">
+              <LockIcon sx={{ fontSize: 9 }} />
+            </span>
+          )}
+          {hasComment && (
+            <span
+              className="hybrid-pick-cell__flag-chip"
+              style={{ ['--flag-color' as string]: posColor }}
+            >
+              <ChatBubbleOutlineIcon sx={{ fontSize: 9 }} />
+            </span>
+          )}
+          {active.length > 0 && (
+            <span
+              className="hybrid-pick-cell__flag-chip hybrid-pick-cell__react-flag"
+              style={{ ['--flag-color' as string]: posColor }}
+            >
+              !!
+            </span>
+          )}
+        </span>
+      )}
+
+      {active.length > 0 && (
+        <div className="hybrid-pick-cell__react-pop" onClick={(e) => e.stopPropagation()}>
+          {active.map((e) => (
+            <button
+              key={e}
+              type="button"
+              className={`hybrid-pick-cell__rchip${entry?.mine.has(e) ? ' is-mine' : ''}`}
+              onClick={() => onReact?.(pick.id, e)}
+            >
+              {e}
+              {(entry?.counts[e] ?? 0) > 1 ? entry?.counts[e] : ''}
+            </button>
+          ))}
+        </div>
+      )}
+    </td>
+  );
+}

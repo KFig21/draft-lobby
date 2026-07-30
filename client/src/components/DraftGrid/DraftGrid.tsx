@@ -9,6 +9,7 @@ import type { ChatMessageRow, MemberRow, PickRow, PlayerRow, TeamRow } from '../
 import { Avatar } from '../Avatar/Avatar';
 import { ChampionBadge } from '../ChampionBadge/ChampionBadge';
 import { BoldPickCell } from './components/BoldPickCell/BoldPickCell';
+import { HybridPickCell } from './components/HybridPickCell/HybridPickCell';
 import { PickCell, type ReactionEntry } from './components/PickCell/PickCell';
 import './DraftGrid.scss';
 
@@ -172,6 +173,26 @@ export function DraftGrid({
                           key={team.id}
                           pick={pick}
                           player={player}
+                          entry={reactionsByPick?.get(pick.id)}
+                          hasComment={(commentsByPick?.get(pick.id)?.length ?? 0) > 0}
+                          onReact={onReactPick}
+                          onClick={onPickClick}
+                          onEnter={() => setHover({ round, teamId: team.id })}
+                          onLeave={() =>
+                            setHover((h) =>
+                              h && h.round === round && h.teamId === team.id ? null : h,
+                            )
+                          }
+                        />
+                      );
+                    }
+                    if (cellStyle === 'hybrid') {
+                      return (
+                        <HybridPickCell
+                          key={team.id}
+                          pick={pick}
+                          player={player}
+                          teamCount={teams.length}
                           entry={reactionsByPick?.get(pick.id)}
                           hasComment={(commentsByPick?.get(pick.id)?.length ?? 0) > 0}
                           onReact={onReactPick}

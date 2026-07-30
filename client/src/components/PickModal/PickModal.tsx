@@ -11,6 +11,7 @@ import SendIcon from '@mui/icons-material/Send';
 import UndoIcon from '@mui/icons-material/Undo';
 import { useMemo, useRef, useState, type FormEvent } from 'react';
 import { api } from '../../lib/api';
+import { formatRoundPick } from '../../lib/format';
 import { sortReactionEmojis } from '../../lib/reactions';
 import { renderMentionText } from '../../lib/renderMentions';
 import { useClickOutside } from '../../lib/useClickOutside';
@@ -174,7 +175,7 @@ export function PickModal({
             <span>
               <strong>{team?.name ?? 'A team'}</strong>
               {team?.owner_id && championUserIds?.has(team.owner_id) && <ChampionBadge size={13} />}{' '}
-              · Pick {pick.overall} · Round {pick.round}.{pickInRound}
+              · Pick {pick.overall} · Round {formatRoundPick(pick.round, pickInRound, teamCount)}
               {pick.is_auto_pick && <span className="pick-modal__auto"> · auto</span>}
             </span>
           </div>

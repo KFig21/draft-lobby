@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { DraftCellStyle } from '../../lib/draftCellStyle';
 import type { PickRow } from '../../lib/types';
 import { BoldPickCell } from './components/BoldPickCell/BoldPickCell';
+import { HybridPickCell } from './components/HybridPickCell/HybridPickCell';
 import type { ReactionEntry } from './components/PickCell/PickCell';
 import { PickCell } from './components/PickCell/PickCell';
 import { randomSamplePlayer } from './samplePlayers';
@@ -23,9 +24,14 @@ const SAMPLE_PICK: PickRow = {
 // showReactions is on (see the Props comment below).
 const SAMPLE_ENTRY: ReactionEntry = { counts: { '🔥': 2 }, mine: new Set() };
 
+// A 12-team league, just to give Hybrid's round.pick line something to
+// render (and show off its 10+ team zero-padding, e.g. "1.01").
+const SAMPLE_TEAM_COUNT = 12;
+
 const OPTIONS: { value: DraftCellStyle; label: string }[] = [
   { value: 'default', label: 'Default' },
   { value: 'bold', label: 'Big screen' },
+  { value: 'hybrid', label: 'Hybrid' },
 ];
 
 /** Lets the user pick a draft cell style by showing a real, live-rendered
@@ -76,6 +82,14 @@ export function DraftCellStylePicker({
                     <BoldPickCell
                       pick={SAMPLE_PICK}
                       player={player}
+                      entry={showReactions ? SAMPLE_ENTRY : undefined}
+                      hasComment={showReactions}
+                    />
+                  ) : opt.value === 'hybrid' ? (
+                    <HybridPickCell
+                      pick={SAMPLE_PICK}
+                      player={player}
+                      teamCount={SAMPLE_TEAM_COUNT}
                       entry={showReactions ? SAMPLE_ENTRY : undefined}
                       hasComment={showReactions}
                     />

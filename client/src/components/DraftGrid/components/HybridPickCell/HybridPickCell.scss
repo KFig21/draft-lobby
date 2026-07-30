@@ -1,0 +1,196 @@
+@use 'variables' as *;
+
+// Independent of BoldPickCell.scss/PickCell.scss on purpose — same reasoning
+// as BoldPickCell's own comment: no shared selectors means this style's
+// hover/flag treatment can never fight another style's for which one wins.
+// .draft-grid__cell (base size/border/padding/vertical-align: top) is still
+// shared, since that's just cell geometry every style fits into.
+.hybrid-pick-cell {
+  cursor: pointer;
+  // Flags hang half outside this box (like Big screen's) and the hover
+  // reactions tray unfolds below it.
+  overflow: visible;
+  transition: transform 300ms ease;
+
+  @media (hover: hover) {
+    &:hover {
+      transform: scale(1.07);
+      box-shadow: none;
+      z-index: 4;
+
+      // Same same-footprint trick as BoldPickCell: a transparent border (not
+      // none) keeps the box-model width identical so the text doesn't
+      // reflow right as you hover it.
+      :root[data-theme='light'] & {
+        border: 1px solid transparent;
+        box-shadow: 0 0 0 6px white, 0 0 0 8px black;
+      }
+
+      :root[data-theme='dark'] & {
+        border: 1px solid transparent;
+        box-shadow: 0 0 0 6px black, 0 0 0 8px white;
+      }
+
+      .hybrid-pick-cell__react-pop {
+        display: flex;
+      }
+    }
+  }
+
+  &__info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0px;
+    // Sits above the corner flags (position: absolute, z-index: 2 below)
+    // regardless of DOM order, same reasoning as BoldPickCell's &__name.
+    position: relative;
+    z-index: 3;
+  }
+
+  &__name {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 800;
+    font-size: .92rem;
+    color: #000000;
+  }
+
+  &__meta {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.55rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: rgba(0, 0, 0, 0.65);
+  }
+
+  &__dot {
+    font-size: 0.5rem;
+  }
+
+  // Third line: "round.pick" (e.g. "5.02") — fainter than &__meta so the
+  // hierarchy reads name > team/bye > round.pick.
+  &__round {
+    font-size: 0.55rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: rgba(0, 0, 0, 0.65);
+  }
+
+  // Same chip treatment as Big screen (BoldPickCell.scss) — kept as its own
+  // copy rather than a shared partial, per this codebase's rule that style
+  // variants stay fully independent.
+  &__flags {
+    position: absolute;
+    bottom: -4px;
+    right: -4px;
+    z-index: 2;
+    display: flex;
+    flex-direction: row-reverse;
+    align-items: center;
+    gap: 2px;
+    pointer-events: none;
+  }
+
+  &__flag-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 3px;
+    border-radius: 999px;
+    background: var(--flag-color);
+    color: #1a1a1a;
+  }
+
+  &__flag-chip.hybrid-pick-cell__keeper-flag {
+    background: $keeper;
+  }
+
+  &__react-flag {
+    font-size: 0.6rem;
+    font-weight: 900;
+    line-height: 1;
+  }
+
+  &__react-pop {
+    position: absolute;
+    top: calc(100% + 10px);
+    left: 0;
+    z-index: 30;
+    display: none;
+    align-items: center;
+    gap: 2px;
+    padding: 3px 4px;
+    background: $bg-raised;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.5);
+    white-space: nowrap;
+  }
+
+  &__rchip {
+    display: inline-flex;
+    align-items: center;
+    gap: 1px;
+    padding: 1px 5px;
+    border: none;
+    border-radius: 999px;
+    background: $bg-overlay;
+    color: $text;
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1.4;
+    cursor: pointer;
+
+    &:hover {
+      background: $bg-hover;
+    }
+
+    &.is-mine {
+      background: rgba($accent, 0.25);
+    }
+  }
+}
+
+// Fullscreen ("TV mode"): grows with --fs-scale, same mechanism as the
+// other two styles' fill-mode font sizes.
+.draft-grid--fill {
+  .hybrid-pick-cell__name {
+    font-size: calc(0.96rem * var(--fs-scale));
+  }
+
+  .hybrid-pick-cell__meta {
+    font-size: calc(0.58rem * var(--fs-scale));
+  }
+
+  .hybrid-pick-cell__round {
+    font-size: calc(0.58rem * var(--fs-scale));
+  }
+
+  .hybrid-pick-cell__react-flag {
+    font-size: calc(0.6rem * var(--fs-scale));
+  }
+
+  .hybrid-pick-cell__flag-chip {
+    min-width: calc(14px * var(--fs-scale));
+    height: calc(14px * var(--fs-scale));
+
+    svg {
+      font-size: calc(9px * var(--fs-scale));
+    }
+  }
+
+  .hybrid-pick-cell__rchip {
+    font-size: calc(0.72rem * var(--fs-scale));
+  }
+}
