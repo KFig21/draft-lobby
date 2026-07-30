@@ -23,6 +23,15 @@
   border-collapse: separate;
   border-spacing: 4px;
   font-size: 0.75rem;
+  // Colour of the gaps between cards (the board canvas showing through the
+  // border-spacing) — mirrors .draft/.draft-grid__corner. The sticky-header
+  // gap masks below use it so a scrolled body cell reads as the normal grid
+  // gap rather than peeking out.
+  --grid-canvas: #{$bg};
+
+  :root[data-theme='light'] & {
+    --grid-canvas: #{$bg-raised};
+  }
 
   &__team,
   &__round,
@@ -37,41 +46,59 @@
     z-index: 11;
   }
 
+  // The frozen header row/column keep their rounded look but sit on an opaque
+  // backing that hides scrolled pick cells behind them. The <td> itself is that
+  // backing — canvas-coloured, square, with a 4px outset shadow filling the
+  // border-spacing gaps around it — so no pick cell (or a flag chip that
+  // overhangs its own cell) can peek out through a gap or a rounded corner. The
+  // visible rounded, coloured face is a &::before layered on top of the backing
+  // but behind the text (z-index: -1). Same structure on &__round and &__corner.
   &__team {
     top: 0;
     z-index: 12; // header row rides above the sticky round column
-    background: $bg-overlay;
     padding: $space;
-    border-radius: $radius-sm;
     white-space: nowrap;
     font-size: 0.7rem;
     max-width: 120px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    box-shadow: inset 0 0 0 1px transparent;
-    transition:
-      box-shadow 120ms ease,
-      background 120ms ease;
+    // No overflow:hidden here — name truncation is handled by &__team-btn (its
+    // own overflow:hidden + ellipsis, constrained to this cell's max-width).
+    background: var(--grid-canvas); // opaque backing
+    box-shadow: 0 0 0 4px var(--grid-canvas); // fills the surrounding gaps
+
+    &::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: -1; // above the backing, behind the team name/avatar
+      border-radius: $radius-sm;
+      background: $bg-overlay;
+      box-shadow: inset 0 0 0 1px transparent; // ring placeholder (see &--mine)
+      pointer-events: none;
+      transition:
+        box-shadow 120ms ease,
+        background 120ms ease;
+    }
 
     // The signed-in user's own team — a persistent ring so it's easy to spot
-    // at a glance. Declared before &--hi/&--onclock so their backgrounds
-    // still take over on top of it; only the ring itself always survives.
-    &--mine {
+    // at a glance. Declared before &--hi/&--onclock so their backgrounds still
+    // take over on top of it; only the ring itself always survives.
+    &--mine::before {
       background: color-mix(in srgb, $primary 15%, $bg-overlay);
       box-shadow: inset 0 0 0 1px $primary;
     }
 
-    // Cross-highlight when hovering one of this team's picks. Opaque (not
-    // rgba) — these cells are sticky and sit over scrolling content, so a
-    // translucent background lets scrolled-past text show through underneath.
-    &--hi {
+    // Cross-highlight when hovering one of this team's picks.
+    &--hi::before {
       background: color-mix(in srgb, $accent 22%, $bg-overlay);
     }
 
-    // The team currently on the clock: filled green, dark text — the avatar
-    // sets its own background inline, so it's unaffected by this.
-    &--onclock {
+    // The team currently on the clock: filled green face, dark text — the
+    // avatar sets its own background inline, so it's unaffected by this.
+    &--onclock::before {
       background: $accent;
+    }
+
+    &--onclock {
       color: #05231a;
     }
   }
@@ -103,26 +130,39 @@
 
   &__round {
     left: 0; // frozen on the left edge of the board
-    background: $bg-overlay;
     color: $text-muted;
     font-weight: 700;
     text-align: center;
-    border-radius: $radius-sm;
     width: 30px;
-    transition: background 120ms ease;
+    // Backing + gap fill (see &__team); rounded face is &::before.
+    background: var(--grid-canvas);
+    box-shadow: 0 0 0 4px var(--grid-canvas);
 
-    // Cross-highlight when hovering a pick in this round. Opaque for the same
-    // reason as the team header's &--hi (this cell is sticky-left and scrolls
-    // over pick content).
-    &--hi {
-      background: color-mix(in srgb, $accent 22%, $bg-overlay);
-      color: $accent;
+    &::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: -1; // above the backing, behind the round number/arrow
+      border-radius: $radius-sm;
+      background: $bg-overlay;
+      pointer-events: none;
+      transition: background 120ms ease;
     }
 
-    // The live round: filled green, dark text — takes priority over &--hi.
+    // Cross-highlight when hovering a pick in this round.
+    &--hi {
+      color: $accent;
+    }
+    &--hi::before {
+      background: color-mix(in srgb, $accent 22%, $bg-overlay);
+    }
+
+    // The live round: filled green face, dark text — takes priority over &--hi.
     &--current {
-      background: $accent;
       color: #05231a;
+    }
+    &--current::before {
+      background: $accent;
     }
   }
 
@@ -157,14 +197,12 @@
     top: 0;
     left: 0;
     z-index: 13; // top-left corner sits above both sticky header and round column
-    background: $bg;
-
-    // Matches the board canvas's own light-mode override (DraftBoardPage.scss
-    // — the corner otherwise sits on the sticky header, not the canvas behind
-    // it, so it needs its own copy of that override to stay in sync).
-    :root[data-theme='light'] & {
-      background: $bg-raised;
-    }
+    // The empty top-left cell is just canvas, so it needs no rounded face —
+    // only the backing + gap fill, so nothing peeks around it where the two
+    // frozen bands meet. var(--grid-canvas) is already theme-aware, so the
+    // shadow tracks light/dark without a separate override.
+    background: var(--grid-canvas);
+    box-shadow: 0 0 0 4px var(--grid-canvas);
   }
 
   &__cell {
