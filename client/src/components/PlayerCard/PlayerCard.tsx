@@ -17,6 +17,10 @@ interface Props {
   onOpenDetail?: () => void;
   /** This pick was a kept player, not a normal draft selection. */
   isKeeper?: boolean;
+  /** How many of the viewer's own drafted players at THIS player's position
+   * already share their bye week. Colors the bye number — 1 turns yellow,
+   * 2+ turns red. Omit/0 to leave it uncolored. */
+  byeClashCount?: number;
 }
 
 /** A row in the player pool: color-coded position, bye, injury, projection. */
@@ -28,6 +32,7 @@ export function PlayerCard({
   queued,
   onOpenDetail,
   isKeeper,
+  byeClashCount,
 }: Props) {
   const color = POSITION_COLORS[player.position as Position];
   const injury = INJURY_ABBR[player.injury_status];
@@ -71,7 +76,18 @@ export function PlayerCard({
         </div>
         <div className="player-card__sub">
           {player.nfl_team}
-          {player.bye_week ? ` · Bye ${player.bye_week}` : ''}
+          {player.bye_week != null && (
+            <span
+              className={`player-card__bye${
+                byeClashCount
+                  ? ` player-card__bye--${byeClashCount >= 2 ? 'danger' : 'warning'}`
+                  : ''
+              }`}
+            >
+              {' '}
+              · Bye {player.bye_week}
+            </span>
+          )}
         </div>
       </div>
       <div className="player-card__stats">

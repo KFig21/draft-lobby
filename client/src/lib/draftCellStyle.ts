@@ -35,3 +35,20 @@ export function getShowCellReactions(): boolean {
 export function setShowCellReactions(show: boolean): void {
   localStorage.setItem(REACTIONS_STORAGE_KEY, show ? '1' : '0');
 }
+
+/** Whether the "bye week clashes" section shows in the player/pick detail
+ * modals (and the color-coded bye badge in the player pool) — per-device
+ * preference, same pattern as the two above. */
+const BYE_CLASHES_STORAGE_KEY = 'showByeClashes';
+
+export function getShowByeClashes(): boolean {
+  try {
+    return localStorage.getItem(BYE_CLASHES_STORAGE_KEY) !== '0';
+  } catch {
+    return true;
+  }
+}
+
+export function setShowByeClashes(show: boolean): void {
+  localStorage.setItem(BYE_CLASHES_STORAGE_KEY, show ? '1' : '0');
+}

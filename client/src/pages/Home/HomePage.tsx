@@ -18,6 +18,7 @@ import { HScrollRow } from '../../components/HScrollRow/HScrollRow';
 import { Loader } from '../../components/Loader/Loader';
 import { ReactorsModal, type Reactor } from '../../components/ReactorsModal/ReactorsModal';
 import { api } from '../../lib/api';
+import { sortReactionEmojis } from '../../lib/reactions';
 import { useInfiniteScroll } from '../../lib/useInfiniteScroll';
 import './HomePage.scss';
 
@@ -451,7 +452,7 @@ function FeedReactions({
       )}
       {open && (
         <div className="feed-card__palette">
-          {REACTION_EMOJIS.map((emoji) => (
+          {sortReactionEmojis(item.reactions).map((emoji) => (
             <button
               key={emoji}
               onClick={() => {

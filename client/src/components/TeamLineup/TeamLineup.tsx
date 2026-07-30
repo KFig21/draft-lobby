@@ -116,12 +116,13 @@ export function TeamLineup({
 
   // Group every drafted player (starter or bench) by bye week, so an owner
   // can spot a pile-up of players sharing the same off week at a glance.
-  const byeMap = new Map<number, PlayerRow[]>();
+  const byeMap = new Map<number, PoolEntry[]>();
   for (const r of rows) {
     if (!r.player || r.player.bye_week == null) continue;
+    const entry: PoolEntry = { player: r.player, pick: r.pick! };
     const group = byeMap.get(r.player.bye_week);
-    if (group) group.push(r.player);
-    else byeMap.set(r.player.bye_week, [r.player]);
+    if (group) group.push(entry);
+    else byeMap.set(r.player.bye_week, [entry]);
   }
   const byeGroups = Array.from(byeMap.entries())
     .sort(([a], [b]) => a - b)
@@ -240,15 +241,30 @@ export function TeamLineup({
                 <span className="bye-breakdown__week">Wk {week}</span>
                 <span className="bye-breakdown__count">{byePlayers.length}</span>
                 <span className="bye-breakdown__players">
-                  {byePlayers.map((p) => (
-                    <span key={p.id} className="bye-breakdown__player">
-                      <span
-                        className="bye-breakdown__dot"
-                        style={{ ['--pos' as string]: POSITION_COLORS[p.position as Position] }}
-                      />
-                      {p.name}
-                    </span>
-                  ))}
+                  {byePlayers.map(({ player: p, pick }) =>
+                    onPickClick ? (
+                      <button
+                        key={p.id}
+                        type="button"
+                        className="bye-breakdown__player bye-breakdown__player--link"
+                        onClick={() => onPickClick(pick)}
+                      >
+                        <span
+                          className="bye-breakdown__dot"
+                          style={{ ['--pos' as string]: POSITION_COLORS[p.position as Position] }}
+                        />
+                        {p.name}
+                      </button>
+                    ) : (
+                      <span key={p.id} className="bye-breakdown__player">
+                        <span
+                          className="bye-breakdown__dot"
+                          style={{ ['--pos' as string]: POSITION_COLORS[p.position as Position] }}
+                        />
+                        {p.name}
+                      </span>
+                    ),
+                  )}
                 </span>
               </li>
             ))}

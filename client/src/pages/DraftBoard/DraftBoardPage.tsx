@@ -87,10 +87,13 @@ import { useAuth } from '../../auth/AuthContext';
 import { useLobby } from '../../hooks/useLobby';
 import { usePlayers } from '../../hooks/usePlayers';
 import { api } from '../../lib/api';
+import { byeClashCountsForWeek, byeClashLookup } from '../../lib/byeClashes';
 import {
   getDraftCellStyle,
+  getShowByeClashes,
   getShowCellReactions,
   setDraftCellStyle,
+  setShowByeClashes,
   setShowCellReactions,
   type DraftCellStyle,
 } from '../../lib/draftCellStyle';
@@ -177,6 +180,7 @@ export function DraftBoardPage() {
   // showUserSettings) can update them without a page refresh.
   const [cellStyle, setCellStyleState] = useState(() => getDraftCellStyle());
   const [showCellReactions, setShowCellReactionsState] = useState(() => getShowCellReactions());
+  const [showByeClashes, setShowByeClashesState] = useState(() => getShowByeClashes());
   const [toastPrefs, setToastPrefsState] = useState(() => getToastPrefs());
   const [showUserSettings, setShowUserSettings] = useState(false);
 
@@ -187,6 +191,10 @@ export function DraftBoardPage() {
   function updateShowCellReactions(show: boolean) {
     setShowCellReactions(show);
     setShowCellReactionsState(show);
+  }
+  function updateShowByeClashes(show: boolean) {
+    setShowByeClashes(show);
+    setShowByeClashesState(show);
   }
   function updateToastsEnabled(enabled: boolean) {
     setToastsEnabled(enabled);
@@ -1264,6 +1272,13 @@ export function DraftBoardPage() {
     if (pos) myPosCounts[pos] = (myPosCounts[pos] ?? 0) + 1;
   }
 
+  // My drafted-player count per (position, bye week) — powers the bye-clash
+  // color coding in the player pool and the clash breakdown shown in the
+  // player/pick detail modals. Skipped entirely when the setting is off.
+  const byeLookup = showByeClashes
+    ? byeClashLookup(picks, playersById, myTeamId)
+    : new Map<string, number>();
+
   // Queued players still on the board, in queue order.
   const queuedPlayers = queue
     .map((pid) => playersById.get(pid))
@@ -1698,6 +1713,9 @@ export function DraftBoardPage() {
                 onPick={canPick ? () => pick(p) : undefined}
                 disabled={!canPick}
                 onOpenDetail={() => setDetailPlayer(p)}
+                byeClashCount={
+                  p.bye_week != null ? byeLookup.get(`${p.position}:${p.bye_week}`) : undefined
+                }
               />
             ))}
           </div>
@@ -1768,6 +1786,9 @@ export function DraftBoardPage() {
               onQueue={() => toggleQueue(p.id)}
               queued={queue.includes(p.id)}
               onOpenDetail={() => setDetailPlayer(p)}
+              byeClashCount={
+                p.bye_week != null ? byeLookup.get(`${p.position}:${p.bye_week}`) : undefined
+              }
             />
           ))}
           {available.length === 0 && <p className="muted pool__empty">No players match.</p>}
@@ -2300,6 +2321,7 @@ export function DraftBoardPage() {
           disabled={!canPick}
           onQueue={() => toggleQueue(detailPlayer.id)}
           queued={queue.includes(detailPlayer.id)}
+          byeClashCounts={byeClashCountsForWeek(detailPlayer.bye_week, byeLookup)}
         />
       )}
 
@@ -2399,6 +2421,17 @@ export function DraftBoardPage() {
         (() => {
           const player = playersById.get(pickModal.player_id);
           if (!player) return null;
+          // This pick's own team's clashes, not the viewer's — a pick made by
+          // someone else's team must reflect THEIR roster. Excludes the pick
+          // itself (it's already in `picks`), so a lone player at a position/
+          // bye doesn't count as clashing with themselves.
+          const pickTeamByeLookup = showByeClashes
+            ? byeClashLookup(
+                picks.filter((p) => p.id !== pickModal.id),
+                playersById,
+                pickModal.team_id,
+              )
+            : new Map<string, number>();
           // Who reacted to this pick, grouped by emoji (for tooltips + the full-list modal).
           const reactors: Record<string, Reactor[]> = {};
           for (const r of allReactions) {
@@ -2459,6 +2492,7 @@ export function DraftBoardPage() {
                       setPickModal(null);
                     }
               }
+              byeClashCounts={byeClashCountsForWeek(player.bye_week, pickTeamByeLookup)}
             />
           );
         })()}
@@ -2570,6 +2604,8 @@ export function DraftBoardPage() {
           onCellStyleChange={updateCellStyle}
           showCellReactions={showCellReactions}
           onShowCellReactionsChange={updateShowCellReactions}
+          showByeClashes={showByeClashes}
+          onShowByeClashesChange={updateShowByeClashes}
           toastPrefs={toastPrefs}
           onToastsEnabledChange={updateToastsEnabled}
           onToastCategoryChange={updateToastCategory}

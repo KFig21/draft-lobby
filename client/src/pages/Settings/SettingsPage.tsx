@@ -18,6 +18,8 @@ import {
   setDraftCellStyle,
   getShowCellReactions,
   setShowCellReactions,
+  getShowByeClashes,
+  setShowByeClashes,
   type DraftCellStyle,
 } from '../../lib/draftCellStyle';
 import { useTheme } from '../../theme/ThemeContext';
@@ -55,6 +57,7 @@ export function SettingsPage() {
   const [toastPrefs, setToastPrefsState] = useState(() => getToastPrefs());
   const [cellStyle, setCellStyleState] = useState<DraftCellStyle>(() => getDraftCellStyle());
   const [showCellReactions, setShowCellReactionsState] = useState(() => getShowCellReactions());
+  const [showByeClashes, setShowByeClashesState] = useState(() => getShowByeClashes());
 
   function updateCellStyle(style: DraftCellStyle) {
     setDraftCellStyle(style);
@@ -64,6 +67,11 @@ export function SettingsPage() {
   function updateShowCellReactions(show: boolean) {
     setShowCellReactions(show);
     setShowCellReactionsState(show);
+  }
+
+  function updateShowByeClashes(show: boolean) {
+    setShowByeClashes(show);
+    setShowByeClashesState(show);
   }
 
   function updateToastsEnabled(enabled: boolean) {
@@ -140,6 +148,19 @@ export function SettingsPage() {
             label="Toggle reactions on cells"
             checked={showCellReactions}
             onChange={updateShowCellReactions}
+          />
+        </div>
+        <div className="settings__row">
+          <div className="settings__row-main">
+            <span className="settings__row-name">Bye week clashes</span>
+            <span className="muted">
+              Flag players whose bye week already stacks against your roster
+            </span>
+          </div>
+          <ToggleSwitch
+            label="Toggle bye week clashes"
+            checked={showByeClashes}
+            onChange={updateShowByeClashes}
           />
         </div>
       </section>

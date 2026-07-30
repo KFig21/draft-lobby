@@ -11,6 +11,8 @@ interface Props {
   onCellStyleChange: (style: DraftCellStyle) => void;
   showCellReactions: boolean;
   onShowCellReactionsChange: (show: boolean) => void;
+  showByeClashes: boolean;
+  onShowByeClashesChange: (show: boolean) => void;
   toastPrefs: ToastPrefs;
   onToastsEnabledChange: (enabled: boolean) => void;
   onToastCategoryChange: (category: ToastCategory, enabled: boolean) => void;
@@ -30,6 +32,8 @@ export function DraftUserSettingsModal({
   onCellStyleChange,
   showCellReactions,
   onShowCellReactionsChange,
+  showByeClashes,
+  onShowByeClashesChange,
   toastPrefs,
   onToastsEnabledChange,
   onToastCategoryChange,
@@ -59,6 +63,19 @@ export function DraftUserSettingsModal({
               label="Toggle reactions on cells"
               checked={showCellReactions}
               onChange={onShowCellReactionsChange}
+            />
+          </div>
+          <div className="draft-user-settings__row">
+            <div className="draft-user-settings__row-main">
+              <span className="draft-user-settings__row-name">Bye week clashes</span>
+              <span className="muted">
+                Flag players whose bye week already stacks against your roster
+              </span>
+            </div>
+            <ToggleSwitch
+              label="Toggle bye week clashes"
+              checked={showByeClashes}
+              onChange={onShowByeClashesChange}
             />
           </div>
         </section>

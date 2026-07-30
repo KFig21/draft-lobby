@@ -1,0 +1,90 @@
+@use '../../styles/variables' as *;
+
+.bye-clashes {
+  margin-top: $space * 2;
+  padding-top: $space * 2;
+  border-top: 1px solid $border;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: $space * 0.6;
+    margin-bottom: $space * 0.75;
+  }
+
+  &__label {
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: $text-muted;
+  }
+
+  // Severity summary of the whole list — how many distinct positions clash,
+  // not any single position's count. Same 1/2/3+ tiers as PlayerCard's bye
+  // badge (see PlayerCard.scss), just with a "1" state here since this is a
+  // deliberate, opted-into detail view rather than a scanned list.
+  &__count {
+    display: inline-grid;
+    place-items: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+
+    &--neutral {
+      background: $bg-overlay;
+      color: $text-muted;
+    }
+
+    &--warning {
+      background: color-mix(in srgb, $warning 20%, transparent);
+      color: $warning;
+    }
+
+    &--danger {
+      background: color-mix(in srgb, $danger 20%, transparent);
+      color: $danger;
+    }
+  }
+
+  &__list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $space * 0.5;
+  }
+
+  // Per-position chip severity — orange at 1 shared player, red at 2+. Same
+  // warning/danger tokens the clock-urgency/skipped-slot states use
+  // elsewhere on the board, so "orange = heads up, red = are you sure" reads
+  // consistently across the app.
+  &__chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px $space * 0.75;
+    border-radius: 999px;
+    font-size: 0.76rem;
+    font-weight: 700;
+
+    &--warning {
+      background: color-mix(in srgb, $warning 16%, transparent);
+      color: $warning;
+    }
+
+    &--danger {
+      background: color-mix(in srgb, $danger 16%, transparent);
+      color: $danger;
+    }
+  }
+
+  &__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+}

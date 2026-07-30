@@ -208,6 +208,21 @@
     white-space: nowrap;
   }
 
+  // Clickable variant (opens the pick's detail modal) — reset button chrome
+  // so it looks identical to the plain span version, plus a hover cue.
+  &__player--link {
+    border: none;
+    background: none;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    cursor: pointer;
+
+    &:hover {
+      color: $text;
+    }
+  }
+
   &__dot {
     flex-shrink: 0;
     width: 8px;

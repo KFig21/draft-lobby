@@ -1,6 +1,5 @@
 import {
   POSITION_COLORS,
-  REACTION_EMOJIS,
   containsSlur,
   defaultAvatar,
   type Avatar as AvatarData,
@@ -18,6 +17,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useAuth } from '../../auth/AuthContext';
 import { api } from '../../lib/api';
 import { supabase } from '../../supabase';
+import { sortReactionEmojis } from '../../lib/reactions';
 import { avatarForTeam } from '../../lib/teamAvatar';
 import { renderMentionText } from '../../lib/renderMentions';
 import type {
@@ -704,7 +704,7 @@ function ReactionBar({
       )}
       {open && (
         <div className="chat-react__palette">
-          {REACTION_EMOJIS.map((e) => (
+          {sortReactionEmojis(entry?.counts).map((e) => (
             <button
               key={e}
               onClick={() => {

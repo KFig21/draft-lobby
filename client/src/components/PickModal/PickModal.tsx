@@ -1,4 +1,8 @@
-import { REACTION_EMOJIS, containsSlur, type Avatar as AvatarData } from '@draft-lobby/shared';
+import {
+  containsSlur,
+  type Avatar as AvatarData,
+  type Position,
+} from '@draft-lobby/shared';
 import AddReactionOutlinedIcon from '@mui/icons-material/AddReactionOutlined';
 import CloseIcon from '@mui/icons-material/Close';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
@@ -7,11 +11,13 @@ import SendIcon from '@mui/icons-material/Send';
 import UndoIcon from '@mui/icons-material/Undo';
 import { useMemo, useRef, useState, type FormEvent } from 'react';
 import { api } from '../../lib/api';
+import { sortReactionEmojis } from '../../lib/reactions';
 import { renderMentionText } from '../../lib/renderMentions';
 import { avatarForTeam } from '../../lib/teamAvatar';
 import { useModalClose } from '../../lib/useModalClose';
 import type { MemberRow, PickRow, PlayerRow, TeamRow } from '../../lib/types';
 import { Avatar } from '../Avatar/Avatar';
+import { ByeClashes } from '../ByeClashes/ByeClashes';
 import { ChampionBadge } from '../ChampionBadge/ChampionBadge';
 import type { ReactionEntry } from '../DraftGrid/DraftGrid';
 import { MentionInput } from '../MentionInput/MentionInput';
@@ -69,6 +75,10 @@ interface Props {
   /** Users whose team is last season's defending champion — badges their
    * name in the header and comment list. */
   championUserIds?: Set<string>;
+  /** How many of the viewer's own drafted players at each position already
+   * share this pick's bye week — same "bye week clashes" section as
+   * PlayerDetailModal. Omit (or leave empty) to hide it. */
+  byeClashCounts?: Partial<Record<Position, number>>;
 }
 
 function formatTime(iso: string): string {
@@ -94,6 +104,7 @@ export function PickModal({
   onRollbackTo,
   myUserId,
   championUserIds,
+  byeClashCounts,
 }: Props) {
   const { closing, requestClose } = useModalClose(onClose);
   const pickInRound = pick.overall - (pick.round - 1) * teamCount;
@@ -179,6 +190,8 @@ export function PickModal({
         <div className="pick-modal__scroll">
           <PlayerStatGrid player={player} />
 
+          <ByeClashes byeWeek={player.bye_week} counts={byeClashCounts} />
+
           <div className="pick-modal__section-header">
             <div className="pick-modal__section-label">Reactions</div>
             {entry && Object.keys(entry.counts).length > 0 && (
@@ -194,7 +207,7 @@ export function PickModal({
             )}
           </div>
           <div className="pick-modal__reactions">
-            {REACTION_EMOJIS.map((emoji) => {
+            {sortReactionEmojis(entry?.counts).map((emoji) => {
               const count = entry?.counts[emoji] ?? 0;
               const mine = entry?.mine.has(emoji) ?? false;
               const names = reactors?.[emoji] ?? [];
@@ -355,7 +368,7 @@ function CommentReactions({
           </button>
           {open && (
             <div className="pick-modal__comment-palette">
-              {REACTION_EMOJIS.map((e) => (
+              {sortReactionEmojis(entry?.counts).map((e) => (
                 <button
                   key={e}
                   type="button"

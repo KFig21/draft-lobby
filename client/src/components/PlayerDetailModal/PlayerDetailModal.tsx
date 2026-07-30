@@ -1,8 +1,10 @@
+import type { Position } from '@draft-lobby/shared';
 import BookmarkIcon from '@mui/icons-material/Bookmark';
 import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder';
 import CloseIcon from '@mui/icons-material/Close';
 import { useModalClose } from '../../lib/useModalClose';
 import type { PlayerRow } from '../../lib/types';
+import { ByeClashes } from '../ByeClashes/ByeClashes';
 import { PlayerHeader, PlayerStatGrid } from '../PlayerStatBlock/PlayerStatBlock';
 import './PlayerDetailModal.scss';
 
@@ -14,6 +16,10 @@ interface Props {
   disabled?: boolean;
   onQueue?: () => void;
   queued?: boolean;
+  /** How many of the viewer's own drafted players at each position already
+   * share this player's bye week — drives the "bye week clashes" list below
+   * the stats. Omit (or leave empty) to hide that section entirely. */
+  byeClashCounts?: Partial<Record<Position, number>>;
 }
 
 /** A closer look at a player before deciding to draft them — opened from the
@@ -27,6 +33,7 @@ export function PlayerDetailModal({
   disabled,
   onQueue,
   queued,
+  byeClashCounts,
 }: Props) {
   const { closing, requestClose } = useModalClose(onClose);
 
@@ -67,6 +74,8 @@ export function PlayerDetailModal({
           }
         />
         <PlayerStatGrid player={player} />
+
+        <ByeClashes byeWeek={player.bye_week} counts={byeClashCounts} />
 
         {onPick && (
           <div className="player-detail__actions">

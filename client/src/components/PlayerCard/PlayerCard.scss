@@ -44,6 +44,19 @@
     font-size: 0.75rem;
     color: $text-muted;
   }
+
+  // "This bye week already stacks against my roster" — 1 shared player turns
+  // yellow, 2+ turns red. Same warning/danger tokens used everywhere else
+  // this severity pattern shows up (see ByeClashes.scss).
+  &__bye--warning {
+    color: $warning;
+    font-weight: 700;
+  }
+
+  &__bye--danger {
+    color: $danger;
+    font-weight: 700;
+  }
   &__keeper-badge {
     display: inline-flex;
     align-items: center;
