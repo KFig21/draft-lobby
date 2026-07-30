@@ -101,8 +101,21 @@
     font-variant-numeric: tabular-nums;
   }
 
+  // Fixed-size wrapper (not just an overridden icon class) — the svg is
+  // forced to fill it via width/height: 100%, which sidesteps MUI's own
+  // font-size-driven icon sizing entirely instead of trying to out-specify
+  // it. That override wasn't reliably taking, leaving the default ~24px
+  // icon looming over the ~13px stat-value text next to it.
   &__trend {
-    font-size: 1.1rem !important; // override MUI's inline default sizing
+    display: inline-flex;
+    flex-shrink: 0;
+    width: 14px;
+    height: 14px;
+
+    svg {
+      width: 100%;
+      height: 100%;
+    }
 
     &--up {
       color: $accent;

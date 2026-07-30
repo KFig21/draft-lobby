@@ -66,15 +66,16 @@ export function PlayerHeader({ player, isKeeper, action }: HeaderProps) {
  * players only have one or the other. */
 function RankTrend({ proj, prev }: { proj: number | null; prev: number | null }) {
   if (proj == null || prev == null) return null;
-  if (proj < prev) {
-    return <TrendingUpIcon className="player-stat-block__trend player-stat-block__trend--up" />;
-  }
-  if (proj > prev) {
-    return (
-      <TrendingDownIcon className="player-stat-block__trend player-stat-block__trend--down" />
-    );
-  }
-  return <TrendingFlatIcon className="player-stat-block__trend player-stat-block__trend--flat" />;
+  const variant = proj < prev ? 'up' : proj > prev ? 'down' : 'flat';
+  const Icon = variant === 'up' ? TrendingUpIcon : variant === 'down' ? TrendingDownIcon : TrendingFlatIcon;
+  // Fixed-size wrapper with the svg forced to fill it — sidesteps relying on
+  // overriding MUI's own font-size-driven icon sizing (which wasn't taking
+  // reliably and let the default ~24px icon loom over the small stat value).
+  return (
+    <span className={`player-stat-block__trend player-stat-block__trend--${variant}`}>
+      <Icon />
+    </span>
+  );
 }
 
 /** The ADP/proj-rank/last-year-rank row + projected/last-year totals (each

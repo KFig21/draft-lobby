@@ -1,0 +1,390 @@
+import {
+  DEFAULT_SCORING_RULES,
+  POSITIONS,
+  POSITION_COLORS,
+  SCORING_PRESETS,
+  SLOT_LABELS,
+  type Position,
+  type ScoringRules,
+} from '@draft-lobby/shared';
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
+import StarIcon from '@mui/icons-material/Star';
+import StarBorderIcon from '@mui/icons-material/StarBorder';
+import { useEffect, useMemo, useState } from 'react';
+import { useAuth } from '../../auth/AuthContext';
+import { Loader } from '../../components/Loader/Loader';
+import { Modal } from '../../components/Modal/Modal';
+import { PlayerDetailModal } from '../../components/PlayerDetailModal/PlayerDetailModal';
+import { usePlayers } from '../../hooks/usePlayers';
+import { getDefaultScoringChoice } from '../../lib/defaultScoring';
+import { INJURY_ABBR, INJURY_SEVERITY } from '../../lib/injuryStatus';
+import { scorePlayers } from '../../lib/playerPoints';
+import { supabase } from '../../supabase';
+import type { PlayerRow } from '../../lib/types';
+import {
+  ScoringFormatCreatorPage,
+  type SavedScoringFormat,
+} from '../ScoringFormatCreator/ScoringFormatCreatorPage';
+import './RankingsPage.scss';
+
+type Filter = 'ALL' | Position | 'FLEX' | 'SUPERFLEX';
+const FLEX_POS: Position[] = ['RB', 'WR', 'TE'];
+const SUPERFLEX_POS: Position[] = ['QB', 'RB', 'WR', 'TE'];
+type StatYear = 'proj' | 'prev';
+type SortKey = 'points' | 'name' | 'adp';
+type SortDir = 'asc' | 'desc';
+
+const CURRENT_YEAR = new Date().getUTCFullYear();
+
+/** Interactive draft cheat sheet: the full player pool, ranked under a
+ * chosen scoring format (any preset or one of the user's saved formats) and
+ * either this season's projections or last season's actual results — with
+ * a per-user "favorite" star that follows across every draft. */
+export function RankingsPage() {
+  const { session } = useAuth();
+  const userId = session?.user.id;
+  const { players: rawPlayers, loading: playersLoading } = usePlayers();
+
+  const [scoringFormats, setScoringFormats] = useState<SavedScoringFormat[]>([]);
+  const [rulesetChoice, setRulesetChoice] = useState(() => getDefaultScoringChoice());
+  const [showScoringModal, setShowScoringModal] = useState(false);
+  const [statYear, setStatYear] = useState<StatYear>('proj');
+  const [filter, setFilter] = useState<Filter>('ALL');
+  const [search, setSearch] = useState('');
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const [favoriteIds, setFavoriteIds] = useState<Set<string> | null>(null);
+  const [detailPlayer, setDetailPlayer] = useState<PlayerRow | null>(null);
+  const [sortKey, setSortKey] = useState<SortKey>('points');
+  const [sortDir, setSortDir] = useState<SortDir>('desc');
+
+  useEffect(() => {
+    void supabase
+      .from('scoring_formats')
+      .select('id, name, rules')
+      .order('created_at')
+      .then(({ data }) => setScoringFormats((data ?? []) as SavedScoringFormat[]));
+  }, []);
+
+  useEffect(() => {
+    if (!userId) return;
+    void supabase
+      .from('favorite_players')
+      .select('player_id')
+      .eq('user_id', userId)
+      .then(({ data }) => setFavoriteIds(new Set((data ?? []).map((r) => r.player_id as string))));
+  }, [userId]);
+
+  const rules: ScoringRules = useMemo(() => {
+    const [kind, key] = rulesetChoice.split(':');
+    if (kind === 'preset' && key in SCORING_PRESETS) {
+      return SCORING_PRESETS[key as keyof typeof SCORING_PRESETS].rules;
+    }
+    return scoringFormats.find((f) => f.id === key)?.rules ?? DEFAULT_SCORING_RULES;
+  }, [rulesetChoice, scoringFormats]);
+
+  // Same recompute-from-raw-stats helper the draft board uses — this page is
+  // just a different "lobby" (an arbitrary ruleset) feeding the same engine.
+  const players = useMemo(() => scorePlayers(rawPlayers, rules), [rawPlayers, rules]);
+
+  function onScoringSaved(fmt: SavedScoringFormat) {
+    setScoringFormats((prev) => [...prev.filter((f) => f.id !== fmt.id), fmt]);
+    setRulesetChoice(`format:${fmt.id}`);
+    setShowScoringModal(false);
+  }
+
+  async function toggleFavorite(playerId: string) {
+    if (!userId || !favoriteIds) return;
+    const isFav = favoriteIds.has(playerId);
+    // Optimistic — this is single-user personal data, nothing to reconcile.
+    setFavoriteIds((prev) => {
+      const next = new Set(prev);
+      if (isFav) next.delete(playerId);
+      else next.add(playerId);
+      return next;
+    });
+    if (isFav) {
+      await supabase
+        .from('favorite_players')
+        .delete()
+        .eq('user_id', userId)
+        .eq('player_id', playerId);
+    } else {
+      await supabase.from('favorite_players').insert({ user_id: userId, player_id: playerId });
+    }
+  }
+
+  // Clicking the active column again flips direction; switching columns
+  // picks the direction that makes sense for it (best-first for points,
+  // earliest-first for ADP, A→Z for name).
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortKey(key);
+      setSortDir(key === 'points' ? 'desc' : 'asc');
+    }
+  }
+
+  const rows = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const pointsOf = (p: PlayerRow) => (statYear === 'proj' ? p.proj_points : p.prev_points) ?? -Infinity;
+
+    // Ascending base comparator, always sorting missing ADP last regardless
+    // of direction — flipped below for descending instead of duplicated.
+    function compareAsc(a: PlayerRow, b: PlayerRow): number {
+      if (sortKey === 'points') return pointsOf(a) - pointsOf(b);
+      if (sortKey === 'adp') {
+        if (a.adp == null && b.adp == null) return 0;
+        if (a.adp == null) return 1;
+        if (b.adp == null) return -1;
+        return a.adp - b.adp;
+      }
+      return a.name.localeCompare(b.name);
+    }
+
+    return players
+      .filter((p) => {
+        if (favoritesOnly && !favoriteIds?.has(p.id)) return false;
+        if (q && !p.name.toLowerCase().includes(q)) return false;
+        if (filter === 'ALL') return true;
+        if (filter === 'FLEX') return (FLEX_POS as string[]).includes(p.position);
+        if (filter === 'SUPERFLEX') return (SUPERFLEX_POS as string[]).includes(p.position);
+        return p.position === filter;
+      })
+      .sort((a, b) => (sortDir === 'asc' ? compareAsc(a, b) : compareAsc(b, a)));
+  }, [players, filter, search, favoritesOnly, favoriteIds, statYear, sortKey, sortDir]);
+
+  function SortHeader({ label, sortKeyFor }: { label: string; sortKeyFor: SortKey }) {
+    const active = sortKey === sortKeyFor;
+    return (
+      <th
+        className={`rankings-table__sortable${active ? ' is-active' : ''}`}
+        onClick={() => toggleSort(sortKeyFor)}
+        aria-sort={active ? (sortDir === 'asc' ? 'ascending' : 'descending') : undefined}
+      >
+        {label}
+        {active &&
+          (sortDir === 'asc' ? (
+            <ArrowUpwardIcon className="rankings-table__sort-icon" />
+          ) : (
+            <ArrowDownwardIcon className="rankings-table__sort-icon" />
+          ))}
+      </th>
+    );
+  }
+
+  return (
+    <main className="rankings">
+      {/* The height-constrained, frozen-header scroll region. Kept one level in
+          (not on <main>) so the fixed-position modals below — rendered as
+          direct children of the unconstrained <main> — escape to the viewport
+          and dim the whole page, rather than being clipped to this box. */}
+      <div className="rankings__scroll">
+        <header className="rankings__header">
+          <h1>Player Rankings</h1>
+        </header>
+
+        <section className="rankings__filters">
+        <div className="rankings__controls">
+          <select
+            className="rankings__ruleset"
+            value={rulesetChoice}
+            onChange={(e) => setRulesetChoice(e.target.value)}
+            aria-label="Ranking scoring format"
+          >
+            <optgroup label="Presets">
+              {(Object.keys(SCORING_PRESETS) as (keyof typeof SCORING_PRESETS)[]).map((p) => (
+                <option key={p} value={`preset:${p}`}>
+                  {SCORING_PRESETS[p].label}
+                </option>
+              ))}
+            </optgroup>
+            {scoringFormats.length > 0 && (
+              <optgroup label="Your saved formats">
+                {scoringFormats.map((f) => (
+                  <option key={f.id} value={`format:${f.id}`}>
+                    {f.name}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+          </select>
+          <button
+            type="button"
+            className="rankings__new-format"
+            onClick={() => setShowScoringModal(true)}
+          >
+            + New format
+          </button>
+
+          <div className="segmented">
+            <button
+              type="button"
+              className={`segmented__opt${statYear === 'proj' ? ' segmented__opt--on' : ''}`}
+              onClick={() => setStatYear('proj')}
+            >
+              {CURRENT_YEAR} projections
+            </button>
+            <button
+              type="button"
+              className={`segmented__opt${statYear === 'prev' ? ' segmented__opt--on' : ''}`}
+              onClick={() => setStatYear('prev')}
+            >
+              {CURRENT_YEAR - 1} stats
+            </button>
+          </div>
+
+          <input
+            className="rankings__search"
+            type="search"
+            placeholder="Search players…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            aria-label="Search players"
+          />
+        </div>
+
+        <div className="chip-row rankings__positions">
+          <button
+            type="button"
+            className={`chip rankings__pos-chip${filter === 'ALL' ? ' chip--active' : ''}`}
+            onClick={() => setFilter('ALL')}
+          >
+            All
+          </button>
+          {POSITIONS.map((pos) => (
+            <button
+              key={pos}
+              type="button"
+              className={`chip rankings__pos-chip${filter === pos ? ' chip--active' : ''}`}
+              onClick={() => setFilter(pos)}
+            >
+              {pos}
+            </button>
+          ))}
+          {(['FLEX', 'SUPERFLEX'] as const).map((f) => (
+            <button
+              key={f}
+              type="button"
+              className={`chip rankings__pos-chip${filter === f ? ' chip--active' : ''}`}
+              onClick={() => setFilter(f)}
+            >
+              {SLOT_LABELS[f]}
+            </button>
+          ))}
+          <button
+            type="button"
+            className={`chip rankings__fav-toggle${favoritesOnly ? ' chip--active' : ''}`}
+            onClick={() => setFavoritesOnly((v) => !v)}
+          >
+            <StarIcon fontSize="inherit" /> Favorites
+          </button>
+        </div>
+      </section>
+
+      {playersLoading ? (
+        <div className="section-loading">
+          <Loader label="Loading players…" />
+        </div>
+      ) : (
+        <div className="rankings__table-wrap">
+          <table className="rankings-table">
+            <thead>
+              <tr>
+                <th className="rankings-table__star" aria-label="Favorite" />
+                <th>Rank</th>
+                <SortHeader label="Player" sortKeyFor="name" />
+                <th>Stats</th>
+                <SortHeader label="Points" sortKeyFor="points" />
+                <SortHeader label="ADP" sortKeyFor="adp" />
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((p, i) => {
+                const color = POSITION_COLORS[p.position as Position];
+                const injury = INJURY_ABBR[p.injury_status];
+                const posRank = statYear === 'proj' ? p.proj_rank : p.prev_rank;
+                const statLine = statYear === 'proj' ? p.proj_stat_line : p.prev_stat_line;
+                const points = statYear === 'proj' ? p.proj_points : p.prev_points;
+                const isFav = favoriteIds?.has(p.id) ?? false;
+                return (
+                  <tr
+                    key={p.id}
+                    className="rankings-table__row"
+                    onClick={() => setDetailPlayer(p)}
+                  >
+                    <td className="rankings-table__star">
+                      <button
+                        type="button"
+                        className={`rankings-table__fav${isFav ? ' is-on' : ''}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void toggleFavorite(p.id);
+                        }}
+                        aria-label={isFav ? 'Remove from favorites' : 'Add to favorites'}
+                        disabled={!userId}
+                      >
+                        {isFav ? <StarIcon fontSize="small" /> : <StarBorderIcon fontSize="small" />}
+                      </button>
+                    </td>
+                    <td className="rankings-table__rank muted">{i + 1}</td>
+                    <td className="rankings-table__player">
+                      <span className="rankings-table__pos" style={{ background: color }}>
+                        {p.position}
+                        <span className="rankings-table__pos-dot" />
+                        {posRank ?? '—'}
+                      </span>
+                      <div className="rankings-table__name-block">
+                        <span className="rankings-table__name">
+                          {p.name}
+                          {injury && (
+                            <span
+                              className={`injury-badge injury-badge--${INJURY_SEVERITY[p.injury_status] ?? 'danger'}`}
+                              title={p.injury_status}
+                            >
+                              {injury}
+                            </span>
+                          )}
+                        </span>
+                        <span className="muted rankings-table__team">
+                          {p.nfl_team}
+                          {p.bye_week != null ? ` · Bye ${p.bye_week}` : ''}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="rankings-table__stats muted">{statLine ?? '—'}</td>
+                    <td className="rankings-table__points">
+                      {points != null ? points.toFixed(1) : '—'}
+                    </td>
+                    <td className="rankings-table__adp muted">
+                      {p.adp != null ? p.adp.toFixed(1) : '—'}
+                    </td>
+                  </tr>
+                );
+              })}
+              {rows.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="muted rankings-table__empty">
+                    No players match.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+      </div>
+
+      {detailPlayer && (
+        <PlayerDetailModal player={detailPlayer} onClose={() => setDetailPlayer(null)} />
+      )}
+
+      {showScoringModal && (
+        <Modal title="New scoring format" wide onClose={() => setShowScoringModal(false)}>
+          <ScoringFormatCreatorPage embedded onSaved={onScoringSaved} />
+        </Modal>
+      )}
+    </main>
+  );
+}

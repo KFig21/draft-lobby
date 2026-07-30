@@ -1,0 +1,314 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+// This page owns its own vertical space — the shell's bottom-bar padding is
+// off here so the main can be exactly the visible height (see `.rankings`).
+.app-shell__content:has(.rankings) {
+  padding-bottom: 0;
+}
+
+.rankings {
+  // Deliberately a plain block — NOT height/overflow-constrained — so the
+  // fixed-position modals rendered as its children (PlayerDetailModal, the
+  // scoring Modal) escape to the viewport and dim the whole page. The frozen-
+  // header scroll region is one level in, in &__scroll.
+
+  // Fill the viewport so the page itself never scrolls — only the table body
+  // does (see &__table-wrap). This is what makes the header genuinely frozen:
+  // a real bounded scroll region, not a sticky offset juggled against the
+  // page scroll. On mobile, stop above the fixed bottom nav bar (64px).
+  &__scroll {
+    height: calc(100dvh - 64px - env(safe-area-inset-bottom, 0));
+    @include md {
+      height: 100dvh;
+    }
+    display: flex;
+    flex-direction: column;
+    gap: $space * 2;
+    overflow: hidden;
+
+    > * {
+      width: 100%;
+      max-width: 1100px;
+      margin-inline: auto;
+      padding-inline: $space * 3;
+    }
+  }
+
+  // Page header + filters are fixed-height rows at the top — they don't
+  // scroll (the table body below them does), so no sticky needed, just
+  // flex-shrink:0 so a tall table can't squeeze them.
+  &__header {
+    flex-shrink: 0;
+    max-width: none;
+    z-index: 11;
+    display: flex;
+    align-items: center;
+    min-height: 56px;
+    padding: $space $space * 3;
+    background: $bg-raised;
+    border-bottom: 1px solid $border;
+
+    h1 {
+      font-size: 1.3rem;
+    }
+  }
+
+  // Ruleset/stat-year/search/favorites + position chips.
+  &__filters {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: $space * 1.5;
+  }
+
+  &__controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: $space * 1.25;
+  }
+
+  &__ruleset {
+    padding: $space * 0.75 $space;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: $bg;
+    color: $text;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  &__new-format {
+    padding: $space * 0.75 $space;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: none;
+    color: $text-muted;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+
+    &:hover {
+      background: $bg-hover;
+      color: $text;
+    }
+  }
+
+  &__search {
+    flex: 1;
+    min-width: 160px;
+    padding: $space * 0.75 $space;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: $bg;
+    color: $text;
+    font-size: 0.85rem;
+
+    &:focus {
+      border-color: $primary;
+    }
+  }
+
+  &__fav-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    // Sits after the position chips in the same row but reads as a separate
+    // action (not another position filter), hence the left margin gap.
+    margin-left: $space * 0.5;
+  }
+
+  &__positions {
+    // All position/FLEX/OP chips the same size regardless of label length.
+    .rankings__pos-chip {
+      min-width: 3rem;
+      text-align: center;
+    }
+  }
+}
+
+// ── Table ───────────────────────────────────────────────────────────
+// THE scroll container. It takes the remaining page height (flex:1 +
+// min-height:0 so it can shrink below content) and scrolls both axes. Because
+// the sticky <th> below sticks to its nearest scrollable ancestor, that
+// ancestor MUST be this bounded box — not an `overflow-x:auto`-only wrapper,
+// which (per spec, overflow-y computes to auto too) becomes an *unbounded*
+// scroll context and makes the header float/detach instead of freezing.
+.rankings__table-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.rankings-table {
+  width: 100%;
+  min-width: 640px;
+  // NOT `collapse` — sticky positioning on <th> inside a collapsed-border
+  // table is a known browser quirk (the header detaches/floats instead of
+  // sticking cleanly). `separate` + zero spacing keeps the same visual
+  // border look without breaking sticky.
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.88rem;
+
+  th {
+    position: sticky;
+    // Sticks to the top of &__table-wrap (the scroll container) — the header
+    // and filters live outside it and never scroll, so this is a plain top:0
+    // freeze with nothing to coordinate against.
+    top: 0;
+    z-index: 10;
+    padding: $space * 0.75 $space;
+    background: $bg-raised;
+    border-bottom: 1px solid $border;
+    color: $text-muted;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  td {
+    padding: $space * 0.75 $space;
+    border-bottom: 1px solid $border;
+    vertical-align: middle;
+  }
+
+  &__sortable {
+    cursor: pointer;
+    user-select: none;
+
+    &:hover {
+      color: $text;
+    }
+
+    &.is-active {
+      color: $text;
+    }
+  }
+
+  &__sort-icon {
+    font-size: 0.8rem !important;
+    vertical-align: -1px;
+    margin-left: 2px;
+  }
+
+  &__row {
+    cursor: pointer;
+    transition: background-color 120ms ease;
+
+    &:hover {
+      background: $bg-overlay;
+    }
+  }
+
+  &__star {
+    width: 32px;
+  }
+
+  &__fav {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 999px;
+    background: none;
+    color: $text-muted;
+    cursor: pointer;
+
+    &:hover {
+      background: $bg-hover;
+    }
+
+    &.is-on {
+      color: $keeper;
+    }
+
+    &:disabled {
+      cursor: not-allowed;
+      opacity: 0.4;
+    }
+  }
+
+  &__rank {
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+  }
+
+  &__player {
+    display: flex;
+    align-items: center;
+    gap: $space;
+    min-width: 220px;
+  }
+
+  // Position + within-position rank folded into one fixed-width chip (e.g.
+  // "RB · 12") instead of a separate table column.
+  &__pos {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-width: 4.4rem;
+    padding: 3px 6px;
+    border-radius: $radius-sm;
+    color: #05231a;
+    font-size: 0.68rem;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+
+  &__pos-dot {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0.6;
+  }
+
+  &__name-block {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+  }
+
+  &__name {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  &__team {
+    font-size: 0.76rem;
+  }
+
+  &__adp {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  &__stats {
+    white-space: nowrap;
+    font-size: 0.8rem;
+  }
+
+  &__points {
+    font-variant-numeric: tabular-nums;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+
+  &__empty {
+    padding: $space * 3;
+    text-align: center;
+  }
+}
