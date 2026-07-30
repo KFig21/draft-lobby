@@ -11,6 +11,15 @@ export default defineConfig({
       '@styles': stylesDir,
     },
   },
+  // @draft-lobby/shared is an npm-workspace symlink into node_modules, so
+  // Vite's dependency pre-bundler (esbuild) treats it like a normal
+  // dependency and caches its output — edits to shared/src (e.g. adding a
+  // reaction emoji) silently don't show up until the cache is invalidated
+  // (dev server restart, or deleting node_modules/.vite). Excluding it here
+  // keeps it live-reloaded like any other first-party source file.
+  optimizeDeps: {
+    exclude: ['@draft-lobby/shared'],
+  },
   css: {
     preprocessorOptions: {
       scss: {
