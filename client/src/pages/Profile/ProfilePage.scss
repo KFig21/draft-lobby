@@ -37,6 +37,20 @@
     }
   }
 
+  &__identity-text {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+
+    .muted {
+      font-size: 0.8rem;
+    }
+  }
+
+  &__missing {
+    padding-top: $space * 2;
+  }
+
   &__section {
     h2 {
       font-size: 1rem;
@@ -44,69 +58,125 @@
     }
   }
 
-  &__pager {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: $space * 1.5;
-    margin-top: $space * 1.5;
-  }
-
-  &__pager-btn {
-    display: grid;
-    place-items: center;
-    width: 32px;
-    height: 32px;
-    border: 1px solid $border;
-    border-radius: $radius-sm;
-    background: $bg-raised;
-    color: $text;
-    cursor: pointer;
-
-    &:hover:not(:disabled) {
-      background: $bg-overlay;
-    }
-
-    &:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-    }
-  }
-
-  &__archived-toggle {
-    background: none;
-    border: none;
-    padding: 0;
-    margin-bottom: $space * 1.5;
-    color: $text-muted;
-    font-size: 1rem;
-    font-weight: 700;
-    cursor: pointer;
-
-    &:hover {
-      color: $text;
-    }
-  }
-
-  &__filters {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: $space;
-  }
-
-  &__sort {
-    margin-left: auto;
-    padding: $space * 0.75 $space;
-    border: 1px solid $border;
-    border-radius: $radius-sm;
-    background: $bg-raised;
-    color: $text;
-    font-size: 0.85rem;
+  // Compound selector (both classes) so this reliably beats the top-level
+  // `>* { width: 100% }` rule regardless of source order — the tied,
+  // single-class specificity trap documented elsewhere in this codebase.
+  &__tabs.segmented {
+    width: fit-content;
   }
 }
 
-.lobby-list {
+// ── Stats ───────────────────────────────────────────────────────────
+.profile-stats {
+  display: grid;
+  // auto-fit (not a fixed column count) so this reflows cleanly regardless
+  // of how many stat tiles there are, instead of leaving a lopsided last row.
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: $space;
+  margin-bottom: $space * 2;
+}
+
+.profile-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: $space * 1.25 $space;
+  background: $bg-raised;
+  border: 1px solid $border;
+  border-radius: $radius-sm;
+
+  &__value {
+    font-size: 1.4rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: $text-muted;
+    text-align: center;
+  }
+}
+
+.most-picked {
+  &__title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: $text-muted;
+    margin-bottom: $space;
+  }
+
+  &__list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: $space * 0.75;
+  }
+
+  &__row {
+    display: flex;
+    align-items: center;
+    gap: $space;
+    padding: $space * 0.75 $space;
+    background: $bg-raised;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+  }
+
+  &__pos {
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    min-width: 2.4rem;
+    padding: 2px 6px;
+    border-radius: $radius-sm;
+    color: #05231a;
+    font-size: 0.65rem;
+    font-weight: 800;
+  }
+
+  &__name {
+    font-weight: 600;
+  }
+
+  &__team {
+    font-size: 0.78rem;
+  }
+
+  &__count {
+    margin-left: auto;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+// ── Friends tab (read-only list — no add/remove, that's /friends) ──
+.friend-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: $space * 0.75;
+
+  &__row {
+    display: flex;
+    align-items: center;
+    gap: $space * 1.25;
+    padding: $space $space * 1.25;
+    background: $bg-raised;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+  }
+
+  &__name {
+    font-weight: 600;
+  }
+}
+
+// ── Drafts tab (read-only, public drafts only — full management lives on
+// the separate /drafts page) ────────────────────────────────────────
+.draft-list {
   list-style: none;
   display: flex;
   flex-direction: column;
@@ -136,23 +206,6 @@
     }
   }
 
-  &__action {
-    flex-shrink: 0;
-    display: grid;
-    place-items: center;
-    width: 44px;
-    border: 1px solid $border;
-    border-radius: $radius-sm;
-    background: $bg-raised;
-    color: $text-muted;
-    cursor: pointer;
-
-    &:hover {
-      background: $bg-overlay;
-      color: $text;
-    }
-  }
-
   &__main {
     display: flex;
     flex-direction: column;
@@ -179,5 +232,94 @@
     font-size: 0.68rem;
     font-weight: 700;
     white-space: nowrap;
+  }
+}
+
+// ── Activity feed ───────────────────────────────────────────────────
+.activity-feed {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: $space * 0.75;
+
+  &__sentinel {
+    height: 1px;
+  }
+}
+
+.activity-row {
+  &__link {
+    display: flex;
+    align-items: flex-start;
+    gap: $space;
+    padding: $space * 1.25;
+    background: $bg-raised;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    color: $text;
+    transition: border-color 120ms ease;
+
+    &:not(&--static):hover {
+      border-color: $primary;
+    }
+  }
+
+  &__icon {
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 999px;
+    background: $bg-overlay;
+    color: $text-muted;
+  }
+
+  &__emoji {
+    font-size: 1rem;
+    line-height: 1;
+  }
+
+  &__body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &__text {
+    font-size: 0.9rem;
+
+    strong {
+      font-weight: 700;
+    }
+  }
+
+  &__meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: $space * 0.75;
+    font-size: 0.72rem;
+  }
+
+  &__lobby {
+    &::after {
+      content: '·';
+      margin-left: $space * 0.75;
+    }
+  }
+
+  &__quote {
+    margin-top: 2px;
+    font-size: 0.82rem;
+    color: $text-muted;
+    font-style: italic;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
   }
 }

@@ -1,379 +1,487 @@
-import { SCORING_PRESETS, defaultAvatar, matchPreset } from '@draft-lobby/shared';
-import ArchiveOutlinedIcon from '@mui/icons-material/ArchiveOutlined';
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import UnarchiveOutlinedIcon from '@mui/icons-material/UnarchiveOutlined';
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import {
+  POSITION_COLORS,
+  SCORING_PRESETS,
+  defaultAvatar,
+  matchPreset,
+  type Avatar as AvatarData,
+  type LobbySettings,
+  type Position,
+} from '@draft-lobby/shared';
+import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlined';
+import EmojiEventsOutlinedIcon from '@mui/icons-material/EmojiEventsOutlined';
+import SportsFootballIcon from '@mui/icons-material/SportsFootball';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { Avatar } from '../../components/Avatar/Avatar';
 import { Loader } from '../../components/Loader/Loader';
+import { ProfileLink } from '../../components/ProfileLink/ProfileLink';
 import { useAuth } from '../../auth/AuthContext';
 import { api } from '../../lib/api';
-import { supabase } from '../../supabase';
-import type { LobbyRow } from '../../lib/types';
+import { useInfiniteScroll } from '../../lib/useInfiniteScroll';
 import './ProfilePage.scss';
 
-const PAST_PAGE_SIZE = 10;
-
-type DraftModeFilter = 'ALL' | 'LIVE' | 'MOCK';
-type VisibilityFilter = 'ALL' | 'PRIVATE' | 'OPEN';
-type SortOrder = 'NEWEST' | 'OLDEST' | 'NAME';
-
-interface MyLobby {
-  role: string;
-  archived: boolean;
-  lobby: Pick<LobbyRow, 'id' | 'name' | 'status' | 'settings' | 'created_at'>;
+// ── Public profile bundle (server: /api/users/:id/profile) ──
+interface ProfileData {
+  id: string;
+  username: string;
+  avatar: AvatarData | null;
+  createdAt: string;
+}
+interface MostPicked {
+  playerId: string;
+  name: string;
+  position: string;
+  nflTeam: string;
+  count: number;
+}
+interface ProfileStats {
+  totalDrafts: number;
+  liveDrafts: number;
+  mockDrafts: number;
+  completedDrafts: number;
+  totalPicks: number;
+  mostPicked: MostPicked[];
+}
+interface FriendMini {
+  id: string;
+  username: string;
+  avatar: AvatarData | null;
+}
+interface PublicDraft {
+  id: string;
+  name: string;
+  status: string;
+  settings: LobbySettings;
+  createdAt: string;
+}
+type ProfileTab = 'stats' | 'activity' | 'drafts' | 'friends';
+interface ActivityItem {
+  id: string;
+  kind:
+    | 'DRAFT_COMPLETED'
+    | 'OPEN_LOBBY_CREATED'
+    | 'PICK_REACTION'
+    | 'MESSAGE_REACTION'
+    | 'PICK_COMMENT';
+  createdAt: string;
+  lobbyId: string | null;
+  lobbyName: string | null;
+  emoji?: string;
+  player?: { name: string; position: string; nflTeam: string };
+  commentBody?: string;
 }
 
-interface RawRow {
-  role: string;
-  archived: boolean;
-  lobbies: MyLobby['lobby'] | MyLobby['lobby'][] | null;
+function timeAgo(iso: string): string {
+  const secs = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+  if (secs < 60) return 'just now';
+  const mins = Math.floor(secs / 60);
+  if (mins < 60) return `${mins}m`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h`;
+  const days = Math.floor(hrs / 24);
+  return days < 7 ? `${days}d` : new Date(iso).toLocaleDateString();
 }
 
-function toMyLobbies(rows: RawRow[]): MyLobby[] {
-  return rows
-    .map((r) => {
-      // Supabase types the to-one relation as an array; it's a single row.
-      const lobby = (Array.isArray(r.lobbies) ? r.lobbies[0] : r.lobbies) ?? undefined;
-      return lobby ? { role: r.role, archived: !!r.archived, lobby } : null;
-    })
-    .filter((r): r is MyLobby => r !== null);
+function memberSince(iso: string): string {
+  return new Date(iso).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
 }
 
-// PostgREST's order-by-embedded-resource (`.order(col, { foreignTable })`)
-// doesn't actually reorder the parent `lobby_members` rows against this
-// project's Supabase instance — confirmed empirically, rows came back in
-// roughly insertion order regardless of what was requested. Sorting here
-// client-side, on the already-fetched `lobbies` data, sidesteps it entirely.
-function sortMyLobbies(rows: MyLobby[], order: SortOrder): MyLobby[] {
-  const sorted = [...rows];
-  sorted.sort((a, b) => {
-    if (order === 'NAME') return a.lobby.name.localeCompare(b.lobby.name);
-    const diff =
-      new Date(a.lobby.created_at).getTime() - new Date(b.lobby.created_at).getTime();
-    return order === 'OLDEST' ? diff : -diff;
-  });
-  return sorted;
-}
+const PROFILE_TABS: ProfileTab[] = ['stats', 'activity', 'drafts', 'friends'];
 
 export function ProfilePage() {
-  const { session } = useAuth();
-  const [active, setActive] = useState<MyLobby[]>([]);
-  const [archived, setArchived] = useState<MyLobby[]>([]);
-  const [sectionsLoading, setSectionsLoading] = useState(true);
-  const [showArchived, setShowArchived] = useState(false);
-
-  const [past, setPast] = useState<MyLobby[]>([]);
-  const [pastPage, setPastPage] = useState(0);
-  const [pastTotal, setPastTotal] = useState(0);
-  const [pastLoading, setPastLoading] = useState(true);
-
-  const [draftModeFilter, setDraftModeFilter] = useState<DraftModeFilter>('ALL');
-  const [visibilityFilter, setVisibilityFilter] = useState<VisibilityFilter>('ALL');
-  const [sortOrder, setSortOrder] = useState<SortOrder>('NEWEST');
-
-  const userId = session?.user.id;
-  const username =
+  const { userId: routeUserId } = useParams();
+  const [searchParams] = useSearchParams();
+  const { session, profile: authProfile } = useAuth();
+  const myUserId = session?.user.id;
+  const targetId = routeUserId ?? myUserId;
+  const isSelf = !!targetId && targetId === myUserId;
+  // Supports deep-linking directly to a tab, e.g. ?tab=friends.
+  const requestedTab = searchParams.get('tab');
+  const initialTab: ProfileTab =
+    requestedTab && (PROFILE_TABS as string[]).includes(requestedTab)
+      ? (requestedTab as ProfileTab)
+      : 'stats';
+  // Own username/avatar are already known from AuthContext, independent of
+  // this page's own fetch below — used as the header's fallback so your own
+  // profile still shows an identity even if the stats/activity request fails.
+  const selfUsername =
+    authProfile?.username ??
     (session?.user.user_metadata?.username as string | undefined) ??
     session?.user.email ??
     'drafter';
 
-  useEffect(() => {
-    if (!userId) return;
-    setSectionsLoading(true);
-    let activeQ = supabase
-      .from('lobby_members')
-      .select('role, archived, lobbies!inner ( id, name, status, settings, created_at )')
-      .eq('user_id', userId)
-      .eq('archived', false)
-      .neq('lobbies.status', 'COMPLETE');
-    let archivedQ = supabase
-      .from('lobby_members')
-      .select('role, archived, lobbies!inner ( id, name, status, settings, created_at )')
-      .eq('user_id', userId)
-      .eq('archived', true);
-    if (draftModeFilter !== 'ALL') {
-      activeQ = activeQ.eq('lobbies.settings->>draftMode', draftModeFilter);
-      archivedQ = archivedQ.eq('lobbies.settings->>draftMode', draftModeFilter);
-    }
-    if (visibilityFilter !== 'ALL') {
-      activeQ = activeQ.eq('lobbies.settings->>visibility', visibilityFilter);
-      archivedQ = archivedQ.eq('lobbies.settings->>visibility', visibilityFilter);
-    }
-    Promise.all([activeQ, archivedQ]).then(([activeRes, archivedRes]) => {
-      setActive(sortMyLobbies(toMyLobbies((activeRes.data ?? []) as unknown as RawRow[]), sortOrder));
-      setArchived(
-        sortMyLobbies(toMyLobbies((archivedRes.data ?? []) as unknown as RawRow[]), sortOrder),
-      );
-      setSectionsLoading(false);
-    });
-  }, [userId, draftModeFilter, visibilityFilter, sortOrder]);
-
-  const loadPast = useCallback(
-    (page: number) => {
-      if (!userId) return;
-      setPastLoading(true);
-      let q = supabase
-        .from('lobby_members')
-        .select('role, archived, lobbies!inner ( id, name, status, settings, created_at )')
-        .eq('user_id', userId)
-        .eq('archived', false)
-        .eq('lobbies.status', 'COMPLETE');
-      if (draftModeFilter !== 'ALL') q = q.eq('lobbies.settings->>draftMode', draftModeFilter);
-      if (visibilityFilter !== 'ALL') q = q.eq('lobbies.settings->>visibility', visibilityFilter);
-      // No server-side range/order here — see sortMyLobbies for why. The full
-      // set of a single user's past drafts is small, so fetching it all and
-      // paginating the (correctly) sorted array client-side is cheap.
-      void q.then(({ data }) => {
-        const sorted = sortMyLobbies(toMyLobbies((data ?? []) as unknown as RawRow[]), sortOrder);
-        setPastTotal(sorted.length);
-        setPast(sorted.slice(page * PAST_PAGE_SIZE, page * PAST_PAGE_SIZE + PAST_PAGE_SIZE));
-        setPastLoading(false);
-      });
-    },
-    [userId, draftModeFilter, visibilityFilter, sortOrder],
-  );
+  // ── Public profile bundle (header + stats + activity) ──
+  const [profile, setProfile] = useState<ProfileData | null>(null);
+  const [stats, setStats] = useState<ProfileStats | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [profileError, setProfileError] = useState(false);
+  const [activity, setActivity] = useState<ActivityItem[]>([]);
+  const [activityMore, setActivityMore] = useState(false);
+  const [activityHasMore, setActivityHasMore] = useState(false);
+  const activityCursor = useRef<string | null>(null);
 
   useEffect(() => {
-    loadPast(pastPage);
-  }, [loadPast, pastPage]);
+    if (!targetId) return;
+    setProfileLoading(true);
+    setProfileError(false);
+    void api<{
+      profile: ProfileData;
+      stats: ProfileStats;
+      items: ActivityItem[];
+      nextCursor: string | null;
+      hasMore: boolean;
+    }>(`/users/${targetId}/profile`)
+      .then(({ profile, stats, items, nextCursor, hasMore }) => {
+        setProfile(profile);
+        setStats(stats);
+        setActivity(items);
+        activityCursor.current = nextCursor;
+        setActivityHasMore(hasMore);
+      })
+      .catch(() => setProfileError(true))
+      .finally(() => setProfileLoading(false));
+  }, [targetId]);
 
-  // Restart pagination whenever the filters/sort change underneath it.
+  const loadMoreActivity = useCallback(() => {
+    if (!targetId || !activityCursor.current) return;
+    setActivityMore(true);
+    void api<{ items: ActivityItem[]; nextCursor: string | null; hasMore: boolean }>(
+      `/users/${targetId}/activity?before=${encodeURIComponent(activityCursor.current)}`,
+    )
+      .then(({ items, nextCursor, hasMore }) => {
+        setActivity((prev) => [...prev, ...items]);
+        activityCursor.current = nextCursor;
+        setActivityHasMore(hasMore);
+      })
+      .catch(() => {})
+      .finally(() => setActivityMore(false));
+  }, [targetId]);
+
+  const activitySentinel = useInfiniteScroll(loadMoreActivity, {
+    hasMore: activityHasMore,
+    loading: activityMore,
+  });
+
+  // ── Friends / Drafts tabs — lazy-loaded read-only lists, only fetched once
+  // the tab is actually opened (rather than bundled into the initial fetch). ──
+  const [tab, setTab] = useState<ProfileTab>(initialTab);
+  const [friends, setFriends] = useState<FriendMini[] | null>(null);
+  const [friendsLoading, setFriendsLoading] = useState(false);
+  const [publicDrafts, setPublicDrafts] = useState<PublicDraft[] | null>(null);
+  const [draftsLoading, setDraftsLoading] = useState(false);
+
+  // Reset per-profile state when navigating from one user's profile to
+  // another (route param changes but the component stays mounted) — but not
+  // on the very first render, which would otherwise stomp the ?tab= param above.
+  const prevTargetId = useRef(targetId);
   useEffect(() => {
-    setPastPage(0);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draftModeFilter, visibilityFilter, sortOrder]);
+    if (prevTargetId.current === targetId) return;
+    prevTargetId.current = targetId;
+    setTab('stats');
+    setFriends(null);
+    setPublicDrafts(null);
+  }, [targetId]);
 
-  async function setLobbyArchived(row: MyLobby, archivedNext: boolean) {
-    // Optimistic — the flag is personal so there's no conflict to reconcile.
-    if (archivedNext) {
-      setActive((prev) => prev.filter((r) => r.lobby.id !== row.lobby.id));
-      setPast((prev) => prev.filter((r) => r.lobby.id !== row.lobby.id));
-      setArchived((prev) => [{ ...row, archived: true }, ...prev]);
-    } else {
-      setArchived((prev) => prev.filter((r) => r.lobby.id !== row.lobby.id));
-      if (row.lobby.status === 'COMPLETE') loadPast(pastPage);
-      else setActive((prev) => [{ ...row, archived: false }, ...prev]);
-    }
-    try {
-      await api(`/lobbies/${row.lobby.id}/archive`, {
-        method: 'POST',
-        body: { archived: archivedNext },
-      });
-    } catch {
-      // Revert on failure by reloading both sources of truth.
-      if (archivedNext) setArchived((prev) => prev.filter((r) => r.lobby.id !== row.lobby.id));
-      loadPast(pastPage);
-    }
-  }
+  useEffect(() => {
+    if (tab !== 'friends' || friends !== null || !targetId) return;
+    setFriendsLoading(true);
+    void api<{ friends: FriendMini[] }>(`/users/${targetId}/friends`)
+      .then(({ friends }) => setFriends(friends))
+      .catch(() => setFriends([]))
+      .finally(() => setFriendsLoading(false));
+  }, [tab, targetId, friends]);
 
-  const pastPageCount = Math.max(1, Math.ceil(pastTotal / PAST_PAGE_SIZE));
+  useEffect(() => {
+    if (tab !== 'drafts' || publicDrafts !== null || !targetId) return;
+    setDraftsLoading(true);
+    void api<{ drafts: PublicDraft[] }>(`/users/${targetId}/drafts`)
+      .then(({ drafts }) => setPublicDrafts(drafts))
+      .catch(() => setPublicDrafts([]))
+      .finally(() => setDraftsLoading(false));
+  }, [tab, targetId, publicDrafts]);
+
+  const username = profile?.username ?? (isSelf ? selfUsername : '…');
+  const avatarData =
+    profile?.avatar ?? (isSelf ? authProfile?.avatar : null) ?? defaultAvatar(targetId ?? username);
+
+  const tabs: { key: ProfileTab; label: string }[] = [
+    { key: 'stats', label: 'Stats' },
+    { key: 'activity', label: 'Activity' },
+    { key: 'drafts', label: 'Drafts' },
+    { key: 'friends', label: 'Friends' },
+  ];
 
   return (
     <main className="profile">
       <header className="profile__header">
         <div className="profile__identity">
-          <Avatar avatar={defaultAvatar(userId ?? username)} size={32} />
-          <h1>{username}</h1>
+          <Avatar avatar={avatarData} size={48} />
+          <div className="profile__identity-text">
+            <h1>{username}</h1>
+            {profile && (
+              <span className="muted">Member since {memberSince(profile.createdAt)}</span>
+            )}
+          </div>
         </div>
       </header>
 
-      <div className="profile__filters">
-        <div className="segmented">
-          {(['ALL', 'LIVE', 'MOCK'] as const).map((v) => (
-            <button
-              key={v}
-              type="button"
-              className={`segmented__opt${draftModeFilter === v ? ' segmented__opt--on' : ''}`}
-              onClick={() => setDraftModeFilter(v)}
-            >
-              {v === 'ALL' ? 'All' : v === 'LIVE' ? '🏈 Live' : '🤖 Mock'}
-            </button>
-          ))}
-        </div>
-        <div className="segmented">
-          {(['ALL', 'PRIVATE', 'OPEN'] as const).map((v) => (
-            <button
-              key={v}
-              type="button"
-              className={`segmented__opt${visibilityFilter === v ? ' segmented__opt--on' : ''}`}
-              onClick={() => setVisibilityFilter(v)}
-            >
-              {v === 'ALL' ? 'All' : v === 'PRIVATE' ? '🔒 Private' : '🌐 Open'}
-            </button>
-          ))}
-        </div>
-        <select
-          className="profile__sort"
-          value={sortOrder}
-          onChange={(e) => setSortOrder(e.target.value as SortOrder)}
-          aria-label="Sort drafts"
-        >
-          <option value="NEWEST">Newest first</option>
-          <option value="OLDEST">Oldest first</option>
-          <option value="NAME">Name (A–Z)</option>
-        </select>
+      <div className="segmented profile__tabs">
+        {tabs.map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            className={`segmented__opt${tab === t.key ? ' segmented__opt--on' : ''}`}
+            onClick={() => setTab(t.key)}
+          >
+            {t.label}
+          </button>
+        ))}
       </div>
 
-      {sectionsLoading ? (
-        <div className="section-loading">
-          <Loader label="Loading your drafts…" />
-        </div>
-      ) : (
-        <>
-          {active.length > 0 && (
-            <section className="profile__section">
-              <h2>Active &amp; upcoming</h2>
-              <LobbyList
-                rows={active}
-                renderAction={(row) => (
-                  <button
-                    type="button"
-                    className="lobby-list__action"
-                    aria-label={`Archive ${row.lobby.name}`}
-                    title="Archive"
-                    onClick={() => setLobbyArchived(row, true)}
-                  >
-                    <ArchiveOutlinedIcon fontSize="small" />
-                  </button>
-                )}
-              />
-            </section>
-          )}
+      {tab === 'stats' &&
+        (profileError ? (
+          <p className="muted profile__missing">This profile could not be loaded.</p>
+        ) : stats ? (
+          <ProfileStatsBlock stats={stats} />
+        ) : (
+          <div className="section-loading">
+            <Loader label="Loading stats…" />
+          </div>
+        ))}
 
-          <section className="profile__section">
-            <h2>Past drafts</h2>
-            {pastLoading ? (
-              <div className="section-loading section-loading--inline">
-                <Loader label="Loading…" />
-              </div>
-            ) : past.length === 0 ? (
-              <p className="muted">No completed drafts yet.</p>
-            ) : (
-              <>
-                <LobbyList
-                  rows={past}
-                  renderAction={(row) => (
-                    <button
-                      type="button"
-                      className="lobby-list__action"
-                      aria-label={`Archive ${row.lobby.name}`}
-                      title="Archive"
-                      onClick={() => setLobbyArchived(row, true)}
-                    >
-                      <ArchiveOutlinedIcon fontSize="small" />
-                    </button>
-                  )}
-                />
-                {pastPageCount > 1 && (
-                  <div className="profile__pager">
-                    <button
-                      type="button"
-                      className="profile__pager-btn"
-                      disabled={pastPage === 0}
-                      onClick={() => setPastPage((p) => Math.max(0, p - 1))}
-                      aria-label="Previous page"
-                    >
-                      <ChevronLeftIcon fontSize="small" />
-                    </button>
-                    <span className="muted">
-                      Page {pastPage + 1} of {pastPageCount}
-                    </span>
-                    <button
-                      type="button"
-                      className="profile__pager-btn"
-                      disabled={pastPage >= pastPageCount - 1}
-                      onClick={() => setPastPage((p) => Math.min(pastPageCount - 1, p + 1))}
-                      aria-label="Next page"
-                    >
-                      <ChevronRightIcon fontSize="small" />
-                    </button>
-                  </div>
-                )}
-              </>
-            )}
-          </section>
-
-          {archived.length > 0 && (
-            <section className="profile__section">
-              <button
-                type="button"
-                className="profile__archived-toggle"
-                onClick={() => setShowArchived((v) => !v)}
-              >
-                {showArchived ? '▾' : '▸'} Archived ({archived.length})
-              </button>
-              {showArchived && (
-                <LobbyList
-                  rows={archived}
-                  renderAction={(row) => (
-                    <button
-                      type="button"
-                      className="lobby-list__action"
-                      aria-label={`Unarchive ${row.lobby.name}`}
-                      title="Unarchive"
-                      onClick={() => setLobbyArchived(row, false)}
-                    >
-                      <UnarchiveOutlinedIcon fontSize="small" />
-                    </button>
-                  )}
-                />
+      {tab === 'activity' && (
+        <section className="profile__section">
+          {profileError ? (
+            <p className="muted profile__missing">This profile could not be loaded.</p>
+          ) : profileLoading ? (
+            <div className="section-loading section-loading--inline">
+              <Loader label="Loading activity…" />
+            </div>
+          ) : activity.length === 0 ? (
+            <p className="muted">
+              {isSelf ? 'No public activity yet.' : 'Nothing to show here yet.'}
+            </p>
+          ) : (
+            <>
+              <ul className="activity-feed">
+                {activity.map((item) => (
+                  <ActivityRow key={item.id} item={item} />
+                ))}
+              </ul>
+              {activityHasMore && <div ref={activitySentinel} className="activity-feed__sentinel" />}
+              {activityMore && (
+                <div className="section-loading section-loading--inline">
+                  <Loader label="Loading…" />
+                </div>
               )}
-            </section>
+            </>
           )}
-        </>
+        </section>
+      )}
+
+      {tab === 'drafts' && (
+        <section className="profile__section">
+          {draftsLoading ? (
+            <div className="section-loading section-loading--inline">
+              <Loader label="Loading drafts…" />
+            </div>
+          ) : !publicDrafts || publicDrafts.length === 0 ? (
+            <p className="muted">
+              {isSelf ? "You don't have any public drafts yet." : 'No public drafts to show.'}
+            </p>
+          ) : (
+            <ul className="draft-list">
+              {publicDrafts.map((d) => (
+                <PublicDraftRow key={d.id} draft={d} />
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
+
+      {tab === 'friends' && (
+        <section className="profile__section">
+          {friendsLoading ? (
+            <div className="section-loading section-loading--inline">
+              <Loader label="Loading friends…" />
+            </div>
+          ) : !friends || friends.length === 0 ? (
+            <p className="muted">
+              {isSelf ? "You haven't added any friends yet." : 'No friends to show.'}
+            </p>
+          ) : (
+            <ul className="friend-list">
+              {friends.map((f) => (
+                <li key={f.id} className="friend-list__row">
+                  <ProfileLink userId={f.id}>
+                    <Avatar avatar={f.avatar ?? defaultAvatar(f.id)} size={36} />
+                  </ProfileLink>
+                  <ProfileLink userId={f.id} className="friend-list__name">
+                    {f.username}
+                  </ProfileLink>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
       )}
     </main>
   );
 }
 
-function LobbyList({
-  rows,
-  renderAction,
-}: {
-  rows: MyLobby[];
-  renderAction?: (row: MyLobby) => ReactNode;
-}) {
+function ProfileStatsBlock({ stats }: { stats: ProfileStats }) {
   return (
-    <ul className="lobby-list">
-      {rows.map((row) => {
-        const { lobby, role } = row;
-        const { settings } = lobby;
-        const live = lobby.status === 'DRAFTING' || lobby.status === 'COMPLETE';
-        const to = live ? `/lobby/${lobby.id}/draft` : `/lobby/${lobby.id}`;
-        const preset = matchPreset(settings.scoring);
-        return (
-          <li key={lobby.id} className="lobby-list__item">
-            <Link to={to} className="lobby-list__row">
-              <div className="lobby-list__main">
-                <div className="lobby-list__name-row">
-                  <span className="lobby-list__name">{lobby.name}</span>
-                  <span className="lobby-list__badge">
-                    {settings.draftMode === 'MOCK' ? '🤖 Mock' : '🏈 Live'}
-                  </span>
-                  <span className="lobby-list__badge">
-                    {settings.visibility === 'OPEN' ? '🌐 Open' : '🔒 Private'}
-                  </span>
-                </div>
-                <span className="muted">
-                  {settings.teamCount} teams · {settings.draftType === 'SNAKE' ? 'Snake' : 'Straight'}
-                  {' · '}
-                  {preset ? SCORING_PRESETS[preset].label : 'Custom scoring'} ·{' '}
-                  {new Date(lobby.created_at).toLocaleDateString()}
-                  {role === 'COMMISSIONER' ? ' · Commissioner' : ''}
+    <section className="profile__section">
+      <div className="profile-stats">
+        <div className="profile-stat">
+          <span className="profile-stat__value">{stats.totalDrafts}</span>
+          <span className="profile-stat__label">Drafts</span>
+        </div>
+        <div className="profile-stat">
+          <span className="profile-stat__value">{stats.liveDrafts}</span>
+          <span className="profile-stat__label">🏈 Live</span>
+        </div>
+        <div className="profile-stat">
+          <span className="profile-stat__value">{stats.mockDrafts}</span>
+          <span className="profile-stat__label">🤖 Mock</span>
+        </div>
+        <div className="profile-stat">
+          <span className="profile-stat__value">{stats.completedDrafts}</span>
+          <span className="profile-stat__label">Completed</span>
+        </div>
+        <div className="profile-stat">
+          <span className="profile-stat__value">{stats.totalPicks}</span>
+          <span className="profile-stat__label">Picks made</span>
+        </div>
+      </div>
+
+      {stats.mostPicked.length > 0 && (
+        <div className="most-picked">
+          <h3 className="most-picked__title">Most-drafted players</h3>
+          <ul className="most-picked__list">
+            {stats.mostPicked.map((p) => (
+              <li key={p.playerId} className="most-picked__row">
+                <span
+                  className="most-picked__pos"
+                  style={{ background: POSITION_COLORS[p.position as Position] }}
+                >
+                  {p.position === 'DEF' ? 'D/ST' : p.position}
                 </span>
-              </div>
-              <span
-                className={`status-pill status-pill--${lobby.status.toLowerCase()}`}
-              >
-                {lobby.status}
-              </span>
-            </Link>
-            {renderAction?.(row)}
-          </li>
-        );
-      })}
-    </ul>
+                <span className="most-picked__name">{p.name}</span>
+                <span className="most-picked__team muted">{p.nflTeam}</span>
+                <span className="most-picked__count">×{p.count}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function ActivityRow({ item }: { item: ActivityItem }) {
+  let icon: ReactNode;
+  let text: ReactNode;
+  switch (item.kind) {
+    case 'DRAFT_COMPLETED':
+      icon = <EmojiEventsOutlinedIcon fontSize="small" />;
+      text = <>Completed a draft</>;
+      break;
+    case 'OPEN_LOBBY_CREATED':
+      icon = <SportsFootballIcon fontSize="small" />;
+      text = <>Opened a lobby</>;
+      break;
+    case 'PICK_REACTION':
+      icon = <span className="activity-row__emoji">{item.emoji}</span>;
+      text = item.player ? (
+        <>
+          Reacted to <strong>{item.player.name}</strong>'s pick
+        </>
+      ) : (
+        <>Reacted to a pick</>
+      );
+      break;
+    case 'MESSAGE_REACTION':
+      icon = <span className="activity-row__emoji">{item.emoji}</span>;
+      text = <>Reacted to a message</>;
+      break;
+    case 'PICK_COMMENT':
+      icon = <ChatBubbleOutlineIcon fontSize="small" />;
+      text = item.player ? (
+        <>
+          Commented on <strong>{item.player.name}</strong>'s pick
+        </>
+      ) : (
+        <>Commented on a pick</>
+      );
+      break;
+  }
+
+  const to =
+    item.lobbyId && item.kind === 'OPEN_LOBBY_CREATED'
+      ? `/lobby/${item.lobbyId}`
+      : item.lobbyId
+        ? `/lobby/${item.lobbyId}/draft`
+        : null;
+
+  const body = (
+    <>
+      <span className="activity-row__icon">{icon}</span>
+      <span className="activity-row__body">
+        <span className="activity-row__text">{text}</span>
+        <span className="activity-row__meta muted">
+          {item.lobbyName && <span className="activity-row__lobby">{item.lobbyName}</span>}
+          <span className="activity-row__time">{timeAgo(item.createdAt)}</span>
+        </span>
+        {item.commentBody && (
+          <span className="activity-row__quote">“{item.commentBody}”</span>
+        )}
+      </span>
+    </>
+  );
+
+  return (
+    <li className="activity-row">
+      {to ? (
+        <Link to={to} className="activity-row__link">
+          {body}
+        </Link>
+      ) : (
+        <div className="activity-row__link activity-row__link--static">{body}</div>
+      )}
+    </li>
+  );
+}
+
+function PublicDraftRow({ draft }: { draft: PublicDraft }) {
+  const { settings } = draft;
+  const live = draft.status === 'DRAFTING' || draft.status === 'COMPLETE';
+  const to = live ? `/lobby/${draft.id}/draft` : `/lobby/${draft.id}`;
+  const preset = matchPreset(settings.scoring);
+  return (
+    <li className="draft-list__item">
+      <Link to={to} className="draft-list__row">
+        <div className="draft-list__main">
+          <div className="draft-list__name-row">
+            <span className="draft-list__name">{draft.name}</span>
+            <span className="draft-list__badge">
+              {settings.draftMode === 'MOCK' ? '🤖 Mock' : '🏈 Live'}
+            </span>
+            <span className="draft-list__badge">
+              {settings.visibility === 'OPEN' ? '🌐 Open' : '🔒 Private'}
+            </span>
+          </div>
+          <span className="muted">
+            {settings.teamCount} teams · {settings.draftType === 'SNAKE' ? 'Snake' : 'Straight'}
+            {' · '}
+            {preset ? SCORING_PRESETS[preset].label : 'Custom scoring'} ·{' '}
+            {new Date(draft.createdAt).toLocaleDateString()}
+          </span>
+        </div>
+        <span className={`status-pill status-pill--${draft.status.toLowerCase()}`}>
+          {draft.status}
+        </span>
+      </Link>
+    </li>
   );
 }

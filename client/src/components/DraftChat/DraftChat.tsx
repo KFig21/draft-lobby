@@ -34,6 +34,7 @@ import { Avatar } from '../Avatar/Avatar';
 import { ChampionBadge } from '../ChampionBadge/ChampionBadge';
 import { GradeBadge } from '../GradeBadge/GradeBadge';
 import { MentionInput } from '../MentionInput/MentionInput';
+import { ProfileLink } from '../ProfileLink/ProfileLink';
 import { ReactorsModal, type Reactor } from '../ReactorsModal/ReactorsModal';
 import './DraftChat.scss';
 
@@ -537,11 +538,15 @@ export function DraftChat({
                 highlightId === it.id ? ' chat__msg--focused' : ''
               }`}
             >
-              <Avatar avatar={u?.avatar ?? defaultAvatar(it.userId)} size={28} />
+              <ProfileLink userId={it.userId}>
+                <Avatar avatar={u?.avatar ?? defaultAvatar(it.userId)} size={28} />
+              </ProfileLink>
               <div className="chat__msg-body">
                 <div className="chat__msg-head">
                   <span className="chat__msg-name">
-                    <span className="chat__msg-name-text">{u?.username ?? 'Player'}</span>
+                    <ProfileLink userId={it.userId} className="chat__msg-name-text">
+                      {u?.username ?? 'Player'}
+                    </ProfileLink>
                     {championUserIds.has(it.userId) && <ChampionBadge size={12} />}
                   </span>
                   <span className="chat__msg-time">{formatTime(it.at)}</span>

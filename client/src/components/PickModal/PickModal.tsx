@@ -23,6 +23,7 @@ import { ByeClashes } from '../ByeClashes/ByeClashes';
 import { ChampionBadge } from '../ChampionBadge/ChampionBadge';
 import type { ReactionEntry } from '../DraftGrid/DraftGrid';
 import { MentionInput } from '../MentionInput/MentionInput';
+import { ProfileLink } from '../ProfileLink/ProfileLink';
 import { PlayerHeader, PlayerStatGrid } from '../PlayerStatBlock/PlayerStatBlock';
 import { ReactorsModal, type Reactor } from '../ReactorsModal/ReactorsModal';
 import './PickModal.scss';
@@ -171,9 +172,15 @@ export function PickModal({
           <PlayerHeader player={player} isKeeper={pick.is_keeper} />
 
           <div className="pick-modal__drafted">
-            {team && <Avatar avatar={avatarForTeam(team, members)} size={18} />}
+            {team && (
+              <ProfileLink userId={team.owner_id}>
+                <Avatar avatar={avatarForTeam(team, members)} size={18} />
+              </ProfileLink>
+            )}
             <span>
-              <strong>{team?.name ?? 'A team'}</strong>
+              <ProfileLink userId={team?.owner_id}>
+                <strong>{team?.name ?? 'A team'}</strong>
+              </ProfileLink>
               {team?.owner_id && championUserIds?.has(team.owner_id) && <ChampionBadge size={13} />}{' '}
               · Pick {pick.overall} · Round {formatRoundPick(pick.round, pickInRound, teamCount)}
               {pick.is_auto_pick && <span className="pick-modal__auto"> · auto</span>}
@@ -246,10 +253,14 @@ export function PickModal({
           ) : (
             comments.map((c) => (
               <div key={c.id} className="pick-modal__comment">
-                <Avatar avatar={c.avatar} size={26} />
+                <ProfileLink userId={c.userId}>
+                  <Avatar avatar={c.avatar} size={26} />
+                </ProfileLink>
                 <div className="pick-modal__comment-main">
                   <div className="pick-modal__comment-head">
-                    <span className="pick-modal__comment-author">{c.author}</span>
+                    <ProfileLink userId={c.userId} className="pick-modal__comment-author">
+                      {c.author}
+                    </ProfileLink>
                     {championUserIds?.has(c.userId) && <ChampionBadge size={12} />}
                     <span className="pick-modal__comment-time">{formatTime(c.at)}</span>
                   </div>

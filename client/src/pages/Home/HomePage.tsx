@@ -15,6 +15,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { Avatar } from '../../components/Avatar/Avatar';
 import { HScrollRow } from '../../components/HScrollRow/HScrollRow';
 import { Loader } from '../../components/Loader/Loader';
+import { ProfileLink } from '../../components/ProfileLink/ProfileLink';
 import { ReactorsModal, type Reactor } from '../../components/ReactorsModal/ReactorsModal';
 import { api } from '../../lib/api';
 import { sortReactionEmojis } from '../../lib/reactions';
@@ -331,14 +332,18 @@ function FeedCard({
       <div className="feed-card__upper">
         <div className="feed-card__avatars">
           {item.actors.slice(0, 3).map((a) => (
-            <Avatar key={a.id} avatar={a.avatar ?? defaultAvatar(a.id)} size={40} />
+            <ProfileLink key={a.id} userId={a.id}>
+              <Avatar avatar={a.avatar ?? defaultAvatar(a.id)} size={40} />
+            </ProfileLink>
           ))}
         </div>
         <div className="feed-card__body">
           <p className="feed-card__text">
             {item.type === 'DRAFT_COMPLETED' && (
               <>
-                <strong>{nameFor(lead?.username, lead?.id, myUserId)}</strong>
+                <ProfileLink userId={lead?.id}>
+                  <strong>{nameFor(lead?.username, lead?.id, myUserId)}</strong>
+                </ProfileLink>
                 {extra > 0 && ` & ${extra} other${extra > 1 ? 's' : ''}`} completed{' '}
                 {item.lobbyName ? <strong>{item.lobbyName}</strong> : 'a draft'}{' '}
                 <SportsFootballIcon className="feed-card__icon" sx={{ fontSize: 17 }} />
@@ -346,14 +351,23 @@ function FeedCard({
             )}
             {item.type === 'FRIEND_ACCEPTED' && (
               <>
-                <strong>{nameFor(lead?.username, lead?.id, myUserId)}</strong> and{' '}
-                <strong>{nameFor(item.subject?.username, item.subject?.id, myUserId)}</strong> are
-                now friends <HandshakeIcon className="feed-card__icon" sx={{ fontSize: 17 }} />
+                <ProfileLink userId={lead?.id}>
+                  <strong>{nameFor(lead?.username, lead?.id, myUserId)}</strong>
+                </ProfileLink>{' '}
+                and{' '}
+                <ProfileLink userId={item.subject?.id}>
+                  <strong>{nameFor(item.subject?.username, item.subject?.id, myUserId)}</strong>
+                </ProfileLink>{' '}
+                are now friends{' '}
+                <HandshakeIcon className="feed-card__icon" sx={{ fontSize: 17 }} />
               </>
             )}
             {item.type === 'OPEN_LOBBY_CREATED' && (
               <>
-                <strong>{nameFor(lead?.username, lead?.id, myUserId)}</strong> opened{' '}
+                <ProfileLink userId={lead?.id}>
+                  <strong>{nameFor(lead?.username, lead?.id, myUserId)}</strong>
+                </ProfileLink>{' '}
+                opened{' '}
                 <strong>{item.lobbyName ?? 'a lobby'}</strong>
                 {/* Only offer to join if the draft hasn't started yet. */}
                 {item.lobbyId &&

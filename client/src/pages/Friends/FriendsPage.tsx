@@ -3,6 +3,7 @@ import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Avatar } from '../../components/Avatar/Avatar';
 import { Loader } from '../../components/Loader/Loader';
+import { ProfileLink } from '../../components/ProfileLink/ProfileLink';
 import { useAuth } from '../../auth/AuthContext';
 import { api } from '../../lib/api';
 import { supabase } from '../../supabase';
@@ -182,8 +183,12 @@ export function FriendsPage() {
             const rel = relationOf(p.id);
             return (
               <li key={p.id} className="friends__row">
-                <Avatar avatar={p.avatar ?? defaultAvatar(p.id)} size={36} />
-                <span className="friends__name">{p.username}</span>
+                <ProfileLink userId={p.id}>
+                  <Avatar avatar={p.avatar ?? defaultAvatar(p.id)} size={36} />
+                </ProfileLink>
+                <ProfileLink userId={p.id} className="friends__name">
+                  {p.username}
+                </ProfileLink>
                 {rel === 'friends' && <span className="muted">Friends</span>}
                 {rel === 'outgoing' && <span className="muted">Requested</span>}
                 {rel === 'incoming' && (
@@ -218,11 +223,15 @@ export function FriendsPage() {
           <ul className="friends__list">
             {incoming.map((f) => (
               <li key={f.id} className="friends__row">
-                <Avatar
-                  avatar={f.requester?.avatar ?? defaultAvatar(f.requester_id)}
-                  size={36}
-                />
-                <span className="friends__name">{f.requester?.username ?? 'Someone'}</span>
+                <ProfileLink userId={f.requester_id}>
+                  <Avatar
+                    avatar={f.requester?.avatar ?? defaultAvatar(f.requester_id)}
+                    size={36}
+                  />
+                </ProfileLink>
+                <ProfileLink userId={f.requester_id} className="friends__name">
+                  {f.requester?.username ?? 'Someone'}
+                </ProfileLink>
                 <button
                   className="button button--primary friends__btn"
                   onClick={() => act('respond', { requesterId: f.requester_id, accept: true })}
@@ -258,8 +267,12 @@ export function FriendsPage() {
                 if (!p) return null;
                 return (
                   <li key={f.id} className="friends__row">
-                    <Avatar avatar={p.avatar ?? defaultAvatar(p.id)} size={36} />
-                    <span className="friends__name">{p.username}</span>
+                    <ProfileLink userId={p.id}>
+                      <Avatar avatar={p.avatar ?? defaultAvatar(p.id)} size={36} />
+                    </ProfileLink>
+                    <ProfileLink userId={p.id} className="friends__name">
+                      {p.username}
+                    </ProfileLink>
                     <button
                       className="button friends__btn"
                       onClick={() => act('remove', { userId: p.id })}

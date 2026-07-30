@@ -35,6 +35,9 @@ const LobbyRoomPage = lazy(() =>
 const LobbyWizardPage = lazy(() =>
   import('./pages/LobbyWizard/LobbyWizardPage').then((m) => ({ default: m.LobbyWizardPage })),
 );
+const MyDraftsPage = lazy(() =>
+  import('./pages/MyDrafts/MyDraftsPage').then((m) => ({ default: m.MyDraftsPage })),
+);
 const NotificationsPage = lazy(() =>
   import('./pages/Notifications/NotificationsPage').then((m) => ({ default: m.NotificationsPage })),
 );
@@ -148,6 +151,8 @@ export default function App() {
           >
             <Route path="/home" element={<HomePage />} />
             <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/profile/:userId" element={<ProfilePage />} />
+            <Route path="/drafts" element={<MyDraftsPage />} />
             <Route path="/friends" element={<FriendsPage />} />
             <Route path="/notifications" element={<NotificationsPage />} />
             <Route path="/settings" element={<SettingsPage />} />

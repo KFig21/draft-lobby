@@ -1,3 +1,4 @@
+import AccountCircleOutlinedIcon from '@mui/icons-material/AccountCircleOutlined';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutlined';
 import CloseIcon from '@mui/icons-material/Close';
 import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
@@ -11,12 +12,14 @@ import DarkModeIcon from '@mui/icons-material/DarkMode';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import type { SvgIconComponent } from '@mui/icons-material';
 // (sign-out lives in Settings only)
+import { defaultAvatar } from '@draft-lobby/shared';
 import { useEffect, useState, type ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
 import { useNotifications } from '../../notifications/NotificationsContext';
 import { useTheme } from '../../theme/ThemeContext';
 import { supabase } from '../../supabase';
+import { Avatar } from '../Avatar/Avatar';
 
 export interface NavItem {
   to: string;
@@ -29,10 +32,20 @@ export const NAV_ITEMS: NavItem[] = [
   { to: '/home', label: 'Home', Icon: HomeOutlinedIcon, end: true },
   { to: '/lobby/new', label: 'Create', Icon: AddCircleOutlineIcon },
   { to: '/lobby/join', label: 'Join', Icon: LoginIcon },
-  { to: '/profile', label: 'My drafts', Icon: ListAltOutlinedIcon },
+  { to: '/drafts', label: 'My drafts', Icon: ListAltOutlinedIcon },
   { to: '/friends', label: 'Friends', Icon: PeopleAltOutlinedIcon },
   { to: '/notifications', label: 'Notifications', Icon: NotificationsNoneOutlinedIcon },
   { to: '/settings', label: 'Settings', Icon: SettingsOutlinedIcon },
+];
+
+/** Curated subset shown as icons in the mobile bottom bar — kept separate
+ * from NAV_ITEMS so reordering/extending the full nav list (drawer/sidebar)
+ * can't silently change what shows up there. */
+export const MOBILE_BOTTOM_ITEMS: NavItem[] = [
+  { to: '/home', label: 'Home', Icon: HomeOutlinedIcon, end: true },
+  { to: '/lobby/new', label: 'Create', Icon: AddCircleOutlineIcon },
+  { to: '/notifications', label: 'Notifications', Icon: NotificationsNoneOutlinedIcon },
+  { to: '/profile', label: 'Profile', Icon: AccountCircleOutlinedIcon, end: true },
 ];
 
 interface NavDrawerProps {
@@ -52,10 +65,15 @@ interface LiveDraft {
 
 /** Slide-in menu used by the mobile bottom bar and the draft board. */
 export function NavDrawer({ open, onClose, extraItems, extraContent }: NavDrawerProps) {
-  const { session } = useAuth();
+  const { session, profile } = useAuth();
   const { unreadCount } = useNotifications();
   const { theme, toggle } = useTheme();
   const userId = session?.user.id;
+  const username =
+    profile?.username ??
+    (session?.user.user_metadata?.username as string | undefined) ??
+    session?.user.email ??
+    'drafter';
   const [liveDrafts, setLiveDrafts] = useState<LiveDraft[]>([]);
 
   // Surface the user's active drafts (pre-draft and in-progress) at the top.
@@ -109,6 +127,11 @@ export function NavDrawer({ open, onClose, extraItems, extraContent }: NavDrawer
             <CloseIcon fontSize="small" />
           </button>
         </div>
+        <NavLink to="/profile" className="navbar-drawer__me" onClick={onClose}>
+          <Avatar avatar={profile?.avatar ?? defaultAvatar(userId ?? username)} size={36} />
+          <span className="navbar-drawer__me-name">{username}</span>
+        </NavLink>
+        <div className="navbar-drawer__divider" />
         {liveDrafts.length > 0 && (
           <>
             <div className="navbar-drawer__section-label">Your drafts</div>

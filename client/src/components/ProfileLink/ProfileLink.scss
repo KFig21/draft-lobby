@@ -1,0 +1,16 @@
+@use 'variables' as *;
+
+// Inherits the surrounding text's color/weight — it should read as the same
+// name/avatar it wraps, just now tappable, with a hover cue.
+.profile-link {
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  border-radius: $radius-sm;
+
+  @media (hover: hover) {
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}

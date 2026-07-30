@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { useModalClose } from '../../lib/useModalClose';
 import { Avatar } from '../Avatar/Avatar';
 import { ChampionBadge } from '../ChampionBadge/ChampionBadge';
+import { ProfileLink } from '../ProfileLink/ProfileLink';
 import './ReactorsModal.scss';
 
 export interface Reactor {
@@ -78,11 +79,13 @@ export function ReactorsModal({ reactors, myUserId, championUserIds, onClose }: 
         <ul className="reactors-modal__list">
           {rows.map((r, i) => (
             <li key={`${r.emoji}-${r.userId}-${i}`} className="reactors-modal__row">
-              <Avatar avatar={r.avatar ?? defaultAvatar(r.userId)} size={26} />
+              <ProfileLink userId={r.userId}>
+                <Avatar avatar={r.avatar ?? defaultAvatar(r.userId)} size={26} />
+              </ProfileLink>
               <span className="reactors-modal__row-name">
-                <span className="reactors-modal__row-username">
+                <ProfileLink userId={r.userId} className="reactors-modal__row-username">
                   {r.userId === myUserId ? 'You' : r.username}
-                </span>
+                </ProfileLink>
                 {championUserIds?.has(r.userId) && <ChampionBadge size={12} />}
               </span>
               <span className="reactors-modal__row-emoji">{r.emoji}</span>

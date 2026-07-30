@@ -47,7 +47,7 @@ export function Sidebar() {
       </nav>
 
       <div className="sidebar__footer">
-        <NavLink to="/settings" className="sidebar__me">
+        <NavLink to="/profile" className="sidebar__me">
           <Avatar avatar={profile?.avatar ?? defaultAvatar(userId)} size={36} />
           <span className="sidebar__me-name">{username}</span>
         </NavLink>

@@ -1,0 +1,183 @@
+@use 'variables' as *;
+
+.my-drafts {
+  padding: 0 0 $space * 3;
+  display: flex;
+  flex-direction: column;
+  gap: $space * 3;
+
+  > * {
+    width: 100%;
+    max-width: 720px;
+    margin-inline: auto;
+    padding-inline: $space * 3;
+  }
+
+  // Pinned page header with a full-width bottom border.
+  &__header {
+    max-width: none;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    min-height: 56px;
+    padding: $space $space * 3;
+    background: $bg-raised;
+    border-bottom: 1px solid $border;
+  }
+
+  &__identity {
+    display: flex;
+    align-items: center;
+    gap: $space * 1.5;
+
+    h1 {
+      font-size: 1.3rem;
+    }
+  }
+
+  &__section {
+    h2 {
+      font-size: 1rem;
+      margin-bottom: $space * 1.5;
+    }
+  }
+
+  &__pager {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: $space * 1.5;
+    margin-top: $space * 1.5;
+  }
+
+  &__pager-btn {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: $bg-raised;
+    color: $text;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      background: $bg-overlay;
+    }
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+  }
+
+  &__archived-toggle {
+    background: none;
+    border: none;
+    padding: 0;
+    margin-bottom: $space * 1.5;
+    color: $text-muted;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+
+    &:hover {
+      color: $text;
+    }
+  }
+
+  &__filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: $space;
+  }
+
+  &__sort {
+    margin-left: auto;
+    padding: $space * 0.75 $space;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: $bg-raised;
+    color: $text;
+    font-size: 0.85rem;
+  }
+}
+
+.lobby-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: $space;
+
+  &__item {
+    display: flex;
+    align-items: stretch;
+    gap: $space;
+  }
+
+  &__row {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $space * 1.5;
+    background: $bg-raised;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    padding: $space * 1.5;
+    transition: border-color 120ms ease;
+
+    &:hover {
+      border-color: $primary;
+    }
+  }
+
+  &__action {
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    width: 44px;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: $bg-raised;
+    color: $text-muted;
+    cursor: pointer;
+
+    &:hover {
+      background: $bg-overlay;
+      color: $text;
+    }
+  }
+
+  &__main {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  &__name-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: $space * 0.75;
+  }
+
+  &__name {
+    font-weight: 600;
+  }
+
+  &__badge {
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: $bg-overlay;
+    color: $text-muted;
+    font-size: 0.68rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+}

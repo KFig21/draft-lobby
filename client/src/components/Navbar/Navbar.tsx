@@ -2,11 +2,8 @@ import MenuIcon from '@mui/icons-material/Menu';
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useNotifications } from '../../notifications/NotificationsContext';
-import { NAV_ITEMS, NavDrawer } from './NavDrawer';
+import { MOBILE_BOTTOM_ITEMS, NavDrawer } from './NavDrawer';
 import './Navbar.scss';
-
-// Bottom bar shows the top actions; the rest live behind the menu drawer.
-const BOTTOM = NAV_ITEMS.slice(0, 4);
 
 /** Mobile-only bottom bar + slide-in menu. Desktop uses the Sidebar. */
 export function Navbar() {
@@ -15,19 +12,26 @@ export function Navbar() {
 
   return (
     <>
-      {/* Mobile bottom bar */}
+      {/* Mobile bottom bar — icon-only, labels live in the drawer instead. */}
       <nav className="navbar-bottom">
-        {BOTTOM.map(({ to, label, Icon, end }) => (
+        {MOBILE_BOTTOM_ITEMS.map(({ to, label, Icon, end }) => (
           <NavLink
             key={to}
             to={to}
             end={end}
+            aria-label={label}
             className={({ isActive }) =>
               `navbar-bottom__item${isActive ? ' is-active' : ''}`
             }
           >
-            <Icon fontSize="small" />
-            <span>{label}</span>
+            {to === '/notifications' && unreadCount > 0 ? (
+              <span className="navbar__link-icon">
+                <Icon />
+                <span className="navbar__badge navbar__badge--dot" />
+              </span>
+            ) : (
+              <Icon />
+            )}
           </NavLink>
         ))}
         <button
@@ -36,11 +40,7 @@ export function Navbar() {
           onClick={() => setDrawerOpen(true)}
           aria-label="Open menu"
         >
-          <span className="navbar__link-icon">
-            <MenuIcon fontSize="small" />
-            {unreadCount > 0 && <span className="navbar__badge navbar__badge--dot" />}
-          </span>
-          <span>Menu</span>
+          <MenuIcon />
         </button>
       </nav>
 
