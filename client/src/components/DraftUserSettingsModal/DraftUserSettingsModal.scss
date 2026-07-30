@@ -25,10 +25,12 @@
     border-top: 1px solid $border;
   }
 
+  // Stacked (name on its own line, description below) instead of side by
+  // side — see SettingsPage.scss's identical comment for why.
   &__row-main {
     display: flex;
-    align-items: baseline;
-    gap: $space;
+    flex-direction: column;
+    gap: 2px;
     min-width: 0;
   }
 

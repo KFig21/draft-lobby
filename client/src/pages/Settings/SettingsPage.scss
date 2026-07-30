@@ -58,10 +58,14 @@
     border-top: 1px solid $border;
   }
 
+  // Stacked (name on its own line, description below) instead of side by
+  // side — sharing one line meant each got only half the row's width,
+  // wrapping a heading like "Bye week clashes" onto 3 cramped lines on
+  // narrow screens.
   &__row-main {
     display: flex;
-    align-items: baseline;
-    gap: $space;
+    flex-direction: column;
+    gap: 2px;
     min-width: 0;
   }
 
