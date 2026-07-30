@@ -9,12 +9,23 @@ import {
 } from '@draft-lobby/shared';
 import AddReactionOutlinedIcon from '@mui/icons-material/AddReactionOutlined';
 import CloseIcon from '@mui/icons-material/Close';
+import EmojiEmotionsOutlinedIcon from '@mui/icons-material/EmojiEmotionsOutlined';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
 import ReplyIcon from '@mui/icons-material/Reply';
 import SendIcon from '@mui/icons-material/Send';
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import type { EmojiClickData, Theme } from 'emoji-picker-react';
+import {
+  Suspense,
+  lazy,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+} from 'react';
 import { useAuth } from '../../auth/AuthContext';
+import { useTheme } from '../../theme/ThemeContext';
 import { api } from '../../lib/api';
 import { supabase } from '../../supabase';
 import { sortReactionEmojis } from '../../lib/reactions';
@@ -37,6 +48,10 @@ import { MentionInput } from '../MentionInput/MentionInput';
 import { ProfileLink } from '../ProfileLink/ProfileLink';
 import { ReactorsModal, type Reactor } from '../ReactorsModal/ReactorsModal';
 import './DraftChat.scss';
+
+// Keep the ~600 kB emoji dataset out of the main bundle — only loaded once
+// the compose emoji button is actually clicked.
+const EmojiPicker = lazy(() => import('emoji-picker-react'));
 
 interface Props {
   lobbyId: string;
@@ -113,6 +128,7 @@ export function DraftChat({
   viewOnly = false,
 }: Props) {
   const { session } = useAuth();
+  const { theme } = useTheme();
   const userId = session?.user.id;
   const lastSeenRef = useRef(0);
   const initedRef = useRef(false);
@@ -131,10 +147,27 @@ export function DraftChat({
   // reactionsByTarget (`PICK:id` / `MESSAGE:id`) — lifted up here so opening
   // one closes any other that was already open.
   const [openPalette, setOpenPalette] = useState<string | null>(null);
+  const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const composeRef = useRef<HTMLInputElement>(null);
+  const emojiRef = useRef<HTMLDivElement>(null);
   const atBottomRef = useRef(true);
+  useClickOutside(emojiRef, () => setEmojiPickerOpen(false), emojiPickerOpen);
+
+  // Insert at the input's current caret (falling back to the end), same
+  // approach MentionInput uses for @mention completion.
+  function insertEmoji(emoji: string) {
+    const el = composeRef.current;
+    const caret = el?.selectionStart ?? draft.length;
+    const next = draft.slice(0, caret) + emoji + draft.slice(caret);
+    setDraft(next);
+    requestAnimationFrame(() => {
+      const pos = caret + emoji.length;
+      el?.focus();
+      el?.setSelectionRange(pos, pos);
+    });
+  }
 
   function onScroll() {
     const el = scrollRef.current;
@@ -640,6 +673,34 @@ export function DraftChat({
             </div>
           )}
           <form className="chat__compose" onSubmit={send}>
+            <div className="chat__emoji" ref={emojiRef}>
+              <button
+                type="button"
+                className="chat__emoji-btn"
+                aria-label="Add emoji"
+                aria-expanded={emojiPickerOpen}
+                onClick={() => setEmojiPickerOpen((o) => !o)}
+              >
+                <EmojiEmotionsOutlinedIcon fontSize="small" />
+              </button>
+              {emojiPickerOpen && (
+                <div className="chat__emoji-picker">
+                  <Suspense fallback={<p className="muted">Loading emoji…</p>}>
+                    <EmojiPicker
+                      theme={theme as Theme}
+                      lazyLoadEmojis
+                      width={320}
+                      height={360}
+                      previewConfig={{ showPreview: false }}
+                      onEmojiClick={(data: EmojiClickData) => {
+                        insertEmoji(data.emoji);
+                        setEmojiPickerOpen(false);
+                      }}
+                    />
+                  </Suspense>
+                </div>
+              )}
+            </div>
             <MentionInput
               value={draft}
               onChange={setDraft}

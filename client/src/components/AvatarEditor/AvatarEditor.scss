@@ -68,6 +68,14 @@
       --epr-category-label-bg-color: #{$bg-raised};
       border-color: $border !important;
       border-radius: $radius !important;
+
+      // The library's own search-input padding (meant to clear its
+      // absolutely-positioned search icon) loses its cascade tie against
+      // this app's global input styles, so the icon lands on top of the
+      // typed text instead of to its left. Pin it back explicitly.
+      input[aria-label='Type to search for an emoji'] {
+        padding: 0 30px !important;
+      }
     }
   }
 

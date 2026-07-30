@@ -381,6 +381,47 @@
     }
   }
 
+  &__emoji {
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  &__emoji-btn {
+    display: grid;
+    place-items: center;
+    width: 42px;
+    height: 100%;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: $bg;
+    color: $text-muted;
+    cursor: pointer;
+
+    &:hover {
+      background: $bg-overlay;
+      color: $text;
+    }
+  }
+
+  &__emoji-picker {
+    position: absolute;
+    bottom: calc(100% + 4px);
+    left: 0;
+    z-index: 20;
+    border: 1px solid $border;
+    border-radius: $radius;
+    overflow: hidden;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+
+    // The library's own search-input padding (meant to clear its
+    // absolutely-positioned search icon) loses its cascade tie against this
+    // app's global input styles, so the icon lands on top of the typed text
+    // instead of to its left. Pin it back explicitly.
+    .EmojiPickerReact input[aria-label='Type to search for an emoji'] {
+      padding: 0 30px !important;
+    }
+  }
+
   &__send {
     flex-shrink: 0;
     display: grid;
