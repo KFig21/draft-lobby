@@ -1,8 +1,10 @@
 import {
   DEFAULT_LOBBY_SETTINGS,
+  SCORING_PRESETS,
   lobbySettingsSchema,
   rosterSize,
   type LobbySettings,
+  type ScoringRules,
 } from '@draft-lobby/shared';
 import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -11,6 +13,7 @@ import {
   LeagueSettingsFields,
   normalizeTiers,
 } from '../../components/LeagueSettingsFields/LeagueSettingsFields';
+import { getDefaultScoringChoice } from '../../lib/defaultScoring';
 import { supabase } from '../../supabase';
 import '../LobbyWizard/LobbyWizardPage.scss';
 
@@ -52,6 +55,26 @@ export function LeagueWizardPage({ embedded = false, onSaved, onCancel }: Props 
       .then(({ data }) => {
         if (data?.settings) setSettings(data.settings as LobbySettings);
       });
+  }, [editId]);
+
+  // Fresh league (not editing one): seed scoring from the user's default
+  // (Settings → Scoring formats) instead of always the shared app default.
+  useEffect(() => {
+    if (editId) return;
+    const [kind, key] = getDefaultScoringChoice().split(':');
+    if (kind === 'preset' && key in SCORING_PRESETS) {
+      const rules = SCORING_PRESETS[key as keyof typeof SCORING_PRESETS].rules;
+      setSettings((s) => ({ ...s, scoring: rules }));
+    } else if (kind === 'format') {
+      void supabase
+        .from('scoring_formats')
+        .select('rules')
+        .eq('id', key)
+        .single()
+        .then(({ data }) => {
+          if (data?.rules) setSettings((s) => ({ ...s, scoring: data.rules as ScoringRules }));
+        });
+    }
   }, [editId]);
 
   async function handleSubmit(e: FormEvent) {

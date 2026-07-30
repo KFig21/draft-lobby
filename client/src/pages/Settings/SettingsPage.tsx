@@ -1,5 +1,6 @@
 import {
   POSITION_OVERRIDE_SEP,
+  SCORING_PRESETS,
   matchPreset,
   type LobbySettings,
   type ScoringRules,
@@ -22,6 +23,7 @@ import {
   setShowByeClashes,
   type DraftCellStyle,
 } from '../../lib/draftCellStyle';
+import { getDefaultScoringChoice, setDefaultScoringChoice } from '../../lib/defaultScoring';
 import { useTheme } from '../../theme/ThemeContext';
 import { supabase } from '../../supabase';
 import {
@@ -58,6 +60,7 @@ export function SettingsPage() {
   const [cellStyle, setCellStyleState] = useState<DraftCellStyle>(() => getDraftCellStyle());
   const [showCellReactions, setShowCellReactionsState] = useState(() => getShowCellReactions());
   const [showByeClashes, setShowByeClashesState] = useState(() => getShowByeClashes());
+  const [defaultScoring, setDefaultScoringState] = useState(() => getDefaultScoringChoice());
 
   function updateCellStyle(style: DraftCellStyle) {
     setDraftCellStyle(style);
@@ -72,6 +75,11 @@ export function SettingsPage() {
   function updateShowByeClashes(show: boolean) {
     setShowByeClashes(show);
     setShowByeClashesState(show);
+  }
+
+  function updateDefaultScoring(choice: string) {
+    setDefaultScoringChoice(choice);
+    setDefaultScoringState(choice);
   }
 
   function updateToastsEnabled(enabled: boolean) {
@@ -234,6 +242,35 @@ export function SettingsPage() {
       {/* Scoring formats */}
       <section className="settings__section">
         <h2>Scoring formats</h2>
+        <div className="settings__row">
+          <div className="settings__row-main">
+            <span className="settings__row-name">Default scoring format</span>
+            <span className="muted">Used to start Rankings and new leagues</span>
+          </div>
+          <select
+            className="settings__select"
+            value={defaultScoring}
+            onChange={(e) => updateDefaultScoring(e.target.value)}
+            aria-label="Default scoring format"
+          >
+            <optgroup label="Presets">
+              {(Object.keys(SCORING_PRESETS) as (keyof typeof SCORING_PRESETS)[]).map((p) => (
+                <option key={p} value={`preset:${p}`}>
+                  {SCORING_PRESETS[p].label}
+                </option>
+              ))}
+            </optgroup>
+            {formats.length > 0 && (
+              <optgroup label="Your saved formats">
+                {formats.map((f) => (
+                  <option key={f.id} value={`format:${f.id}`}>
+                    {f.name}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+          </select>
+        </div>
         {formats.map((f) => (
           <div className="settings__row" key={f.id}>
             <div className="settings__row-main">
