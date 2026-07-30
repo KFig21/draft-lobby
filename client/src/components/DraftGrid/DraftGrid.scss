@@ -153,6 +153,7 @@
     &--hi {
       color: $accent;
     }
+
     &--hi::before {
       background: color-mix(in srgb, $accent 22%, $bg-overlay);
     }
@@ -161,6 +162,7 @@
     &--current {
       color: #05231a;
     }
+
     &--current::before {
       background: $accent;
     }
@@ -293,7 +295,7 @@
     &--skipped {
       border-width: 2px;
       border-style: dashed;
-      border-color: $warning;
+      border-color: $pos-def;
       text-align: center;
       vertical-align: middle;
       overflow: hidden;
@@ -302,12 +304,13 @@
     // The viewer's own skipped slot: same faint "it's on you" tint + pointer
     // as the own-on-clock cell, in amber.
     &--skipped-mine {
-      background: rgba($warning, 0.14);
+      border-color: $danger;
+      background: rgba($danger, 0.14);
       cursor: pointer;
 
       @media (hover: hover) {
         &:hover {
-          background: rgba($warning, 0.22);
+          background: rgba($danger, 0.22);
         }
       }
     }
