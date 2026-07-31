@@ -1,10 +1,7 @@
 import {
   DRAFT_RESULTS_LOCK_MS,
-  SCORING_PRESETS,
   defaultAvatar,
   extractMentionedUsernames,
-  matchPreset,
-  roundsForSettings,
   type Avatar as AvatarData,
 } from '@draft-lobby/shared';
 import AddIcon from '@mui/icons-material/Add';
@@ -32,7 +29,6 @@ import PersonRemoveOutlinedIcon from '@mui/icons-material/PersonRemoveOutlined';
 import RemoveModeratorOutlinedIcon from '@mui/icons-material/RemoveModeratorOutlined';
 import ShuffleIcon from '@mui/icons-material/Shuffle';
 import SmartToyOutlinedIcon from '@mui/icons-material/SmartToyOutlined';
-import { clockSummary } from '../../lib/format';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Avatar } from '../../components/Avatar/Avatar';
@@ -42,6 +38,7 @@ import { ConfirmModal } from '../../components/ConfirmModal/ConfirmModal';
 import { DraftChat } from '../../components/DraftChat/DraftChat';
 import { ErrorScreen } from '../../components/ErrorScreen/ErrorScreen';
 import { LeagueRulesModal } from '../../components/LeagueRulesModal/LeagueRulesModal';
+import { RulesOverview } from '../../components/LeagueRulesModal/RulesOverview';
 import { Loader } from '../../components/Loader/Loader';
 import { useAuth } from '../../auth/AuthContext';
 import { useLobby } from '../../hooks/useLobby';
@@ -679,42 +676,25 @@ export function LobbyRoomPage() {
             <span className={`status-pill status-pill--${lobby.status.toLowerCase()}`}>
               {lobby.status}
             </span>
+            {s.draftMode === 'MOCK' && <span className="room__mock-badge">🤖 Mock</span>}
           </div>
         </header>
 
-        <div className="room__meta">
-          <span>{s.teamCount} teams</span>
-          <span>{s.draftType === 'SNAKE' ? 'Snake' : 'Straight'}</span>
-          <span>{roundsForSettings(s)} rounds</span>
-          <span>{clockSummary(s.pickTiers)}/pick</span>
-          <span className="room__meta-scoring">
-            {matchPreset(s.scoring) ? SCORING_PRESETS[matchPreset(s.scoring)!].label : 'Custom'}
+        {/* Same stat grid as the League rules modal's own Overview section
+            (RulesOverview) — the whole thing opens that modal. */}
+        <button
+          type="button"
+          className="room__overview"
+          onClick={() => setShowRules(true)}
+          title="View full league rules"
+        >
+          <RulesOverview settings={s} />
+          <span className="room__overview-cta">
+            <InfoOutlinedIcon fontSize="inherit" /> View full rules
           </span>
-          {s.draftMode === 'MOCK' && <span>🤖 Mock</span>}
-          {s.keepersEnabled && <span>Keepers</span>}
-          {/* Only this pill is interactive — opens the full rules modal. */}
-          <button
-            type="button"
-            className="room__meta-rules"
-            onClick={() => setShowRules(true)}
-            title="View full league rules"
-          >
-            <InfoOutlinedIcon fontSize="inherit" /> Rules
-          </button>
-        </div>
+        </button>
 
-        <section className="room__invite card">
-          <div>
-            <h2>Invite</h2>
-            <p className="muted">Share the link or lobby ID + password.</p>
-            <code className="room__id">{id}</code>
-          </div>
-          <button className="button" onClick={copyInvite}>
-            {copied ? 'Copied!' : 'Copy invite link'}
-          </button>
-        </section>
-
-        {/* Primary action sits between the invite and the draft order. */}
+        {/* Primary action sits between the overview and the draft order. */}
         <div className="room__primary-action">
           {roomOpen ? (
             <Link className="button button--primary button--lg" to={`/lobby/${id}/draft`}>
@@ -736,7 +716,10 @@ export function LobbyRoomPage() {
 
         <section className="room__teams">
           <div className="room__teams-head">
-            <h2>Draft order</h2>
+            <h2>
+              <FormatListNumberedIcon fontSize="small" className="room__h2-icon" />
+              Draft order
+            </h2>
             {isCommish && !isComplete && !orderMode && (
               <div className="room__teams-actions">
                 <button
@@ -1119,6 +1102,20 @@ export function LobbyRoomPage() {
               })}
             </ol>
           )}
+        </section>
+
+        <section className="room__invite card">
+          <div>
+            <h2>
+              <PersonAddAlt1Icon fontSize="small" className="room__h2-icon" />
+              Invite
+            </h2>
+            <p className="muted">Share the link or lobby ID + password.</p>
+            <code className="room__id">{id}</code>
+          </div>
+          <button className="button" onClick={copyInvite}>
+            {copied ? 'Copied!' : 'Copy invite link'}
+          </button>
         </section>
 
         {!draftLive && (

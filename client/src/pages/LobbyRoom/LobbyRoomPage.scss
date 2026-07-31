@@ -113,47 +113,64 @@
     }
   }
 
-  &__meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: $space * 1.5;
+  // Small "🤖 Mock" flag next to the status pill — the one bit of info the
+  // Overview stat grid below doesn't otherwise cover.
+  &__mock-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: $space * 0.3 $space;
+    background: $bg-raised;
+    border: 1px solid $border;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: $text-muted;
+  }
 
-    span {
-      background: $bg-raised;
-      border: 1px solid $border;
-      border-radius: 999px;
-      padding: $space * 0.5 $space * 1.5;
-      font-size: 0.8rem;
-      color: $text-muted;
+  // The League rules modal's own Overview stat grid (RulesOverview), reused
+  // here so the room shows the same at-a-glance summary — the whole card is
+  // a button that opens the full modal, rather than a row of separate pills.
+  &__overview {
+    // Reset native <button> chrome explicitly — otherwise some browsers'
+    // UA stylesheet colors/fonts win over the inherited dark-theme values.
+    appearance: none;
+    -webkit-appearance: none;
+    display: block;
+    width: 100%;
+    // Extra room below the "View full rules" line — otherwise it sits flush
+    // against the card's bottom edge.
+    padding: $space * 2 $space * 3;
+    border: 1px solid $border;
+    border-radius: $radius;
+    background: $bg-raised;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 120ms ease;
+
+    &:hover {
+      border-color: $primary;
     }
   }
 
-  // Scoring pill gets a touch of the brand color so it reads as the format,
-  // not just another neutral fact. (Info only — not clickable.)
-  &__meta-scoring {
-    color: $primary !important;
-    font-weight: 700;
-  }
-
-  // The ONLY interactive pill in the meta row — a filled accent button that
-  // opens the full rules modal. Self-contained pill styling (it's a <button>,
-  // not one of the info <span>s), and hover affects only itself.
-  &__meta-rules {
+  &__overview-cta {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    padding: $space * 0.5 $space * 1.5;
-    border: 1px solid transparent;
-    border-radius: 999px;
-    background: color-mix(in srgb, $primary 16%, transparent);
+    margin-top: $space * 1.25;
     color: $primary;
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     font-weight: 800;
-    cursor: pointer;
+  }
 
-    &:hover {
-      background: color-mix(in srgb, $primary 26%, transparent);
-    }
+  // Icon next to a section heading ("Draft order", "Invite") — always
+  // primary regardless of theme (unlike the sidebar's active link/rules
+  // modal's section icons, which split primary/accent by theme).
+  &__h2-icon {
+    display: inline-flex;
+    flex-shrink: 0;
+    color: $primary;
   }
 
   &__invite {
@@ -169,6 +186,9 @@
     }
 
     h2 {
+      display: flex;
+      align-items: center;
+      gap: $space * 0.6;
       font-size: 1rem;
       margin-bottom: $space * 0.5;
     }
@@ -386,6 +406,9 @@
   margin-bottom: $space * 1.5;
 
   h2 {
+    display: flex;
+    align-items: center;
+    gap: $space * 0.6;
     font-size: 1rem;
   }
 

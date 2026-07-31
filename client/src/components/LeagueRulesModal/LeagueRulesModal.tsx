@@ -14,23 +14,22 @@ import {
   type LobbySettings,
   type RosterSlot,
 } from '@draft-lobby/shared';
-import AssignmentIcon from '@mui/icons-material/Assignment';
 import CheckIcon from '@mui/icons-material/Check';
 import GroupsIcon from '@mui/icons-material/Groups';
 import LinkIcon from '@mui/icons-material/Link';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutlined';
-import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
+import SaveIcon from '@mui/icons-material/Save';
 import ScoreboardIcon from '@mui/icons-material/Scoreboard';
-import SportsIcon from '@mui/icons-material/Sports';
 import TimerOutlinedIcon from '@mui/icons-material/TimerOutlined';
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../auth/AuthContext';
 import { api } from '../../lib/api';
-import { clockSummary, formatSeconds } from '../../lib/format';
+import { formatSeconds } from '../../lib/format';
 import type { ProfileMini } from '../../lib/types';
 import { supabase } from '../../supabase';
 import { Avatar } from '../Avatar/Avatar';
 import { Modal } from '../Modal/Modal';
+import { RulesOverview } from './RulesOverview';
 import './LeagueRulesModal.scss';
 
 interface Props {
@@ -86,9 +85,6 @@ export function LeagueRulesModal({ settings, defaultName, onClose }: Props) {
 
   const preset = matchPreset(settings.scoring);
   const scoringLabel = preset ? SCORING_PRESETS[preset].label : 'Custom';
-  // "standard" | "half_ppr" | "ppr" | "custom" — used as the preset badge's
-  // color modifier (see LeagueRulesModal.scss).
-  const presetKey = (preset ?? 'CUSTOM').toLowerCase().replace('_', '-');
 
   const totalRounds = roundsForSettings(settings);
 
@@ -304,27 +300,7 @@ export function LeagueRulesModal({ settings, defaultName, onClose }: Props) {
       <div className="rules-modal">
         {/* Overview */}
         <section className="rules-modal__section">
-          <h3>
-            <AssignmentIcon fontSize="small" className="rules-modal__h-icon" />
-            Overview
-          </h3>
-          <div className="rules-modal__overview">
-            {(
-              [
-                ['Teams', String(settings.teamCount)],
-                ['Draft type', settings.draftType === 'SNAKE' ? 'Snake' : 'Straight'],
-                ['Rounds', String(totalRounds)],
-                ['Pick clock', clockSummary(settings.pickTiers)],
-                ['Scoring', scoringLabel],
-                ['Keepers', settings.keepersEnabled ? 'On' : 'Off'],
-              ] as const
-            ).map(([label, value]) => (
-              <div className="rules-modal__stat" key={label}>
-                <span className="rules-modal__stat-label">{label}</span>
-                <span className="rules-modal__stat-value">{value}</span>
-              </div>
-            ))}
-          </div>
+          <RulesOverview settings={settings} />
           {settings.allowSkips && (
             <p className="rules-modal__note muted">
               Teams that run out of time are skipped, not auto-picked
@@ -338,7 +314,7 @@ export function LeagueRulesModal({ settings, defaultName, onClose }: Props) {
 
         {/* Starting lineup */}
         <section className="rules-modal__section">
-          <h3>
+          <h3 className="rules-modal__h3">
             <GroupsIcon fontSize="small" className="rules-modal__h-icon" />
             Starting lineup
             <span className="muted rules-modal__h-sub">
@@ -387,12 +363,10 @@ export function LeagueRulesModal({ settings, defaultName, onClose }: Props) {
 
         {/* Scoring */}
         <section className="rules-modal__section">
-          <h3>
+          <h3 className="rules-modal__h3">
             <ScoreboardIcon fontSize="small" className="rules-modal__h-icon" />
             Scoring
-            <span className={`rules-modal__preset-badge rules-modal__preset-badge--${presetKey}`}>
-              <SportsIcon fontSize="inherit" /> {scoringLabel}
-            </span>
+            <span className="rules-modal__preset-badge">{scoringLabel}</span>
           </h3>
           <div className="rules-modal__scoring-grid">
             {scoringGroups.map(({ group, items }) => (
@@ -413,16 +387,19 @@ export function LeagueRulesModal({ settings, defaultName, onClose }: Props) {
           </div>
           {/* Save/share JUST this scoring format — separate from the whole
               league setup below, since scoring formats are their own
-              reusable entity (Settings > Scoring formats). */}
-          {userId && (
+              reusable entity (Settings > Scoring formats). Hidden when this
+              is an unmodified preset — saving/sharing a stock PPR/Standard/
+              Half-PPR format back to yourself (or a friend, who already has
+              the same preset picker) has no value. */}
+          {userId && !preset && (
             <div className="rules-modal__section-actions">
               <p className="muted rules-modal__section-actions-caption">
                 Save or share just this scoring format
               </p>
-              <div className="rules-modal__actions rules-modal__actions--compact">
+              <div className="rules-modal__actions">
                 <button
                   type="button"
-                  className="button button--sm"
+                  className="button"
                   onClick={saveScoringFormat}
                   disabled={scoreSaveState !== 'idle'}
                 >
@@ -432,14 +409,14 @@ export function LeagueRulesModal({ settings, defaultName, onClose }: Props) {
                     </>
                   ) : (
                     <>
-                      <SaveOutlinedIcon fontSize="small" />{' '}
+                      <SaveIcon fontSize="small" />{' '}
                       {scoreSaveState === 'saving' ? 'Saving…' : 'Save format'}
                     </>
                   )}
                 </button>
                 <button
                   type="button"
-                  className="button button--sm"
+                  className="button"
                   onClick={copyScoringLink}
                   disabled={scoreLinkState === 'working'}
                 >
@@ -456,7 +433,7 @@ export function LeagueRulesModal({ settings, defaultName, onClose }: Props) {
                 </button>
                 <button
                   type="button"
-                  className="button button--sm"
+                  className="button"
                   onClick={() => setScoreFriendPickerOpen((o) => !o)}
                   aria-expanded={scoreFriendPickerOpen}
                 >
@@ -476,7 +453,7 @@ export function LeagueRulesModal({ settings, defaultName, onClose }: Props) {
         {/* Clock tiers (only when there's more than the single catch-all) */}
         {settings.pickTiers.length > 1 && (
           <section className="rules-modal__section">
-            <h3>
+            <h3 className="rules-modal__h3">
               <TimerOutlinedIcon fontSize="small" className="rules-modal__h-icon" />
               Pick clock by round
             </h3>
@@ -506,10 +483,13 @@ export function LeagueRulesModal({ settings, defaultName, onClose }: Props) {
             separate from the scoring-only action above. */}
         {userId && (
           <section className="rules-modal__section">
-            <h3>
-              <SaveOutlinedIcon fontSize="small" className="rules-modal__h-icon" />
+            <h3 className="rules-modal__h3">
+              <SaveIcon fontSize="small" className="rules-modal__h-icon" />
               Save &amp; share this league
             </h3>
+            <p className="muted rules-modal__section-actions-caption">
+              Also saves the scoring above — custom or preset — as part of this league.
+            </p>
             <div className="rules-modal__actions">
               <button
                 type="button"
@@ -523,8 +503,8 @@ export function LeagueRulesModal({ settings, defaultName, onClose }: Props) {
                   </>
                 ) : (
                   <>
-                    <SaveOutlinedIcon fontSize="small" />{' '}
-                    {saveState === 'saving' ? 'Saving…' : 'Save league format'}
+                    <SaveIcon fontSize="small" />{' '}
+                    {saveState === 'saving' ? 'Saving…' : 'Save format'}
                   </>
                 )}
               </button>

@@ -20,13 +20,17 @@
       padding-top: $space * 2.5;
       border-top: 1px solid $border;
     }
+  }
 
-    h3 {
-      display: flex;
-      align-items: center;
-      gap: $space * 0.75;
-      font-size: 1rem;
-    }
+  // A standalone class (not scoped under &__section) so a heading works
+  // wherever it's rendered — RulesOverview renders its own "Overview" h3 and
+  // is reused outside this modal entirely (the lobby room's room__overview).
+  &__h3 {
+    display: flex;
+    align-items: center;
+    gap: $space * 0.75;
+    font-size: 1rem;
+    padding-bottom: $space;
   }
 
   // Icon next to a section title (Overview, Pick clock by round) — primary in
@@ -34,14 +38,7 @@
   &__h-icon {
     display: inline-flex;
     flex-shrink: 0;
-
-    :root[data-theme='light'] & {
-      color: $primary;
-    }
-
-    :root[data-theme='dark'] & {
-      color: $accent;
-    }
+    color: $primary;
   }
 
   &__h-sub {
@@ -73,11 +70,23 @@
   }
 
   &__stat-label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
     font-size: 0.66rem;
     text-transform: uppercase;
     letter-spacing: 0.04em;
     color: $text-muted;
     font-weight: 700;
+  }
+
+  // Per-stat icon (Teams/Draft type/Rounds/Pick clock/Scoring/Keepers) —
+  // matches the label text's own muted color rather than an accent, so it
+  // reads as part of the caption, not a separate highlight.
+  &__stat-icon {
+    flex-shrink: 0;
+    font-size: 0.85rem !important;
+    color: inherit;
   }
 
   &__stat-value {
@@ -89,38 +98,19 @@
     font-size: 0.8rem;
   }
 
-  // Scoring preset badge (next to the "Scoring" title) — one color per
-  // preset so Standard/Half-PPR/PPR/Custom are visually distinct at a glance.
+  // Scoring preset badge (next to the "Scoring" title) — plain neutral
+  // labeling, not a status to call attention to.
   &__preset-badge {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
     padding: 2px $space;
     border-radius: 999px;
+    background: $bg-overlay;
+    color: $text-muted;
     font-size: 0.72rem;
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.03em;
-
-    &--standard {
-      background: color-mix(in srgb, $primary 20%, transparent);
-      color: $primary;
-    }
-
-    &--half-ppr {
-      background: color-mix(in srgb, $warning 20%, transparent);
-      color: $warning;
-    }
-
-    &--ppr {
-      background: color-mix(in srgb, $accent 20%, transparent);
-      color: $accent;
-    }
-
-    &--custom {
-      background: color-mix(in srgb, $keeper 20%, transparent);
-      color: $keeper;
-    }
   }
 
   // Starting lineup: position-colored chips. A pure slot's badge takes that
@@ -256,6 +246,11 @@
       flex: 1;
       min-width: 150px;
       gap: 6px;
+      // Smaller than the global .button default so labels like "Copy share
+      // link" fit on one line at this min-width instead of wrapping.
+      padding: $space * 1.1 $space * 1.5;
+      font-size: 0.82rem;
+      white-space: nowrap;
     }
   }
 
@@ -271,11 +266,6 @@
 
   &__section-actions-caption {
     font-size: 0.78rem;
-  }
-
-  &__actions--compact .button {
-    flex: 0 1 auto;
-    min-width: 0;
   }
 
   &__friends {
