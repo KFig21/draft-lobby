@@ -8,7 +8,7 @@ import { INJURY_ABBR, INJURY_SEVERITY } from '../../lib/injuryStatus';
 import type { PlayerRow } from '../../lib/types';
 import './PlayerCard.scss';
 
-interface Props {
+export interface PlayerCardProps {
   player: PlayerRow;
   onPick?: () => void;
   disabled?: boolean;
@@ -23,13 +23,26 @@ interface Props {
   onOpenDetail?: () => void;
   /** This pick was a kept player, not a normal draft selection. */
   isKeeper?: boolean;
+  /** Within-position rank shown on the position badge (e.g. RB · 5). Omit to
+   * show just the position. */
+  posRank?: number | null;
+  /** Already drafted — shown dimmed with a "Drafted" tag instead of the Draft
+   * button (the pool can optionally reveal drafted players). */
+  drafted?: boolean;
+  /** "round.pick" slot this player went at (e.g. "5.06"), appended to the
+   * "Drafted" tag. Omit to show just "Drafted". */
+  draftedLabel?: string;
   /** How many of the viewer's own drafted players at THIS player's position
    * already share their bye week. Colors the bye number — 1 turns yellow,
    * 2+ turns red. Omit/0 to leave it uncolored. */
   byeClashCount?: number;
 }
 
-/** A row in the player pool: color-coded position, bye, injury, projection. */
+/** The roomy ("comfy") player-pool row: color-coded position, name, a second
+ * line of team/bye, projection + ADP, and the queue/favorite marks in their
+ * own column. The tighter "compact" alternative is a separate component
+ * (CompactPlayerCard) chosen at the render site, per the app's convention of
+ * isolating style variants rather than branching one component on a prop. */
 export function PlayerCard({
   player,
   onPick,
@@ -40,14 +53,19 @@ export function PlayerCard({
   favorited,
   onOpenDetail,
   isKeeper,
+  posRank,
+  drafted,
+  draftedLabel,
   byeClashCount,
-}: Props) {
+}: PlayerCardProps) {
   const color = POSITION_COLORS[player.position as Position];
   const injury = INJURY_ABBR[player.injury_status];
 
   return (
     <div
-      className={`player-card${onOpenDetail ? ' player-card--clickable' : ''}`}
+      className={`player-card${onOpenDetail ? ' player-card--clickable' : ''}${
+        drafted ? ' player-card--drafted' : ''
+      }`}
       onClick={onOpenDetail}
       onKeyDown={
         onOpenDetail
@@ -63,11 +81,12 @@ export function PlayerCard({
       tabIndex={onOpenDetail ? 0 : undefined}
     >
       <span className="player-card__pos" style={{ background: color }}>
-        {player.position}
+        <span className="player-card__pos-abbr">{player.position}</span>
+        {posRank != null && <span className="player-card__pos-rank">{posRank}</span>}
       </span>
       <div className="player-card__main">
         <div className="player-card__name">
-          {player.name}
+          <span className="player-card__name-text">{player.name}</span>
           {isKeeper && (
             <span className="player-card__keeper-badge">
               <LockOutlinedIcon sx={{ fontSize: 11 }} /> Keeper
@@ -140,17 +159,23 @@ export function PlayerCard({
           )}
         </div>
       )}
-      {onPick && (
-        <button
-          className="button button--primary player-card__draft"
-          onClick={(e) => {
-            e.stopPropagation();
-            onPick();
-          }}
-          disabled={disabled}
-        >
-          Draft
-        </button>
+      {drafted ? (
+        <span className="player-card__drafted-tag">
+          Drafted{draftedLabel ? <span className="player-card__drafted-pick">{draftedLabel}</span> : null}
+        </span>
+      ) : (
+        onPick && (
+          <button
+            className="button button--primary player-card__draft"
+            onClick={(e) => {
+              e.stopPropagation();
+              onPick();
+            }}
+            disabled={disabled}
+          >
+            Draft
+          </button>
+        )
       )}
     </div>
   );

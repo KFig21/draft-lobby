@@ -1326,6 +1326,17 @@
     gap: $space;
     padding: $space * 1.5;
     border-bottom: 1px solid $border;
+
+    // The player-filter pills run a touch tighter than the global .chip — 2px
+    // less height (1px off each side of the vertical padding).
+    .chip {
+      padding-block: calc(#{$space * 0.75} - 1px);
+
+      @include lg {
+        font-size: .8rem;
+        padding: 6px 8px;
+      }
+    }
   }
 
   // "Bookmarked"/"favorites" chips need icon+text alignment the plain
@@ -1347,18 +1358,20 @@
     color: $keeper;
   }
 
-  // Separates the position chips from the bye-week dropdown — hidden
-  // whenever the dropdown itself is (mobile), so it never strands a lone
-  // divider with nothing after it.
-  &__filters-divider {
-    display: none;
+  // Small "Show drafted" checkbox sitting after the filter chips — reveals
+  // already-drafted players (dimmed) in the pool instead of hiding them.
+  &__showdrafted {
+    display: inline-flex;
+    align-items: center;
+    gap: $space * 0.5;
+    font-size: 0.78rem;
+    color: $text-muted;
+    cursor: pointer;
+    user-select: none;
 
-    @include lg {
-      display: block;
-      align-self: stretch;
-      width: 1px;
-      margin: 2px 0;
-      background: $border;
+    input {
+      width: 15px;
+      height: 15px;
     }
   }
 

@@ -24,6 +24,12 @@ import {
   type DraftCellStyle,
 } from '../../lib/draftCellStyle';
 import { getDefaultScoringChoice, setDefaultScoringChoice } from '../../lib/defaultScoring';
+import {
+  getPlayerCardStyle,
+  setPlayerCardStyle,
+  type PlayerCardStyle,
+} from '../../lib/playerCardStyle';
+import { getTeamColorsEnabled, setTeamColorsEnabled } from '../../lib/nflTeamColors';
 import { useTheme } from '../../theme/ThemeContext';
 import { supabase } from '../../supabase';
 import {
@@ -61,6 +67,13 @@ export function SettingsPage() {
   const [showCellReactions, setShowCellReactionsState] = useState(() => getShowCellReactions());
   const [showByeClashes, setShowByeClashesState] = useState(() => getShowByeClashes());
   const [defaultScoring, setDefaultScoringState] = useState(() => getDefaultScoringChoice());
+  const [cardStyle, setCardStyleState] = useState<PlayerCardStyle>(() => getPlayerCardStyle());
+  const [teamColors, setTeamColorsState] = useState(() => getTeamColorsEnabled());
+
+  function updateTeamColors(enabled: boolean) {
+    setTeamColorsEnabled(enabled);
+    setTeamColorsState(enabled);
+  }
 
   function updateCellStyle(style: DraftCellStyle) {
     setDraftCellStyle(style);
@@ -80,6 +93,11 @@ export function SettingsPage() {
   function updateDefaultScoring(choice: string) {
     setDefaultScoringChoice(choice);
     setDefaultScoringState(choice);
+  }
+
+  function updateCardStyle(style: PlayerCardStyle) {
+    setPlayerCardStyle(style);
+    setCardStyleState(style);
   }
 
   function updateToastsEnabled(enabled: boolean) {
@@ -156,6 +174,39 @@ export function SettingsPage() {
             label="Toggle reactions on cells"
             checked={showCellReactions}
             onChange={updateShowCellReactions}
+          />
+        </div>
+        <div className="settings__row">
+          <div className="settings__row-main">
+            <span className="settings__row-name">Player card style</span>
+            <span className="muted">Row density in the draft pool's player list</span>
+          </div>
+          <div className="segmented">
+            <button
+              type="button"
+              className={`segmented__opt${cardStyle === 'comfy' ? ' segmented__opt--on' : ''}`}
+              onClick={() => updateCardStyle('comfy')}
+            >
+              Comfy
+            </button>
+            <button
+              type="button"
+              className={`segmented__opt${cardStyle === 'compact' ? ' segmented__opt--on' : ''}`}
+              onClick={() => updateCardStyle('compact')}
+            >
+              Compact
+            </button>
+          </div>
+        </div>
+        <div className="settings__row">
+          <div className="settings__row-main">
+            <span className="settings__row-name">Team colors</span>
+            <span className="muted">Tint the team abbreviation in player pop-ups with team colors</span>
+          </div>
+          <ToggleSwitch
+            label="Toggle team colors"
+            checked={teamColors}
+            onChange={updateTeamColors}
           />
         </div>
         <div className="settings__row">

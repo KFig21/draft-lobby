@@ -1,0 +1,169 @@
+@use 'variables' as *;
+
+// Dense single-line pool row. Deliberately its own namespace (not a modifier
+// on .player-card) so the comfy/compact rules can never compete for the same
+// selector — see the app's variant-isolation convention.
+.compact-card {
+  display: flex;
+  align-items: center;
+  gap: $space * 0.75;
+  padding: $space * 0.5 $space * 0.75;
+  background: $bg;
+  border: 1px solid $border;
+  border-radius: $radius-sm;
+  min-width: 0;
+
+  &--clickable {
+    cursor: pointer;
+
+    @media (hover: hover) {
+      &:hover {
+        border-color: $primary;
+      }
+    }
+  }
+
+  &--drafted {
+    opacity: 0.4;
+
+    @media (hover: hover) {
+      &:hover {
+        opacity: 0.7;
+      }
+    }
+
+    // Strike the name so it reads as "off the board" even without the dim.
+    .compact-card__name {
+      text-decoration: line-through;
+      text-decoration-thickness: 2px;
+    }
+  }
+
+  &__pos {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    width: 36px;
+    min-height: 24px;
+    padding: 2px 0;
+    border-radius: $radius-sm;
+    color: #05231a;
+    font-weight: 800;
+  }
+
+  &__pos-abbr {
+    font-size: 0.62rem;
+    line-height: 1;
+  }
+
+  &__pos-rank {
+    font-size: 0.62rem;
+    line-height: 1;
+  }
+
+  &__name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+
+  // Team abbreviation between the name and the marks.
+  &__team {
+    flex-shrink: 0;
+    font-size: 0.64rem;
+    font-weight: 600;
+    color: $text-muted;
+  }
+
+  // Wraps the favorite + queue marks so they sit tight together (the card's
+  // own gap would otherwise space them as far apart as everything else).
+  &__marks {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+  }
+
+  &__keeper-badge {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    color: $keeper;
+  }
+
+  &__mark {
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border: none;
+    border-radius: $radius-sm;
+    background: none;
+    color: $text-muted;
+    cursor: pointer;
+    font-size: 1rem;
+
+    @media (hover: hover) {
+      &:hover {
+        color: $text;
+      }
+    }
+
+    // Queue bookmark on = accent; favorite star on = keeper gold.
+    &.is-on {
+      color: $accent;
+    }
+
+    &--fav.is-on {
+      color: $keeper;
+    }
+  }
+
+  // Pushes the projection + Draft button to the right edge.
+  &__spacer {
+    flex: 1;
+    min-width: $space;
+  }
+
+  &__proj {
+    flex-shrink: 0;
+    font-weight: 700;
+    font-size: 0.85rem;
+    font-variant-numeric: tabular-nums;
+    color: $text-muted;
+  }
+
+  &__draft {
+    flex-shrink: 0;
+    padding: $space * 0.4 $space;
+    font-size: 0.75rem;
+  }
+
+  &__drafted-tag {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: $space * 0.4;
+    padding: $space * 0.35 $space * 0.75;
+    border-radius: $radius-sm;
+    background: $bg-overlay;
+    color: $text-muted;
+    font-size: 0.64rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  // The "round.pick" slot appended to "Drafted" (e.g. 5.06).
+  &__drafted-pick {
+    color: $text;
+    font-variant-numeric: tabular-nums;
+  }
+}

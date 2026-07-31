@@ -33,7 +33,14 @@
     justify-content: center;
     gap: 3px;
 
+    // Flex row so the name and any inline action (favorite star, keeper badge)
+    // share a common center line — an inline star was riding high above the
+    // name's optical center otherwise.
     h3 {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
       font-size: 1.3rem;
       line-height: 1.2;
     }
@@ -47,7 +54,6 @@
     display: inline-flex;
     align-items: center;
     gap: 2px;
-    margin-left: 8px;
     padding: 2px 7px;
     border-radius: 4px;
     background: color-mix(in srgb, $keeper 16%, transparent);
@@ -63,6 +69,19 @@
     display: flex;
     align-items: center;
     gap: 6px;
+  }
+
+  // Team-colored abbreviation pill (bg + text come from NFL_TEAM_COLORS via
+  // inline style). Only rendered when the user's team-colors setting is on.
+  &__team {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 7px;
+    border-radius: $radius-sm;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
   }
 
   &__row {

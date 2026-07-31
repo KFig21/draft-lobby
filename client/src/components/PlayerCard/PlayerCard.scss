@@ -19,16 +19,74 @@
     }
   }
 
+  // Already-drafted players revealed by "Show drafted" — dimmed so it's
+  // obvious at a glance they're off the board. Controls still work (the star
+  // stays clickable); hover lifts the dim a bit for readability.
+  &--drafted {
+    opacity: 0.4;
+
+    @media (hover: hover) {
+      &:hover {
+        opacity: 0.7;
+      }
+    }
+
+    // Strike just the name text (not the keeper/injury badges nested beside
+    // it) so it reads as "off the board" even without the dim.
+    .player-card__name-text {
+      text-decoration: line-through;
+      text-decoration-thickness: 2px;
+    }
+  }
+
+  &__drafted-tag {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: $space * 0.5;
+    padding: $space * 0.5 $space;
+    border-radius: $radius-sm;
+    background: $bg-overlay;
+    color: $text-muted;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  // The "round.pick" slot appended to "Drafted" (e.g. 5.06) — tabular figures
+  // so the dot/digits line up, tinted to stand out from the muted label.
+  &__drafted-pick {
+    color: $text;
+    font-variant-numeric: tabular-nums;
+  }
+
   &__pos {
     flex-shrink: 0;
     width: 34px;
-    height: 34px;
-    display: grid;
-    place-items: center;
+    min-height: 34px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    padding: 2px 0;
     border-radius: $radius-sm;
-    font-size: 0.65rem;
     font-weight: 800;
     color: #05231a;
+  }
+
+  &__pos-abbr {
+    font-size: 0.65rem;
+    line-height: 1;
+  }
+
+  // Within-position rank under the position abbreviation (e.g. "RB" / "5").
+  &__pos-rank {
+    font-size: 0.62rem;
+    font-weight: 700;
+    line-height: 1;
+    opacity: 0.8;
   }
 
   &__main {

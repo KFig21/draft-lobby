@@ -5,6 +5,7 @@ import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import TrendingFlatIcon from '@mui/icons-material/TrendingFlat';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import { INJURY_ABBR, INJURY_SEVERITY } from '../../lib/injuryStatus';
+import { getTeamColors, getTeamColorsEnabled } from '../../lib/nflTeamColors';
 import type { PlayerRow } from '../../lib/types';
 import './PlayerStatBlock.scss';
 
@@ -27,6 +28,9 @@ interface HeaderProps extends Props {
 export function PlayerHeader({ player, isKeeper, action }: HeaderProps) {
   const pos = player.position as Position;
   const injury = INJURY_ABBR[player.injury_status];
+  // Team-colored abbreviation pill — only when the user has the setting on and
+  // the team is one we have a color pair for (else fall back to plain text).
+  const teamColors = getTeamColorsEnabled() ? getTeamColors(player.nfl_team) : null;
   return (
     <header className="player-stat-block__head">
       <span className="player-stat-block__pos" style={{ background: POSITION_COLORS[pos] }}>
@@ -43,10 +47,22 @@ export function PlayerHeader({ player, isKeeper, action }: HeaderProps) {
           {action}
         </h3>
         <div className="player-stat-block__subtitle">
-          <span className="muted">
-            {player.nfl_team}
-            {player.bye_week ? ` · Bye ${player.bye_week}` : ''}
-          </span>
+          {teamColors ? (
+            <>
+              <span
+                className="player-stat-block__team"
+                style={{ background: teamColors.bg, color: teamColors.text }}
+              >
+                {player.nfl_team}
+              </span>
+              {player.bye_week ? <span className="muted">Bye {player.bye_week}</span> : null}
+            </>
+          ) : (
+            <span className="muted">
+              {player.nfl_team}
+              {player.bye_week ? ` · Bye ${player.bye_week}` : ''}
+            </span>
+          )}
           {injury && (
             <span
               className={`injury-badge injury-badge--${INJURY_SEVERITY[player.injury_status] ?? 'danger'}`}

@@ -1,4 +1,5 @@
 import type { DraftCellStyle } from '../../lib/draftCellStyle';
+import type { PlayerCardStyle } from '../../lib/playerCardStyle';
 import { TOAST_CATEGORIES, type ToastCategory, type ToastPrefs } from '../../toast/toastPrefs';
 import { DraftCellStylePicker } from '../DraftGrid/DraftCellStylePicker';
 import { Modal } from '../Modal/Modal';
@@ -9,10 +10,14 @@ interface Props {
   onClose: () => void;
   cellStyle: DraftCellStyle;
   onCellStyleChange: (style: DraftCellStyle) => void;
+  cardStyle: PlayerCardStyle;
+  onCardStyleChange: (style: PlayerCardStyle) => void;
   showCellReactions: boolean;
   onShowCellReactionsChange: (show: boolean) => void;
   showByeClashes: boolean;
   onShowByeClashesChange: (show: boolean) => void;
+  teamColors: boolean;
+  onTeamColorsChange: (enabled: boolean) => void;
   toastPrefs: ToastPrefs;
   onToastsEnabledChange: (enabled: boolean) => void;
   onToastCategoryChange: (category: ToastCategory, enabled: boolean) => void;
@@ -30,10 +35,14 @@ export function DraftUserSettingsModal({
   onClose,
   cellStyle,
   onCellStyleChange,
+  cardStyle,
+  onCardStyleChange,
   showCellReactions,
   onShowCellReactionsChange,
   showByeClashes,
   onShowByeClashesChange,
+  teamColors,
+  onTeamColorsChange,
   toastPrefs,
   onToastsEnabledChange,
   onToastCategoryChange,
@@ -67,6 +76,28 @@ export function DraftUserSettingsModal({
           </div>
           <div className="draft-user-settings__row">
             <div className="draft-user-settings__row-main">
+              <span className="draft-user-settings__row-name">Player card style</span>
+              <span className="muted">Row density in the player pool list</span>
+            </div>
+            <div className="segmented">
+              <button
+                type="button"
+                className={`segmented__opt${cardStyle === 'comfy' ? ' segmented__opt--on' : ''}`}
+                onClick={() => onCardStyleChange('comfy')}
+              >
+                Comfy
+              </button>
+              <button
+                type="button"
+                className={`segmented__opt${cardStyle === 'compact' ? ' segmented__opt--on' : ''}`}
+                onClick={() => onCardStyleChange('compact')}
+              >
+                Compact
+              </button>
+            </div>
+          </div>
+          <div className="draft-user-settings__row">
+            <div className="draft-user-settings__row-main">
               <span className="draft-user-settings__row-name">Bye week clashes</span>
               <span className="muted">
                 Flag players whose bye week already stacks against your roster
@@ -76,6 +107,19 @@ export function DraftUserSettingsModal({
               label="Toggle bye week clashes"
               checked={showByeClashes}
               onChange={onShowByeClashesChange}
+            />
+          </div>
+          <div className="draft-user-settings__row">
+            <div className="draft-user-settings__row-main">
+              <span className="draft-user-settings__row-name">Team colors</span>
+              <span className="muted">
+                Tint the team abbreviation in player pop-ups with team colors
+              </span>
+            </div>
+            <ToggleSwitch
+              label="Toggle team colors"
+              checked={teamColors}
+              onChange={onTeamColorsChange}
             />
           </div>
         </section>

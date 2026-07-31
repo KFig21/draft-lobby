@@ -91,6 +91,13 @@ import { useAuth } from '../../auth/AuthContext';
 import { useLobby } from '../../hooks/useLobby';
 import { usePlayers } from '../../hooks/usePlayers';
 import { useFavorites } from '../../hooks/useFavorites';
+import { CompactPlayerCard } from '../../components/PlayerCard/CompactPlayerCard';
+import {
+  getPlayerCardStyle,
+  setPlayerCardStyle,
+  type PlayerCardStyle,
+} from '../../lib/playerCardStyle';
+import { getTeamColorsEnabled, setTeamColorsEnabled } from '../../lib/nflTeamColors';
 import { scorePlayers } from '../../lib/playerPoints';
 import { api } from '../../lib/api';
 import { byeClashCountsForWeek, byeClashLookup } from '../../lib/byeClashes';
@@ -195,6 +202,8 @@ export function DraftBoardPage() {
   const [cellStyle, setCellStyleState] = useState(() => getDraftCellStyle());
   const [showCellReactions, setShowCellReactionsState] = useState(() => getShowCellReactions());
   const [showByeClashes, setShowByeClashesState] = useState(() => getShowByeClashes());
+  const [cardStyle, setCardStyleState] = useState<PlayerCardStyle>(() => getPlayerCardStyle());
+  const [teamColors, setTeamColorsState] = useState(() => getTeamColorsEnabled());
   const [toastPrefs, setToastPrefsState] = useState(() => getToastPrefs());
   const [showUserSettings, setShowUserSettings] = useState(false);
   const [showRules, setShowRules] = useState(false);
@@ -207,9 +216,17 @@ export function DraftBoardPage() {
     setShowCellReactions(show);
     setShowCellReactionsState(show);
   }
+  function updateCardStyle(style: PlayerCardStyle) {
+    setPlayerCardStyle(style);
+    setCardStyleState(style);
+  }
   function updateShowByeClashes(show: boolean) {
     setShowByeClashes(show);
     setShowByeClashesState(show);
+  }
+  function updateTeamColors(enabled: boolean) {
+    setTeamColorsEnabled(enabled);
+    setTeamColorsState(enabled);
   }
   function updateToastsEnabled(enabled: boolean) {
     setToastsEnabled(enabled);
@@ -221,6 +238,12 @@ export function DraftBoardPage() {
   }
   const [filter, setFilter] = useState<Filter>('ALL');
   const [search, setSearch] = useState('');
+  // Drafted players are hidden from the pool by default; this reveals them
+  // (dimmed, non-draftable) so you can still see/favorite who's gone.
+  const [showDrafted, setShowDrafted] = useState(false);
+  // Per-device pool-row density (Settings, or the in-room settings modal).
+  // The two layouts are separate components, chosen here at the render call.
+  const PoolCard = cardStyle === 'compact' ? CompactPlayerCard : PlayerCard;
   // Bye weeks to hide from the player pool (desktop/fullscreen only) — a set
   // rather than a single value since a bye-heavy roster may want to dodge
   // more than one week at once. Tucked behind a dropdown (not a chip row)
@@ -442,6 +465,30 @@ export function DraftBoardPage() {
   }, [players]);
 
   const draftedIds = useMemo(() => new Set(picks.map((p) => p.player_id)), [picks]);
+
+  // The pick that took each drafted player — so a click on a drafted pool row
+  // can open that pick's modal (who took them, round/pick) instead of the plain
+  // player-detail modal.
+  const pickByPlayerId = useMemo(() => {
+    const m = new Map<string, PickRow>();
+    for (const pk of picks) m.set(pk.player_id, pk);
+    return m;
+  }, [picks]);
+
+  // "round.pick" label for each drafted player (e.g. round 5 pick 6 → "5.6" in
+  // an 8-team draft, "5.06" in a 10/12-team draft). The pick-in-round is
+  // zero-padded to the width of the team count so picks sort/align cleanly.
+  const pickLabelByPlayerId = useMemo(() => {
+    const m = new Map<string, string>();
+    const teamCount = lobby?.settings.teamCount ?? 0;
+    if (!teamCount) return m;
+    const width = String(teamCount).length;
+    for (const pk of picks) {
+      const inRound = pk.overall - (pk.round - 1) * teamCount;
+      m.set(pk.player_id, `${pk.round}.${String(inRound).padStart(width, '0')}`);
+    }
+    return m;
+  }, [picks, lobby?.settings.teamCount]);
 
   // Most recent *real* pick (what the top-bar "Undo" rolls back to). Excludes
   // keepers: those are pre-placed at their round slot, so a late-round keeper
@@ -1165,7 +1212,7 @@ export function DraftBoardPage() {
   const available = useMemo(() => {
     const q = search.trim().toLowerCase();
     return players.filter((p) => {
-      if (draftedIds.has(p.id)) return false;
+      if (!showDrafted && draftedIds.has(p.id)) return false;
       if (filter === 'QUEUE') {
         if (!queue.includes(p.id)) return false;
       } else if (filter === 'FAVORITES') {
@@ -1181,7 +1228,7 @@ export function DraftBoardPage() {
       if (q && !p.name.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [players, draftedIds, filter, search, queue, favoriteIds, excludedByeWeeks]);
+  }, [players, draftedIds, filter, search, queue, favoriteIds, excludedByeWeeks, showDrafted]);
   // Only offer bye weeks that actually appear in the pool right now (not a
   // fixed 1-18 list) — so the filter row shrinks as the board fills up.
   const availableByeWeeks = useMemo(() => {
@@ -1723,9 +1770,10 @@ export function DraftBoardPage() {
           <div className="pool__queue">
             <div className="pool__queue-head">Queue ({queuedPlayers.length})</div>
             {queuedPlayers.map((p) => (
-              <PlayerCard
+              <PoolCard
                 key={p.id}
                 player={p}
+                posRank={p.proj_rank}
                 queued
                 onQueue={() => toggleQueue(p.id)}
                 onFavorite={canFavorite ? () => toggleFavorite(p.id) : undefined}
@@ -1790,12 +1838,14 @@ export function DraftBoardPage() {
                 <span className="chip__count">{favoriteIds?.size ?? 0}</span>
               </button>
             )}
-            {!isFullscreen && byeFilter && (
-              <>
-                <span className="pool__filters-divider" aria-hidden />
-                {byeFilter}
-              </>
-            )}
+            <label className="pool__showdrafted">
+              <input
+                type="checkbox"
+                checked={showDrafted}
+                onChange={(e) => setShowDrafted(e.target.checked)}
+              />
+              Show drafted
+            </label>
           </div>
           <div className="pool__searchrow">
             <input
@@ -1804,26 +1854,38 @@ export function DraftBoardPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-            {isFullscreen && byeFilter}
+            {byeFilter}
           </div>
         </div>
         <div className="pool__list">
-          {available.slice(0, 200).map((p) => (
-            <PlayerCard
-              key={p.id}
-              player={p}
-              onPick={canPick ? () => pick(p) : undefined}
-              disabled={!canPick}
-              onQueue={() => toggleQueue(p.id)}
-              queued={queue.includes(p.id)}
-              onFavorite={canFavorite ? () => toggleFavorite(p.id) : undefined}
-              favorited={favoriteIds?.has(p.id) ?? false}
-              onOpenDetail={() => setDetailPlayer(p)}
-              byeClashCount={
-                p.bye_week != null ? byeLookup.get(`${p.position}:${p.bye_week}`) : undefined
-              }
-            />
-          ))}
+          {available.slice(0, 200).map((p) => {
+            const isDrafted = draftedIds.has(p.id);
+            return (
+              <PoolCard
+                key={p.id}
+                player={p}
+                posRank={p.proj_rank}
+                drafted={isDrafted}
+                draftedLabel={isDrafted ? pickLabelByPlayerId.get(p.id) : undefined}
+                onPick={!isDrafted && canPick ? () => pick(p) : undefined}
+                disabled={!canPick}
+                onQueue={isDrafted ? undefined : () => toggleQueue(p.id)}
+                queued={queue.includes(p.id)}
+                onFavorite={canFavorite ? () => toggleFavorite(p.id) : undefined}
+                favorited={favoriteIds?.has(p.id) ?? false}
+                onOpenDetail={() => {
+                  // A drafted player opens its pick (who took them, round/pick);
+                  // an available one opens the plain player-detail modal.
+                  const pk = isDrafted ? pickByPlayerId.get(p.id) : undefined;
+                  if (pk) setPickModal(pk);
+                  else setDetailPlayer(p);
+                }}
+                byeClashCount={
+                  p.bye_week != null ? byeLookup.get(`${p.position}:${p.bye_week}`) : undefined
+                }
+              />
+            );
+          })}
           {available.length === 0 && <p className="muted pool__empty">No players match.</p>}
         </div>
       </>
@@ -2138,6 +2200,17 @@ export function DraftBoardPage() {
             </button>
           )}
           {!isComplete && RequestPauseButton({ compact: true })}
+          {isFullscreen && (
+            <button
+              className="draft__fs-menu-btn"
+              onClick={() => setShowFsMenu(true)}
+              aria-label="Menu"
+              title="Players, roster, chat & results"
+            >
+              <MenuIcon fontSize="small" />
+              <span className="draft__btn-label">Menu</span>
+            </button>
+          )}
           {myTeam && !myTeam.is_bot && !isComplete && (
             <button
               className={`draft__icon-btn draft__auto-btn${myTeam.auto_draft ? ' is-on' : ''}`}
@@ -2150,17 +2223,6 @@ export function DraftBoardPage() {
               ) : (
                 <SmartToyOutlinedIcon fontSize="small" />
               )}
-            </button>
-          )}
-          {isFullscreen && (
-            <button
-              className="draft__fs-menu-btn"
-              onClick={() => setShowFsMenu(true)}
-              aria-label="Menu"
-              title="Players, roster, chat & results"
-            >
-              <MenuIcon fontSize="small" />
-              <span className="draft__btn-label">Menu</span>
             </button>
           )}
           <button
@@ -2353,7 +2415,7 @@ export function DraftBoardPage() {
           player={detailPlayer}
           onClose={() => setDetailPlayer(null)}
           onPick={
-            canPick
+            canPick && !draftedIds.has(detailPlayer.id)
               ? () => {
                   setDetailPlayer(null);
                   setSelected(detailPlayer);
@@ -2362,7 +2424,9 @@ export function DraftBoardPage() {
               : undefined
           }
           disabled={!canPick}
-          onQueue={() => toggleQueue(detailPlayer.id)}
+          onQueue={
+            draftedIds.has(detailPlayer.id) ? undefined : () => toggleQueue(detailPlayer.id)
+          }
           queued={queue.includes(detailPlayer.id)}
           onFavorite={() => toggleFavorite(detailPlayer.id)}
           favorited={favoriteIds?.has(detailPlayer.id) ?? false}
@@ -2670,10 +2734,14 @@ export function DraftBoardPage() {
           onClose={() => setShowUserSettings(false)}
           cellStyle={cellStyle}
           onCellStyleChange={updateCellStyle}
+          cardStyle={cardStyle}
+          onCardStyleChange={updateCardStyle}
           showCellReactions={showCellReactions}
           onShowCellReactionsChange={updateShowCellReactions}
           showByeClashes={showByeClashes}
           onShowByeClashesChange={updateShowByeClashes}
+          teamColors={teamColors}
+          onTeamColorsChange={updateTeamColors}
           toastPrefs={toastPrefs}
           onToastsEnabledChange={updateToastsEnabled}
           onToastCategoryChange={updateToastCategory}
