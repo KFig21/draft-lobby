@@ -1,4 +1,5 @@
 @use 'variables' as *;
+@use 'mixins' as *;
 
 .room {
   display: flex;
@@ -150,8 +151,12 @@
     cursor: pointer;
     transition: border-color 120ms ease;
 
-    &:hover {
-      border-color: $primary;
+    // Guarded to real-hover devices only — otherwise tapping the card on
+    // mobile leaves the border stuck primary-colored until you tap elsewhere.
+    @include hover-only {
+      &:hover {
+        border-color: $primary;
+      }
     }
 
     // The shared RulesOverview renders its "Overview" heading with the rules

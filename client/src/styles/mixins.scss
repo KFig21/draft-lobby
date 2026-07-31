@@ -13,6 +13,18 @@
   }
 }
 
+// Gates :hover (and any :active feedback meant only for it) to devices that
+// support genuine hovering — a real cursor. Without this, tapping a button on
+// a touchscreen applies :hover on release and it visually "sticks" until the
+// user taps elsewhere, since touch has no hover state for the browser to
+// clear it on. Wrap the pseudo-class rule itself in this, e.g.:
+//   @include hover-only { &:hover { ... } }
+@mixin hover-only {
+  @media (hover: hover) {
+    @content;
+  }
+}
+
 // ── Surfaces / layout helpers ───────────────────────────────────────
 @mixin card-surface {
   background: $bg-raised;

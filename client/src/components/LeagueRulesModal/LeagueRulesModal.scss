@@ -296,8 +296,12 @@
     cursor: pointer;
     text-align: left;
 
-    &:hover:not(:disabled) {
-      background: $bg-overlay;
+    // Guarded to real-hover devices only — otherwise tapping a friend row on
+    // mobile leaves it stuck highlighted until you tap elsewhere.
+    @include hover-only {
+      &:hover:not(:disabled) {
+        background: $bg-overlay;
+      }
     }
 
     &:disabled {

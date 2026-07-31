@@ -217,7 +217,12 @@
     font-weight: 600;
   }
 
+  // Shared by "+ New format" and "View ruleset" — the flex/gap only matters
+  // for the latter's icon, but both are the same plain bordered-pill look.
   &__new-format {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
     padding: $space * 0.75 $space;
     border: 1px solid $border;
     border-radius: $radius-sm;
@@ -227,6 +232,10 @@
     font-weight: 700;
     cursor: pointer;
     white-space: nowrap;
+
+    svg {
+      font-size: 1rem;
+    }
 
     &:hover {
       background: $bg-hover;

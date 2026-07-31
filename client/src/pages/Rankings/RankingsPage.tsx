@@ -13,13 +13,15 @@ import CloseIcon from '@mui/icons-material/Close';
 import TuneIcon from '@mui/icons-material/Tune';
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
+import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import { useEffect, useMemo, useState } from 'react';
 import { Loader } from '../../components/Loader/Loader';
 import { Modal } from '../../components/Modal/Modal';
 import { PlayerDetailModal } from '../../components/PlayerDetailModal/PlayerDetailModal';
+import { ScoringRulesModal } from '../../components/LeagueRulesModal/ScoringRulesModal';
 import { usePlayers } from '../../hooks/usePlayers';
 import { useFavorites } from '../../hooks/useFavorites';
-import { getDefaultScoringChoice } from '../../lib/defaultScoring';
+import { getDefaultScoringChoice, setDefaultScoringChoice } from '../../lib/defaultScoring';
 import { INJURY_ABBR, INJURY_SEVERITY } from '../../lib/injuryStatus';
 import { scorePlayers } from '../../lib/playerPoints';
 import { supabase } from '../../supabase';
@@ -50,6 +52,7 @@ export function RankingsPage() {
   const [scoringFormats, setScoringFormats] = useState<SavedScoringFormat[]>([]);
   const [rulesetChoice, setRulesetChoice] = useState(() => getDefaultScoringChoice());
   const [showScoringModal, setShowScoringModal] = useState(false);
+  const [showRulesModal, setShowRulesModal] = useState(false);
   const [statYear, setStatYear] = useState<StatYear>('proj');
   const [filter, setFilter] = useState<Filter>('ALL');
   const [search, setSearch] = useState('');
@@ -77,13 +80,29 @@ export function RankingsPage() {
     return scoringFormats.find((f) => f.id === key)?.rules ?? DEFAULT_SCORING_RULES;
   }, [rulesetChoice, scoringFormats]);
 
+  // A saved (non-preset) format's own name, for the "View ruleset" modal's
+  // badge — presets already show their own label there regardless.
+  const rulesetName = useMemo(() => {
+    const [kind, key] = rulesetChoice.split(':');
+    return kind === 'format' ? scoringFormats.find((f) => f.id === key)?.name : undefined;
+  }, [rulesetChoice, scoringFormats]);
+
   // Same recompute-from-raw-stats helper the draft board uses — this page is
   // just a different "lobby" (an arbitrary ruleset) feeding the same engine.
   const players = useMemo(() => scorePlayers(rawPlayers, rules), [rawPlayers, rules]);
 
+  // Persists to the same "default scoring format" preference Settings'
+  // dropdown manages, so whatever the user last picks here (or just saved) is
+  // what Rankings — and a fresh league — seeds with next time, instead of
+  // reverting the moment they leave the page.
+  function updateRulesetChoice(choice: string) {
+    setRulesetChoice(choice);
+    setDefaultScoringChoice(choice);
+  }
+
   function onScoringSaved(fmt: SavedScoringFormat) {
     setScoringFormats((prev) => [...prev.filter((f) => f.id !== fmt.id), fmt]);
-    setRulesetChoice(`format:${fmt.id}`);
+    updateRulesetChoice(`format:${fmt.id}`);
     setShowScoringModal(false);
   }
 
@@ -192,7 +211,7 @@ export function RankingsPage() {
           <select
             className="rankings__ruleset"
             value={rulesetChoice}
-            onChange={(e) => setRulesetChoice(e.target.value)}
+            onChange={(e) => updateRulesetChoice(e.target.value)}
             aria-label="Ranking scoring format"
           >
             <optgroup label="Presets">
@@ -212,6 +231,13 @@ export function RankingsPage() {
               </optgroup>
             )}
           </select>
+          <button
+            type="button"
+            className="rankings__new-format"
+            onClick={() => setShowRulesModal(true)}
+          >
+            <VisibilityOutlinedIcon fontSize="small" /> View ruleset
+          </button>
           <button
             type="button"
             className="rankings__new-format"
@@ -391,6 +417,14 @@ export function RankingsPage() {
         <Modal title="New scoring format" wide onClose={() => setShowScoringModal(false)}>
           <ScoringFormatCreatorPage embedded onSaved={onScoringSaved} />
         </Modal>
+      )}
+
+      {showRulesModal && (
+        <ScoringRulesModal
+          rules={rules}
+          name={rulesetName}
+          onClose={() => setShowRulesModal(false)}
+        />
       )}
     </main>
   );

@@ -203,6 +203,46 @@ export function computeFantasyPoints(
   return Math.round(total * 10) / 10;
 }
 
+/** One rendered row in a grouped scoring breakdown — a category label plus
+ * its human-readable award, e.g. { label: "Passing yards", text: "1 pt per
+ * 25 yards" }. */
+export interface ScoringGroupItem {
+  label: string;
+  text: string;
+}
+
+export interface ScoringGroup {
+  group: string;
+  items: ScoringGroupItem[];
+}
+
+/** Groups a rule set's entries the way the catalog groups them (Passing,
+ * Rushing, …), in catalog order, including any per-position overrides (e.g. a
+ * different rushing-TD value for QBs). Shared by every "show me this scoring
+ * format" surface (LeagueRulesModal's Scoring section, the standalone
+ * ScoringRulesModal) so they always render the same breakdown the same way. */
+export function groupScoringRules(rules: ScoringRules): ScoringGroup[] {
+  const order: string[] = [];
+  const byGroup = new Map<string, ScoringGroupItem[]>();
+  const push = (group: string, label: string, text: string) => {
+    if (!byGroup.has(group)) {
+      byGroup.set(group, []);
+      order.push(group);
+    }
+    byGroup.get(group)!.push({ label, text });
+  };
+  for (const cat of FOOTBALL_CATALOG) {
+    const base = rules[cat.key];
+    if (base !== undefined) push(cat.group, cat.label, formatScoringRule(cat.key, base));
+    for (const pos of cat.overridePositions ?? []) {
+      const key = `${cat.key}${POSITION_OVERRIDE_SEP}${pos}`;
+      const val = rules[key];
+      if (val !== undefined) push(cat.group, `${cat.label} (${pos})`, formatScoringRule(key, val));
+    }
+  }
+  return order.map((group) => ({ group, items: byGroup.get(group)! }));
+}
+
 // ── Validation for saved formats ────────────────────────────────────
 export const createScoringFormatSchema = z
   .object({

@@ -1,13 +1,11 @@
 import {
-  FOOTBALL_CATALOG,
   POSITION_COLORS,
-  POSITION_OVERRIDE_SEP,
   ROSTER_SLOTS,
   SCORING_PRESETS,
   SLOT_ELIGIBILITY,
   SLOT_HINTS,
   SLOT_LABELS,
-  formatScoringRule,
+  groupScoringRules,
   matchPreset,
   roundsForSettings,
   startingSpots,
@@ -108,28 +106,7 @@ export function LeagueRulesModal({ settings, defaultName, onClose }: Props) {
   // Scoring rules grouped the way the catalog groups them (Passing, Rushing,
   // …), in catalog order, including any per-position overrides (e.g. a
   // different rushing-TD value for QBs).
-  const scoringGroups = useMemo(() => {
-    const rules = settings.scoring;
-    const order: string[] = [];
-    const byGroup = new Map<string, { label: string; text: string }[]>();
-    const push = (group: string, label: string, text: string) => {
-      if (!byGroup.has(group)) {
-        byGroup.set(group, []);
-        order.push(group);
-      }
-      byGroup.get(group)!.push({ label, text });
-    };
-    for (const cat of FOOTBALL_CATALOG) {
-      const base = rules[cat.key];
-      if (base !== undefined) push(cat.group, cat.label, formatScoringRule(cat.key, base));
-      for (const pos of cat.overridePositions ?? []) {
-        const key = `${cat.key}${POSITION_OVERRIDE_SEP}${pos}`;
-        const val = rules[key];
-        if (val !== undefined) push(cat.group, `${cat.label} (${pos})`, formatScoringRule(key, val));
-      }
-    }
-    return order.map((group) => ({ group, items: byGroup.get(group)! }));
-  }, [settings.scoring]);
+  const scoringGroups = useMemo(() => groupScoringRules(settings.scoring), [settings.scoring]);
 
   // Bench is called out separately in the section header ("9 Starters · 5
   // Bench") rather than as its own pill — it's not a "position", so it never
