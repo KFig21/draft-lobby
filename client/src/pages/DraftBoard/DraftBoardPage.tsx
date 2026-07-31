@@ -31,17 +31,17 @@ import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 import GridViewOutlinedIcon from '@mui/icons-material/GridViewOutlined';
 import GroupsIcon from '@mui/icons-material/Groups';
-import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
+import HomeIcon from '@mui/icons-material/Home';
 import InsertDriveFileOutlinedIcon from '@mui/icons-material/InsertDriveFileOutlined';
 import LockOpenOutlinedIcon from '@mui/icons-material/LockOpenOutlined';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
-import MeetingRoomOutlinedIcon from '@mui/icons-material/MeetingRoomOutlined';
+import MeetingRoomIcon from '@mui/icons-material/MeetingRoom';
 import MenuIcon from '@mui/icons-material/Menu';
 import MenuBookOutlinedIcon from '@mui/icons-material/MenuBookOutlined';
 import PauseIcon from '@mui/icons-material/Pause';
 import PauseCircleOutlineIcon from '@mui/icons-material/PauseCircleOutlineOutlined';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
+import SettingsIcon from '@mui/icons-material/Settings';
 import SkipNextIcon from '@mui/icons-material/SkipNext';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
 import SmartToyOutlinedIcon from '@mui/icons-material/SmartToyOutlined';
@@ -2085,12 +2085,12 @@ export function DraftBoardPage() {
               className="draft__home-btn"
               onClick={() => navigate('/home')}
             >
-              <HomeOutlinedIcon fontSize="small" />
+              <HomeIcon fontSize="small" />
               <span className="draft__btn-label">Home</span>
             </button>
             {isMember && (
               <Link to={`/lobby/${id}`} className="draft__room-btn">
-                <MeetingRoomOutlinedIcon fontSize="small" />
+                <MeetingRoomIcon fontSize="small" />
                 <span className="draft__btn-label">Room</span>
               </Link>
             )}
@@ -2116,7 +2116,7 @@ export function DraftBoardPage() {
               </strong>
             ) : isStaging ? (
               <span className="draft__staging-status">
-                <MeetingRoomOutlinedIcon fontSize="small" /> Draft room open
+                <MeetingRoomIcon fontSize="small" /> Draft room open
                 <span className="draft__staging-counts">
                   <span
                     className={`draft__count draft__count--seated${
@@ -2256,7 +2256,7 @@ export function DraftBoardPage() {
             aria-label="Your settings"
             title="Your settings"
           >
-            <SettingsOutlinedIcon fontSize="small" />
+            <SettingsIcon fontSize="small" />
           </button>
           <ThemeToggle className="draft__icon-btn draft__theme-btn" />
         </div>
@@ -2446,7 +2446,7 @@ export function DraftBoardPage() {
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         extraItems={[
-          { to: `/lobby/${id}`, label: 'Lobby room', Icon: MeetingRoomOutlinedIcon },
+          { to: `/lobby/${id}`, label: 'Lobby room', Icon: MeetingRoomIcon },
         ]}
         extraContent={
           <>

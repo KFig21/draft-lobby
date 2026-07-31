@@ -17,7 +17,8 @@
 // bots, Export…). Blends the theme's text color into the raised bar
 // background via color-mix so they read clearly against it in both themes,
 // instead of the near-invisible bg-overlay-on-bg-raised contrast they had.
-%draft-chip-btn {
+%draft-chip-btn,
+.draft__fs-menu-btn {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -37,7 +38,8 @@
 
   &:hover:not(:disabled) {
     border-color: $primary;
-    background: color-mix(in srgb, $bg-raised 66%, $text 18%);
+    background: $primary;
+    color: white;
   }
 
   &:active:not(:disabled) {
@@ -116,13 +118,16 @@
       .draft__home-btn,
       .draft__room-btn,
       .draft__tool-btn,
-      .draft__reqpause-btn {
+      .draft__reqpause-btn,
+      .draft__fs-menu-btn {
         border-color: rgba(#05231a, 0.35);
         background: rgba(#05231a, 0.12);
         color: #05231a;
 
         &:hover:not(:disabled) {
-          background: rgba(#05231a, 0.2);
+          background: #05231a;
+          border: solid 1px #05231a;
+          color: white
         }
       }
 
@@ -136,8 +141,9 @@
       }
 
       .draft__icon-btn:hover {
-        background: rgba(#05231a, 0.14);
-        color: #05231a;
+        background: black;
+        color: white;
+        border: solid 1px black;
       }
 
       // The auto-draft toggle's "on" state is normally green — invisible
@@ -200,13 +206,16 @@
       .draft__home-btn,
       .draft__room-btn,
       .draft__tool-btn,
-      .draft__reqpause-btn {
+      .draft__reqpause-btn,
+      .draft__fs-menu-btn {
         border-color: rgba(255, 255, 255, 0.35);
         background: rgba(255, 255, 255, 0.14);
         color: #fff;
 
         &:hover:not(:disabled) {
-          background: rgba(255, 255, 255, 0.24);
+          background: black;
+          color: white;
+          border: solid 1px black;
         }
       }
 
@@ -220,8 +229,9 @@
       }
 
       .draft__icon-btn:hover {
-        background: rgba(255, 255, 255, 0.18);
-        color: #fff;
+        background: black;
+        color: white;
+        border: solid 1px black;
       }
 
       // Red-on-red would vanish — invert to white-on-transparent instead of
@@ -531,8 +541,9 @@
     cursor: pointer;
 
     &:hover {
-      background: $bg-overlay;
-      color: $text;
+      background: $primary;
+      border: solid 1px $primary;
+      color: white;
     }
   }
 
@@ -615,7 +626,6 @@
   // drawer instead (more room, and frees up the cramped mobile top bar).
   &__auto-btn {
     display: none;
-    opacity: 0.5;
 
     @include lg {
       display: grid;
@@ -623,6 +633,8 @@
 
     &:hover {
       opacity: 1;
+      border: solid 1px $primary;
+      color: white;
     }
 
     &.is-on {
@@ -1345,9 +1357,15 @@
   .chip--fav {
     display: inline-flex;
     align-items: center;
+    // The body's 1.4 line-height (global.scss) gives the "· 0"/"· 2" text a
+    // taller line box than the icon's, so centering the flex row's boxes
+    // still left the icon looking higher than the text inside them. Flattening
+    // line-height to 1 here shrinks the text's box down to match the icon's.
+    line-height: 1;
     gap: 4px;
 
     svg {
+      display: block;
       font-size: 0.9rem;
     }
   }

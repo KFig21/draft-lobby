@@ -36,6 +36,7 @@ import {
   choosePlayer,
   claimSeat,
   computeDeadline,
+  computeFullClockMs,
   fillOpenSeatsWithBots,
   nextOpenOverall,
   onClockTeam,
@@ -1636,7 +1637,13 @@ draftRouter.post('/:id/rollback-to', async (req: AuthedRequest, res: Response) =
   const total = settings.teamCount * roundsForSettings(settings);
   const resumeOverall = (await nextOpenOverall(lobbyId, targetOverall, total)) ?? targetOverall;
   const wasPaused = lobby.status === 'PAUSED';
+  // Either way, the team now on the clock gets a fresh full turn — never the
+  // leftover countdown from whatever pick got rolled back. Live drafts get a
+  // real deadline; paused ones get the frozen-remaining-time snapshot reset
+  // to a full turn instead, so a later /resume doesn't restore stale seconds
+  // that belonged to a different pick.
   const deadline = wasPaused ? null : await computeDeadline(lobbyId, settings, resumeOverall);
+  const remainingMs = wasPaused ? await computeFullClockMs(lobbyId, settings, resumeOverall) : null;
 
   const { error: updateError } = await supabaseAdmin
     .from('lobbies')
@@ -1644,6 +1651,7 @@ draftRouter.post('/:id/rollback-to', async (req: AuthedRequest, res: Response) =
       current_overall: resumeOverall,
       status: wasPaused ? 'PAUSED' : 'DRAFTING',
       pick_deadline: deadline,
+      pick_deadline_remaining_ms: remainingMs,
     })
     .eq('id', lobbyId);
   if (updateError) {

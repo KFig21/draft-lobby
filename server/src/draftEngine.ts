@@ -119,7 +119,7 @@ export async function onClockTeam(
 }
 
 /** Bots and auto-draft teams get a short clock; everyone else gets the round timer. */
-function clockSeconds(team: OnClockTeam | null, settings: LobbySettings, overall: number): number {
+export function clockSeconds(team: OnClockTeam | null, settings: LobbySettings, overall: number): number {
   if (team && (team.is_bot || team.auto_draft)) return AUTO_PICK_SECONDS;
   const round = Math.floor((overall - 1) / settings.teamCount) + 1;
   return secondsForRound(round, settings.pickTiers);
@@ -133,6 +133,19 @@ export async function computeDeadline(
 ): Promise<string> {
   const team = await onClockTeam(lobbyId, settings, overall);
   return new Date(Date.now() + clockSeconds(team, settings, overall) * 1000).toISOString();
+}
+
+/** A fresh, full clock duration (ms) for whoever is on the clock at `overall`
+ * — the paused-state equivalent of computeDeadline, for callers that need to
+ * reset the frozen `pick_deadline_remaining_ms` snapshot rather than a live
+ * deadline (e.g. a rollback that lands while the draft is paused). */
+export async function computeFullClockMs(
+  lobbyId: string,
+  settings: LobbySettings,
+  overall: number,
+): Promise<number> {
+  const team = await onClockTeam(lobbyId, settings, overall);
+  return clockSeconds(team, settings, overall) * 1000;
 }
 
 /** Create bot teams for any draft slot 1..teamCount that has no team yet. Returns how many were added. */
