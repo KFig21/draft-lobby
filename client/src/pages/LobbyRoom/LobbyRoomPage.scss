@@ -153,6 +153,14 @@
     &:hover {
       border-color: $primary;
     }
+
+    // The shared RulesOverview renders its "Overview" heading with the rules
+    // modal's own icon class (always primary). Here in the lobby we want it to
+    // follow the room's section-icon treatment instead: primary in light mode,
+    // muted in dark — matching &__h2-icon, distinct from the modal.
+    :root[data-theme='dark'] & .rules-modal__h-icon {
+      color: $text-muted;
+    }
   }
 
   &__overview-cta {

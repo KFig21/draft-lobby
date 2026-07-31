@@ -24,9 +24,16 @@
     }
     display: flex;
     flex-direction: column;
-    gap: $space * 2;
+    // No gap: the top bar, the filter band, and the sticky column-header row
+    // all share the same raised background and butt directly against each
+    // other, reading as one continuous full-width header region. Spacing that
+    // used to come from the gap now lives inside each band's own padding.
+    gap: 0;
     overflow: hidden;
 
+    // Default: children are centered to the 1100px content column. The header,
+    // filters, and table-wrap each override this to run full-bleed (raised bg
+    // edge-to-edge) and re-center their *inner* content at 1100px instead.
     > * {
       width: 100%;
       max-width: 1100px;
@@ -164,8 +171,14 @@
       z-index: auto;
       max-height: none;
       overflow: visible;
-      padding-block: 0;
-      background: none;
+      // Full-bleed raised band (like the top bar): span the whole width and
+      // drop the shared 1100px cap / side padding — the inner rows re-center
+      // themselves at 1100px (see &__controls / &__positions below). No
+      // bottom border, so it flows seamlessly into the sticky header row.
+      max-width: none;
+      padding-block: $space * 1.5;
+      padding-inline: 0;
+      background: $bg-raised;
       border-top: none;
       border-radius: 0;
       box-shadow: none;
@@ -178,6 +191,20 @@
     flex-wrap: wrap;
     align-items: center;
     gap: $space * 1.25;
+  }
+
+  // Desktop only: the filter band runs full-bleed, so its two rows re-center
+  // their content within the same 1100px column the table columns use, keeping
+  // the controls aligned with the data below. (On mobile the band is the
+  // bottom sheet, which supplies its own padding.)
+  @include md {
+    &__controls,
+    &__positions {
+      width: 100%;
+      max-width: 1100px;
+      margin-inline: auto;
+      padding-inline: $space * 3;
+    }
   }
 
   &__ruleset {
@@ -251,10 +278,20 @@
   flex: 1;
   min-height: 0;
   overflow: auto;
+  // Full-bleed: drop the shared 1100px cap / side padding so the sticky header
+  // row can paint its raised background edge-to-edge (see the th box-shadow
+  // below). The table itself re-centers within a 1100px lane.
+  max-width: none;
+  padding-inline: 0;
 }
 
 .rankings-table {
   width: 100%;
+  // Centered 1100px lane, aligned with the filter controls above — the table
+  // (rows + header cells) lives here; the header's *background* alone breaks
+  // out to full width via the box-shadow trick on th.
+  max-width: 1100px;
+  margin-inline: auto;
   min-width: 640px;
   // NOT `collapse` — sticky positioning on <th> inside a collapsed-border
   // table is a known browser quirk (the header detaches/floats instead of
@@ -287,6 +324,34 @@
     padding: $space * 0.75 $space;
     border-bottom: 1px solid $border;
     vertical-align: middle;
+  }
+
+  // Match the filter controls' side gutter ($space * 3) on the outer columns,
+  // so the star and ADP line up with the dropdown / search edges above.
+  th:first-child,
+  td:first-child {
+    padding-left: $space * 3;
+  }
+
+  th:last-child,
+  td:last-child {
+    padding-right: $space * 3;
+  }
+
+  // Full-bleed header background. The table is centered at 1100px, so only the
+  // OUTER header cells need to reach into the side rails. Each paints a huge
+  // box-shadow (paint-only — never adds horizontal scroll) toward its own edge:
+  // the directional clip-path both trims the shadow's vertical bleed to this
+  // row's height AND keeps it on one side, so it can't paint over the inner
+  // header cells' text (which is what made every label but ADP disappear).
+  th:first-child {
+    box-shadow: 0 0 0 100vw $bg-raised;
+    clip-path: inset(0 0 0 -100vw); // extend left into the rail only
+  }
+
+  th:last-child {
+    box-shadow: 0 0 0 100vw $bg-raised;
+    clip-path: inset(0 -100vw 0 0); // extend right into the rail only
   }
 
   &__sortable {

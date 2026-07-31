@@ -33,19 +33,13 @@
     padding-bottom: $space;
   }
 
-  // Icon next to a section title (Overview, Pick clock by round) — primary in
-  // light mode, accent in dark, same split used for the sidebar's active link.
+  // Icon next to a section title (Overview, Pick clock by round) — always
+  // primary, in both light and dark mode. (The lobby room reuses this via
+  // RulesOverview but overrides dark mode to muted; see room__overview.)
   &__h-icon {
     display: inline-flex;
     flex-shrink: 0;
-
-    :root[data-theme='light'] & {
-      color: $primary;
-    }
-
-    :root[data-theme='dark'] & {
-      color: $text-muted;
-    }
+    color: $primary;
   }
 
   &__h-sub {
