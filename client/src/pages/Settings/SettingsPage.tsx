@@ -14,6 +14,9 @@ import { ProfileEditor } from '../../components/ProfileEditor/ProfileEditor';
 import { ThemeToggle } from '../../components/ThemeToggle/ThemeToggle';
 import { ToggleSwitch } from '../../components/ToggleSwitch/ToggleSwitch';
 import { DraftCellStylePicker } from '../../components/DraftGrid/DraftCellStylePicker';
+import { randomSamplePlayer } from '../../components/DraftGrid/samplePlayers';
+import { PlayerCardStylePicker } from '../../components/PlayerCard/PlayerCardStylePicker';
+import { TeamColorPreview } from '../../components/PlayerStatBlock/TeamColorPreview';
 import {
   getDraftCellStyle,
   setDraftCellStyle,
@@ -69,6 +72,9 @@ export function SettingsPage() {
   const [defaultScoring, setDefaultScoringState] = useState(() => getDefaultScoringChoice());
   const [cardStyle, setCardStyleState] = useState<PlayerCardStyle>(() => getPlayerCardStyle());
   const [teamColors, setTeamColorsState] = useState(() => getTeamColorsEnabled());
+  // One shared sample player for both the Cell-style and Team-colors previews
+  // below, so they show the same classic player (picked once per mount).
+  const [samplePlayer] = useState(randomSamplePlayer);
 
   function updateTeamColors(enabled: boolean) {
     setTeamColorsEnabled(enabled);
@@ -164,6 +170,7 @@ export function SettingsPage() {
           value={cellStyle}
           onChange={updateCellStyle}
           showReactions={showCellReactions}
+          player={samplePlayer}
         />
         <div className="settings__row">
           <div className="settings__row-main">
@@ -181,23 +188,8 @@ export function SettingsPage() {
             <span className="settings__row-name">Player card style</span>
             <span className="muted">Row density in the draft pool's player list</span>
           </div>
-          <div className="segmented">
-            <button
-              type="button"
-              className={`segmented__opt${cardStyle === 'comfy' ? ' segmented__opt--on' : ''}`}
-              onClick={() => updateCardStyle('comfy')}
-            >
-              Comfy
-            </button>
-            <button
-              type="button"
-              className={`segmented__opt${cardStyle === 'compact' ? ' segmented__opt--on' : ''}`}
-              onClick={() => updateCardStyle('compact')}
-            >
-              Compact
-            </button>
-          </div>
         </div>
+        <PlayerCardStylePicker value={cardStyle} onChange={updateCardStyle} player={samplePlayer} />
         <div className="settings__row">
           <div className="settings__row-main">
             <span className="settings__row-name">Team colors</span>
@@ -209,6 +201,7 @@ export function SettingsPage() {
             onChange={updateTeamColors}
           />
         </div>
+        <TeamColorPreview player={samplePlayer} />
         <div className="settings__row">
           <div className="settings__row-main">
             <span className="settings__row-name">Bye week clashes</span>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { DraftCellStyle } from '../../lib/draftCellStyle';
-import type { PickRow } from '../../lib/types';
+import type { PickRow, PlayerRow } from '../../lib/types';
 import { BoldPickCell } from './components/BoldPickCell/BoldPickCell';
 import { HybridPickCell } from './components/HybridPickCell/HybridPickCell';
 import type { ReactionEntry } from './components/PickCell/PickCell';
@@ -41,6 +41,7 @@ export function DraftCellStylePicker({
   value,
   onChange,
   showReactions,
+  player: playerProp,
 }: {
   value: DraftCellStyle;
   onChange: (style: DraftCellStyle) => void;
@@ -48,32 +49,33 @@ export function DraftCellStylePicker({
    * comment flag-chip on the previews when on, so this control's own effect
    * is visible right next to it instead of only on the real board. */
   showReactions: boolean;
+  /** Sample player to preview. Omit to pick one at random on mount; the
+   * parent passes a shared one so the Team-colors preview below can show the
+   * same player. */
+  player?: PlayerRow;
 }) {
   // Picked once per page load, not per render — the point is a fun surprise
   // each visit to Settings, not a different player on every re-render.
-  const [player] = useState(randomSamplePlayer);
+  const [ownPlayer] = useState(randomSamplePlayer);
+  const player = playerProp ?? ownPlayer;
 
   return (
     <div className="cell-style-picker">
       {OPTIONS.map((opt) => (
-        // A <table> isn't valid inside a <button> (button only accepts
-        // phrasing content) — role="button" on a plain div is the same
-        // pattern DraftGrid.tsx's own on-clock cell already uses for a
-        // clickable <td> that needs richer content than a button allows.
-        <div
-          key={opt.value}
-          role="button"
-          tabIndex={0}
-          aria-pressed={value === opt.value}
-          className={`cell-style-picker__option${value === opt.value ? ' is-selected' : ''}`}
-          onClick={() => onChange(opt.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              onChange(opt.value);
-            }
-          }}
-        >
+        <div key={opt.value} className="cell-style-picker__option">
+          <label className="cell-style-picker__radio-row">
+            <input
+              type="radio"
+              name="draftCellStyle"
+              checked={value === opt.value}
+              onChange={() => onChange(opt.value)}
+            />
+            <span
+              className={`cell-style-picker__name${value === opt.value ? ' is-selected' : ''}`}
+            >
+              {opt.label}
+            </span>
+          </label>
           <span className="cell-style-picker__swatch">
             <table className="cell-style-picker__table">
               <tbody>
@@ -107,7 +109,6 @@ export function DraftCellStylePicker({
               </tbody>
             </table>
           </span>
-          <span className="cell-style-picker__name">{opt.label}</span>
         </div>
       ))}
     </div>

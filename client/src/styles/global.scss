@@ -253,6 +253,52 @@ input[type='checkbox'] {
   }
 }
 
+// Radio: the circular sibling of the checkbox above. Same appearance:none
+// treatment (so it's never the white native control in dark mode) — a
+// bordered, raised-surface circle that grows a $primary dot when selected.
+// Pickers wanting the primary(light)/accent(dark) split just recolor the
+// checked state themselves (see PlayerCardStylePicker/DraftCellStylePicker).
+input[type='radio'] {
+  appearance: none;
+  -webkit-appearance: none;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  border: 1px solid $border;
+  border-radius: 50%;
+  background: $bg;
+  cursor: pointer;
+  display: inline-grid;
+  place-content: center;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease;
+
+  &::before {
+    content: '';
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    transform: scale(0);
+    transition: transform 120ms ease;
+    background: $primary;
+  }
+
+  &:checked {
+    border-color: $primary;
+
+    &::before {
+      transform: scale(1);
+    }
+  }
+
+  &:focus-visible {
+    outline: none;
+    border-color: $primary;
+  }
+}
+
 // App-wide focus treatment — no native browser ring anywhere. Buttons/links
 // only pick up a cue for keyboard/programmatic focus (a mouse click alone
 // shouldn't leave one lingering); text inputs/selects always recolor their

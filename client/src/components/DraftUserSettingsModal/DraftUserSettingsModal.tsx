@@ -1,8 +1,12 @@
+import { useState } from 'react';
 import type { DraftCellStyle } from '../../lib/draftCellStyle';
 import type { PlayerCardStyle } from '../../lib/playerCardStyle';
 import { TOAST_CATEGORIES, type ToastCategory, type ToastPrefs } from '../../toast/toastPrefs';
 import { DraftCellStylePicker } from '../DraftGrid/DraftCellStylePicker';
+import { randomSamplePlayer } from '../DraftGrid/samplePlayers';
 import { Modal } from '../Modal/Modal';
+import { PlayerCardStylePicker } from '../PlayerCard/PlayerCardStylePicker';
+import { TeamColorPreview } from '../PlayerStatBlock/TeamColorPreview';
 import { ToggleSwitch } from '../ToggleSwitch/ToggleSwitch';
 import './DraftUserSettingsModal.scss';
 
@@ -47,6 +51,9 @@ export function DraftUserSettingsModal({
   onToastsEnabledChange,
   onToastCategoryChange,
 }: Props) {
+  // One shared sample player for both the Cell-style and Team-colors previews
+  // so they show the same classic player (picked once per mount).
+  const [samplePlayer] = useState(randomSamplePlayer);
   return (
     <Modal title="Your settings" onClose={onClose} wide>
       <div className="draft-user-settings">
@@ -62,6 +69,7 @@ export function DraftUserSettingsModal({
             value={cellStyle}
             onChange={onCellStyleChange}
             showReactions={showCellReactions}
+            player={samplePlayer}
           />
           <div className="draft-user-settings__row">
             <div className="draft-user-settings__row-main">
@@ -79,23 +87,12 @@ export function DraftUserSettingsModal({
               <span className="draft-user-settings__row-name">Player card style</span>
               <span className="muted">Row density in the player pool list</span>
             </div>
-            <div className="segmented">
-              <button
-                type="button"
-                className={`segmented__opt${cardStyle === 'comfy' ? ' segmented__opt--on' : ''}`}
-                onClick={() => onCardStyleChange('comfy')}
-              >
-                Comfy
-              </button>
-              <button
-                type="button"
-                className={`segmented__opt${cardStyle === 'compact' ? ' segmented__opt--on' : ''}`}
-                onClick={() => onCardStyleChange('compact')}
-              >
-                Compact
-              </button>
-            </div>
           </div>
+          <PlayerCardStylePicker
+            value={cardStyle}
+            onChange={onCardStyleChange}
+            player={samplePlayer}
+          />
           <div className="draft-user-settings__row">
             <div className="draft-user-settings__row-main">
               <span className="draft-user-settings__row-name">Bye week clashes</span>
@@ -122,6 +119,7 @@ export function DraftUserSettingsModal({
               onChange={onTeamColorsChange}
             />
           </div>
+          <TeamColorPreview player={samplePlayer} />
         </section>
 
         <section className="draft-user-settings__section">

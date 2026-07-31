@@ -59,9 +59,18 @@
       background: $bg-overlay;
     }
 
+    // Primary in light mode, accent in dark — same split used for the
+    // "complete" lobby badge (see global.scss).
     &--active {
-      background: rgba($primary, 0.18);
-      color: $primary-hover;
+      :root[data-theme='light'] & {
+        background: rgba($primary, 0.18);
+        color: $primary-hover;
+      }
+
+      :root[data-theme='dark'] & {
+        background: rgba($accent, 0.18);
+        color: $accent;
+      }
     }
   }
 

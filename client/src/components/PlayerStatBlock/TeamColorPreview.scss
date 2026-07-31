@@ -1,0 +1,8 @@
+@use 'variables' as *;
+
+.team-color-preview {
+  padding: $space * 1.25 0;
+  // Illustrative only — real component, fake data, no working buttons.
+  pointer-events: none;
+  user-select: none;
+}
