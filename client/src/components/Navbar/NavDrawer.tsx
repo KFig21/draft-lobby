@@ -1,13 +1,13 @@
 import AccountCircleOutlinedIcon from '@mui/icons-material/AccountCircleOutlined';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutlined';
 import CloseIcon from '@mui/icons-material/Close';
-import HomeIcon from '@mui/icons-material/Home';
+import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
 import LeaderboardOutlinedIcon from '@mui/icons-material/LeaderboardOutlined';
 import ListAltOutlinedIcon from '@mui/icons-material/ListAltOutlined';
 import LoginIcon from '@mui/icons-material/Login';
 import NotificationsNoneOutlinedIcon from '@mui/icons-material/NotificationsNoneOutlined';
 import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
-import SettingsIcon from '@mui/icons-material/Settings';
+import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import SportsFootballIcon from '@mui/icons-material/SportsFootball';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
 import LightModeIcon from '@mui/icons-material/LightMode';
@@ -31,21 +31,21 @@ export interface NavItem {
 }
 
 export const NAV_ITEMS: NavItem[] = [
-  { to: '/home', label: 'Home', Icon: HomeIcon, end: true },
+  { to: '/home', label: 'Home', Icon: HomeOutlinedIcon, end: true },
   { to: '/lobby/new', label: 'Create', Icon: AddCircleOutlineIcon },
   { to: '/lobby/join', label: 'Join', Icon: LoginIcon },
   { to: '/drafts', label: 'My drafts', Icon: ListAltOutlinedIcon },
   { to: '/rankings', label: 'Rankings', Icon: LeaderboardOutlinedIcon },
   { to: '/friends', label: 'Friends', Icon: PeopleAltOutlinedIcon },
   { to: '/notifications', label: 'Notifications', Icon: NotificationsNoneOutlinedIcon },
-  { to: '/settings', label: 'Settings', Icon: SettingsIcon },
+  { to: '/settings', label: 'Settings', Icon: SettingsOutlinedIcon },
 ];
 
 /** Curated subset shown as icons in the mobile bottom bar — kept separate
  * from NAV_ITEMS so reordering/extending the full nav list (drawer/sidebar)
  * can't silently change what shows up there. */
 export const MOBILE_BOTTOM_ITEMS: NavItem[] = [
-  { to: '/home', label: 'Home', Icon: HomeIcon, end: true },
+  { to: '/home', label: 'Home', Icon: HomeOutlinedIcon, end: true },
   { to: '/lobby/new', label: 'Create', Icon: AddCircleOutlineIcon },
   { to: '/notifications', label: 'Notifications', Icon: NotificationsNoneOutlinedIcon },
   { to: '/profile', label: 'Profile', Icon: AccountCircleOutlinedIcon, end: true },
