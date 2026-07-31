@@ -30,7 +30,7 @@ import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 import GridViewOutlinedIcon from '@mui/icons-material/GridViewOutlined';
-import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
+import GroupsIcon from '@mui/icons-material/Groups';
 import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
 import InsertDriveFileOutlinedIcon from '@mui/icons-material/InsertDriveFileOutlined';
 import LockOpenOutlinedIcon from '@mui/icons-material/LockOpenOutlined';
@@ -2292,7 +2292,7 @@ export function DraftBoardPage() {
               className="draft__staging-cta draft__staging-cta--ghost"
               onClick={() => setShowAllKeepers(true)}
             >
-              <GroupsOutlinedIcon fontSize="small" />
+              <GroupsIcon fontSize="small" />
               View all
             </button>
           )}

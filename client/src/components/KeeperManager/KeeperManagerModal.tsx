@@ -3,8 +3,8 @@ import CloseIcon from '@mui/icons-material/Close';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
-import PersonOutlineIcon from '@mui/icons-material/PersonOutlineOutlined';
+import GroupsIcon from '@mui/icons-material/Groups';
+import PersonIcon from '@mui/icons-material/Person';
 import { useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { api } from '../../lib/api';
@@ -418,7 +418,7 @@ export function KeeperManagerModal({
             className={`keeper-modal__topmode${topMode === 'assign' ? ' is-active' : ''}`}
             onClick={() => setTopMode('assign')}
           >
-            <PersonOutlineIcon fontSize="small" />
+            <PersonIcon fontSize="small" />
             <span className="keeper-modal__topmode-label">Assign directly</span>
             <span className="keeper-modal__topmode-desc">You set each team's exact keepers</span>
           </button>
@@ -427,7 +427,7 @@ export function KeeperManagerModal({
             className={`keeper-modal__topmode${topMode === 'offer' ? ' is-active' : ''}`}
             onClick={() => setTopMode('offer')}
           >
-            <GroupsOutlinedIcon fontSize="small" />
+            <GroupsIcon fontSize="small" />
             <span className="keeper-modal__topmode-label">Let owners choose</span>
             <span className="keeper-modal__topmode-desc">Offer candidates, owners pick</span>
           </button>

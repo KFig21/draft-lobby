@@ -1,113 +1,239 @@
 @use 'variables' as *;
+@use 'mixins' as *;
 
 .rules-modal {
   display: flex;
   flex-direction: column;
-  gap: $space * 2.5;
+  // No gap here — every direct child is a &__section, and its own
+  // padding-top (below) is what spaces sections apart, alongside the divider.
+  gap: 0;
 
   &__section {
     display: flex;
     flex-direction: column;
     gap: $space;
+    padding-bottom: $space * 2.5;
+
+    // A divider between sections (not above the first) instead of relying on
+    // a gap alone to separate them.
+    &:not(:first-child) {
+      padding-top: $space * 2.5;
+      border-top: 1px solid $border;
+    }
 
     h3 {
       display: flex;
-      align-items: baseline;
-      justify-content: space-between;
-      gap: $space;
+      align-items: center;
+      gap: $space * 0.75;
       font-size: 1rem;
+    }
+  }
+
+  // Icon next to a section title (Overview, Pick clock by round) — primary in
+  // light mode, accent in dark, same split used for the sidebar's active link.
+  &__h-icon {
+    display: inline-flex;
+    flex-shrink: 0;
+
+    :root[data-theme='light'] & {
+      color: $primary;
+    }
+
+    :root[data-theme='dark'] & {
+      color: $accent;
     }
   }
 
   &__h-sub {
     font-size: 0.8rem;
-    font-weight: 600;
+    font-weight: 400;
+    color: $text-muted;
   }
 
-  // Overview key/value grid.
-  &__grid {
+  // Overview: compact stat tiles — 2 columns on narrow screens, a clean 3×2
+  // once there's room (rather than auto-fit, which can strand a lone tile).
+  &__overview {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: $space $space * 2;
+    gap: $space;
 
-    dt {
-      font-size: 0.72rem;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      color: $text-muted;
-      font-weight: 700;
+    @include md {
+      grid-template-columns: repeat(3, 1fr);
     }
+  }
 
-    dd {
-      font-weight: 700;
-      font-size: 0.95rem;
-    }
+  &__stat {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: $space * 0.85 $space;
+    background: $bg;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+  }
+
+  &__stat-label {
+    font-size: 0.66rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: $text-muted;
+    font-weight: 700;
+  }
+
+  &__stat-value {
+    font-weight: 700;
+    font-size: 0.95rem;
   }
 
   &__note {
     font-size: 0.8rem;
   }
 
+  // Scoring preset badge (next to the "Scoring" title) — one color per
+  // preset so Standard/Half-PPR/PPR/Custom are visually distinct at a glance.
+  &__preset-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px $space;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+
+    &--standard {
+      background: color-mix(in srgb, $primary 20%, transparent);
+      color: $primary;
+    }
+
+    &--half-ppr {
+      background: color-mix(in srgb, $warning 20%, transparent);
+      color: $warning;
+    }
+
+    &--ppr {
+      background: color-mix(in srgb, $accent 20%, transparent);
+      color: $accent;
+    }
+
+    &--custom {
+      background: color-mix(in srgb, $keeper 20%, transparent);
+      color: $keeper;
+    }
+  }
+
+  // Starting lineup: position-colored chips. A pure slot's badge takes that
+  // position's color; a flex slot's badge is outlined and followed by a dot
+  // per eligible position.
   &__lineup {
     list-style: none;
     display: flex;
     flex-wrap: wrap;
-    gap: $space;
-
-    li {
-      display: inline-flex;
-      align-items: baseline;
-      gap: 5px;
-      padding: $space * 0.5 $space;
-      background: $bg;
-      border: 1px solid $border;
-      border-radius: $radius-sm;
-    }
+    gap: $space * 0.75;
   }
 
-  &__lineup-count {
+  &__slot {
+    display: inline-flex;
+    align-items: center;
+    gap: $space * 0.5;
+    padding: $space * 0.4 $space * 0.75;
+    background: $bg;
+    border: 1px solid $border;
+    border-radius: 999px;
+  }
+
+  &__slot-badge {
+    display: inline-grid;
+    place-items: center;
+    min-width: 30px;
+    padding: 2px 7px;
+    border-radius: $radius-sm;
+    // Dark ink on the bright position fills, matching the pool's pos badges.
+    color: #05231a;
+    font-size: 0.72rem;
     font-weight: 800;
-    color: $primary;
+    letter-spacing: 0.02em;
+  }
+
+  // Flex/bench slots have no single position color — outline instead of fill.
+  &__slot--flex &__slot-badge {
+    padding: 1px 6px;
+    background: none;
+    border: 1px solid $border;
+    color: $text;
+  }
+
+  &__slot-dots {
+    display: inline-flex;
+    gap: 3px;
+  }
+
+  &__slot-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+  }
+
+  &__slot-count {
+    font-weight: 800;
+    font-size: 0.82rem;
+    color: $text-muted;
     font-variant-numeric: tabular-nums;
   }
 
-  &__lineup-label {
-    font-weight: 600;
-    font-size: 0.9rem;
-  }
-
-  &__lineup-hint {
-    font-size: 0.75rem;
+  // Scoring: a grid of grouped cards instead of one tall bordered list, so it
+  // reads as organized sections rather than a wall of rows.
+  &__scoring-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: $space;
   }
 
   &__scoregroup {
+    // Clips the h4 header strip's corners to the container's own radius.
+    overflow: hidden;
+    background: $bg;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+
     h4 {
-      margin: $space * 0.5 0 2px;
-      font-size: 0.72rem;
+      margin: 0;
+      padding: $space * 0.5 $space * 1.25;
+      // Header strip reads as a cap on the card — same color as the border
+      // it sits inside, so it looks like an extension of it, not a stripe.
+      background: $border;
+      font-size: 0.66rem;
       text-transform: uppercase;
-      letter-spacing: 0.04em;
+      letter-spacing: 0.05em;
       color: $text-muted;
+      font-weight: 800;
     }
+  }
+
+  &__scoregroup-body {
+    padding: $space * 0.75 $space * 1.25 $space * 1.1;
   }
 
   &__scorelist {
     list-style: none;
     display: flex;
     flex-direction: column;
+    gap: 2px;
 
     li {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: $space;
-      padding: $space * 0.6 0;
-      border-bottom: 1px solid $border;
-      font-size: 0.9rem;
-
-      &:last-child {
-        border-bottom: none;
-      }
+      padding: $space * 0.35 0;
+      font-size: 0.88rem;
     }
+  }
+
+  &__scorelabel {
+    min-width: 0;
+    color: $text-muted;
   }
 
   &__scoreval {
@@ -131,6 +257,25 @@
       min-width: 150px;
       gap: 6px;
     }
+  }
+
+  // Scoring-only save/share, nested inside the Scoring section rather than
+  // its own top-level section — a lighter-weight sibling of the whole-league
+  // "Save & share" section at the bottom, not an equally prominent one.
+  &__section-actions {
+    display: flex;
+    flex-direction: column;
+    gap: $space * 0.75;
+    padding-top: $space * 0.5;
+  }
+
+  &__section-actions-caption {
+    font-size: 0.78rem;
+  }
+
+  &__actions--compact .button {
+    flex: 0 1 auto;
+    min-width: 0;
   }
 
   &__friends {
