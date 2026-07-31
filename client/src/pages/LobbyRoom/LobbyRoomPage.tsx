@@ -676,7 +676,12 @@ export function LobbyRoomPage() {
             <span className={`status-pill status-pill--${lobby.status.toLowerCase()}`}>
               {lobby.status}
             </span>
-            {s.draftMode === 'MOCK' && <span className="room__mock-badge">🤖 Mock</span>}
+            {s.draftMode === 'MOCK' && (
+              <span className="room__mock-badge">
+                <SmartToyOutlinedIcon fontSize="inherit" />
+                Mock
+              </span>
+            )}
           </div>
         </header>
 

@@ -113,11 +113,12 @@
     }
   }
 
-  // Small "🤖 Mock" flag next to the status pill — the one bit of info the
+  // Small "Mock" flag next to the status pill — the one bit of info the
   // Overview stat grid below doesn't otherwise cover.
   &__mock-badge {
     display: inline-flex;
     align-items: center;
+    gap: 4px;
     padding: $space * 0.3 $space;
     background: $bg-raised;
     border: 1px solid $border;
@@ -164,13 +165,20 @@
     font-weight: 800;
   }
 
-  // Icon next to a section heading ("Draft order", "Invite") — always
-  // primary regardless of theme (unlike the sidebar's active link/rules
-  // modal's section icons, which split primary/accent by theme).
+  // Icon next to a section heading ("Draft order", "Invite") — primary in
+  // light mode, muted in dark, same split used by the rules modal's own
+  // section icons (&__h-icon).
   &__h2-icon {
     display: inline-flex;
     flex-shrink: 0;
-    color: $primary;
+
+    :root[data-theme='light'] & {
+      color: $primary;
+    }
+
+    :root[data-theme='dark'] & {
+      color: $text-muted;
+    }
   }
 
   &__invite {

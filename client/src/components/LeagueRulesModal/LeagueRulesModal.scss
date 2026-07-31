@@ -38,7 +38,14 @@
   &__h-icon {
     display: inline-flex;
     flex-shrink: 0;
-    color: $primary;
+
+    :root[data-theme='light'] & {
+      color: $primary;
+    }
+
+    :root[data-theme='dark'] & {
+      color: $text-muted;
+    }
   }
 
   &__h-sub {
