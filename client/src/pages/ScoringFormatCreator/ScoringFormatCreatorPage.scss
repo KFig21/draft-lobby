@@ -1,5 +1,6 @@
 @use 'sass:color';
 @use 'variables' as *;
+@use 'mixins' as *;
 
 .scoring {
   display: flex;
@@ -7,7 +8,7 @@
 
   // Centre the form body; the header (below) spans the full container width.
   // Scoped to the form so the embedded (in-modal) render isn't reconstrained.
-  > .scoring__form {
+  >.scoring__form {
     width: 100%;
     max-width: 680px;
     margin-inline: auto;
@@ -37,6 +38,19 @@
     flex-direction: column;
     gap: $space * 1.5;
     padding-block: $space * 2 $space * 3;
+  }
+
+  // Groups the name/preset/rate-style controls into one lifted card instead
+  // of leaving them loose on the page background — otherwise every input's
+  // own $bg fill matches the page behind it and the whole form reads as flat,
+  // washed-out text fields with no visual structure (same card-surface +
+  // sunken-input convention as .settings__section).
+  &__meta {
+    display: flex;
+    flex-direction: column;
+    gap: $space;
+    padding: $space * 2;
+    @include card-surface;
   }
 
   &__name,
@@ -106,10 +120,13 @@
     font-size: 0.85rem;
   }
 
-  // Category groups (collapsible)
+  // Category groups (collapsible) — lifted off the page the same way &__meta
+  // is, so the whole form reads as a stack of cards rather than bare borders
+  // floating on the page background.
   &__group {
     border: 1px solid $border;
     border-radius: $radius-sm;
+    background: $bg-raised;
     overflow: hidden;
   }
 
@@ -245,6 +262,14 @@
     font-size: 0.85rem;
     font-weight: 700;
     cursor: pointer;
+
+    :root[data-theme='light'] & {
+      color: $primary;
+    }
+
+    :root[data-theme='dark'] & {
+      color: $accent;
+    }
 
     &:hover {
       background: $bg-overlay;

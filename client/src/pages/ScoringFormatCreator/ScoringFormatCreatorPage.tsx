@@ -312,52 +312,54 @@ export function ScoringFormatCreatorPage({ embedded = false, onSaved }: Props = 
         </header>
       )}
       <form className="scoring__form" onSubmit={save}>
-        <label className="scoring__preset-label" htmlFor="scoring-name">
-          Scoring format name
-        </label>
-        <input
-          id="scoring-name"
-          className="scoring__name"
-          placeholder='e.g. "League One Scoring"'
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          maxLength={40}
-          required
-        />
+        <div className="scoring__meta">
+          <label className="scoring__preset-label" htmlFor="scoring-name">
+            Scoring format name
+          </label>
+          <input
+            id="scoring-name"
+            className="scoring__name"
+            placeholder='e.g. "League One Scoring"'
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            maxLength={40}
+            required
+          />
 
-        <label className="scoring__preset-label" htmlFor="scoring-start-preset">
-          Start from a preset
-        </label>
-        <select
-          id="scoring-start-preset"
-          className="scoring__preset"
-          value={startPreset}
-          onChange={(e) => changeStartPreset(e.target.value)}
-        >
-          <option value="">Blank (catalog defaults)</option>
-          {(Object.keys(SCORING_PRESETS) as ScoringPreset[]).map((p) => (
-            <option key={p} value={p}>
-              {SCORING_PRESETS[p].label}
-            </option>
-          ))}
-        </select>
+          <label className="scoring__preset-label" htmlFor="scoring-start-preset">
+            Start from a preset
+          </label>
+          <select
+            id="scoring-start-preset"
+            className="scoring__preset"
+            value={startPreset}
+            onChange={(e) => changeStartPreset(e.target.value)}
+          >
+            <option value="">Blank (catalog defaults)</option>
+            {(Object.keys(SCORING_PRESETS) as ScoringPreset[]).map((p) => (
+              <option key={p} value={p}>
+                {SCORING_PRESETS[p].label}
+              </option>
+            ))}
+          </select>
 
-        <div className="scoring__rate-style" role="group" aria-label="Rate scoring style">
-          <span className="scoring__rate-style-label">Rate scoring</span>
-          <button
-            type="button"
-            className={`scoring__rate-tab${rateStyle === 'whole' ? ' scoring__rate-tab--on' : ''}`}
-            onClick={() => changeRateStyle('whole')}
-          >
-            Whole (1 per 25)
-          </button>
-          <button
-            type="button"
-            className={`scoring__rate-tab${rateStyle === 'decimal' ? ' scoring__rate-tab--on' : ''}`}
-            onClick={() => changeRateStyle('decimal')}
-          >
-            Decimal (per unit)
-          </button>
+          <div className="scoring__rate-style" role="group" aria-label="Rate scoring style">
+            <span className="scoring__rate-style-label">Rate scoring</span>
+            <button
+              type="button"
+              className={`scoring__rate-tab${rateStyle === 'whole' ? ' scoring__rate-tab--on' : ''}`}
+              onClick={() => changeRateStyle('whole')}
+            >
+              Whole (1 per 25)
+            </button>
+            <button
+              type="button"
+              className={`scoring__rate-tab${rateStyle === 'decimal' ? ' scoring__rate-tab--on' : ''}`}
+              onClick={() => changeRateStyle('decimal')}
+            >
+              Decimal (per unit)
+            </button>
+          </div>
         </div>
 
         {groups.map(([group, cats]) => {
@@ -391,7 +393,7 @@ export function ScoringFormatCreatorPage({ embedded = false, onSaved }: Props = 
                       className="scoring__advanced-toggle"
                       onClick={() => toggleAdvanced(group)}
                     >
-                      Show {advanced.length} advanced
+                      + Show {advanced.length} advanced
                     </button>
                   )}
                   {advOpen && advanced.map((c) => renderCat(c, advOpen))}
@@ -401,7 +403,7 @@ export function ScoringFormatCreatorPage({ embedded = false, onSaved }: Props = 
                       className="scoring__advanced-toggle"
                       onClick={() => toggleAdvanced(group)}
                     >
-                      Hide advanced
+                      - Hide advanced
                     </button>
                   )}
                 </div>

@@ -792,12 +792,13 @@
   &__keepers-btn {
     @extend %draft-chip-btn;
     border-color: $keeper;
-    color: $keeper;
-    background: color-mix(in srgb, $keeper 12%, transparent);
+    color: $text;
+    background: color-mix(in srgb, $keeper 20%, transparent);
 
     &:hover:not(:disabled) {
       border-color: $keeper;
-      background: color-mix(in srgb, $keeper 20%, transparent);
+      background: $keeper;
+      color: black;
     }
   }
 
