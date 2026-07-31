@@ -15,6 +15,17 @@ export function clockSummary(tiers: PickTier[]): string {
   return `${formatSeconds(first)} → ${formatSeconds(last)}`;
 }
 
+/** "Josh Allen" → "J. Allen" — a tighter name for narrow layouts (mobile
+ * Rankings' frozen player column). Multi-word last names ("Ja'Marr Chase" →
+ * "J. Chase", "Marvin Harrison Jr." → "M. Harrison Jr.") keep everything
+ * after the first word intact. */
+export function abbreviatedName(fullName: string): string {
+  const parts = fullName.trim().split(/\s+/);
+  if (parts.length < 2) return fullName;
+  const [first, ...rest] = parts;
+  return `${first[0]}. ${rest.join(' ')}`;
+}
+
 /** "Round.pick" label — e.g. round 5, 2nd pick of the round. Zero-padded to
  * 2 digits once a draft has 10+ teams (round 5's 2nd pick reads as "5.02",
  * not "5.2", once picks-in-round can reach double digits); below that,

@@ -22,6 +22,7 @@ import { ScoringRulesModal } from '../../components/LeagueRulesModal/ScoringRule
 import { usePlayers } from '../../hooks/usePlayers';
 import { useFavorites } from '../../hooks/useFavorites';
 import { getDefaultScoringChoice, setDefaultScoringChoice } from '../../lib/defaultScoring';
+import { abbreviatedName } from '../../lib/format';
 import { INJURY_ABBR, INJURY_SEVERITY } from '../../lib/injuryStatus';
 import { scorePlayers } from '../../lib/playerPoints';
 import { supabase } from '../../supabase';
@@ -63,6 +64,21 @@ export function RankingsPage() {
   // Mobile only: the filters live in a slide-up bottom sheet (desktop shows
   // them inline). Closed by default so the table gets the full screen.
   const [filtersOpen, setFiltersOpen] = useState(false);
+
+  // Mobile: the table freezes star/rank/player and scrolls Points/Stats/ADP
+  // under them (see &__star/&__rank/&__player's sticky-left CSS) — Points
+  // moves in front of Stats to lead with the number people scan first, and
+  // player names abbreviate to "F. Last" to leave the frozen columns room.
+  // Same matchMedia-in-state pattern as LobbyRoomPage's isDesktop.
+  const [isMobile, setIsMobile] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches,
+  );
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)');
+    const onChange = () => setIsMobile(mq.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
 
   useEffect(() => {
     void supabase
@@ -147,11 +163,19 @@ export function RankingsPage() {
       .sort((a, b) => (sortDir === 'asc' ? compareAsc(a, b) : compareAsc(b, a)));
   }, [players, filter, search, favoritesOnly, favoriteIds, statYear, sortKey, sortDir]);
 
-  function SortHeader({ label, sortKeyFor }: { label: string; sortKeyFor: SortKey }) {
+  function SortHeader({
+    label,
+    sortKeyFor,
+    className,
+  }: {
+    label: string;
+    sortKeyFor: SortKey;
+    className?: string;
+  }) {
     const active = sortKey === sortKeyFor;
     return (
       <th
-        className={`rankings-table__sortable${active ? ' is-active' : ''}`}
+        className={`rankings-table__sortable${active ? ' is-active' : ''}${className ? ` ${className}` : ''}`}
         onClick={() => toggleSort(sortKeyFor)}
         aria-sort={active ? (sortDir === 'asc' ? 'ascending' : 'descending') : undefined}
       >
@@ -321,10 +345,19 @@ export function RankingsPage() {
             <thead>
               <tr>
                 <th className="rankings-table__star" aria-label="Favorite" />
-                <th>Rank</th>
-                <SortHeader label="Player" sortKeyFor="name" />
-                <th>Stats</th>
-                <SortHeader label="Points" sortKeyFor="points" />
+                <th className="rankings-table__rank">{isMobile ? '' : 'Rank'}</th>
+                <SortHeader label="Player" sortKeyFor="name" className="rankings-table__player" />
+                {isMobile ? (
+                  <>
+                    <SortHeader label="Points" sortKeyFor="points" className="rankings-table__points" />
+                    <th>Stats</th>
+                  </>
+                ) : (
+                  <>
+                    <th>Stats</th>
+                    <SortHeader label="Points" sortKeyFor="points" className="rankings-table__points" />
+                  </>
+                )}
                 <SortHeader label="ADP" sortKeyFor="adp" />
               </tr>
             </thead>
@@ -365,7 +398,7 @@ export function RankingsPage() {
                       </span>
                       <div className="rankings-table__name-block">
                         <span className="rankings-table__name">
-                          {p.name}
+                          {isMobile ? abbreviatedName(p.name) : p.name}
                           {injury && (
                             <span
                               className={`injury-badge injury-badge--${INJURY_SEVERITY[p.injury_status] ?? 'danger'}`}
@@ -381,10 +414,21 @@ export function RankingsPage() {
                         </span>
                       </div>
                     </td>
-                    <td className="rankings-table__stats muted">{statLine ?? '—'}</td>
-                    <td className="rankings-table__points">
-                      {points != null ? points.toFixed(1) : '—'}
-                    </td>
+                    {isMobile ? (
+                      <>
+                        <td className="rankings-table__points">
+                          {points != null ? points.toFixed(1) : '—'}
+                        </td>
+                        <td className="rankings-table__stats muted">{statLine ?? '—'}</td>
+                      </>
+                    ) : (
+                      <>
+                        <td className="rankings-table__stats muted">{statLine ?? '—'}</td>
+                        <td className="rankings-table__points">
+                          {points != null ? points.toFixed(1) : '—'}
+                        </td>
+                      </>
+                    )}
                     <td className="rankings-table__adp muted">
                       {p.adp != null ? p.adp.toFixed(1) : '—'}
                     </td>

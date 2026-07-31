@@ -19,9 +19,11 @@
   // page scroll. On mobile, stop above the fixed bottom nav bar (64px).
   &__scroll {
     height: calc(100dvh - 64px - env(safe-area-inset-bottom, 0));
+
     @include md {
       height: 100dvh;
     }
+
     display: flex;
     flex-direction: column;
     // No gap: the top bar, the filter band, and the sticky column-header row
@@ -34,7 +36,7 @@
     // Default: children are centered to the 1100px content column. The header,
     // filters, and table-wrap each override this to run full-bleed (raised bg
     // edge-to-edge) and re-center their *inner* content at 1100px instead.
-    > * {
+    >* {
       width: 100%;
       max-width: 1100px;
       margin-inline: auto;
@@ -198,6 +200,7 @@
   // the controls aligned with the data below. (On mobile the band is the
   // bottom sheet, which supplies its own padding.)
   @include md {
+
     &__controls,
     &__positions {
       width: 100%;
@@ -268,6 +271,7 @@
   }
 
   &__positions {
+
     // All position/FLEX/OP chips the same size regardless of label length.
     .rankings__pos-chip {
       min-width: 3rem;
@@ -495,5 +499,120 @@
   &__empty {
     padding: $space * 3;
     text-align: center;
+  }
+
+  // ── Mobile: freeze star/rank/player, tighten spacing ─────────────────
+  // Dropping the 640px floor and shrinking the padding/pos-badge/name-block
+  // below is most of "too much side scrolling, too much space" — the frozen
+  // trio + 3 remaining columns need far less room than the desktop layout.
+  // Several selectors below intentionally repeat an exact selector already
+  // declared above (th:first-child, td:first-child, …) so the override wins
+  // by matching specificity + later source position, not by being *more*
+  // specific — same technique as the css-specificity-order-trap lesson
+  // elsewhere in this app, applied deliberately instead of left to chance.
+  @media (max-width: #{$bp-md - 1px}) {
+    min-width: 0;
+    font-size: 0.82rem;
+
+    th,
+    td {
+      padding: $space * 0.5 $space * 0.6;
+    }
+
+    th:last-child,
+    td:last-child {
+      padding-right: $space;
+    }
+
+    // The desktop full-bleed-header box-shadow (on the outer th) isn't needed
+    // here — the table already fills the width — and it interferes with the
+    // now-sticky corner header cells, so switch it off.
+    th:first-child,
+    th:last-child {
+      box-shadow: none;
+      clip-path: none;
+    }
+
+    // No favorites column on mobile — the row's detail modal still favorites,
+    // and dropping it here reclaims a whole column of frozen width.
+    &__star {
+      display: none;
+    }
+
+    // Rank + player stay put while Points/Stats/ADP scroll underneath. Each
+    // needs its own opaque fill (sticky cells are otherwise transparent), and
+    // the row-hover wash (painted on <tr>) is repainted here explicitly since
+    // it'd otherwise be hidden right where a thumb taps. Rank is a fixed-width
+    // number column, so the sticky offsets are hardcoded: rank 32 → player 32.
+    &__rank,
+    &__player {
+      position: sticky;
+      z-index: 4; // above the scrolling body cells
+      background: $bg-raised;
+    }
+
+    &__row:hover &__rank,
+    &__row:hover &__player {
+      background: $bg-overlay;
+    }
+
+    &__rank {
+      left: 0;
+      width: 32px;
+      padding-left: $space;
+      padding-right: 0;
+      text-align: center;
+    }
+
+    &__player {
+      left: 32px;
+      // A little breathing room between the pos chip and the name/team block.
+      gap: $space * 0.75;
+      min-width: 0;
+      max-width: 160px;
+      // box-shadow: 2px 0px 8px 0px rgba(0, 0, 0, 0.15);
+    }
+
+    // Leading scrollable column: right-aligned so the numbers line up on the
+    // decimal, with a wider left gutter so they clear the frozen player column
+    // and a little right gutter before Stats.
+    &__points {
+      padding-left: $space * 2;
+      padding-right: $space * 1.25;
+      text-align: right;
+    }
+
+    // Frozen header cells (top-left corner) must outrank BOTH the scrolling
+    // headers (z 10) and their own frozen body cells (z 4), so nothing slides
+    // over them in either scroll direction.
+    th.rankings-table__rank,
+    th.rankings-table__player {
+      z-index: 12;
+    }
+
+    // Pos + within-position rank stacked vertically (no dot divider) instead
+    // of side-by-side, to reclaim horizontal room in the frozen player column.
+    &__pos {
+      flex-direction: column;
+      gap: 0;
+      min-width: 2rem;
+      padding: 2px 5px;
+      font-size: 0.6rem;
+      line-height: 1.2;
+    }
+
+    &__pos-dot {
+      display: none;
+    }
+
+    &__name-block {
+      max-width: 120px;
+    }
+
+    &__name,
+    &__team {
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
   }
 }
