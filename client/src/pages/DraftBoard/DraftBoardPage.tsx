@@ -31,6 +31,7 @@ import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 import GridViewOutlinedIcon from '@mui/icons-material/GridViewOutlined';
+import LeaderboardIcon from '@mui/icons-material/Leaderboard';
 import GroupsIcon from '@mui/icons-material/Groups';
 import HomeIcon from '@mui/icons-material/Home';
 import InsertDriveFileOutlinedIcon from '@mui/icons-material/InsertDriveFileOutlined';
@@ -65,7 +66,7 @@ import { ConfirmModal } from '../../components/ConfirmModal/ConfirmModal';
 import { DraftChat } from '../../components/DraftChat/DraftChat';
 import { DraftGrid, type ReactionEntry } from '../../components/DraftGrid/DraftGrid';
 import { DraftOutroModal } from '../../components/DraftOutroModal/DraftOutroModal';
-import { DraftResultsPanel } from '../../components/DraftResultsPanel/DraftResultsPanel';
+import { PowerRankingsPanel } from '../../components/PowerRankings/PowerRankingsPanel';
 import { DraftUserSettingsModal } from '../../components/DraftUserSettingsModal/DraftUserSettingsModal';
 import { ErrorScreen } from '../../components/ErrorScreen/ErrorScreen';
 import { GradeBadge } from '../../components/GradeBadge/GradeBadge';
@@ -141,21 +142,23 @@ type MobileTab = 'board' | PanelTab;
 const FLEX_POS: Position[] = ['RB', 'WR', 'TE'];
 const SUPERFLEX_POS: Position[] = ['QB', 'RB', 'WR', 'TE'];
 
-// The right sidebar's tabs (desktop) — labels shown in the tab strip. "Results"
-// only makes sense once the draft is complete, so it's filtered out until then.
+// The right sidebar's tabs (desktop) — labels shown in the tab strip. Post-draft
+// Power Rankings live in the center view (top-bar Board/Power Rankings toggle),
+// not the sidebar, so there's no "results" tab here.
 const SIDEBAR_TABS: { key: PanelTab; label: string; Icon: SvgIconComponent }[] = [
   { key: 'players', label: 'Players', Icon: SportsFootballIcon },
   { key: 'roster', label: 'Roster', Icon: FormatListBulletedIcon },
   { key: 'chat', label: 'Chat', Icon: ChatBubbleOutlineIcon },
-  { key: 'results', label: 'Results', Icon: EmojiEventsOutlinedIcon },
 ];
-// Bottom-bar sections (mobile) — Board plus the sidebar tabs.
+// Bottom-bar sections (mobile) — Board plus the sidebar tabs, and (post-draft)
+// Rankings. Mobile has no top bar, so the Power Rankings are reached via this
+// "Rankings" tab (key stays 'results' — same panel slot, crown/grade data).
 const MOBILE_TABS: { key: MobileTab; label: string; Icon: SvgIconComponent }[] = [
   { key: 'board', label: 'Board', Icon: GridViewOutlinedIcon },
   { key: 'players', label: 'Players', Icon: SportsFootballIcon },
   { key: 'roster', label: 'Roster', Icon: FormatListBulletedIcon },
   { key: 'chat', label: 'Chat', Icon: ChatBubbleOutlineIcon },
-  { key: 'results', label: 'Results', Icon: EmojiEventsOutlinedIcon },
+  { key: 'results', label: 'Rankings', Icon: LeaderboardIcon },
 ];
 
 const MIN_SIDEBAR = 300;
@@ -284,6 +287,10 @@ export function DraftBoardPage() {
   }, [byeDropdownOpen]);
   const [mobileTab, setMobileTab] = useState<MobileTab>('board');
   const [panelTab, setPanelTab] = useState<PanelTab>('players');
+  // Post-draft, the top-bar toggle (desktop/fullscreen) swaps the center between
+  // the draft board and the Power Rankings. Mobile reaches rankings via its own
+  // "Rankings" tab, so this stays 'board' there.
+  const [centerView, setCenterView] = useState<'board' | 'rankings'>('board');
   const [rosterTeamSel, setRosterTeamSel] = useState<string | null>(null);
   const [resultsDrawerView, setResultsDrawerView] = useState<ResultsDrawerView>('closed');
   const [queue, setQueue] = useState<string[]>([]);
@@ -1987,9 +1994,12 @@ export function DraftBoardPage() {
                             onClick={() => {
                               // The fullscreen modal has no room for a second
                               // slide-in drawer on top of itself — jump to the
-                              // Results tab (already right there) instead.
-                              if (isFullscreen) setPanelTab('results');
-                              else setResultsDrawerView((v) => (v === 'closed' ? 'open' : 'closed'));
+                              // Power Rankings center view (and close the menu so
+                              // it's visible) instead.
+                              if (isFullscreen) {
+                                setCenterView('rankings');
+                                setShowFsMenu(false);
+                              } else setResultsDrawerView((v) => (v === 'closed' ? 'open' : 'closed'));
                             }}
                           >
                             <GradeBadge grade={avgGrade} size={44} />
@@ -2050,34 +2060,32 @@ export function DraftBoardPage() {
           />
         </div>
 
-        {/* Results — crown vote + peer grading, only relevant post-draft. */}
+        {/* Rankings (mobile) — Power Rankings + crown vote + peer grading. On
+            desktop/fullscreen this lives in the center view instead; here it
+            only ever shows on the mobile "Rankings" tab. */}
         {isComplete && (
           <div
-            className={`draft__panel-body ${panelTab === 'results' ? 'is-desktop-active' : ''} ${
+            className={`draft__panel-body ${
               mobileTab === 'results' ? 'is-mobile-active' : ''
             }`}
           >
-            <div className="draft__results">
-              {resultsLocked && (
-                <span className="bot-badge bot-badge--warn draft__results-locked">
-                  <LockOutlinedIcon fontSize="inherit" /> Voting and grading closed 24h after the
-                  draft ended — showing final results
-                </span>
-              )}
-              <DraftResultsPanel
-                teams={teams}
-                members={members}
-                myTeamId={myTeam?.id ?? null}
-                myUserId={userId}
-                crownVotes={crownVotes}
-                grades={grades}
-                locked={resultsLocked}
-                canVote={canVote}
-                canGrade={canGrade}
-                onVote={castCrownVote}
-                onGrade={gradeTeam}
-              />
-            </div>
+            <PowerRankingsPanel
+              teams={teams}
+              members={members}
+              picks={picks}
+              playersById={playersById}
+              settings={lobby.settings}
+              myTeamId={myTeam?.id ?? null}
+              myUserId={userId}
+              crownVotes={crownVotes}
+              grades={grades}
+              locked={resultsLocked}
+              canVote={canVote}
+              canGrade={canGrade}
+              onVote={castCrownVote}
+              onGrade={gradeTeam}
+              onPickClick={setPickModal}
+            />
           </div>
         )}
       </>
@@ -2118,6 +2126,28 @@ export function DraftBoardPage() {
               </Link>
             )}
           </div>
+          {isComplete && (
+            <div className="draft__viewtoggle" role="group" aria-label="Center view">
+              <button
+                type="button"
+                className={`draft__viewtoggle-btn${centerView === 'board' ? ' is-active' : ''}`}
+                aria-pressed={centerView === 'board'}
+                onClick={() => setCenterView('board')}
+              >
+                <GridViewOutlinedIcon fontSize="small" />
+                <span className="draft__btn-label">Board</span>
+              </button>
+              <button
+                type="button"
+                className={`draft__viewtoggle-btn${centerView === 'rankings' ? ' is-active' : ''}`}
+                aria-pressed={centerView === 'rankings'}
+                onClick={() => setCenterView('rankings')}
+              >
+                <LeaderboardIcon fontSize="small" />
+                <span className="draft__btn-label">Power Rankings</span>
+              </button>
+            </div>
+          )}
           {!isComplete && (
             <div className="draft__commish-tools">
               {/* Called as functions, NOT <CommishTools /> — a component
@@ -2327,35 +2357,55 @@ export function DraftBoardPage() {
           ref={boardSectionRef}
           className={`draft__board ${mobileTab === 'board' ? 'is-mobile-active' : ''}`}
         >
-          <DraftGrid
-            teams={teams}
-            members={members}
-            rounds={totalRounds}
-            picks={picks}
-            playersById={playersById}
-            onClockTeamId={isComplete || isStaging ? null : onClockTeam?.id ?? null}
-            myTeamId={myTeam?.id ?? null}
-            currentRound={round}
-            draftType={lobby.settings.draftType}
-            onTeamClick={openTeamRoster}
-            reactionsByPick={showCellReactions ? reactionsByPick : undefined}
-            onReactPick={isMember ? reactPick : undefined}
-            onPickClick={setPickModal}
-            commentsByPick={showCellReactions ? commentsByPick : undefined}
-            cellStyle={cellStyle}
-            fill={isFullscreen}
-            fillRowHeight={fsRowHeight}
-            onMyClockCellClick={() => {
-              setPanelTab('players');
-              setMobileTab('players');
-              setShowFsMenu(true);
-            }}
-            onClockUrgency={onClockCellUrgency}
-            onClockFlashing={onClockCellFlashing}
-            onClockElapsedPct={onClockCellElapsedPct}
-            skippedCells={isComplete || isStaging ? undefined : skippedCellKeys}
-            onRollbackSkipped={isCommish && !rollbackLocked ? openSkipRollback : undefined}
-          />
+          {isComplete && centerView === 'rankings' ? (
+            <PowerRankingsPanel
+              teams={teams}
+              members={members}
+              picks={picks}
+              playersById={playersById}
+              settings={lobby.settings}
+              myTeamId={myTeam?.id ?? null}
+              myUserId={userId}
+              crownVotes={crownVotes}
+              grades={grades}
+              locked={resultsLocked}
+              canVote={canVote}
+              canGrade={canGrade}
+              onVote={castCrownVote}
+              onGrade={gradeTeam}
+              onPickClick={setPickModal}
+            />
+          ) : (
+            <DraftGrid
+              teams={teams}
+              members={members}
+              rounds={totalRounds}
+              picks={picks}
+              playersById={playersById}
+              onClockTeamId={isComplete || isStaging ? null : onClockTeam?.id ?? null}
+              myTeamId={myTeam?.id ?? null}
+              currentRound={round}
+              draftType={lobby.settings.draftType}
+              onTeamClick={openTeamRoster}
+              reactionsByPick={showCellReactions ? reactionsByPick : undefined}
+              onReactPick={isMember ? reactPick : undefined}
+              onPickClick={setPickModal}
+              commentsByPick={showCellReactions ? commentsByPick : undefined}
+              cellStyle={cellStyle}
+              fill={isFullscreen}
+              fillRowHeight={fsRowHeight}
+              onMyClockCellClick={() => {
+                setPanelTab('players');
+                setMobileTab('players');
+                setShowFsMenu(true);
+              }}
+              onClockUrgency={onClockCellUrgency}
+              onClockFlashing={onClockCellFlashing}
+              onClockElapsedPct={onClockCellElapsedPct}
+              skippedCells={isComplete || isStaging ? undefined : skippedCellKeys}
+              onRollbackSkipped={isCommish && !rollbackLocked ? openSkipRollback : undefined}
+            />
+          )}
         </section>
 
         {!isFullscreen && (
@@ -2562,6 +2612,7 @@ export function DraftBoardPage() {
           myUserId={userId}
           picks={picks}
           playersById={playersById}
+          settings={lobby.settings}
           crownVotes={crownVotes}
           grades={grades}
           locked={resultsLocked}

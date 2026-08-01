@@ -83,17 +83,7 @@
     color: $text-muted;
   }
 
-  &__grade-badge {
-    display: inline-grid;
-    place-items: center;
-    min-width: 48px;
-    padding: $space * 0.4 $space * 0.75;
-    border-radius: $radius-sm;
-    background: $accent;
-    color: #05231a;
-    font-size: 1.1rem;
-    font-weight: 800;
-  }
+  // (Grade badge itself now rendered by the shared <GradeBadge> component.)
 
   &__grade-note {
     flex-basis: 100%;

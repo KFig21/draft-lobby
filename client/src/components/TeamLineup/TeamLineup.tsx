@@ -1,14 +1,13 @@
 import {
   POSITIONS,
   POSITION_COLORS,
-  ROSTER_SLOTS,
   SLOT_LABELS,
   type LobbySettings,
   type Position,
-  type RosterSlot,
 } from '@draft-lobby/shared';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
 import { PlayerCard } from '../PlayerCard/PlayerCard';
+import { buildLineup, type LineupRow } from '../../lib/powerRankings';
 import type { PickRow, PlayerRow, TeamRow } from '../../lib/types';
 import './TeamLineup.scss';
 
@@ -30,71 +29,9 @@ interface Props {
   belowSelect?: React.ReactNode;
 }
 
-const FLEX_ELIGIBLE: Position[] = ['RB', 'WR', 'TE'];
-const SUPERFLEX_ELIGIBLE: Position[] = ['QB', 'RB', 'WR', 'TE'];
-
-function eligible(slot: RosterSlot, pos: Position): boolean {
-  if (slot === 'BENCH') return true;
-  if (slot === 'FLEX') return FLEX_ELIGIBLE.includes(pos);
-  if (slot === 'SUPERFLEX') return SUPERFLEX_ELIGIBLE.includes(pos);
-  if (slot === 'IDP') return false; // no IDP positions in the current player pool
-  return slot === pos;
-}
-
-interface Row {
-  slot: RosterSlot;
-  player?: PlayerRow;
-  pick?: PickRow;
-}
-
-interface PoolEntry {
+interface ByeEntry {
   pick: PickRow;
   player: PlayerRow;
-}
-
-/** Fills a team's roster slots greedily (best projection first), rest to bench. */
-function buildLineup(
-  teamId: string,
-  picks: PickRow[],
-  playersById: Map<string, PlayerRow>,
-  settings: LobbySettings,
-): Row[] {
-  const pool: PoolEntry[] = picks
-    .filter((p) => p.team_id === teamId)
-    .map((p) => {
-      const player = playersById.get(p.player_id);
-      return player ? { pick: p, player } : null;
-    })
-    .filter((e): e is PoolEntry => !!e)
-    .sort((a, b) => (b.player.proj_points ?? 0) - (a.player.proj_points ?? 0));
-
-  // Slot -> configured count, so display order can follow the fixed
-  // ROSTER_SLOTS sequence below instead of however this league's
-  // rosterComposition array happens to be ordered (older leagues can have
-  // D/ST stored before OP/SUPERFLEX, for instance).
-  const countBySlot = new Map(settings.rosterComposition.map((rc) => [rc.slot, rc.count]));
-
-  const assigned = new Set<string>();
-  const rows: Row[] = [];
-  for (const slot of ROSTER_SLOTS) {
-    if (slot === 'BENCH') continue;
-    const count = countBySlot.get(slot) ?? 0;
-    for (let i = 0; i < count; i++) {
-      const entry = pool.find(
-        (e) => !assigned.has(e.player.id) && eligible(slot, e.player.position as Position),
-      );
-      if (entry) assigned.add(entry.player.id);
-      rows.push({ slot, player: entry?.player, pick: entry?.pick });
-    }
-  }
-
-  const benchCount = countBySlot.get('BENCH') ?? 0;
-  const leftover = pool.filter((e) => !assigned.has(e.player.id));
-  for (let i = 0; i < Math.max(benchCount, leftover.length); i++) {
-    const entry = leftover[i] as PoolEntry | undefined;
-    rows.push({ slot: 'BENCH', player: entry?.player, pick: entry?.pick });
-  }
-  return rows;
 }
 
 export function TeamLineup({
@@ -110,16 +47,15 @@ export function TeamLineup({
   onPickClick,
   belowSelect,
 }: Props) {
-  const rows = buildLineup(selectedTeamId, picks, playersById, settings);
-  const starters = rows.filter((r) => r.slot !== 'BENCH');
-  const bench = rows.filter((r) => r.slot === 'BENCH');
+  const { starters, bench } = buildLineup(selectedTeamId, picks, playersById, settings);
+  const rows = [...starters, ...bench];
 
   // Group every drafted player (starter or bench) by bye week, so an owner
   // can spot a pile-up of players sharing the same off week at a glance.
-  const byeMap = new Map<number, PoolEntry[]>();
+  const byeMap = new Map<number, ByeEntry[]>();
   for (const r of rows) {
     if (!r.player || r.player.bye_week == null) continue;
-    const entry: PoolEntry = { player: r.player, pick: r.pick! };
+    const entry: ByeEntry = { player: r.player, pick: r.pick! };
     const group = byeMap.get(r.player.bye_week);
     if (group) group.push(entry);
     else byeMap.set(r.player.bye_week, [entry]);
@@ -279,7 +215,7 @@ function LineupSlot({
   row,
   onPickClick,
 }: {
-  row: Row;
+  row: LineupRow;
   onPickClick?: (pick: PickRow) => void;
 }) {
   const { slot, player, pick } = row;

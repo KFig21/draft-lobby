@@ -286,6 +286,7 @@
       // dead space; the label's own margin-left supplies spacing once open.
       .draft__home-btn,
       .draft__room-btn,
+      .draft__viewtoggle-btn,
       .draft__tool-btn,
       .draft__export-btn,
       .draft__reqpause-btn,
@@ -360,6 +361,7 @@
 
       .draft__home-btn,
       .draft__room-btn,
+      .draft__viewtoggle-btn,
       .draft__tool-btn,
       .draft__export-btn,
       .draft__fs-menu-btn,
@@ -442,6 +444,71 @@
   &__home-btn,
   &__room-btn {
     @extend %draft-chip-btn;
+  }
+
+  // Post-draft center-view switch (Board / Power Rankings), a segmented control
+  // right of Room. Desktop only, same @include lg gate as &__nav-links — below
+  // that the mobile bottom bar's "Rankings" tab reaches the same view. Also
+  // force-shown in fullscreen (TV mode) regardless of width.
+  &__viewtoggle {
+    display: none;
+    align-items: center;
+    gap: 3px;
+    padding: 3px;
+    border-radius: $radius;
+    background: rgba(0, 0, 0, 0.22);
+
+    // Light mode: the dark-inset track reads too heavy on the light top bar —
+    // match the Home/Room chips beside it instead (same %draft-chip-btn fill).
+    :root[data-theme='light'] & {
+      background: color-mix(in srgb, $bg-raised 78%, $text 12%);
+      border: 1px solid color-mix(in srgb, $text 16%, transparent);
+    }
+
+    @include lg {
+      display: inline-flex;
+    }
+  }
+  &__topbar--fill &__viewtoggle {
+    display: inline-flex;
+  }
+
+  &__viewtoggle-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 11px;
+    border: 0;
+    border-radius: $radius-sm;
+    background: none;
+    color: inherit;
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 650;
+    white-space: nowrap;
+    cursor: pointer;
+    opacity: 0.7;
+
+    svg {
+      font-size: 1.05rem;
+    }
+
+    @include hover-only {
+      &:hover {
+        opacity: 1;
+      }
+    }
+
+    &.is-active {
+      opacity: 1;
+      background: $accent;
+      color: #05231a;
+
+      :root[data-theme='light'] & {
+        background: $accent;
+        color: #05231a;
+      }
+    }
   }
 
   // Wraps the commissioner/member tools in the desktop top bar — on mobile

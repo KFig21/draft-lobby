@@ -1,0 +1,568 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+.power-rankings {
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  padding: $space * 2;
+
+  @include md {
+    padding: $space * 3 $space * 3 $space * 5;
+  }
+
+  &__inner {
+    max-width: 940px;
+    margin-inline: auto;
+  }
+
+  // ── header ──────────────────────────────────────────────────────────
+  &__head {
+    margin-bottom: $space * 2;
+  }
+
+  &__title {
+    display: flex;
+    align-items: baseline;
+    gap: $space * 1.5;
+    flex-wrap: wrap;
+
+    h2 {
+      margin: 0;
+      font-size: 1.6rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+  }
+
+  &__badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: $accent;
+    background: rgba($accent, 0.14);
+    padding: 3px 8px;
+    border-radius: 999px;
+
+    :root[data-theme='light'] & {
+      color: $primary;
+      background: rgba($primary, 0.12);
+    }
+  }
+
+  // "How grades work" — opens the explainer modal. Pushed to the far right of
+  // the title row.
+  &__help {
+    margin-left: auto;
+    align-self: center;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border: 1px solid $border;
+    border-radius: 999px;
+    background: $bg-raised;
+    color: $text-muted;
+    font: inherit;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+
+    svg {
+      font-size: 0.95rem;
+    }
+
+    @include hover-only {
+      &:hover {
+        color: $text;
+        border-color: $primary;
+      }
+    }
+  }
+
+  &__help-body {
+    display: flex;
+    flex-direction: column;
+    gap: $space * 1.5;
+    font-size: 0.9rem;
+    line-height: 1.55;
+    color: $text-muted;
+
+    p {
+      margin: 0;
+    }
+
+    b {
+      color: $text;
+    }
+  }
+
+  &__sub {
+    margin: $space * 0.5 0 0;
+    color: $text-muted;
+    font-size: 0.9rem;
+
+    b {
+      color: $text;
+    }
+  }
+
+  &__legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $space * 1.5;
+    margin-top: $space * 1.5;
+    font-size: 0.78rem;
+    color: $text-muted;
+  }
+
+  &__legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: $space * 0.5;
+
+    b {
+      color: $text;
+    }
+  }
+
+  &__locked {
+    display: flex;
+    align-items: center;
+    gap: $space * 0.5;
+    margin: $space * 1.5 0 0;
+    padding: $space $space * 1.25;
+    font-size: 0.78rem;
+    color: $warning;
+    background: rgba($warning, 0.12);
+    border: 1px solid rgba($warning, 0.35);
+    border-radius: $radius-sm;
+
+    // The bright warning orange is too low-contrast as text on the light
+    // theme's near-white surfaces — darken the text + border there (same
+    // reasoning as $info/$keeper being theme-aware).
+    :root[data-theme='light'] & {
+      color: color-mix(in srgb, $warning 45%, #000);
+      border-color: color-mix(in srgb, $warning 60%, #000);
+      background: rgba($warning, 0.16);
+    }
+  }
+
+  &__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: $space * 1.25;
+  }
+
+}
+
+// ── one team's ranking row ────────────────────────────────────────────
+.pr-row {
+  @include card-surface;
+  overflow: hidden;
+
+  &--top {
+    border-color: rgba($accent, 0.55);
+
+    :root[data-theme='light'] & {
+      border-color: rgba($primary, 0.45);
+    }
+  }
+
+  &__main {
+    width: 100%;
+    display: grid;
+    align-items: center;
+    gap: $space;
+    grid-template-columns: auto auto 1fr auto auto;
+    padding: $space * 1.5;
+    background: none;
+    border: 0;
+    text-align: left;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+
+    @include md {
+      grid-template-columns: auto auto 1fr auto auto auto;
+    }
+
+    @include hover-only {
+      &:hover {
+        background: $bg-hover;
+      }
+    }
+  }
+
+  &__rank {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    flex-shrink: 0;
+
+    // Top 3: the number sits inside a filled medal circle (gold/silver/bronze)
+    // with black text, instead of a plain colored numeral.
+    &--medal {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+
+      .pr-row__rank-n {
+        color: #000;
+      }
+    }
+
+    &--r1 {
+      background: #f5c518; // gold
+    }
+    &--r2 {
+      background: #c4ccd2; // silver
+    }
+    &--r3 {
+      background: #cd7f32; // bronze
+    }
+  }
+
+  &__rank-n {
+    font-size: 1.2rem;
+    font-weight: 800;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__team {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  &__name {
+    font-weight: 700;
+    font-size: 0.95rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__meta {
+    display: flex;
+    align-items: center;
+    gap: $space;
+  }
+
+  &__bar {
+    flex: 1;
+    max-width: 240px;
+    height: 7px;
+    border-radius: 4px;
+    background: rgba($pos-def, 0.25);
+    overflow: hidden;
+
+    >i {
+      display: block;
+      height: 100%;
+      border-radius: 4px;
+      background: $accent;
+
+      :root[data-theme='light'] & {
+        background: $primary;
+      }
+    }
+  }
+
+  &__pts {
+    font-size: 0.78rem;
+    color: $text-muted;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+
+    b {
+      color: $text;
+      font-weight: 700;
+    }
+  }
+
+  // Crown-vote chip that rides in the meta line — mobile only (the desktop
+  // layout has a dedicated votes/peer column instead).
+  &__votes-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: $warning;
+    white-space: nowrap;
+
+    @include md {
+      display: none;
+    }
+  }
+
+  &__owner {
+    font-size: 0.72rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  // Desktop-only votes + peer-grade column.
+  &__side {
+    display: none;
+
+    @include md {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      min-width: 56px;
+    }
+  }
+
+  &__votes {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: $warning;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__peer {
+    font-size: 0.72rem;
+    color: $text-muted;
+    white-space: nowrap;
+
+    b {
+      color: $text;
+    }
+  }
+
+  &__chev {
+    color: $text-muted;
+    transition: transform 0.18s ease;
+  }
+
+  &.is-open &__chev {
+    transform: rotate(180deg);
+  }
+
+  // ── expanded detail ─────────────────────────────────────────────────
+  &__detail {
+    padding: 0 $space * 1.5 $space * 2;
+    border-top: 1px solid $border;
+    background: $bg;
+  }
+
+  &__detail-grid {
+    display: grid;
+    gap: $space * 2.5;
+    padding-top: $space * 1.5;
+
+    @include md {
+      grid-template-columns: 1.1fr 1fr;
+    }
+  }
+
+  &__col {
+    min-width: 0;
+  }
+
+  &__col-title {
+    margin: 0 0 $space;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: $text-muted;
+    font-weight: 700;
+  }
+
+  &__starters {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  &__starter {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 34px 1fr auto;
+    align-items: center;
+    gap: $space;
+    padding: 3px 0;
+    font-size: 0.85rem;
+    background: none;
+    border: 0;
+    color: inherit;
+    font-family: inherit;
+    text-align: left;
+
+    &--link {
+      cursor: pointer;
+      border-radius: $radius-sm;
+
+      @include hover-only {
+        &:hover {
+          background: $bg-hover;
+        }
+      }
+    }
+  }
+
+  &__slot {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: $text-muted;
+  }
+
+  &__pname {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 700;
+  }
+
+  &__pos {
+    display: inline-block;
+    width: 4px;
+    height: 14px;
+    border-radius: 2px;
+    margin-right: 7px;
+    vertical-align: -2px;
+  }
+
+  &__pp {
+    color: $text-muted;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__comments {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: $space;
+  }
+
+  &__comment {
+    display: grid;
+    grid-template-columns: 26px 1fr;
+    gap: $space;
+    align-items: start;
+    font-size: 0.85rem;
+  }
+
+  &__comment-author {
+    font-weight: 700;
+  }
+
+  &__empty,
+  &__self-note {
+    font-size: 0.82rem;
+    margin: 0;
+  }
+
+  &__self-note {
+    margin-top: $space * 1.5;
+  }
+
+  // ── inline crown/grade form ─────────────────────────────────────────
+  &__form {
+    margin-top: $space * 2;
+    padding: $space * 1.5;
+    border: 1px dashed $border;
+    border-radius: $radius;
+    background: $bg-raised;
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: $space * 1.25;
+    flex-wrap: wrap;
+  }
+
+  &__crown {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 12px;
+    border-radius: $radius-sm;
+    border: 1px solid $border;
+    background: $bg;
+    color: $text;
+    font-weight: 650;
+    font-size: 0.82rem;
+    cursor: pointer;
+
+    &.is-on {
+      background: rgba($keeper, 0.2);
+      border-color: $keeper;
+      color: $keeper;
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+
+    @include hover-only {
+      &:not(:disabled):hover {
+        border-color: $keeper;
+      }
+    }
+  }
+
+  &__pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  &__pill {
+    min-width: 30px;
+    height: 28px;
+    padding: 0 4px;
+    border-radius: $radius-sm;
+    border: 1px solid $border;
+    background: $bg;
+    color: $text-muted;
+    font-weight: 700;
+    font-size: 0.75rem;
+    cursor: pointer;
+
+    &.is-on {
+      background: $accent;
+      color: #04211b;
+      border-color: $accent;
+    }
+  }
+
+  &__grade-input {
+    display: flex;
+    gap: $space;
+    margin-top: $space;
+
+    input {
+      flex: 1;
+      min-width: 0;
+      padding: 8px 10px;
+      border-radius: $radius-sm;
+      border: 1px solid $border;
+      background: $bg;
+      color: $text;
+      font: inherit;
+      font-size: 0.85rem;
+    }
+  }
+}

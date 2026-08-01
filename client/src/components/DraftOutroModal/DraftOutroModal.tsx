@@ -1,7 +1,7 @@
-import type { DraftGrade } from '@draft-lobby/shared';
+import type { DraftGrade, LobbySettings } from '@draft-lobby/shared';
 import CloseIcon from '@mui/icons-material/Close';
 import { useMemo, useState } from 'react';
-import { computeDraftGrade } from '../../lib/draftGrade';
+import { computePowerRankings } from '../../lib/powerRankings';
 import { useModalClose } from '../../lib/useModalClose';
 import type {
   DraftCrownVoteRow,
@@ -11,7 +11,8 @@ import type {
   PlayerRow,
   TeamRow,
 } from '../../lib/types';
-import { DraftResultsPanel } from '../DraftResultsPanel/DraftResultsPanel';
+import { GradeBadge } from '../GradeBadge/GradeBadge';
+import { PowerRankingsPanel } from '../PowerRankings/PowerRankingsPanel';
 import { PlayerCard } from '../PlayerCard/PlayerCard';
 import './DraftOutroModal.scss';
 
@@ -22,6 +23,7 @@ interface Props {
   myUserId: string | undefined;
   picks: PickRow[];
   playersById: Map<string, PlayerRow>;
+  settings: LobbySettings;
   crownVotes: DraftCrownVoteRow[];
   grades: DraftGradeRow[];
   locked: boolean;
@@ -39,6 +41,7 @@ export function DraftOutroModal({
   myUserId,
   picks,
   playersById,
+  settings,
   crownVotes,
   grades,
   locked,
@@ -56,7 +59,11 @@ export function DraftOutroModal({
         : [],
     [picks, myTeam],
   );
-  const myGrade = myTeam ? computeDraftGrade(myTeam.id, picks, playersById) : null;
+  const rankings = useMemo(
+    () => computePowerRankings(teams, picks, playersById, settings),
+    [teams, picks, playersById, settings],
+  );
+  const myRank = myTeam ? rankings.find((r) => r.team.id === myTeam.id) ?? null : null;
 
   return (
     <div
@@ -77,12 +84,12 @@ export function DraftOutroModal({
           {step === 0 ? (
             <>
               <h2 className="draft-outro__heading">Draft complete! 🏈</h2>
-              {myGrade && (
+              {myRank && (
                 <div className="draft-outro__grade">
                   <span className="draft-outro__grade-label">Your draft grade</span>
-                  <span className="draft-outro__grade-badge">{myGrade}</span>
+                  <GradeBadge grade={myRank.grade} size={56} />
                   <span className="muted draft-outro__grade-note">
-                    Provisional — this calculation will keep getting refined.
+                    #{myRank.rank} of {rankings.length} by projected starting-lineup points.
                   </span>
                 </div>
               )}
@@ -112,9 +119,12 @@ export function DraftOutroModal({
                 Crown the roster you think won the draft, and leave a grade + a
                 quick note on the rest. {locked ? '' : 'You can change these anytime for the next 24 hours.'}
               </p>
-              <DraftResultsPanel
+              <PowerRankingsPanel
                 teams={teams}
                 members={members}
+                picks={picks}
+                playersById={playersById}
+                settings={settings}
                 myTeamId={myTeam?.id ?? null}
                 myUserId={myUserId}
                 crownVotes={crownVotes}
