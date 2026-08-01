@@ -13,6 +13,16 @@
     max-width: 680px;
     margin-inline: auto;
     padding-inline: $space * 3;
+
+    // Embedded (the "New scoring format" modal, opened from the league
+    // wizard): on mobile, this padding stacks with .dialog__body's own
+    // (Modal.scss) on a card that's already narrow, leaving barely any room
+    // for content. The modal body's padding is enough on its own there.
+    .dialog__body & {
+      @media (max-width: #{$bp-md - 1px}) {
+        padding-inline: 0;
+      }
+    }
   }
 
   // Pinned page header with a full-width bottom border — same shape as every
