@@ -507,7 +507,7 @@ export function KeeperManagerModal({
                 onApplySuggestion={applySuggestion}
                 importBusy={importBusy}
                 importResult={importResult}
-                hint="Paste CSV or JSON with columns "
+                hint="Paste from a spreadsheet, CSV, or JSON with columns "
                 columnsLabel="team, player, position, round"
                 example={KEEPER_IMPORT_EXAMPLE}
                 actionLabel="keeper"
@@ -830,7 +830,9 @@ function ImportPanel({
           {hint}
           <code>{columnsLabel}</code>.{hasTeamCol && ' Team matches by name or draft position;'} position
           is optional and either order works (<code>player, position</code> or{' '}
-          <code>position, player</code>); round defaults to 1 if left blank.
+          <code>position, player</code>); round defaults to 1 if left blank. You can{' '}
+          <strong>paste straight from your keeper spreadsheet</strong> — no need to convert to CSV
+          first.
         </p>
         <button type="button" className="keeper-modal__example" onClick={onDownloadExample}>
           Download example

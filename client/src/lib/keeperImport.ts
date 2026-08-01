@@ -154,8 +154,17 @@ function rawFromJson(o: Record<string, unknown>): RawRow {
   };
 }
 
-function splitCsvLine(line: string): string[] {
-  return line.split(',').map((c) => c.trim().replace(/^"|"$/g, ''));
+/**
+ * Split one row into cells. Copying a range out of a spreadsheet (Google
+ * Sheets, Excel, Numbers) puts it on the clipboard TAB-separated, not comma-
+ * separated — so a straight paste from a keeper-tracking sheet isn't CSV at
+ * all. Detect the delimiter per line (a tab means it's a spreadsheet paste,
+ * otherwise treat it as CSV) so both a pasted sheet and a pasted/edited CSV
+ * work without the commissioner having to convert anything first.
+ */
+function splitRow(line: string): string[] {
+  const delimiter = line.includes('\t') ? '\t' : ',';
+  return line.split(delimiter).map((c) => c.trim().replace(/^"|"$/g, ''));
 }
 
 function looksLikeHeader(cols: string[]): boolean {
@@ -217,7 +226,7 @@ function parseRaw(text: string, hasTeamColumn: boolean): { raws: RawRow[]; parse
   const lines = trimmed.split(/\r?\n/).filter((l) => l.trim());
   const raws: RawRow[] = [];
   lines.forEach((line, i) => {
-    const cols = splitCsvLine(line);
+    const cols = splitRow(line);
     if (i === 0 && looksLikeHeader(cols)) return;
     if (cols.every((c) => !c)) return;
     // Team-scoped import (a team is already picked above the textarea) drops
@@ -229,8 +238,10 @@ function parseRaw(text: string, hasTeamColumn: boolean): { raws: RawRow[]; parse
 }
 
 /**
- * Parse pasted keeper data (CSV or JSON) and resolve each row against the
- * lobby. Columns/keys: team, player, position, round. Round is optional and
+ * Parse pasted keeper data (a spreadsheet copy/TSV, CSV, or JSON) and resolve
+ * each row against the lobby. Columns/keys: team, player, position, round. The
+ * team/player/position/round columns can be in any order (classified by shape).
+ * Round is optional and
  * falls back to `defaultRound`. Team matches by name or draft position; player
  * matches by normalized name (+ position), with D/ST and near-miss handling.
  *
