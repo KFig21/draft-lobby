@@ -502,10 +502,10 @@
   }
 
   // ── Mobile: no horizontal scroll, no frozen columns ──────────────────
-  // Just the four columns that matter — rank, player (pos chip + name/meta),
-  // proj points, ADP — sized to fit a phone screen. The wide Stats column and
-  // the favorites star are dropped (favoriting still works via the row's
-  // detail modal); the player column flexes to absorb the leftover width.
+  // Three columns only — rank, player (chip + full name + team/bye all on one
+  // line), and proj points — sized to fit a phone screen. Stats, ADP and the
+  // favorites star are dropped (favoriting still works via the row's detail
+  // modal); the player column flexes to absorb the leftover width.
   @media (max-width: #{$bp-md - 1px}) {
     min-width: 0; // drop the 640px floor that forced side-scrolling
     table-layout: fixed;
@@ -519,7 +519,8 @@
 
     // Columns not shown on phones.
     &__star,
-    &__stats {
+    &__stats,
+    &__adp {
       display: none;
     }
 
@@ -540,49 +541,46 @@
       text-align: center;
     }
 
-    // Player absorbs the leftover width; name/team truncate rather than wrap.
+    // Player absorbs the leftover width; it stays a single line — chip, then
+    // the name and team/bye inline (name truncates with an ellipsis if long).
     &__player {
       width: auto;
       min-width: 0;
-      gap: $space * 0.75;
+      gap: $space * 0.6;
     }
 
     &__name-block {
+      flex-direction: row;
+      align-items: baseline;
+      gap: $space * 0.5;
       min-width: 0;
     }
 
-    &__name,
-    &__team {
+    &__name {
+      min-width: 0;
       overflow: hidden;
       text-overflow: ellipsis;
     }
 
-    // Pos + within-position rank stacked vertically (no dot divider) instead
-    // of side-by-side, to keep the chip narrow.
-    &__pos {
-      flex-direction: column;
-      gap: 0;
-      min-width: 2rem;
-      padding: 2px 5px;
-      font-size: 0.6rem;
-      line-height: 1.2;
-    }
-
-    &__pos-dot {
-      display: none;
-    }
-
-    // Points (proj total) and ADP: fixed, right-aligned number columns so the
-    // decimals line up and the player column gets everything else.
-    &__points,
-    &__adp {
-      width: 3rem;
-      text-align: right;
+    &__team {
+      flex-shrink: 0;
       white-space: nowrap;
     }
 
-    &__adp {
+    // Position chip stays on one line ("WR · 10"); just tightened.
+    &__pos {
+      min-width: 2.6rem;
+      padding: 2px 5px;
+      font-size: 0.62rem;
+    }
+
+    // Points (proj total): fixed right-aligned number column, everything else
+    // goes to the player column.
+    &__points {
+      width: 3.5rem;
       padding-right: $space;
+      text-align: right;
+      white-space: nowrap;
     }
   }
 }

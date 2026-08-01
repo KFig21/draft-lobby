@@ -22,7 +22,6 @@ import { ScoringRulesModal } from '../../components/LeagueRulesModal/ScoringRule
 import { usePlayers } from '../../hooks/usePlayers';
 import { useFavorites } from '../../hooks/useFavorites';
 import { getDefaultScoringChoice, setDefaultScoringChoice } from '../../lib/defaultScoring';
-import { abbreviatedName } from '../../lib/format';
 import { INJURY_ABBR, INJURY_SEVERITY } from '../../lib/injuryStatus';
 import { scorePlayers } from '../../lib/playerPoints';
 import { supabase } from '../../supabase';
@@ -389,7 +388,7 @@ export function RankingsPage() {
                       </span>
                       <div className="rankings-table__name-block">
                         <span className="rankings-table__name">
-                          {isMobile ? abbreviatedName(p.name) : p.name}
+                          {p.name}
                           {injury && (
                             <span
                               className={`injury-badge injury-badge--${INJURY_SEVERITY[p.injury_status] ?? 'danger'}`}
