@@ -314,6 +314,19 @@
         }
       }
     }
+
+    // Commissioner-only: a skipped cell they can roll the draft back to. Just a
+    // pointer + faint hover fill on hover-capable devices — no persistent tint,
+    // so it doesn't compete with the dashed "action needed" skipped styling.
+    &--rollbackable {
+      cursor: pointer;
+
+      @media (hover: hover) {
+        &:hover {
+          background: rgba($pos-def, 0.16);
+        }
+      }
+    }
   }
 
   &__skipped-label {

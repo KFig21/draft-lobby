@@ -8,6 +8,7 @@ import {
   draftPositionForOverall,
   extractMentionedUsernames,
   openSlots,
+  overallForDraftPosition,
   roundsForSettings,
   secondsForRound,
   type Avatar as AvatarData,
@@ -178,6 +179,13 @@ function PausedDuration({ since }: { since: string }) {
   return <span className="draft__paused-duration">Paused for {text}</span>;
 }
 
+/** What the rollback confirm modal is aimed at: either a real pick, or a
+ * skipped slot (an open slot the clock already passed, so it has no pick row).
+ * Both roll back to the same `overall`; the skip case just has no player. */
+type RollbackTarget =
+  | { kind: 'pick'; pick: PickRow }
+  | { kind: 'skip'; overall: number; round: number; teamId: string };
+
 export function DraftBoardPage() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
@@ -299,7 +307,7 @@ export function DraftBoardPage() {
   const [reqPauseBusy, setReqPauseBusy] = useState(false);
   // The pick to roll back to (inclusive) — set from the toolbar's "Undo" (the
   // last pick) or from a pick modal's "Roll back to this pick" (any earlier one).
-  const [rollbackTarget, setRollbackTarget] = useState<PickRow | null>(null);
+  const [rollbackTarget, setRollbackTarget] = useState<RollbackTarget | null>(null);
   const [rollbackConfirmText, setRollbackConfirmText] = useState('');
   const [showExport, setShowExport] = useState(false);
   const [showKeepers, setShowKeepers] = useState(false);
@@ -1450,6 +1458,21 @@ export function DraftBoardPage() {
     }
   }
 
+  // Commissioner clicked a skipped cell on the board — resolve which slot it is
+  // (round + that team's draft position) and open the rollback confirm aimed at
+  // it. The skip has no pick row, so this goes through the skip target path.
+  function openSkipRollback(round: number, teamId: string) {
+    const team = teamsById.get(teamId);
+    if (!team || !lobby) return;
+    const overall = overallForDraftPosition(
+      round,
+      team.draft_position,
+      teams.length,
+      lobby.settings.draftType,
+    );
+    setRollbackTarget({ kind: 'skip', overall, round, teamId });
+  }
+
   async function requestPause() {
     setReqPauseBusy(true);
     try {
@@ -1560,7 +1583,7 @@ export function DraftBoardPage() {
         <>
           <button
             className="draft__tool-btn"
-            onClick={() => setRollbackTarget(lastPick)}
+            onClick={() => setRollbackTarget({ kind: 'pick', pick: lastPick })}
             disabled={commishBusy}
           >
             <UndoIcon fontSize="small" />
@@ -1642,7 +1665,7 @@ export function DraftBoardPage() {
         )}
         <button
           className="draft__tool-btn"
-          onClick={() => lastPick && setRollbackTarget(lastPick)}
+          onClick={() => lastPick && setRollbackTarget({ kind: 'pick', pick: lastPick })}
           disabled={commishBusy || !lastPick}
         >
           <UndoIcon fontSize="small" />
@@ -2331,6 +2354,7 @@ export function DraftBoardPage() {
             onClockFlashing={onClockCellFlashing}
             onClockElapsedPct={onClockCellElapsedPct}
             skippedCells={isComplete || isStaging ? undefined : skippedCellKeys}
+            onRollbackSkipped={isCommish && !rollbackLocked ? openSkipRollback : undefined}
           />
         </section>
 
@@ -2618,7 +2642,7 @@ export function DraftBoardPage() {
                 rollbackLocked || pickModal.is_keeper
                   ? undefined
                   : () => {
-                      setRollbackTarget(pickModal);
+                      setRollbackTarget({ kind: 'pick', pick: pickModal });
                       setPickModal(null);
                     }
               }
@@ -2632,22 +2656,33 @@ export function DraftBoardPage() {
       {rollbackTarget &&
         (() => {
           const target = rollbackTarget;
-          const player = playersById.get(target.player_id);
-          const team = teamsById.get(target.team_id);
-          // Only real picks are deleted (keepers at/after the target survive
-          // server-side), so the count the user sees must exclude them too.
-          const count = picks.filter((p) => p.overall >= target.overall && !p.is_keeper).length;
+          const isSkip = target.kind === 'skip';
+          const overall = isSkip ? target.overall : target.pick.overall;
+          const round = isSkip ? target.round : target.pick.round;
+          const teamId = isSkip ? target.teamId : target.pick.team_id;
+          const player = isSkip ? undefined : playersById.get(target.pick.player_id);
+          const team = teamsById.get(teamId);
+          // Real picks at/after the target that will be deleted (keepers at/after
+          // survive server-side, so exclude them from the count shown). For a
+          // skipped slot every counted pick sits *after* it (the slot's own
+          // overall is empty); for a real pick the count includes that pick.
+          const count = picks.filter((p) => p.overall >= overall && !p.is_keeper).length;
           const multi = count > 1;
           const confirmWord = 'ROLLBACK';
+          const title = isSkip
+            ? 'Roll back to this skipped pick?'
+            : multi
+              ? `Roll back ${count} picks?`
+              : 'Undo this pick?';
           return (
             <ConfirmModal
-              title={multi ? `Roll back ${count} picks?` : 'Undo this pick?'}
-              confirmLabel={multi ? 'Roll back' : 'Undo pick'}
-              busyLabel={multi ? 'Rolling back…' : 'Undoing…'}
+              title={title}
+              confirmLabel={isSkip || multi ? 'Roll back' : 'Undo pick'}
+              busyLabel={isSkip || multi ? 'Rolling back…' : 'Undoing…'}
               busy={commishBusy}
               danger={multi}
               confirmDisabled={multi && rollbackConfirmText.trim().toUpperCase() !== confirmWord}
-              onConfirm={() => rollbackTo(target.overall)}
+              onConfirm={() => rollbackTo(overall)}
               onClose={() => {
                 setRollbackTarget(null);
                 setRollbackConfirmText('');
@@ -2655,18 +2690,24 @@ export function DraftBoardPage() {
             >
               <div className="rollback-summary">
                 <span className="rollback-summary__player">
-                  {player?.name ?? 'Unknown player'}
+                  {isSkip ? 'Skipped pick' : (player?.name ?? 'Unknown player')}
                 </span>
                 <span className="rollback-summary__meta">
-                  {team?.name ?? 'A team'} · Round {target.round} · Pick {target.overall} overall
+                  {team?.name ?? 'A team'} · Round {round} · Pick {overall} overall
                 </span>
               </div>
               {multi ? (
                 <>
                   <p>
-                    This permanently deletes the last <strong>{count}</strong> picks (from pick{' '}
-                    {target.overall} onward) and puts {team?.name ?? 'that team'} back on the
-                    clock. This can’t be undone.
+                    This puts {team?.name ?? 'that team'} back on the clock at pick {overall} and
+                    permanently deletes the{' '}
+                    <strong>{count}</strong>{' '}
+                    {isSkip ? (
+                      <>pick{count === 1 ? '' : 's'} made after it</>
+                    ) : (
+                      <>picks from pick {overall} onward</>
+                    )}
+                    . This can’t be undone.
                   </p>
                   <label>
                     Type <strong>{confirmWord}</strong> to confirm
@@ -2679,6 +2720,11 @@ export function DraftBoardPage() {
                     />
                   </label>
                 </>
+              ) : isSkip ? (
+                <p>
+                  This puts {team?.name ?? 'that team'} back on the clock at pick {overall}
+                  {count === 1 ? ', undoing the 1 pick made after it' : ''}.
+                </p>
               ) : (
                 <p>This removes the pick and puts that team back on the clock.</p>
               )}

@@ -1581,7 +1581,7 @@ draftRouter.post('/:id/rollback-to', async (req: AuthedRequest, res: Response) =
 
   const { data: lobby } = await supabaseAdmin
     .from('lobbies')
-    .select('status, settings')
+    .select('status, settings, current_overall')
     .eq('id', lobbyId)
     .single();
   if (!lobby) {
@@ -1589,30 +1589,44 @@ draftRouter.post('/:id/rollback-to', async (req: AuthedRequest, res: Response) =
     return;
   }
 
+  const settings = lobby.settings as LobbySettings;
+  const total = settings.teamCount * roundsForSettings(settings);
+
   const { data: targetPick } = await supabaseAdmin
     .from('picks')
     .select('id, player_id, is_keeper')
     .eq('lobby_id', lobbyId)
     .eq('overall', targetOverall)
     .maybeSingle();
-  if (!targetPick) {
-    res.status(409).json({ error: 'That pick no longer exists' });
-    return;
-  }
-  // Keepers are pre-placed picks that belong to the team regardless of draft
-  // order — there's nothing to "re-pick" at a keeper slot, and rolling one back
-  // would strand the kept player back in the pool. Reject it outright (the UI
-  // also hides the option on keepers; this is the server-side backstop).
-  if (targetPick.is_keeper) {
+
+  // The target can be a real pick OR a skipped slot — an open slot the clock
+  // already advanced past (skip-on-timeout). A skipped slot has no pick row, so
+  // it's only a valid target when it's genuinely behind the live frontier and
+  // within the draft; otherwise "no pick here" means a stale/bogus request.
+  const isSkippedTarget = !targetPick;
+  if (isSkippedTarget) {
+    const frontier = (lobby.current_overall as number) ?? total + 1;
+    if (targetOverall < 1 || targetOverall > total || targetOverall >= frontier) {
+      res.status(409).json({ error: 'That pick no longer exists' });
+      return;
+    }
+  } else if (targetPick.is_keeper) {
+    // Keepers are pre-placed picks that belong to the team regardless of draft
+    // order — there's nothing to "re-pick" at a keeper slot, and rolling one
+    // back would strand the kept player back in the pool. Reject it outright
+    // (the UI also hides the option on keepers; this is the server-side
+    // backstop).
     res.status(409).json({ error: "Keepers can't be rolled back" });
     return;
   }
 
-  const { data: rolledPlayer } = await supabaseAdmin
-    .from('players')
-    .select('name')
-    .eq('id', targetPick.player_id)
-    .maybeSingle();
+  const { data: rolledPlayer } = targetPick
+    ? await supabaseAdmin
+        .from('players')
+        .select('name')
+        .eq('id', targetPick.player_id)
+        .maybeSingle()
+    : { data: null };
 
   // Delete only real (non-keeper) picks at/after the target. Keepers sitting in
   // later rounds must survive: deleting them would free their kept player back
@@ -1632,9 +1646,8 @@ draftRouter.post('/:id/rollback-to', async (req: AuthedRequest, res: Response) =
 
   // Resume on the first genuinely open slot at/after the target — not blindly on
   // targetOverall, which could be (or sit just before) a surviving keeper slot
-  // the engine would otherwise stall the clock on. Same rule /start uses.
-  const settings = lobby.settings as LobbySettings;
-  const total = settings.teamCount * roundsForSettings(settings);
+  // the engine would otherwise stall the clock on. Same rule /start uses. (For a
+  // skipped target the slot is already open, so this just returns it.)
   const resumeOverall = (await nextOpenOverall(lobbyId, targetOverall, total)) ?? targetOverall;
   const wasPaused = lobby.status === 'PAUSED';
   // Either way, the team now on the clock gets a fresh full turn — never the
@@ -1665,15 +1678,16 @@ draftRouter.post('/:id/rollback-to', async (req: AuthedRequest, res: Response) =
   // it back off.)
   await supabaseAdmin.from('teams').update({ timeouts: 0 }).eq('lobby_id', lobbyId);
   const who = await usernameOf(req.user!.id);
-  const count = removed?.length ?? 1;
+  const count = removed?.length ?? 0;
   const what = rolledPlayer?.name ? ` (${rolledPlayer.name})` : '';
-  await postSystemMessage(
-    lobbyId,
-    req.user!.id,
-    count === 1
+  // A skipped target reopens the slot and rewinds the picks after it, so the
+  // wording leads with the skip rather than an "undo pick N" the slot never had.
+  const message = isSkippedTarget
+    ? `↩️ ${who} rolled back to skipped pick ${targetOverall}${count ? ` (${count} pick${count === 1 ? '' : 's'} undone)` : ''}`
+    : count <= 1
       ? `↩️ ${who} rolled back pick ${targetOverall}${what}`
-      : `↩️ ${who} rolled back ${count} picks to pick ${targetOverall}${what}`,
-  );
+      : `↩️ ${who} rolled back ${count} picks to pick ${targetOverall}${what}`;
+  await postSystemMessage(lobbyId, req.user!.id, message);
   res.json({ ok: true, rolledBackOverall: targetOverall, count });
 });
 

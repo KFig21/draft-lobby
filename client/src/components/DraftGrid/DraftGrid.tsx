@@ -58,6 +58,10 @@ interface Props {
    * pickable, but with no live clock (skip-on-timeout). Rendered distinctly
    * from the single timed on-the-clock cell. */
   skippedCells?: Set<string>;
+  /** Commissioner only: click another team's skipped cell to roll the draft
+   * back to it. When set, skipped cells the viewer doesn't own become buttons.
+   * (round, teamId) identifies the slot; the page resolves it to an overall. */
+  onRollbackSkipped?: (round: number, teamId: string) => void;
 }
 
 /**
@@ -88,6 +92,7 @@ export function DraftGrid({
   onClockFlashing,
   onClockElapsedPct,
   skippedCells,
+  onRollbackSkipped,
 }: Props) {
   // Index picks by "round:teamId" for O(1) cell lookup.
   const byCell = new Map<string, PickRow>();
@@ -166,6 +171,10 @@ export function DraftGrid({
                   const isMyClock = isOnClock && team.id === myTeamId;
                   const isMySkipped = isSkipped && team.id === myTeamId;
                   const isMyPickable = isMyClock || isMySkipped;
+                  // Commissioner can roll the draft back to another team's
+                  // skipped slot (their own skipped cell keeps the pick
+                  // shortcut instead). Set only when onRollbackSkipped is given.
+                  const canRollbackHere = isSkipped && !isMySkipped && !!onRollbackSkipped;
                   if (pick && player) {
                     if (cellStyle === 'bold') {
                       return (
@@ -225,6 +234,11 @@ export function DraftGrid({
                       />
                     );
                   }
+                  const cellAction = isMyPickable
+                    ? onMyClockCellClick
+                    : canRollbackHere
+                      ? () => onRollbackSkipped!(round, team.id)
+                      : undefined;
                   return (
                     <td
                       key={team.id}
@@ -234,16 +248,19 @@ export function DraftGrid({
                         isOnClock && onClockUrgency ? ` draft-grid__cell--${onClockUrgency}` : ''
                       }${isOnClock && onClockFlashing ? ' draft-grid__cell--flash' : ''}${
                         isSkipped ? ' draft-grid__cell--skipped' : ''
-                      }${isMySkipped ? ' draft-grid__cell--skipped-mine' : ''}`}
-                      onClick={isMyPickable ? onMyClockCellClick : undefined}
-                      role={isMyPickable ? 'button' : undefined}
-                      tabIndex={isMyPickable ? 0 : undefined}
+                      }${isMySkipped ? ' draft-grid__cell--skipped-mine' : ''}${
+                        canRollbackHere ? ' draft-grid__cell--rollbackable' : ''
+                      }`}
+                      onClick={cellAction}
+                      title={canRollbackHere ? 'Roll the draft back to this skipped pick' : undefined}
+                      role={cellAction ? 'button' : undefined}
+                      tabIndex={cellAction ? 0 : undefined}
                       onKeyDown={
-                        isMyPickable
+                        cellAction
                           ? (e) => {
                               if (e.key === 'Enter' || e.key === ' ') {
                                 e.preventDefault();
-                                onMyClockCellClick?.();
+                                cellAction();
                               }
                             }
                           : undefined
