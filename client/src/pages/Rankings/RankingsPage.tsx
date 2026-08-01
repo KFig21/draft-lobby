@@ -347,18 +347,9 @@ export function RankingsPage() {
                 <th className="rankings-table__star" aria-label="Favorite" />
                 <th className="rankings-table__rank">{isMobile ? '' : 'Rank'}</th>
                 <SortHeader label="Player" sortKeyFor="name" className="rankings-table__player" />
-                {isMobile ? (
-                  <>
-                    <SortHeader label="Points" sortKeyFor="points" className="rankings-table__points" />
-                    <th>Stats</th>
-                  </>
-                ) : (
-                  <>
-                    <th>Stats</th>
-                    <SortHeader label="Points" sortKeyFor="points" className="rankings-table__points" />
-                  </>
-                )}
-                <SortHeader label="ADP" sortKeyFor="adp" />
+                <th className="rankings-table__stats">Stats</th>
+                <SortHeader label="Points" sortKeyFor="points" className="rankings-table__points" />
+                <SortHeader label="ADP" sortKeyFor="adp" className="rankings-table__adp" />
               </tr>
             </thead>
             <tbody>
@@ -414,21 +405,10 @@ export function RankingsPage() {
                         </span>
                       </div>
                     </td>
-                    {isMobile ? (
-                      <>
-                        <td className="rankings-table__points">
-                          {points != null ? points.toFixed(1) : '—'}
-                        </td>
-                        <td className="rankings-table__stats muted">{statLine ?? '—'}</td>
-                      </>
-                    ) : (
-                      <>
-                        <td className="rankings-table__stats muted">{statLine ?? '—'}</td>
-                        <td className="rankings-table__points">
-                          {points != null ? points.toFixed(1) : '—'}
-                        </td>
-                      </>
-                    )}
+                    <td className="rankings-table__stats muted">{statLine ?? '—'}</td>
+                    <td className="rankings-table__points">
+                      {points != null ? points.toFixed(1) : '—'}
+                    </td>
                     <td className="rankings-table__adp muted">
                       {p.adp != null ? p.adp.toFixed(1) : '—'}
                     </td>

@@ -501,97 +501,64 @@
     text-align: center;
   }
 
-  // ── Mobile: freeze star/rank/player, tighten spacing ─────────────────
-  // Dropping the 640px floor and shrinking the padding/pos-badge/name-block
-  // below is most of "too much side scrolling, too much space" — the frozen
-  // trio + 3 remaining columns need far less room than the desktop layout.
-  // Several selectors below intentionally repeat an exact selector already
-  // declared above (th:first-child, td:first-child, …) so the override wins
-  // by matching specificity + later source position, not by being *more*
-  // specific — same technique as the css-specificity-order-trap lesson
-  // elsewhere in this app, applied deliberately instead of left to chance.
+  // ── Mobile: no horizontal scroll, no frozen columns ──────────────────
+  // Just the four columns that matter — rank, player (pos chip + name/meta),
+  // proj points, ADP — sized to fit a phone screen. The wide Stats column and
+  // the favorites star are dropped (favoriting still works via the row's
+  // detail modal); the player column flexes to absorb the leftover width.
   @media (max-width: #{$bp-md - 1px}) {
-    min-width: 0;
+    min-width: 0; // drop the 640px floor that forced side-scrolling
+    table-layout: fixed;
+    width: 100%;
     font-size: 0.82rem;
 
     th,
     td {
-      padding: $space * 0.5 $space * 0.6;
+      padding: $space * 0.6 $space * 0.5;
     }
 
-    th:last-child,
-    td:last-child {
-      padding-right: $space;
+    // Columns not shown on phones.
+    &__star,
+    &__stats {
+      display: none;
     }
 
     // The desktop full-bleed-header box-shadow (on the outer th) isn't needed
-    // here — the table already fills the width — and it interferes with the
-    // now-sticky corner header cells, so switch it off.
+    // here — the table already fills the width — and reaches off-screen, so
+    // switch it off.
     th:first-child,
     th:last-child {
       box-shadow: none;
       clip-path: none;
     }
 
-    // No favorites column on mobile — the row's detail modal still favorites,
-    // and dropping it here reclaims a whole column of frozen width.
-    &__star {
-      display: none;
-    }
-
-    // Rank + player stay put while Points/Stats/ADP scroll underneath. Each
-    // needs its own opaque fill (sticky cells are otherwise transparent), and
-    // the row-hover wash (painted on <tr>) is repainted here explicitly since
-    // it'd otherwise be hidden right where a thumb taps. Rank is a fixed-width
-    // number column, so the sticky offsets are hardcoded: rank 32 → player 32.
-    &__rank,
-    &__player {
-      position: sticky;
-      z-index: 4; // above the scrolling body cells
-      background: $bg-raised;
-    }
-
-    &__row:hover &__rank,
-    &__row:hover &__player {
-      background: $bg-overlay;
-    }
-
+    // Rank: a tight fixed number column, no wasted width.
     &__rank {
-      left: 0;
-      width: 32px;
+      width: 1.75rem;
       padding-left: $space;
       padding-right: 0;
       text-align: center;
     }
 
+    // Player absorbs the leftover width; name/team truncate rather than wrap.
     &__player {
-      left: 32px;
-      // A little breathing room between the pos chip and the name/team block.
-      gap: $space * 0.75;
+      width: auto;
       min-width: 0;
-      max-width: 160px;
-      // box-shadow: 2px 0px 8px 0px rgba(0, 0, 0, 0.15);
+      gap: $space * 0.75;
     }
 
-    // Leading scrollable column: right-aligned so the numbers line up on the
-    // decimal, with a wider left gutter so they clear the frozen player column
-    // and a little right gutter before Stats.
-    &__points {
-      padding-left: $space * 2;
-      padding-right: $space * 1.25;
-      text-align: right;
+    &__name-block {
+      min-width: 0;
     }
 
-    // Frozen header cells (top-left corner) must outrank BOTH the scrolling
-    // headers (z 10) and their own frozen body cells (z 4), so nothing slides
-    // over them in either scroll direction.
-    th.rankings-table__rank,
-    th.rankings-table__player {
-      z-index: 12;
+    &__name,
+    &__team {
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     // Pos + within-position rank stacked vertically (no dot divider) instead
-    // of side-by-side, to reclaim horizontal room in the frozen player column.
+    // of side-by-side, to keep the chip narrow.
     &__pos {
       flex-direction: column;
       gap: 0;
@@ -605,14 +572,17 @@
       display: none;
     }
 
-    &__name-block {
-      max-width: 120px;
+    // Points (proj total) and ADP: fixed, right-aligned number columns so the
+    // decimals line up and the player column gets everything else.
+    &__points,
+    &__adp {
+      width: 3rem;
+      text-align: right;
+      white-space: nowrap;
     }
 
-    &__name,
-    &__team {
-      overflow: hidden;
-      text-overflow: ellipsis;
+    &__adp {
+      padding-right: $space;
     }
   }
 }
