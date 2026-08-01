@@ -126,6 +126,17 @@
     .button {
       flex: 1;
     }
+
+    // Embedded (e.g. the "Set up a league" modal, opened from the lobby
+    // wizard): there's no mobile bottom nav inside the modal to clear, so the
+    // standalone page's 64px sticky offset just left this floating with a
+    // gap over the modal's own content instead of flush at the bottom.
+    // Plain static flow (like the scoring-format modal's own footer) is the
+    // right behavior here — the modal body's own bottom padding is enough.
+    &--embedded {
+      position: static;
+      bottom: auto;
+    }
   }
 
   &__template select {

@@ -210,6 +210,11 @@
     }
   }
 
+  &__ruleset-wrap {
+    position: relative;
+    display: inline-flex;
+  }
+
   &__ruleset {
     padding: $space * 0.75 $space;
     border: 1px solid $border;
@@ -218,6 +223,30 @@
     color: $text;
     font-size: 0.85rem;
     font-weight: 600;
+
+    // Mobile: the native arrow doesn't reliably respect `color` (iOS renders
+    // it near-black regardless of theme, illegible on this dark background)
+    // — hide it and let &__ruleset-chevron (a real, themed icon) draw it
+    // instead.
+    @media (max-width: #{$bp-md - 1px}) {
+      appearance: none;
+      -webkit-appearance: none;
+      padding-right: $space * 3;
+    }
+  }
+
+  &__ruleset-chevron {
+    display: none;
+
+    @media (max-width: #{$bp-md - 1px}) {
+      display: block;
+      position: absolute;
+      top: 50%;
+      right: $space * 0.6;
+      transform: translateY(-50%);
+      color: $text-muted;
+      pointer-events: none;
+    }
   }
 
   // Shared by "+ New format" and "View ruleset" — the flex/gap only matters
@@ -574,9 +603,13 @@
       white-space: nowrap;
     }
 
-    // Position chip stays on one line ("WR · 10"); just tightened.
+    // Position chip stays on one line ("WR · 10"); just tightened. A fixed
+    // width (not min-width) so every chip lines up the same regardless of
+    // whether the within-position rank is 1 or 2 digits — min-width let
+    // double-digit ranks stretch wider than single-digit ones, the "uneven
+    // chip width" bug.
     &__pos {
-      min-width: 2.6rem;
+      width: 3.4rem;
       padding: 2px 5px;
       font-size: 0.62rem;
     }

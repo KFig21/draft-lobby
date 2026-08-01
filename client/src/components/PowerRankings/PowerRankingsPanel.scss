@@ -282,10 +282,19 @@
     display: flex;
     align-items: center;
     gap: $space;
+
+    // Mobile only: the votes-chip (below) shares this line. Without wrap +
+    // a bar floor, it competed with the bar for space and squeezed the bar
+    // down to a near-invisible sliver — wrap lets the chip drop to its own
+    // line instead once it doesn't fit.
+    @media (max-width: #{$bp-md - 1px}) {
+      flex-wrap: wrap;
+    }
   }
 
   &__bar {
-    flex: 1;
+    flex: 1 1 50px;
+    min-width: 50px;
     max-width: 240px;
     height: 7px;
     border-radius: 4px;
@@ -305,6 +314,7 @@
   }
 
   &__pts {
+    flex-shrink: 0;
     font-size: 0.78rem;
     color: $text-muted;
     white-space: nowrap;
@@ -320,6 +330,7 @@
   // layout has a dedicated votes/peer column instead).
   &__votes-chip {
     display: inline-flex;
+    flex-shrink: 0;
     align-items: center;
     gap: 3px;
     font-size: 0.78rem;
@@ -484,7 +495,7 @@
     display: grid;
     grid-template-columns: 26px 1fr;
     gap: $space;
-    align-items: start;
+    align-items: center;
     font-size: 0.85rem;
   }
 

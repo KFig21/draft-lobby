@@ -10,6 +10,7 @@ import {
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import CloseIcon from '@mui/icons-material/Close';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import TuneIcon from '@mui/icons-material/Tune';
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
@@ -231,29 +232,35 @@ export function RankingsPage() {
           </button>
         </div>
         <div className="rankings__controls">
-          <select
-            className="rankings__ruleset"
-            value={rulesetChoice}
-            onChange={(e) => updateRulesetChoice(e.target.value)}
-            aria-label="Ranking scoring format"
-          >
-            <optgroup label="Presets">
-              {(Object.keys(SCORING_PRESETS) as (keyof typeof SCORING_PRESETS)[]).map((p) => (
-                <option key={p} value={`preset:${p}`}>
-                  {SCORING_PRESETS[p].label}
-                </option>
-              ))}
-            </optgroup>
-            {scoringFormats.length > 0 && (
-              <optgroup label="Your saved formats">
-                {scoringFormats.map((f) => (
-                  <option key={f.id} value={`format:${f.id}`}>
-                    {f.name}
+          <span className="rankings__ruleset-wrap">
+            <select
+              className="rankings__ruleset"
+              value={rulesetChoice}
+              onChange={(e) => updateRulesetChoice(e.target.value)}
+              aria-label="Ranking scoring format"
+            >
+              <optgroup label="Presets">
+                {(Object.keys(SCORING_PRESETS) as (keyof typeof SCORING_PRESETS)[]).map((p) => (
+                  <option key={p} value={`preset:${p}`}>
+                    {SCORING_PRESETS[p].label}
                   </option>
                 ))}
               </optgroup>
-            )}
-          </select>
+              {scoringFormats.length > 0 && (
+                <optgroup label="Your saved formats">
+                  {scoringFormats.map((f) => (
+                    <option key={f.id} value={`format:${f.id}`}>
+                      {f.name}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+            </select>
+            {/* Native select arrows don't reliably pick up `color` (iOS in
+                particular renders a near-black chevron regardless of theme) —
+                hide it and draw our own so it's visible on a dark background. */}
+            <KeyboardArrowDownIcon className="rankings__ruleset-chevron" fontSize="small" />
+          </span>
           <button
             type="button"
             className="rankings__new-format"

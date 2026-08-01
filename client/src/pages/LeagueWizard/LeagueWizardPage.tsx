@@ -131,7 +131,9 @@ export function LeagueWizardPage({ embedded = false, onSaved, onCancel }: Props 
 
       {error && <p className="wizard__error">{error}</p>}
 
-      <div className="wizard__submit-row">
+      <div
+        className={`wizard__submit-row${embedded ? ' wizard__submit-row--embedded' : ''}`}
+      >
         {embedded && onCancel && (
           <button type="button" className="button" onClick={onCancel}>
             Cancel

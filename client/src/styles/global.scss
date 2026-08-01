@@ -363,6 +363,7 @@ textarea {
   border-radius: 999px;
   background: $bg;
   width: fit-content;
+  max-width: 100%;
 
   &__opt {
     padding: $space * 0.75 $space * 2;
@@ -377,6 +378,23 @@ textarea {
     &--on {
       background: $primary;
       color: #fff;
+    }
+  }
+
+  // A `width: fit-content` row of several options (e.g. the lobby wizard's
+  // 4-option chat-lock unit picker) can be wider than a phone screen, and
+  // being an inline-flex block it doesn't shrink to its container — it just
+  // spills past the edge instead. Wrap and let each option flex, and trim
+  // the padding a bit, so it folds into 2 rows instead of overflowing.
+  @media (max-width: 480px) {
+    flex-wrap: wrap;
+    justify-content: center;
+    border-radius: $radius;
+
+    &__opt {
+      flex: 1 1 auto;
+      padding: $space * 0.6 $space * 1.1;
+      font-size: 0.82rem;
     }
   }
 }
@@ -561,6 +579,13 @@ textarea {
   font-size: 0.75rem;
   font-weight: 700;
   white-space: nowrap;
+
+  // Redundant with the scoring-format <select> right below it, and on a
+  // narrow screen it just eats space next to the "Scoring format" heading —
+  // drop it there; the select is the source of truth either way.
+  @media (max-width: 480px) {
+    display: none;
+  }
 }
 
 // Status pill for "this is automated / read-only" indicators (bot auto-draft,

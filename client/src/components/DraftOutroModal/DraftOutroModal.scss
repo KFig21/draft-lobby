@@ -51,6 +51,22 @@
   &__body {
     overflow-y: auto;
     padding: $space * 3;
+
+    // Step 2 embeds <PowerRankingsPanel>, which pads itself for its other
+    // (unbordered, full-height) contexts — stacked on top of this modal's
+    // own padding it read as way too much dead space in an already-narrow
+    // dialog. Let the modal's padding be the only source of spacing here.
+    .power-rankings {
+      height: auto;
+      padding: 0;
+      overflow: visible;
+    }
+  }
+
+  @media (max-width: 480px) {
+    &__body {
+      padding: $space * 2 $space * 1.5;
+    }
   }
 
   &__heading {
