@@ -296,6 +296,13 @@
   // below). The table itself re-centers within a 1100px lane.
   max-width: none;
   padding-inline: 0;
+
+  // Mobile: the table is sized to fit the viewport (table-layout: fixed), so
+  // there should be nothing to scroll sideways — lock it down explicitly so a
+  // stray overflow can't reintroduce the side-scroll. Vertical scroll stays.
+  @media (max-width: #{$bp-md - 1px}) {
+    overflow-x: hidden;
+  }
 }
 
 .rankings-table {
