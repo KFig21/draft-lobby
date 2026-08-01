@@ -25,6 +25,10 @@
   // Staging status blue: same story as --keeper above (~7.3:1 here, ~2.3:1 on
   // the light theme's near-white surfaces).
   --info: #4aa8ff;
+  // Warning amber: same story as --keeper/--info above — bright enough here,
+  // too washed out as text/border/icon color on the light theme's near-white
+  // surfaces.
+  --warning: #f6a642;
 }
 
 :root[data-theme='light'] {
@@ -42,6 +46,7 @@
   --cell-bg: #ffffff;
   --keeper: #c39124;
   --info: #0f6fc0;
+  --warning: #c9862b;
 }
 
 // ── Scrollbars (theme-aware via the CSS vars above) ──────────────────
@@ -495,7 +500,7 @@ textarea {
   }
 
   &--paused {
-    background: rgba($warning, 0.2);
+    background: color-mix(in srgb, $warning 20%, transparent);
     color: $warning;
   }
 
@@ -535,7 +540,7 @@ textarea {
   &--warn {
     color: $warning;
     border: 1px solid $warning;
-    background: rgba($warning, 0.12);
+    background: color-mix(in srgb, $warning 12%, transparent);
   }
 
   &--danger {
@@ -579,7 +584,7 @@ textarea {
   // "This is locked/unavailable" reads as a caution, not a routine status —
   // distinguish it from the default teal (bot / automated) meaning.
   &--warn {
-    background: rgba($warning, 0.16);
+    background: color-mix(in srgb, $warning 16%, transparent);
     color: $warning;
   }
 }

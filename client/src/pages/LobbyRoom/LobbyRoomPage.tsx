@@ -975,7 +975,12 @@ export function LobbyRoomPage() {
                       <span className="team-list__name">{team.name}</span>
                     )}
                     {!editing && (
-                      <>
+                      // Status chips + action icons, grouped as one flex item —
+                      // on a narrow phone this either stays inline after the
+                      // name or, once it doesn't fit, wraps as a whole onto
+                      // its own second line instead of squeezing every chip
+                      // and icon down individually (see .team-list__trailing).
+                      <span className="team-list__trailing">
                         {/* Status chips sit right next to the team name. */}
                         {!team.is_bot && ownerUsername(team.owner_id) && (
                           <span className="team-list__chip team-list__chip--owner">
@@ -1100,7 +1105,7 @@ export function LobbyRoomPage() {
                             <PersonAddAlt1Icon fontSize="small" />
                           </button>
                         )}
-                      </>
+                      </span>
                     )}
                   </li>
                 );

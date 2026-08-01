@@ -9,7 +9,7 @@ import {
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import EmojiEventsOutlinedIcon from '@mui/icons-material/EmojiEventsOutlined';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import HelpOutlineIcon from '@mui/icons-material/HelpOutlined';
+import InfoOutlineIcon from '@mui/icons-material/InfoOutlined';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import { useMemo, useState } from 'react';
 import { mostCommonGrade } from '../../lib/draftGrade';
@@ -107,16 +107,18 @@ export function PowerRankingsPanel({
       <div className="power-rankings__inner">
         <header className="power-rankings__head">
           <div className="power-rankings__title">
-            <h2>Power Rankings</h2>
-            <span className="power-rankings__badge">{teams.length} teams</span>
+            <div className="power-rankings__title-main">
+              <h2>Power Rankings</h2>
             <button
               type="button"
               className="power-rankings__help"
               onClick={() => setShowHelp(true)}
+              aria-label="How grades work"
+              title="How grades work"
             >
-              <HelpOutlineIcon fontSize="inherit" />
-              How grades work
+              <InfoOutlineIcon fontSize="inherit" />
             </button>
+            </div>
           </div>
           <p className="power-rankings__sub">
             Graded on projected points from each team’s optimal <b>starting lineup</b> — the
@@ -256,7 +258,7 @@ function RankRow({
   const ownerName = team.owner_id ? usernameById.get(team.owner_id) : null;
 
   return (
-    <li className={`pr-row${rank === 1 ? ' pr-row--top' : ''}${open ? ' is-open' : ''}`}>
+    <li className={`pr-row${isSelf ? ' pr-row--mine' : ''}${open ? ' is-open' : ''}`}>
       <button
         type="button"
         className="pr-row__main"
@@ -275,8 +277,8 @@ function RankRow({
 
         <span className="pr-row__team">
           <span className="pr-row__name">
-            {team.name}
-            {isSelf && <span className="muted"> (you)</span>}
+            <span className="pr-row__name-text">{team.name}</span>
+            {ownerName && <span className="pr-row__owner muted">@{ownerName}</span>}
           </span>
           <span className="pr-row__meta">
             <span className="pr-row__bar">
@@ -291,7 +293,6 @@ function RankRow({
               </span>
             )}
           </span>
-          {ownerName && <span className="pr-row__owner muted">@{ownerName}</span>}
         </span>
 
         <span className="pr-row__side">

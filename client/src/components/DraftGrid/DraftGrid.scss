@@ -267,7 +267,7 @@
       cursor: pointer;
 
       &.draft-grid__cell--warning {
-        background: rgba($warning, 0.14);
+        background: color-mix(in srgb, $warning 14%, transparent);
       }
 
       &.draft-grid__cell--danger {
@@ -280,7 +280,7 @@
         }
 
         &.draft-grid__cell--warning:hover {
-          background: rgba($warning, 0.22);
+          background: color-mix(in srgb, $warning 22%, transparent);
         }
 
         &.draft-grid__cell--danger:hover {
@@ -350,7 +350,7 @@
       background 300ms ease;
 
     .draft-grid__cell--warning & {
-      background: rgba($warning, 0.45);
+      background: color-mix(in srgb, $warning 45%, transparent);
     }
 
     .draft-grid__cell--danger & {

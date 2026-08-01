@@ -478,12 +478,12 @@
   &--on {
     border-color: $warning;
     color: $warning;
-    background: rgba($warning, 0.12);
+    background: color-mix(in srgb, $warning 12%, transparent);
 
     &:hover:not(:disabled) {
       border-color: $warning;
       color: $warning;
-      background: rgba($warning, 0.2);
+      background: color-mix(in srgb, $warning 20%, transparent);
     }
   }
 }
@@ -515,6 +515,14 @@
   &__row {
     display: flex;
     align-items: center;
+    // Wrap, not squeeze: on a narrow phone a row with lots of chips/action
+    // icons (owner + commissioner + champion badges, edit/remove/promote
+    // buttons) doesn't fit next to the name on one line. &__trailing (below)
+    // groups all of that into one flex item, so it either stays inline after
+    // the name or — once it doesn't fit — wraps as a whole onto its own
+    // second line, instead of every chip/icon shrinking into an unreadable
+    // pile-up.
+    flex-wrap: wrap;
     gap: $space * 1.5 - 2px;
     background: $bg-raised;
     border: 1px solid $border;
@@ -654,6 +662,18 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  // Status chips + action icons after the name — see the &--row wrap comment
+  // above for why this is grouped into one flex item instead of being loose
+  // siblings of &__row.
+  &__trailing {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: $space * 1.5 - 2px;
+    flex: 1 1 auto;
+    min-width: 0;
   }
 
   &__you {

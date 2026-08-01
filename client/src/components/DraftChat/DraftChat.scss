@@ -57,7 +57,7 @@
     text-align: center;
     padding: $space * 0.5 $space * 1.25;
     border-radius: 999px;
-    background: rgba($warning, 0.14);
+    background: color-mix(in srgb, $warning 14%, transparent);
     color: $warning;
     font-size: 0.8rem;
     font-weight: 600;

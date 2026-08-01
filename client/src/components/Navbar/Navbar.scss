@@ -238,7 +238,7 @@
     flex-shrink: 0;
     padding: 2px 7px;
     border-radius: 999px;
-    background: rgba($warning, 0.2);
+    background: color-mix(in srgb, $warning 20%, transparent);
     color: $warning;
     font-size: 0.68rem;
     font-weight: 800;

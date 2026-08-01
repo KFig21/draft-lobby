@@ -23,8 +23,17 @@
 
   &__title {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: $space * 1.5;
+    flex-wrap: wrap;
+  }
+
+  // Groups the heading + team-count badge so they wrap as one unit — only
+  // &__help (below) ever breaks onto its own line on narrow screens.
+  &__title-main {
+    display: flex;
+    align-items: center;
+    gap: $space;
     flex-wrap: wrap;
 
     h2 {
@@ -51,33 +60,32 @@
     }
   }
 
-  // "How grades work" — opens the explainer modal. Pushed to the far right of
-  // the title row.
+  // "How grades work" — opens the explainer modal. Icon-only round button so
+  // it never forces an awkward wrap on narrow screens; pushed flush right of
+  // the title row once there's room for that.
   &__help {
-    margin-left: auto;
-    align-self: center;
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    padding: 4px 10px;
-    border: 1px solid $border;
-    border-radius: 999px;
+    justify-content: center;
+    flex-shrink: 0;
+    border-radius: 50%;
+    border: none;
     background: $bg-raised;
     color: $text-muted;
-    font: inherit;
-    font-size: 0.75rem;
-    font-weight: 600;
     cursor: pointer;
 
     svg {
-      font-size: 0.95rem;
+      font-size: 1.15rem;
     }
 
     @include hover-only {
       &:hover {
-        color: $text;
-        border-color: $primary;
+        color: $primary;
       }
+    }
+
+    @include md {
+      margin-left: auto;
     }
   }
 
@@ -135,18 +143,9 @@
     padding: $space $space * 1.25;
     font-size: 0.78rem;
     color: $warning;
-    background: rgba($warning, 0.12);
-    border: 1px solid rgba($warning, 0.35);
+    background: color-mix(in srgb, $warning 12%, transparent);
+    border: 1px solid color-mix(in srgb, $warning 35%, transparent);
     border-radius: $radius-sm;
-
-    // The bright warning orange is too low-contrast as text on the light
-    // theme's near-white surfaces — darken the text + border there (same
-    // reasoning as $info/$keeper being theme-aware).
-    :root[data-theme='light'] & {
-      color: color-mix(in srgb, $warning 45%, #000);
-      border-color: color-mix(in srgb, $warning 60%, #000);
-      background: rgba($warning, 0.16);
-    }
   }
 
   &__list {
@@ -165,11 +164,15 @@
   @include card-surface;
   overflow: hidden;
 
-  &--top {
-    border-color: rgba($accent, 0.55);
+  // The viewer's own team, and only the viewer's own team — a solid 2px ring
+  // so it reads at a glance even when scrolling past. (Rank 1 gets no border
+  // treatment of its own; the gold medal circle already marks it.)
+  &--mine {
+    border-width: 2px;
+    border-color: $accent;
 
     :root[data-theme='light'] & {
-      border-color: rgba($primary, 0.45);
+      border-color: $primary;
     }
   }
 
@@ -217,14 +220,31 @@
       }
     }
 
+    // Metallic finish: a diagonal highlight-to-shade gradient plus a subtle
+    // inset rim + drop shadow, so each medal reads as a polished disc rather
+    // than a flat color chip.
     &--r1 {
-      background: #f5c518; // gold
+      background: linear-gradient(135deg, #fde08a 0%, #f5c518 45%, #c9930a 100%);
+      box-shadow:
+        inset 0 1px 1px rgba(255, 255, 255, 0.6),
+        inset 0 -2px 3px rgba(0, 0, 0, 0.25),
+        0 1px 3px rgba(0, 0, 0, 0.25);
     }
+
     &--r2 {
-      background: #c4ccd2; // silver
+      background: linear-gradient(135deg, #f1f4f6 0%, #c4ccd2 45%, #8f989e 100%);
+      box-shadow:
+        inset 0 1px 1px rgba(255, 255, 255, 0.7),
+        inset 0 -2px 3px rgba(0, 0, 0, 0.2),
+        0 1px 3px rgba(0, 0, 0, 0.2);
     }
+
     &--r3 {
-      background: #cd7f32; // bronze
+      background: linear-gradient(135deg, #e3a466 0%, #cd7f32 45%, #96591f 100%);
+      box-shadow:
+        inset 0 1px 1px rgba(255, 255, 255, 0.45),
+        inset 0 -2px 3px rgba(0, 0, 0, 0.3),
+        0 1px 3px rgba(0, 0, 0, 0.25);
     }
   }
 
@@ -243,11 +263,19 @@
   }
 
   &__name {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  &__name-text {
     font-weight: 700;
     font-size: 0.95rem;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    min-width: 0;
   }
 
   &__meta {
@@ -305,10 +333,8 @@
   }
 
   &__owner {
-    font-size: 0.72rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    flex-shrink: 0;
+    font-size: 0.78rem;
   }
 
   // Desktop-only votes + peer-grade column.
@@ -506,7 +532,7 @@
     cursor: pointer;
 
     &.is-on {
-      background: rgba($keeper, 0.2);
+      background: color-mix(in srgb, $keeper 20%, transparent);
       border-color: $keeper;
       color: $keeper;
     }

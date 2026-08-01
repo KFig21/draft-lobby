@@ -17,7 +17,10 @@ $primary: #137a83;
 $primary-hover: #178691;
 $accent: #3fd6a5;
 $danger: #f8577d;
-$warning: #f6a642;
+// Theme-aware (see --warning in global.scss) — same reason as $keeper/$info
+// below: bright enough on dark surfaces, too washed out as text/border/icon
+// color on light ones.
+$warning: var(--warning);
 // Keepers — a distinct gold, used for keeper cell outlines + the keeper manager.
 // Unlike the brand colors above, this one IS theme-aware (see global.scss's
 // --keeper): the bright dark-mode gold has ~2:1 contrast on the light theme's
