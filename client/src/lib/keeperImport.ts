@@ -204,7 +204,22 @@ function classifyRestCols(cols: string[]): { player: string; position: string; r
   return { player: remaining[0] ?? '', position, round };
 }
 
-function parseRaw(text: string, hasTeamColumn: boolean): { raws: RawRow[]; parseError: string | null } {
+/**
+ * `resolveTeamName` matches a team by NAME only; `resolveTeamAny` also accepts a
+ * draft-slot number. Both are used by the import-all path to attach a team to
+ * each row two universal ways (auto-detected, no mode toggle):
+ *   1. Team column — a cell (name or slot #) on the row itself.
+ *   2. Section header — a line that is just a team NAME (not a bare number, so
+ *      a stray "5" can't be mistaken for a section); rows below it inherit that
+ *      team until the next header. Explicit team columns override the section.
+ * The team-scoped ("Import by team") path passes neither and skips all of this.
+ */
+function parseRaw(
+  text: string,
+  hasTeamColumn: boolean,
+  resolveTeamName: (s: string) => string | null,
+  resolveTeamAny: (s: string) => string | null,
+): { raws: RawRow[]; parseError: string | null } {
   const trimmed = text.trim();
   if (!trimmed) return { raws: [], parseError: null };
 
@@ -225,14 +240,40 @@ function parseRaw(text: string, hasTeamColumn: boolean): { raws: RawRow[]; parse
 
   const lines = trimmed.split(/\r?\n/).filter((l) => l.trim());
   const raws: RawRow[] = [];
+  // The team named by the most recent section header — inherited by following
+  // rows that don't carry their own team column (import-all only).
+  let sectionTeam = '';
   lines.forEach((line, i) => {
     const cols = splitRow(line);
-    if (i === 0 && looksLikeHeader(cols)) return;
-    if (cols.every((c) => !c)) return;
-    // Team-scoped import (a team is already picked above the textarea) drops
-    // the team column entirely — every column here is player/position/round.
-    const { player, position, round } = classifyRestCols(hasTeamColumn ? cols.slice(1) : cols);
-    raws.push({ team: hasTeamColumn ? (cols[0] ?? '') : '', player, position, round });
+    const nonEmpty = cols.filter((c) => c.trim() !== '');
+    if (nonEmpty.length === 0) return;
+    // Skip a "team, player, position, round" header row — but not a section
+    // header that happens to contain a header keyword (e.g. a team literally
+    // named "Team Rocket"), which resolves to a real team.
+    if (i === 0 && looksLikeHeader(cols) && !nonEmpty.some((c) => resolveTeamAny(c))) return;
+
+    if (!hasTeamColumn) {
+      // Team-scoped import: a team is already picked above the textarea, so
+      // every column here is player/position/round.
+      const { player, position, round } = classifyRestCols(cols);
+      raws.push({ team: '', player, position, round });
+      return;
+    }
+
+    // Section header: a lone team name on its own line starts a section.
+    if (nonEmpty.length === 1 && resolveTeamName(nonEmpty[0]) != null) {
+      sectionTeam = nonEmpty[0];
+      return;
+    }
+    // Explicit team column (name or slot #) — wins over any section context.
+    if (resolveTeamAny(cols[0]) != null) {
+      const { player, position, round } = classifyRestCols(cols.slice(1));
+      raws.push({ team: cols[0], player, position, round });
+      return;
+    }
+    // Otherwise inherit the current section's team (empty → "Missing team").
+    const { player, position, round } = classifyRestCols(cols);
+    raws.push({ team: sectionTeam, player, position, round });
   });
   return { raws, parseError: null };
 }
@@ -245,9 +286,11 @@ function parseRaw(text: string, hasTeamColumn: boolean): { raws: RawRow[]; parse
  * falls back to `defaultRound`. Team matches by name or draft position; player
  * matches by normalized name (+ position), with D/ST and near-miss handling.
  *
- * `fixedTeamId`, when set, scopes the whole paste to one team: the team
- * column is dropped from parsing entirely (every row uses `fixedTeamId`) so
- * the pasted text only needs player/position/round.
+ * Import-all attaches a team to each row two ways, auto-detected: a team column
+ * (name or draft-slot number), or a team-name section header that rows below it
+ * inherit. `fixedTeamId`, when set, scopes the whole paste to one team instead:
+ * the team column is dropped entirely (every row uses `fixedTeamId`) so the
+ * pasted text only needs player/position/round.
  */
 export function parseKeeperImport(
   text: string,
@@ -256,16 +299,19 @@ export function parseKeeperImport(
   defaultRound = 1,
   fixedTeamId: string | null = null,
 ): KeeperImportResult {
-  const { raws, parseError } = parseRaw(text, fixedTeamId == null);
-  if (parseError) return { rows: [], parseError };
-
   const teamByName = new Map(teams.map((t) => [t.name.trim().toLowerCase(), t.id]));
   const teamByPos = new Map(teams.map((t) => [String(t.draft_position), t.id]));
+  const resolveTeamName = (s: string) => teamByName.get(s.trim().toLowerCase()) ?? null;
+  const resolveTeamAny = (s: string) => resolveTeamName(s) ?? teamByPos.get(s.trim()) ?? null;
+
+  const { raws, parseError } = parseRaw(text, fixedTeamId == null, resolveTeamName, resolveTeamAny);
+  if (parseError) return { rows: [], parseError };
+
   const fixedTeamName = fixedTeamId ? (teams.find((t) => t.id === fixedTeamId)?.name ?? '') : '';
   const idx = buildIndices(players);
 
   const rows = raws.map((r): ParsedKeeperRow => {
-    const teamId = fixedTeamId ?? teamByName.get(r.team.trim().toLowerCase()) ?? teamByPos.get(r.team.trim()) ?? null;
+    const teamId = fixedTeamId ?? resolveTeamAny(r.team);
 
     const rawName = r.player.trim();
     const norm = normalizeName(rawName);
@@ -318,6 +364,16 @@ export const KEEPER_IMPORT_EXAMPLE = `team,player,position,round
 1,Bijan Robinson,RB,1
 2,Ja'Marr Chase,WR,2
 3,Amon-Ra St. Brown,WR,8`;
+
+/** The other universal import-all shape: a team name on its own line as a
+ * section header, its players listed below (round/position order-independent).
+ * Shown alongside the team-column example so both are discoverable. */
+export const KEEPER_IMPORT_EXAMPLE_SECTIONED = `Team One
+Justin Jefferson,WR,3
+Bijan Robinson,RB,1
+
+Team Two
+Ja'Marr Chase,WR,2`;
 
 /** Same idea, for a team-scoped import — no team column since one team is
  * already picked above the textarea. */

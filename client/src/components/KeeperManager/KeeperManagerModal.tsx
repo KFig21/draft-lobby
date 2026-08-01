@@ -11,6 +11,7 @@ import { api } from '../../lib/api';
 import {
   KEEPER_IMPORT_EXAMPLE,
   KEEPER_IMPORT_EXAMPLE_BY_TEAM,
+  KEEPER_IMPORT_EXAMPLE_SECTIONED,
   parseKeeperImport,
   type ParsedKeeperRow,
 } from '../../lib/keeperImport';
@@ -510,6 +511,7 @@ export function KeeperManagerModal({
                 hint="Paste from a spreadsheet, CSV, or JSON with columns "
                 columnsLabel="team, player, position, round"
                 example={KEEPER_IMPORT_EXAMPLE}
+                altExample={KEEPER_IMPORT_EXAMPLE_SECTIONED}
                 actionLabel="keeper"
               />
             )}
@@ -611,6 +613,7 @@ export function KeeperManagerModal({
               }
               columnsLabel={teamScoped ? 'player, position, round' : 'team, player, position, round'}
               example={teamScoped ? KEEPER_IMPORT_EXAMPLE_BY_TEAM : KEEPER_IMPORT_EXAMPLE}
+              altExample={teamScoped ? null : KEEPER_IMPORT_EXAMPLE_SECTIONED}
               blockedMessage={teamScoped && !offerImportTeamId ? 'Pick a team above to paste its roster.' : null}
               actionLabel="candidate"
             />
@@ -792,6 +795,8 @@ function ImportPanel({
   hint,
   columnsLabel,
   example,
+  altExample = null,
+  altExampleLabel,
   blockedMessage = null,
   actionLabel,
 }: {
@@ -808,6 +813,10 @@ function ImportPanel({
   hint: string;
   columnsLabel: string;
   example: string;
+  /** A second example shape shown beneath the first (import-all only), so both
+   * the team-column and section-header forms are visible, not just described. */
+  altExample?: string | null;
+  altExampleLabel?: string;
   /** When set, the team-scoped import has no team picked yet — show this
    * instead of the textarea/preview rather than parsing an ambiguous paste. */
   blockedMessage?: string | null;
@@ -828,8 +837,10 @@ function ImportPanel({
       <div className="keeper-modal__import-head">
         <p className="keeper-modal__import-hint">
           {hint}
-          <code>{columnsLabel}</code>.{hasTeamCol && ' Team matches by name or draft position;'} position
-          is optional and either order works (<code>player, position</code> or{' '}
+          <code>{columnsLabel}</code>.{' '}
+          {hasTeamCol &&
+            'Identify each team with a team column (its name or draft-slot number), or drop a team name on its own line as a header and list that team’s players below it. '}
+          Position is optional and either order works (<code>player, position</code> or{' '}
           <code>position, player</code>); round defaults to 1 if left blank. You can{' '}
           <strong>paste straight from your keeper spreadsheet</strong> — no need to convert to CSV
           first.
@@ -847,9 +858,15 @@ function ImportPanel({
         spellCheck={false}
       />
       <div className="keeper-modal__example-block">
-        <span className="keeper-modal__example-label">Example</span>
+        <span className="keeper-modal__example-label">{altExample ? 'By team column' : 'Example'}</span>
         <pre>{example}</pre>
       </div>
+      {altExample && (
+        <div className="keeper-modal__example-block">
+          <span className="keeper-modal__example-label">{altExampleLabel ?? 'Or grouped by team'}</span>
+          <pre>{altExample}</pre>
+        </div>
+      )}
       {parsed.parseError && <p className="keeper-modal__error">{parsed.parseError}</p>}
       {parsed.rows.length > 0 && (
         <div className="keeper-modal__preview">
