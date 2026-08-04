@@ -35,7 +35,7 @@ interface ScoringFormatRow {
 }
 
 const SECONDS_OPTIONS = [15, 30, 45, 60, 90, 120, 180, 240, 300, UNLIMITED_PICK_SECONDS];
-const BOT_SPEED_OPTIONS = [3, 5, 10, 15, 30];
+const BOT_SPEED_OPTIONS = [3, 5, 10, 15, 30, UNLIMITED_PICK_SECONDS];
 
 interface Props {
   settings: LobbySettings;
@@ -356,7 +356,10 @@ export function LeagueSettingsFields({ settings, onChange, nameField }: Props) {
         <label className="field">
           <span>
             Bot pick speed{' '}
-            <em className="muted">(how fast bots draft; capped by the round clock)</em>
+            <em className="muted">
+              (how fast bots draft; capped by the round clock. No limit = bots
+              never auto-pick, so you draft for every team yourself)
+            </em>
           </span>
           <select
             value={settings.botPickSeconds ?? DEFAULT_BOT_PICK_SECONDS}
@@ -364,7 +367,7 @@ export function LeagueSettingsFields({ settings, onChange, nameField }: Props) {
           >
             {BOT_SPEED_OPTIONS.map((s) => (
               <option key={s} value={s}>
-                {formatSeconds(s)}
+                {formatPickClock(s)}
               </option>
             ))}
           </select>

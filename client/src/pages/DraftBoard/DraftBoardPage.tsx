@@ -7,7 +7,6 @@ import {
   draftablePositions,
   draftPositionForOverall,
   extractMentionedUsernames,
-  isUnlimitedPick,
   openSlots,
   overallForDraftPosition,
   roundsForSettings,
@@ -1584,10 +1583,10 @@ export function DraftBoardPage() {
   const onClockCellTotalSeconds = isComplete
     ? null
     : secondsForRound(round, lobby.settings.pickTiers);
-  // This round has no human clock — the header clock shows "∞" and no progress
-  // fills. (A bot on the clock still gets a finite deadline, handled by PickClock.)
-  const clockUnlimited =
-    !isComplete && isUnlimitedPick(secondsForRound(round, lobby.settings.pickTiers));
+  // Whoever's on the clock is untimed (an unlimited round, or an unlimited-bot
+  // solo mock) — the engine leaves pick_deadline null, so show "∞" and no
+  // progress fill. Paused/complete/"waiting" states are excluded.
+  const clockUnlimited = !isComplete && !isPaused && !!onClockTeam && !lobby.pick_deadline;
   const onClockCellElapsedPct =
     onClockCellSecondsLeft != null && onClockCellTotalSeconds
       ? Math.min(
@@ -2238,19 +2237,8 @@ export function DraftBoardPage() {
                   <button
                     type="button"
                     className="draft__onclock-team draft__onclock-team--btn"
-                    // As commissioner, clicking another team that's on the clock
-                    // jumps to the player pool to pick on its behalf; otherwise
-                    // (your own turn, or a non-commissioner) it views the lineup.
-                    onClick={() =>
-                      isCommish && onClockTeam.owner_id !== userId
-                        ? openPlayersPool()
-                        : openTeamRoster(onClockTeam.id)
-                    }
-                    title={
-                      isCommish && onClockTeam.owner_id !== userId
-                        ? `Pick for ${onClockTeam.name}`
-                        : `View ${onClockTeam.name}'s lineup`
-                    }
+                    onClick={() => openTeamRoster(onClockTeam.id)}
+                    title={`View ${onClockTeam.name}'s lineup`}
                   >
                     <span className="draft__onclock-avatar">
                       <Avatar
@@ -2450,11 +2438,8 @@ export function DraftBoardPage() {
               cellStyle={cellStyle}
               fill={isFullscreen}
               fillRowHeight={fsRowHeight}
-              onMyClockCellClick={() => {
-                setPanelTab('players');
-                setMobileTab('players');
-                setShowFsMenu(true);
-              }}
+              onMyClockCellClick={openPlayersPool}
+              onCommishClockCellClick={isCommish ? openPlayersPool : undefined}
               onClockUrgency={onClockCellUrgency}
               onClockFlashing={onClockCellFlashing}
               onClockElapsedPct={onClockCellElapsedPct}

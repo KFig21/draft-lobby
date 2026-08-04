@@ -262,6 +262,11 @@
     // fill (not locked to green) — mixing a frozen green base with an
     // orange/red wash produced a muddy, off-looking blend instead of a
     // clean color.
+    // A commissioner can click any team's on-the-clock cell to pick for it.
+    &--onclock-actionable {
+      cursor: pointer;
+    }
+
     &--onclock-mine {
       background: rgba($accent, 0.14);
       cursor: pointer;

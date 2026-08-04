@@ -1,6 +1,7 @@
 import {
   AUTO_PICK_SECONDS,
   computeFantasyPoints,
+  UNLIMITED_PICK_SECONDS,
   draftPositionForOverall,
   isUnlimitedPick,
   openSlots,
@@ -130,6 +131,9 @@ export function clockSeconds(team: OnClockTeam | null, settings: LobbySettings, 
   const roundSeconds = secondsForRound(round, settings.pickTiers);
   if (team && (team.is_bot || team.auto_draft)) {
     const bot = settings.botPickSeconds ?? AUTO_PICK_SECONDS;
+    // An explicitly unlimited bot clock means bots never auto-pick either (a
+    // solo mock where one person drafts for everyone) — it beats the round cap.
+    if (isUnlimitedPick(bot)) return UNLIMITED_PICK_SECONDS;
     return isUnlimitedPick(roundSeconds) ? bot : Math.min(bot, roundSeconds);
   }
   return roundSeconds; // may be UNLIMITED (0) — see computeDeadline

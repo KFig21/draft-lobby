@@ -46,6 +46,9 @@ interface Props {
   /** The viewer's own on-the-clock cell was clicked — switches to the
    * Players tab (and, in fullscreen, opens the Menu modal onto it). */
   onMyClockCellClick?: () => void;
+  /** Commissioner only: clicking *another* team's on-the-clock cell opens the
+   * Players tab to pick on its behalf. Set only when the viewer is a commish. */
+  onCommishClockCellClick?: () => void;
   /** Same thresholds as the top bar's pick clock — colors whichever cell is
    * on the clock yellow at 25s left, red at 10s, for every viewer. */
   onClockUrgency?: 'warning' | 'danger' | null;
@@ -88,6 +91,7 @@ export function DraftGrid({
   cellStyle = 'default',
   fillRowHeight,
   onMyClockCellClick,
+  onCommishClockCellClick,
   onClockUrgency,
   onClockFlashing,
   onClockElapsedPct,
@@ -234,11 +238,18 @@ export function DraftGrid({
                       />
                     );
                   }
+                  // Another team is on the clock and the viewer is a commish:
+                  // clicking it jumps to the player pool to pick on its behalf.
+                  const isOtherOnClock = isOnClock && !isMyClock;
+                  const commishClockAction =
+                    isOtherOnClock && onCommishClockCellClick ? onCommishClockCellClick : undefined;
                   const cellAction = isMyPickable
                     ? onMyClockCellClick
-                    : canRollbackHere
-                      ? () => onRollbackSkipped!(round, team.id)
-                      : undefined;
+                    : commishClockAction
+                      ? commishClockAction
+                      : canRollbackHere
+                        ? () => onRollbackSkipped!(round, team.id)
+                        : undefined;
                   return (
                     <td
                       key={team.id}
@@ -250,9 +261,15 @@ export function DraftGrid({
                         isSkipped ? ' draft-grid__cell--skipped' : ''
                       }${isMySkipped ? ' draft-grid__cell--skipped-mine' : ''}${
                         canRollbackHere ? ' draft-grid__cell--rollbackable' : ''
-                      }`}
+                      }${commishClockAction ? ' draft-grid__cell--onclock-actionable' : ''}`}
                       onClick={cellAction}
-                      title={canRollbackHere ? 'Roll the draft back to this skipped pick' : undefined}
+                      title={
+                        commishClockAction
+                          ? `Pick for ${team.name}`
+                          : canRollbackHere
+                            ? 'Roll the draft back to this skipped pick'
+                            : undefined
+                      }
                       role={cellAction ? 'button' : undefined}
                       tabIndex={cellAction ? 0 : undefined}
                       onKeyDown={

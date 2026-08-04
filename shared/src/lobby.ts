@@ -128,8 +128,13 @@ export const lobbySettingsSchema = z.object({
   /** Per-round pick clock. */
   pickTiers: pickTiersSchema,
   /** Seconds a bot / auto-draft team gets on the clock. Capped at runtime by
-   * the round's own clock (a bot never gets longer than a human would). */
-  botPickSeconds: z.number().int().min(1).max(MAX_PICK_SECONDS).default(DEFAULT_BOT_PICK_SECONDS),
+   * the round's own clock (a bot never gets longer than a human would), unless
+   * set to UNLIMITED_PICK_SECONDS — then bots never auto-pick either, so one
+   * person can mock the whole draft by picking for every team by hand. */
+  botPickSeconds: z.number().int().refine(
+    (s) => s === UNLIMITED_PICK_SECONDS || (s >= 1 && s <= MAX_PICK_SECONDS),
+    { message: `Bot pick speed must be 1–${MAX_PICK_SECONDS}s, or no limit` },
+  ).default(DEFAULT_BOT_PICK_SECONDS),
   /** When on, a team that lets its clock expire is SKIPPED (the next team comes
    * on the clock) instead of auto-picked — the skipped team can still pick any
    * time afterward. Off = today's behavior (auto-pick on timeout). The skip cap
