@@ -358,12 +358,16 @@ export function parseKeeperImport(
   return { rows, parseError: null };
 }
 
-/** A small ready-to-edit CSV the commissioner can download as a starting point. */
+/** A small ready-to-edit CSV the commissioner can download as a starting point.
+ * Team names here (rather than bare draft-slot numbers) so the "team" column
+ * reads clearly on its own — a slot number works too, but isn't obvious as an
+ * example. Shares team names with KEEPER_IMPORT_EXAMPLE_SECTIONED below so
+ * both examples visibly describe the same two ways to tag a team. */
 export const KEEPER_IMPORT_EXAMPLE = `team,player,position,round
-1,Justin Jefferson,WR,3
-1,Bijan Robinson,RB,1
-2,Ja'Marr Chase,WR,2
-3,Amon-Ra St. Brown,WR,8`;
+Team One,Justin Jefferson,WR,3
+Team One,Bijan Robinson,RB,1
+Team Two,Ja'Marr Chase,WR,2
+Team Three,Amon-Ra St. Brown,WR,8`;
 
 /** The other universal import-all shape: a team name on its own line as a
  * section header, its players listed below (round/position order-independent).

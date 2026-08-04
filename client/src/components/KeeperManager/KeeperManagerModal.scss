@@ -45,6 +45,9 @@
   }
 
   &__title {
+    display: flex;
+    align-items: center;
+    gap: $space * 0.5;
     margin: 0 0 $space * 0.5;
     font-size: 1.2rem;
   }
@@ -183,9 +186,9 @@
 
   &__import-head {
     display: flex;
+    flex-direction: column;
     align-items: flex-start;
-    justify-content: space-between;
-    gap: $space;
+    gap: $space * 0.5;
   }
 
   &__import-hint {

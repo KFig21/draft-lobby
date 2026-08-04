@@ -70,7 +70,9 @@ export function OwnerKeepersModal({ lobbyId, team, options, players, locked, onC
           <CloseIcon fontSize="small" />
         </button>
 
-        <h2 className="owner-keepers__title">🔒 Choose your keepers</h2>
+        <h2 className="owner-keepers__title">
+          <LockOutlinedIcon fontSize="small" /> Choose your keepers
+        </h2>
         <p className="owner-keepers__intro">
           Keep up to <strong>{team.keeper_count}</strong> from last year. Each costs your pick in
           the round shown — or keep no one and draft every round.

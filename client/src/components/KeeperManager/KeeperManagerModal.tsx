@@ -4,6 +4,7 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import GroupsIcon from '@mui/icons-material/Groups';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import PersonIcon from '@mui/icons-material/Person';
 import {
   useLayoutEffect,
@@ -448,7 +449,9 @@ export function KeeperManagerModal({
           <CloseIcon fontSize="small" />
         </button>
 
-        <h2 className="keeper-modal__title">🔒 Keepers</h2>
+        <h2 className="keeper-modal__title">
+          <LockOutlinedIcon fontSize="small" /> Keepers
+        </h2>
         <p className="keeper-modal__intro">
           Each keeper costs a team its pick in a chosen round, and appears on the board right away.
         </p>

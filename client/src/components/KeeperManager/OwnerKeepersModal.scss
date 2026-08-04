@@ -43,6 +43,9 @@
   }
 
   &__title {
+    display: flex;
+    align-items: center;
+    gap: $space * 0.5;
     margin: 0 0 $space * 0.5;
     font-size: 1.2rem;
   }
