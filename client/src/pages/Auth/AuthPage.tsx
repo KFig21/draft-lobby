@@ -80,9 +80,21 @@ export function AuthPage() {
     e.preventDefault();
     setError(null);
 
-    if (mode === 'signup' && usernameStatus === 'taken') {
-      setError('That username is already taken');
-      return;
+    // Validate at submit time rather than disabling the button — a disabled
+    // submit is skipped in the tab order and undiscoverable to keyboard users.
+    if (mode === 'signup') {
+      if (usernameStatus === 'taken') {
+        setError('That username is already taken');
+        return;
+      }
+      if (trimmedUsername.length < USERNAME_MIN_LEN) {
+        setError(`Username must be at least ${USERNAME_MIN_LEN} characters`);
+        return;
+      }
+      if (password.length < 8) {
+        setError('Password must be at least 8 characters');
+        return;
+      }
     }
 
     setBusy(true);
@@ -205,16 +217,6 @@ export function AuthPage() {
     );
   }
 
-  // Block signup only on a *known* problem (too short, or confirmed taken) or a
-  // short password — not while a check is in flight or if the pre-check errored
-  // out. The DB unique constraint + submit-time guard are the real gate.
-  const usernameOk =
-    trimmedUsername.length >= USERNAME_MIN_LEN &&
-    usernameStatus !== 'taken' &&
-    usernameStatus !== 'short';
-  const canSubmit =
-    !busy && (mode !== 'signup' || (usernameOk && password.length >= 8));
-
   return (
     <main className="auth">
       <form className="auth__card" onSubmit={handleSubmit}>
@@ -311,7 +313,7 @@ export function AuthPage() {
 
         {error && <p className="auth__error">{error}</p>}
 
-        <button className="button button--primary" disabled={!canSubmit}>
+        <button className="button button--primary" disabled={busy}>
           {busy
             ? '…'
             : mode === 'signin'

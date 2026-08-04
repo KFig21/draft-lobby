@@ -12,6 +12,10 @@ import { rulesetsRouter } from './routes/rulesets.js';
 
 const app = express();
 
+// Behind Railway's proxy — trust one hop so req.ip is the real client address
+// (used by the IP-keyed rate limiter on public routes) rather than the proxy's.
+app.set('trust proxy', 1);
+
 app.use(cors({ origin: env.CLIENT_ORIGIN, credentials: true }));
 app.use(express.json());
 

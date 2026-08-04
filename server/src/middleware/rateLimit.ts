@@ -24,17 +24,17 @@ setInterval(() => {
 }, SWEEP_INTERVAL_MS).unref();
 
 /**
- * Caps how often one user can hit a given action — a fixed window per
- * "action:userId". Must run after requireAuth (needs req.user).
+ * Caps how often one caller can hit a given action — a fixed window per
+ * "action:identity". Keys on the authenticated user id when there is one
+ * (the common case, after requireAuth); on public routes with no session it
+ * falls back to the client IP so unauthenticated endpoints (e.g. invite-link
+ * resolve) can't be hammered. IP keying needs `trust proxy` set (see index.ts)
+ * or every request looks like it comes from the proxy.
  */
 export function rateLimit(action: string, { max, windowMs }: { max: number; windowMs: number }) {
   return (req: AuthedRequest, res: Response, next: NextFunction): void => {
-    const userId = req.user?.id;
-    if (!userId) {
-      next();
-      return;
-    }
-    const key = `${action}:${userId}`;
+    const identity = req.user?.id ?? `ip:${req.ip ?? 'unknown'}`;
+    const key = `${action}:${identity}`;
     const now = Date.now();
     const bucket = buckets.get(key);
 

@@ -45,7 +45,12 @@ export async function redeemInvite(token: string): Promise<RedeemResult> {
 
 /** Turn a token into the full shareable URL. */
 export function inviteUrl(token: string): string {
-  return `${window.location.origin}/invite/${token}`;
+  // Always the canonical app origin, never wherever the app happens to be
+  // running — a link generated on localhost:5183 in dev is useless to share,
+  // so VITE_APP_URL pins it to the deployed host. In production (Vercel)
+  // window.location.origin already *is* that host, so the env is optional there.
+  const base = (import.meta.env.VITE_APP_URL as string | undefined) || window.location.origin;
+  return `${base.replace(/\/$/, '')}/invite/${token}`;
 }
 
 // ── Pending-invite handoff across signup ────────────────────────────

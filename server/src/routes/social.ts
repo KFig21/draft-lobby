@@ -5,6 +5,7 @@ import {
   removeFriendSchema,
 } from '@draft-lobby/shared';
 import { requireAuth, type AuthedRequest } from '../middleware/auth.js';
+import { rateLimit } from '../middleware/rateLimit.js';
 import { supabaseAdmin } from '../supabase.js';
 
 export const socialRouter = Router();
@@ -253,7 +254,12 @@ socialRouter.post('/remove', async (req: AuthedRequest, res: Response) => {
  * out, possibly with no account yet) can see who invited them. 404 for a
  * missing/revoked/expired link.
  */
-publicSocialRouter.get('/invite/:token', async (req, res: Response) => {
+publicSocialRouter.get(
+  '/invite/:token',
+  // Public + unauthenticated — key on IP. Generous enough for a real recipient
+  // re-loading the landing page, tight enough to stop token enumeration.
+  rateLimit('invite-resolve', { max: 30, windowMs: 60_000 }),
+  async (req, res: Response) => {
   const invite = await liveInvite(req.params.token);
   if (!invite) {
     res.status(404).json({ error: 'This invite link is invalid or has expired.' });
@@ -272,7 +278,10 @@ publicSocialRouter.get('/invite/:token', async (req, res: Response) => {
 });
 
 /** POST /api/friends/invite — get (or mint) the caller's shareable link. */
-socialRouter.post('/invite', async (req: AuthedRequest, res: Response) => {
+socialRouter.post(
+  '/invite',
+  rateLimit('invite-get', { max: 20, windowMs: 60_000 }),
+  async (req: AuthedRequest, res: Response) => {
   try {
     const token = await currentInviteToken(req.user!.id);
     res.json({ token });
@@ -282,7 +291,10 @@ socialRouter.post('/invite', async (req: AuthedRequest, res: Response) => {
 });
 
 /** POST /api/friends/invite/reset — revoke the current link and mint a new one. */
-socialRouter.post('/invite/reset', async (req: AuthedRequest, res: Response) => {
+socialRouter.post(
+  '/invite/reset',
+  rateLimit('invite-reset', { max: 5, windowMs: 60_000 }),
+  async (req: AuthedRequest, res: Response) => {
   const me = req.user!.id;
   await supabaseAdmin
     .from('friend_invites')
@@ -303,7 +315,10 @@ socialRouter.post('/invite/reset', async (req: AuthedRequest, res: Response) => 
  * clicked it), this creates an *accepted* friendship straight away rather than
  * a pending request. Idempotent; opening your own link is a no-op.
  */
-socialRouter.post('/invite/:token/redeem', async (req: AuthedRequest, res: Response) => {
+socialRouter.post(
+  '/invite/:token/redeem',
+  rateLimit('invite-redeem', { max: 15, windowMs: 60_000 }),
+  async (req: AuthedRequest, res: Response) => {
   const me = req.user!.id;
   const invite = await liveInvite(req.params.token);
   if (!invite) {
