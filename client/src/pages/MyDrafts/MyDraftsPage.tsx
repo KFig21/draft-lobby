@@ -2,6 +2,7 @@ import { SCORING_PRESETS, defaultAvatar, matchPreset } from '@draft-lobby/shared
 import ArchiveOutlinedIcon from '@mui/icons-material/ArchiveOutlined';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import PublicOutlinedIcon from '@mui/icons-material/PublicOutlined';
 import SensorsOutlinedIcon from '@mui/icons-material/SensorsOutlined';
@@ -10,6 +11,7 @@ import UnarchiveOutlinedIcon from '@mui/icons-material/UnarchiveOutlined';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Avatar } from '../../components/Avatar/Avatar';
+import { CopyDraftModal } from '../../components/CopyDraftModal/CopyDraftModal';
 import { Loader } from '../../components/Loader/Loader';
 import { useAuth } from '../../auth/AuthContext';
 import { api } from '../../lib/api';
@@ -83,6 +85,9 @@ export function MyDraftsPage() {
   const [draftModeFilter, setDraftModeFilter] = useState<DraftModeFilter>('ALL');
   const [visibilityFilter, setVisibilityFilter] = useState<VisibilityFilter>('ALL');
   const [sortOrder, setSortOrder] = useState<SortOrder>('NEWEST');
+
+  // The draft currently being copied (opens CopyDraftModal).
+  const [copySource, setCopySource] = useState<MyLobby['lobby'] | null>(null);
 
   useEffect(() => {
     if (!userId) return;
@@ -177,6 +182,19 @@ export function MyDraftsPage() {
 
   const pastPageCount = Math.max(1, Math.ceil(pastTotal / PAST_PAGE_SIZE));
 
+  /** Copy action shared by every section's row. */
+  const copyButton = (row: MyLobby) => (
+    <button
+      type="button"
+      className="lobby-list__action"
+      aria-label={`Copy ${row.lobby.name}`}
+      title="Copy draft"
+      onClick={() => setCopySource(row.lobby)}
+    >
+      <ContentCopyIcon fontSize="small" />
+    </button>
+  );
+
   return (
     <main className="my-drafts">
       <header className="my-drafts__header">
@@ -255,15 +273,18 @@ export function MyDraftsPage() {
               <LobbyList
                 rows={active}
                 renderAction={(row) => (
-                  <button
-                    type="button"
-                    className="lobby-list__action"
-                    aria-label={`Archive ${row.lobby.name}`}
-                    title="Archive"
-                    onClick={() => setLobbyArchived(row, true)}
-                  >
-                    <ArchiveOutlinedIcon fontSize="small" />
-                  </button>
+                  <>
+                    {copyButton(row)}
+                    <button
+                      type="button"
+                      className="lobby-list__action"
+                      aria-label={`Archive ${row.lobby.name}`}
+                      title="Archive"
+                      onClick={() => setLobbyArchived(row, true)}
+                    >
+                      <ArchiveOutlinedIcon fontSize="small" />
+                    </button>
+                  </>
                 )}
               />
             </section>
@@ -282,15 +303,18 @@ export function MyDraftsPage() {
                 <LobbyList
                   rows={past}
                   renderAction={(row) => (
-                    <button
-                      type="button"
-                      className="lobby-list__action"
-                      aria-label={`Archive ${row.lobby.name}`}
-                      title="Archive"
-                      onClick={() => setLobbyArchived(row, true)}
-                    >
-                      <ArchiveOutlinedIcon fontSize="small" />
-                    </button>
+                    <>
+                      {copyButton(row)}
+                      <button
+                        type="button"
+                        className="lobby-list__action"
+                        aria-label={`Archive ${row.lobby.name}`}
+                        title="Archive"
+                        onClick={() => setLobbyArchived(row, true)}
+                      >
+                        <ArchiveOutlinedIcon fontSize="small" />
+                      </button>
+                    </>
                   )}
                 />
                 {pastPageCount > 1 && (
@@ -335,21 +359,28 @@ export function MyDraftsPage() {
                 <LobbyList
                   rows={archived}
                   renderAction={(row) => (
-                    <button
-                      type="button"
-                      className="lobby-list__action"
-                      aria-label={`Unarchive ${row.lobby.name}`}
-                      title="Unarchive"
-                      onClick={() => setLobbyArchived(row, false)}
-                    >
-                      <UnarchiveOutlinedIcon fontSize="small" />
-                    </button>
+                    <>
+                      {copyButton(row)}
+                      <button
+                        type="button"
+                        className="lobby-list__action"
+                        aria-label={`Unarchive ${row.lobby.name}`}
+                        title="Unarchive"
+                        onClick={() => setLobbyArchived(row, false)}
+                      >
+                        <UnarchiveOutlinedIcon fontSize="small" />
+                      </button>
+                    </>
                   )}
                 />
               )}
             </section>
           )}
         </>
+      )}
+
+      {copySource && (
+        <CopyDraftModal source={copySource} onClose={() => setCopySource(null)} />
       )}
     </main>
   );

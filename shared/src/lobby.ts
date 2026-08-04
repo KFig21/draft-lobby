@@ -199,3 +199,28 @@ export const joinLobbySchema = z.object({
   teamName: z.string().min(1).max(40).optional(),
 });
 export type JoinLobbyInput = z.infer<typeof joinLobbySchema>;
+
+/**
+ * Which parts of a source draft to carry into a copy. League/scoring/timers all
+ * live in the settings blob; anything left off falls back to
+ * DEFAULT_LOBBY_SETTINGS. The two keeper flags require both `teamNames` and
+ * `leagueSetup` (server-enforced) — keepers map to copied seats and their
+ * round-cost `overall` needs the same team count / draft type / roster.
+ */
+export const copyLobbyIncludeSchema = z.object({
+  leagueSetup: z.boolean(), // teamCount, draftType, rosterComposition
+  scoring: z.boolean(),
+  timers: z.boolean(), // pickTiers, allowSkips, timeoutAllowance
+  teamNames: z.boolean(), // team names, draft order, colors
+  keeperLists: z.boolean(), // keeper_options candidate pools
+  keeperPicks: z.boolean(), // materialized is_keeper picks
+});
+export type CopyLobbyInclude = z.infer<typeof copyLobbyIncludeSchema>;
+
+/** Payload for POST /api/lobbies/:id/copy — duplicate a draft into a new lobby. */
+export const copyLobbySchema = z.object({
+  name: z.string().trim().min(1).max(60),
+  draftMode: draftModeSchema,
+  include: copyLobbyIncludeSchema,
+});
+export type CopyLobbyInput = z.infer<typeof copyLobbySchema>;

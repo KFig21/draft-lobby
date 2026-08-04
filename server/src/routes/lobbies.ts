@@ -1,10 +1,16 @@
 import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 import { Router, type Response } from 'express';
 import {
+  CHAT_LOCK_MS,
+  DEFAULT_LOBBY_SETTINGS,
   DRAFT_RESULTS_LOCK_MS,
+  copyLobbySchema,
   createLobbySchema,
   joinLobbySchema,
+  lobbySettingsSchema,
+  overallForDraftPosition,
   renameLobbySchema,
+  roundsForSettings,
   type LobbySettings,
 } from '@draft-lobby/shared';
 import { requireAuth, type AuthedRequest } from '../middleware/auth.js';
@@ -93,6 +99,257 @@ lobbiesRouter.post('/', async (req: AuthedRequest, res: Response) => {
   }
 
   res.status(201).json({ lobby });
+});
+
+/**
+ * POST /api/lobbies/:id/copy — duplicate a draft into a fresh lobby (the caller
+ * becomes its commissioner). A checklist (`include`) decides which parts carry
+ * over; anything left off falls back to DEFAULT_LOBBY_SETTINGS. Regular picks
+ * are never copied. Members aren't added here — the client re-invites them via
+ * the existing LOBBY_INVITE flow using the `members` returned below.
+ */
+lobbiesRouter.post('/:id/copy', async (req: AuthedRequest, res: Response) => {
+  const sourceId = req.params.id;
+  const userId = req.user!.id;
+
+  const parsed = copyLobbySchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.flatten() });
+    return;
+  }
+  const { name, draftMode, include } = parsed.data;
+
+  // Keeper copy maps to copied seats and its round-cost `overall` needs the same
+  // format — so both flags require team names + league setup (also gated in UI).
+  if ((include.keeperLists || include.keeperPicks) && !(include.teamNames && include.leagueSetup)) {
+    res.status(400).json({ error: 'Copying keepers requires team names and league setup' });
+    return;
+  }
+
+  // Members only — you can copy any draft you're part of.
+  const { data: membership } = await supabaseAdmin
+    .from('lobby_members')
+    .select('role')
+    .eq('lobby_id', sourceId)
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (!membership) {
+    res.status(403).json({ error: 'Only members can copy this draft' });
+    return;
+  }
+
+  const { data: source } = await supabaseAdmin
+    .from('lobbies')
+    .select('settings')
+    .eq('id', sourceId)
+    .maybeSingle();
+  if (!source) {
+    res.status(404).json({ error: 'Draft not found' });
+    return;
+  }
+  const src = source.settings as LobbySettings;
+
+  // Merge the chosen sections over the defaults. Copies always start private,
+  // in SETUP, unscheduled; keepers are on iff we're carrying any over.
+  const merged: LobbySettings = {
+    ...DEFAULT_LOBBY_SETTINGS,
+    name,
+    draftMode,
+    visibility: 'PRIVATE',
+    scheduledStart: null,
+    keepersEnabled: include.keeperLists || include.keeperPicks,
+  };
+  if (include.leagueSetup) {
+    merged.teamCount = src.teamCount;
+    merged.draftType = src.draftType;
+    merged.rosterComposition = src.rosterComposition;
+  }
+  if (include.scoring) merged.scoring = src.scoring;
+  if (include.timers) {
+    merged.pickTiers = src.pickTiers;
+    merged.allowSkips = src.allowSkips;
+    merged.timeoutAllowance = src.timeoutAllowance;
+  }
+  const validated = lobbySettingsSchema.safeParse(merged);
+  if (!validated.success) {
+    res.status(400).json({ error: validated.error.flatten() });
+    return;
+  }
+  const newSettings = validated.data;
+
+  // Create the lobby + commissioner membership.
+  const { data: lobby, error } = await supabaseAdmin
+    .from('lobbies')
+    .insert({
+      name,
+      commissioner_id: userId,
+      password_hash: hashPassword(''),
+      settings: newSettings,
+      status: 'SETUP',
+      results_public: false,
+      chat_public: false,
+      public_voting_allowed: false,
+      chat_lock_ms: CHAT_LOCK_MS,
+    })
+    .select()
+    .single();
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
+  const { error: memberError } = await supabaseAdmin.from('lobby_members').insert({
+    lobby_id: lobby.id,
+    user_id: userId,
+    role: 'COMMISSIONER',
+  });
+  if (memberError) {
+    res.status(500).json({ error: memberError.message });
+    return;
+  }
+
+  // Source teams, needed both to recreate seats and to map keepers by slot.
+  const { data: srcTeams } = await supabaseAdmin
+    .from('teams')
+    .select('id, owner_id, name, draft_position, color, is_prev_champion')
+    .eq('lobby_id', sourceId)
+    .order('draft_position');
+  const srcTeamPos = new Map<string, number>(
+    (srcTeams ?? []).map((t) => [t.id as string, t.draft_position as number]),
+  );
+  const posToNewTeam = new Map<number, string>();
+
+  if (include.teamNames && (srcTeams?.length ?? 0) > 0) {
+    const rows = srcTeams!.map((t) => ({
+      lobby_id: lobby.id,
+      // Keep the copier owning their own seat; everyone else's is unowned
+      // (an empty seat fills with a bot in a mock).
+      owner_id: t.owner_id === userId ? userId : null,
+      name: t.name,
+      draft_position: t.draft_position,
+      color: t.color,
+      is_prev_champion: t.is_prev_champion,
+    }));
+    // The copier is this lobby's commissioner — make sure they own a seat even
+    // if they didn't in the source (e.g. a mock they never sat in).
+    if (!rows.some((r) => r.owner_id === userId)) rows[0].owner_id = userId;
+    const { data: inserted, error: teamErr } = await supabaseAdmin
+      .from('teams')
+      .insert(rows)
+      .select('id, draft_position');
+    if (teamErr) {
+      res.status(500).json({ error: teamErr.message });
+      return;
+    }
+    for (const t of inserted ?? []) posToNewTeam.set(t.draft_position as number, t.id as string);
+  } else {
+    // No seats copied — just the commissioner's team in slot 1 (as normal create).
+    const { data: myTeam, error: teamErr } = await supabaseAdmin
+      .from('teams')
+      .insert({
+        lobby_id: lobby.id,
+        owner_id: userId,
+        name: (await usernameOf(userId)) ?? 'Team 1',
+        draft_position: 1,
+      })
+      .select('id, draft_position')
+      .single();
+    if (teamErr) {
+      res.status(500).json({ error: teamErr.message });
+      return;
+    }
+    posToNewTeam.set(1, myTeam.id as string);
+  }
+
+  // Keeper candidate lists (offered pools), remapped to the new seats.
+  if (include.keeperLists) {
+    const { data: srcOptions } = await supabaseAdmin
+      .from('keeper_options')
+      .select('team_id, player_id, round, selected, is_default')
+      .eq('lobby_id', sourceId);
+    const optionRows = (srcOptions ?? [])
+      .map((o) => {
+        const pos = srcTeamPos.get(o.team_id as string);
+        const newTeam = pos != null ? posToNewTeam.get(pos) : undefined;
+        if (!newTeam) return null;
+        return {
+          lobby_id: lobby.id,
+          team_id: newTeam,
+          player_id: o.player_id,
+          round: o.round,
+          // Only mark kept if we're also carrying the assigned picks over.
+          selected: include.keeperPicks && (o.selected as boolean),
+          is_default: o.is_default,
+        };
+      })
+      .filter((r): r is NonNullable<typeof r> => r !== null);
+    if (optionRows.length > 0) {
+      const { error: optErr } = await supabaseAdmin.from('keeper_options').insert(optionRows);
+      if (optErr) {
+        res.status(500).json({ error: optErr.message });
+        return;
+      }
+    }
+  }
+
+  // Assigned keepers — re-materialize is_keeper picks against the new settings.
+  if (include.keeperPicks) {
+    const maxRound = roundsForSettings(newSettings);
+    const { data: srcKeepers } = await supabaseAdmin
+      .from('picks')
+      .select('team_id, player_id, round')
+      .eq('lobby_id', sourceId)
+      .eq('is_keeper', true);
+    const pickRows = (srcKeepers ?? [])
+      .map((k) => {
+        const pos = srcTeamPos.get(k.team_id as string);
+        const newTeam = pos != null ? posToNewTeam.get(pos) : undefined;
+        if (!newTeam || pos == null || (k.round as number) > maxRound) return null;
+        return {
+          lobby_id: lobby.id,
+          overall: overallForDraftPosition(
+            k.round as number,
+            pos,
+            newSettings.teamCount,
+            newSettings.draftType,
+          ),
+          round: k.round,
+          team_id: newTeam,
+          player_id: k.player_id,
+          is_keeper: true,
+        };
+      })
+      .filter((r): r is NonNullable<typeof r> => r !== null);
+    if (pickRows.length > 0) {
+      const { error: pickErr } = await supabaseAdmin.from('picks').insert(pickRows);
+      if (pickErr) {
+        res.status(500).json({ error: pickErr.message });
+        return;
+      }
+    }
+  }
+
+  // Original members (minus the copier) for the client's re-invite step.
+  const { data: memberRows } = await supabaseAdmin
+    .from('lobby_members')
+    .select('user_id')
+    .eq('lobby_id', sourceId);
+  const otherIds = (memberRows ?? [])
+    .map((m) => m.user_id as string)
+    .filter((id) => id !== userId);
+  let members: { userId: string; username: string | null; avatar: unknown }[] = [];
+  if (otherIds.length > 0) {
+    const { data: profs } = await supabaseAdmin
+      .from('profiles')
+      .select('id, username, avatar')
+      .in('id', otherIds);
+    members = (profs ?? []).map((p) => ({
+      userId: p.id as string,
+      username: (p.username as string | null) ?? null,
+      avatar: p.avatar,
+    }));
+  }
+
+  res.status(201).json({ lobby, members });
 });
 
 /**
