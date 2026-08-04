@@ -150,8 +150,9 @@ export function KeeperOptionsViewModal({
                 {!single && (
                   <div className="keeper-view__team-head">
                     <span className="keeper-view__team-name">
+                      <span className="keeper-view__team-pos">{t.draft_position}.</span>
                       <Avatar avatar={avatarForTeam(t, members)} size={18} />
-                      {t.draft_position}. {t.name}
+                      {t.name}
                     </span>
                     <span className="keeper-view__team-count">
                       {kept}/{t.keeper_count}
