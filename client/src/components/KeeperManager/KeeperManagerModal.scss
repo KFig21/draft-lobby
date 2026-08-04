@@ -541,16 +541,35 @@
     font-variant-numeric: tabular-nums;
   }
 
-  &__kept {
-    margin-left: $space * 0.5;
-    padding: 1px 6px;
+  // Commissioner's per-candidate keep/unkeep control in the offer accordion —
+  // picks on a team's behalf (mirrors the owner's own toggle). Checked = kept.
+  &__keep-toggle {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: none;
     border-radius: 999px;
-    background: color-mix(in srgb, $keeper 18%, transparent);
-    color: $keeper;
-    font-size: 0.62rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
+    background: none;
+    color: $text-muted;
+    cursor: pointer;
+    transition: color 120ms ease, background 120ms ease;
+
+    &:hover:not(:disabled) {
+      color: $keeper;
+      background: $bg-overlay;
+    }
+
+    &.is-kept {
+      color: $keeper;
+    }
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
   }
 
   &__pool-status {
@@ -727,6 +746,13 @@
     border-radius: $radius-sm;
     background: $bg;
     font-size: 0.9rem;
+
+    // A candidate the commissioner (or owner) has kept — tint it so chosen
+    // players read at a glance down the accordion.
+    &.is-kept {
+      background: color-mix(in srgb, $keeper 10%, $bg);
+      border-color: color-mix(in srgb, $keeper 40%, $border);
+    }
   }
 
   &__row-round {

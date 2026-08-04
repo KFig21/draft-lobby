@@ -1,4 +1,5 @@
 import { POSITION_COLORS, type Position } from '@draft-lobby/shared';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CloseIcon from '@mui/icons-material/Close';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
@@ -6,6 +7,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import GroupsIcon from '@mui/icons-material/Groups';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import PersonIcon from '@mui/icons-material/Person';
+import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
 import {
   useLayoutEffect,
   useMemo,
@@ -241,6 +243,9 @@ export function KeeperManagerModal({
   const [addPlayerId, setAddPlayerId] = useState<string | null>(null);
   const [addRound, setAddRound] = useState(1);
   const [editingOptionId, setEditingOptionId] = useState<string | null>(null);
+  // Which candidate's keep/unkeep toggle is mid-request (commissioner picking on
+  // a team's behalf), so we can disable just that row's control.
+  const [selectingId, setSelectingId] = useState<string | null>(null);
 
   /** "Select team" (in the offer-pool accordion) — scope the import panel
    * above to this team and bring it into view. */
@@ -413,6 +418,25 @@ export function KeeperManagerModal({
       setEditingOptionId(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not update the candidate');
+    }
+  }
+
+  /** Keep/unkeep a candidate on a team's behalf — the same action the owner
+   * takes in OwnerKeepersModal, exposed here so the commissioner can make (or
+   * fix) a team's selection directly. Server enforces the keeper-count cap and
+   * materializes/removes the is_keeper pick; realtime refreshes the list. */
+  async function toggleSelect(option: KeeperOptionRow) {
+    setSelectingId(option.id);
+    setError(null);
+    try {
+      await api(`/lobbies/${lobbyId}/keeper-options/${option.id}/select`, {
+        method: 'POST',
+        body: { selected: !option.selected },
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not update keeper');
+    } finally {
+      setSelectingId(null);
     }
   }
 
@@ -723,8 +747,30 @@ export function KeeperManagerModal({
                         {opts.map((o) => {
                           const player = playersById.get(o.player_id);
                           const editing = editingOptionId === o.id;
+                          const keepBlocked = !o.selected && chosen >= t.keeper_count;
                           return (
-                            <div key={o.id} className="keeper-modal__row">
+                            <div key={o.id} className={`keeper-modal__row${o.selected ? ' is-kept' : ''}`}>
+                              <button
+                                type="button"
+                                className={`keeper-modal__keep-toggle${o.selected ? ' is-kept' : ''}`}
+                                onClick={() => toggleSelect(o)}
+                                disabled={selectingId === o.id || keepBlocked}
+                                aria-pressed={o.selected}
+                                aria-label={o.selected ? 'Unkeep for this team' : 'Keep for this team'}
+                                title={
+                                  o.selected
+                                    ? 'Kept — click to unkeep'
+                                    : keepBlocked
+                                      ? `${t.name} is at its keeper limit (${t.keeper_count})`
+                                      : 'Keep this player for the team'
+                                }
+                              >
+                                {o.selected ? (
+                                  <CheckCircleIcon sx={{ fontSize: 18 }} />
+                                ) : (
+                                  <RadioButtonUncheckedIcon sx={{ fontSize: 18 }} />
+                                )}
+                              </button>
                               <select
                                 className="keeper-modal__round-sel"
                                 value={o.round}
@@ -771,7 +817,6 @@ export function KeeperManagerModal({
                                   ) : (
                                     'Player'
                                   )}
-                                  {o.selected && <span className="keeper-modal__kept">kept</span>}
                                   <button
                                     type="button"
                                     className="keeper-modal__edit-btn"
