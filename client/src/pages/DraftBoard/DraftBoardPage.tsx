@@ -1384,6 +1384,14 @@ export function DraftBoardPage() {
     if (isFullscreen) setShowFsMenu(true);
   }
 
+  /** Jump to the player pool — used when the commissioner clicks the on-clock
+   * team to pick on its behalf. Same fullscreen caveat as openTeamRoster. */
+  function openPlayersPool() {
+    setPanelTab('players');
+    setMobileTab('players');
+    if (isFullscreen) setShowFsMenu(true);
+  }
+
   // `overall` names a specific open slot to fill — set only when a skipped
   // picker who's up again chose which of their slots this player goes into
   // (see LockInModal). Omitted → the server fills their earliest open slot.
@@ -2230,8 +2238,19 @@ export function DraftBoardPage() {
                   <button
                     type="button"
                     className="draft__onclock-team draft__onclock-team--btn"
-                    onClick={() => openTeamRoster(onClockTeam.id)}
-                    title={`View ${onClockTeam.name}'s lineup`}
+                    // As commissioner, clicking another team that's on the clock
+                    // jumps to the player pool to pick on its behalf; otherwise
+                    // (your own turn, or a non-commissioner) it views the lineup.
+                    onClick={() =>
+                      isCommish && onClockTeam.owner_id !== userId
+                        ? openPlayersPool()
+                        : openTeamRoster(onClockTeam.id)
+                    }
+                    title={
+                      isCommish && onClockTeam.owner_id !== userId
+                        ? `Pick for ${onClockTeam.name}`
+                        : `View ${onClockTeam.name}'s lineup`
+                    }
                   >
                     <span className="draft__onclock-avatar">
                       <Avatar
