@@ -16,12 +16,10 @@ import { DraftCellStylePicker } from '../../components/DraftGrid/DraftCellStyleP
 import { randomSamplePlayer } from '../../components/DraftGrid/samplePlayers';
 import { PlayerCardStylePicker } from '../../components/PlayerCard/PlayerCardStylePicker';
 import {
-  getDraftCellStyle,
   setDraftCellStyle,
   type DraftCellStyle,
 } from '../../lib/draftCellStyle';
 import {
-  getPlayerCardStyle,
   setPlayerCardStyle,
   type PlayerCardStyle,
 } from '../../lib/playerCardStyle';
@@ -122,8 +120,11 @@ export function OnboardingPage() {
   const [avatar, setAvatar] = useState<AvatarData>(() =>
     defaultAvatar(userId ?? 'seed'),
   );
-  const [cellStyle, setCellStyle] = useState<DraftCellStyle>(getDraftCellStyle);
-  const [cardStyle, setCardStyle] = useState<PlayerCardStyle>(getPlayerCardStyle);
+  // A fresh account starts from the app's true defaults, not whatever a
+  // previous user left in this browser's per-device style prefs (these aren't
+  // synced, so on a shared machine they'd otherwise carry over).
+  const [cellStyle, setCellStyle] = useState<DraftCellStyle>('default');
+  const [cardStyle, setCardStyle] = useState<PlayerCardStyle>('comfy');
   const [samplePlayer] = useState(randomSamplePlayer);
   const [usernameStatus, setUsernameStatus] = useState<UsernameStatus>('idle');
   const [saving, setSaving] = useState(false);
@@ -142,6 +143,13 @@ export function OnboardingPage() {
       setSeeded(true);
     }
   }, [profile, seeded]);
+
+  // Persist the reset-to-default style prefs on entry, so the rest of the app
+  // reflects them even if the user never touches the pickers here.
+  useEffect(() => {
+    setDraftCellStyle('default');
+    setPlayerCardStyle('comfy');
+  }, []);
 
   // Live availability, excluding the user's own current username.
   useEffect(() => {
@@ -378,7 +386,9 @@ function TourStepView({
       <button type="button" className="onboarding__skip" onClick={onSkip}>
         Skip tour
       </button>
-      <Icon className="onboarding__icon" aria-hidden />
+      <span className="onboarding__icon-wrap" aria-hidden>
+        <Icon className="onboarding__icon" />
+      </span>
       <h1>{step.title}</h1>
       <div className="onboarding__prose">{step.body}</div>
       <div className="onboarding__actions">
