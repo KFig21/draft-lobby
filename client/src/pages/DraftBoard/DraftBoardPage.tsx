@@ -2599,6 +2599,7 @@ export function DraftBoardPage() {
       {showAllKeepers && (
         <KeeperOptionsViewModal
           teams={teams}
+          members={members}
           players={players}
           keeperOptions={keeperOptions}
           rosterComposition={lobby.settings.rosterComposition}
@@ -2610,6 +2611,7 @@ export function DraftBoardPage() {
       {showTeamKeepers && (
         <KeeperOptionsViewModal
           teams={teams}
+          members={members}
           players={players}
           keeperOptions={keeperOptions}
           rosterComposition={lobby.settings.rosterComposition}

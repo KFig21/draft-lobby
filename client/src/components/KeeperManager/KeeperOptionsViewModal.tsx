@@ -9,11 +9,15 @@ import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';
 import { useMemo, useState } from 'react';
 import { useModalClose } from '../../lib/useModalClose';
-import type { KeeperOptionRow, PlayerRow, TeamRow } from '../../lib/types';
+import { avatarForTeam } from '../../lib/teamAvatar';
+import type { KeeperOptionRow, MemberRow, PlayerRow, TeamRow } from '../../lib/types';
+import { Avatar } from '../Avatar/Avatar';
 import './KeeperOptionsViewModal.scss';
 
 interface Props {
   teams: TeamRow[];
+  /** Lobby members, for resolving each team's owner avatar beside its name. */
+  members: MemberRow[];
   players: PlayerRow[];
   keeperOptions: KeeperOptionRow[];
   /** Which positions get a filter pill — a league that doesn't roster K/DEF
@@ -33,6 +37,7 @@ interface Props {
  * commissioner's Keeper Manager or the owner's own "Your keepers" modal. */
 export function KeeperOptionsViewModal({
   teams,
+  members,
   players,
   keeperOptions,
   rosterComposition,
@@ -94,6 +99,9 @@ export function KeeperOptionsViewModal({
         </button>
 
         <h2 className="keeper-view__title">
+          {single && shownTeams[0] && (
+            <Avatar avatar={avatarForTeam(shownTeams[0], members)} size={22} />
+          )}
           {single ? `${shownTeams[0]?.name ?? 'Team'}’s keepers` : 'Keeper candidates'}
         </h2>
         {!single && (
@@ -142,6 +150,7 @@ export function KeeperOptionsViewModal({
                 {!single && (
                   <div className="keeper-view__team-head">
                     <span className="keeper-view__team-name">
+                      <Avatar avatar={avatarForTeam(t, members)} size={18} />
                       {t.draft_position}. {t.name}
                     </span>
                     <span className="keeper-view__team-count">
