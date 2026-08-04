@@ -12,9 +12,70 @@
     }
   }
 
+  // Verify-email / reset-sent panels reuse the card but center their prose.
+  &__card--notice {
+    text-align: center;
+    gap: $space * 1.5;
+  }
+
+  &__lead {
+    color: $text-muted;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    margin: 0;
+
+    strong {
+      color: $text;
+    }
+  }
+
   &__error {
     color: $danger;
     font-size: 0.9rem;
+  }
+
+  // Field helper line (username availability, password rule). Neutral by
+  // default; availability states recolor it.
+  &__hint {
+    display: block;
+    margin-top: $space * 0.5;
+    font-size: 0.8rem;
+    color: $text-muted;
+    min-height: 1em;
+
+    &--available {
+      color: $primary;
+
+      :root[data-theme='dark'] & {
+        color: $accent;
+      }
+    }
+
+    &--taken,
+    &--short {
+      color: $danger;
+    }
+  }
+
+  // Inline "Forgot password?" — quieter than a button, left-aligned under the
+  // password field.
+  &__link {
+    align-self: flex-start;
+    margin-top: -$space * 0.5;
+    padding: 0;
+    background: none;
+    border: none;
+    color: $primary;
+    cursor: pointer;
+    font-size: 0.85rem;
+
+    :root[data-theme='dark'] & {
+      color: $accent;
+    }
+
+    &:hover {
+      text-decoration: underline;
+    }
   }
 
   &__switch {

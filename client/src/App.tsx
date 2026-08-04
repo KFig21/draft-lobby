@@ -18,6 +18,12 @@ import { ToastProvider } from './toast/ToastContext';
 // visited, instead of every page's code (DraftBoardPage especially) landing
 // in the single main bundle regardless of which routes a session ever hits.
 const AuthPage = lazy(() => import('./pages/Auth/AuthPage').then((m) => ({ default: m.AuthPage })));
+const ResetPasswordPage = lazy(() =>
+  import('./pages/Auth/ResetPasswordPage').then((m) => ({ default: m.ResetPasswordPage })),
+);
+const OnboardingPage = lazy(() =>
+  import('./pages/Onboarding/OnboardingPage').then((m) => ({ default: m.OnboardingPage })),
+);
 const DraftBoardPage = lazy(() =>
   import('./pages/DraftBoard/DraftBoardPage').then((m) => ({ default: m.DraftBoardPage })),
 );
@@ -65,6 +71,24 @@ function Protected({ children }: { children: React.ReactNode }) {
       </div>
     );
   if (!session) return <Navigate to="/auth" replace />;
+  return <>{children}</>;
+}
+
+/**
+ * Gate for the main app: a verified user who hasn't finished first-run
+ * onboarding (profiles.onboarded_at is null) is sent to /welcome. Always sits
+ * inside <Protected>, so a session is guaranteed; we only wait on the profile
+ * fetch. Never wraps /welcome itself, or it would loop.
+ */
+function RequireOnboarded({ children }: { children: React.ReactNode }) {
+  const { profile, profileLoaded } = useAuth();
+  if (!profileLoaded)
+    return (
+      <div className="loading">
+        <Loader />
+      </div>
+    );
+  if (profile && !profile.onboardedAt) return <Navigate to="/welcome" replace />;
   return <>{children}</>;
 }
 
@@ -147,11 +171,27 @@ export default function App() {
               </PublicOnly>
             }
           />
+          {/* Reset-password landing: neither public-only nor protected — the
+              recovery link establishes a session, so PublicOnly would bounce
+              it to /home before the user could set a new password. */}
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          {/* First-run onboarding: session required, but outside the
+              onboarding gate (wrapping it would loop). */}
+          <Route
+            path="/welcome"
+            element={
+              <Protected>
+                <OnboardingPage />
+              </Protected>
+            }
+          />
           {/* Main signed-in pages share the navbar shell. */}
           <Route
             element={
               <Protected>
-                <MainLayout />
+                <RequireOnboarded>
+                  <MainLayout />
+                </RequireOnboarded>
               </Protected>
             }
           >
@@ -178,7 +218,9 @@ export default function App() {
             path="/lobby/:id/draft"
             element={
               <Protected>
-                <DraftBoardPage />
+                <RequireOnboarded>
+                  <DraftBoardPage />
+                </RequireOnboarded>
               </Protected>
             }
           />

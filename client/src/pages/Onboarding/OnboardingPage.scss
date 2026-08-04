@@ -1,0 +1,199 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+.onboarding {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100%;
+  padding: $space * 3 $space * 2;
+
+  &__card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: $space * 2;
+    width: min(560px, 100%);
+    @include card-surface;
+    padding: $space * 3;
+
+    @media (max-width: #{$bp-md - 1px}) {
+      padding: $space * 2;
+    }
+  }
+
+  // Step indicator dots.
+  &__progress {
+    display: flex;
+    justify-content: center;
+    gap: $space * 0.75;
+  }
+
+  &__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: $border;
+    transition: background 0.2s ease;
+
+    &.is-done {
+      background: $primary;
+
+      :root[data-theme='dark'] & {
+        background: $accent;
+      }
+    }
+  }
+
+  &__body {
+    display: flex;
+    flex-direction: column;
+    gap: $space * 2.5;
+  }
+
+  &__head {
+    display: flex;
+    flex-direction: column;
+    gap: $space * 0.5;
+
+    h1 {
+      font-size: 1.5rem;
+    }
+  }
+
+  &__lead {
+    margin: 0;
+    color: $text-muted;
+    font-size: 0.95rem;
+    line-height: 1.5;
+  }
+
+  &__field {
+    display: flex;
+    flex-direction: column;
+    gap: $space;
+
+    h2 {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: $text-muted;
+      margin: 0;
+    }
+  }
+
+  &__sublead {
+    margin: -$space * 0.5 0 0;
+    color: $text-muted;
+    font-size: 0.85rem;
+  }
+
+  &__hint {
+    display: block;
+    margin-top: $space * 0.5;
+    font-size: 0.8rem;
+    color: $text-muted;
+    min-height: 1em;
+
+    &--available {
+      color: $primary;
+
+      :root[data-theme='dark'] & {
+        color: $accent;
+      }
+    }
+
+    &--taken,
+    &--short {
+      color: $danger;
+    }
+  }
+
+  &__theme {
+    align-self: flex-start;
+  }
+
+  &__error {
+    margin: 0;
+    color: $danger;
+    font-size: 0.9rem;
+  }
+
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: $space;
+    margin-top: $space;
+  }
+
+  &__next {
+    min-width: 120px;
+  }
+
+  // ── Guided-tour steps ──
+  &__body--tour {
+    align-items: center;
+    text-align: center;
+    gap: $space * 1.5;
+    padding-top: $space;
+
+    h1 {
+      font-size: 1.4rem;
+    }
+
+    .onboarding__actions {
+      justify-content: space-between;
+      width: 100%;
+    }
+  }
+
+  &__skip {
+    position: absolute;
+    top: $space * 2;
+    right: $space * 2;
+    padding: 0;
+    background: none;
+    border: none;
+    color: $text-muted;
+    font-size: 0.85rem;
+    cursor: pointer;
+
+    &:hover {
+      color: $text;
+    }
+  }
+
+  &__emoji {
+    font-size: 3rem;
+    line-height: 1;
+  }
+
+  &__prose {
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: $space;
+
+    p {
+      margin: 0;
+      color: $text;
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+
+    strong {
+      color: $text;
+      font-weight: 700;
+    }
+  }
+
+  // Softer aside line at the foot of each tour step.
+  &__note {
+    padding: $space * 1.25;
+    border-radius: $radius-sm;
+    background: $bg-overlay;
+    color: $text-muted !important;
+    font-size: 0.88rem !important;
+  }
+}

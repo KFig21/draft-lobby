@@ -1,5 +1,6 @@
 import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
+import { env } from '../env.js';
 import { supabaseAdmin, supabaseAnon } from '../supabase.js';
 
 export const authRouter = Router();
@@ -8,6 +9,25 @@ const loginSchema = z.object({
   identifier: z.string().min(1), // email or username
   password: z.string().min(1),
 });
+
+const forgotSchema = z.object({
+  identifier: z.string().min(1), // email or username
+});
+
+/** Resolve an email-or-username identifier to its account email, or null. */
+async function emailForIdentifier(identifier: string): Promise<string | null> {
+  if (identifier.includes('@')) return identifier;
+  const { data: profile } = await supabaseAdmin
+    .from('profiles')
+    .select('id')
+    .ilike('username', identifier)
+    .maybeSingle();
+  if (!profile) return null;
+  const { data: userData } = await supabaseAdmin.auth.admin.getUserById(
+    profile.id,
+  );
+  return userData.user?.email ?? null;
+}
 
 /**
  * POST /api/auth/login — sign in with either an email or a username.
@@ -23,23 +43,7 @@ authRouter.post('/login', async (req: Request, res: Response) => {
   }
   const { identifier, password } = parsed.data;
 
-  let email: string | null = null;
-  if (identifier.includes('@')) {
-    email = identifier;
-  } else {
-    // Look up the profile by username (case-insensitive), then its auth email.
-    const { data: profile } = await supabaseAdmin
-      .from('profiles')
-      .select('id')
-      .ilike('username', identifier)
-      .maybeSingle();
-    if (profile) {
-      const { data: userData } = await supabaseAdmin.auth.admin.getUserById(
-        profile.id,
-      );
-      email = userData.user?.email ?? null;
-    }
-  }
+  const email = await emailForIdentifier(identifier);
 
   // Generic error regardless of which part failed (no account enumeration).
   const invalid = () =>
@@ -57,4 +61,30 @@ authRouter.post('/login', async (req: Request, res: Response) => {
     access_token: data.session.access_token,
     refresh_token: data.session.refresh_token,
   });
+});
+
+/**
+ * POST /api/auth/forgot — request a password-reset email by email OR username.
+ * Always responds 200 with the same body regardless of whether an account
+ * exists (no account enumeration — same stance as /login). When an account is
+ * found, sends Supabase's reset email pointing at the client's /reset-password
+ * route, where the recovery session is adopted and the password updated.
+ */
+authRouter.post('/forgot', async (req: Request, res: Response) => {
+  const parsed = forgotSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: 'Enter your email or username' });
+    return;
+  }
+
+  const email = await emailForIdentifier(parsed.data.identifier);
+  if (email) {
+    const base = env.APP_URL ?? env.CLIENT_ORIGIN[0];
+    await supabaseAnon.auth.resetPasswordForEmail(email, {
+      redirectTo: `${base}/reset-password`,
+    });
+  }
+
+  // Same reply either way.
+  res.json({ ok: true });
 });
