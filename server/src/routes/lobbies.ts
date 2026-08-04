@@ -167,6 +167,7 @@ lobbiesRouter.post('/:id/copy', async (req: AuthedRequest, res: Response) => {
   if (include.scoring) merged.scoring = src.scoring;
   if (include.timers) {
     merged.pickTiers = src.pickTiers;
+    merged.botPickSeconds = src.botPickSeconds;
     merged.allowSkips = src.allowSkips;
     merged.timeoutAllowance = src.timeoutAllowance;
   }
@@ -210,7 +211,7 @@ lobbiesRouter.post('/:id/copy', async (req: AuthedRequest, res: Response) => {
   // Source teams, needed both to recreate seats and to map keepers by slot.
   const { data: srcTeams } = await supabaseAdmin
     .from('teams')
-    .select('id, owner_id, name, draft_position, color, is_prev_champion')
+    .select('id, owner_id, name, draft_position, color, is_prev_champion, is_bot, auto_draft')
     .eq('lobby_id', sourceId)
     .order('draft_position');
   const srcTeamPos = new Map<string, number>(
@@ -222,16 +223,25 @@ lobbiesRouter.post('/:id/copy', async (req: AuthedRequest, res: Response) => {
     const rows = srcTeams!.map((t) => ({
       lobby_id: lobby.id,
       // Keep the copier owning their own seat; everyone else's is unowned
-      // (an empty seat fills with a bot in a mock).
+      // (a human seat to re-invite, or a bot that keeps drafting itself).
       owner_id: t.owner_id === userId ? userId : null,
       name: t.name,
       draft_position: t.draft_position,
       color: t.color,
       is_prev_champion: t.is_prev_champion,
+      // Preserve bot seats so a copied mock still drafts itself. A human seat
+      // (is_bot false) with its owner cleared becomes an empty seat to invite.
+      is_bot: t.is_bot,
+      auto_draft: t.auto_draft,
     }));
     // The copier is this lobby's commissioner — make sure they own a seat even
-    // if they didn't in the source (e.g. a mock they never sat in).
-    if (!rows.some((r) => r.owner_id === userId)) rows[0].owner_id = userId;
+    // if they didn't in the source (e.g. a mock they never sat in). Claiming a
+    // seat makes it human, not a bot.
+    if (!rows.some((r) => r.owner_id === userId)) {
+      rows[0].owner_id = userId;
+      rows[0].is_bot = false;
+      rows[0].auto_draft = false;
+    }
     const { data: inserted, error: teamErr } = await supabaseAdmin
       .from('teams')
       .insert(rows)

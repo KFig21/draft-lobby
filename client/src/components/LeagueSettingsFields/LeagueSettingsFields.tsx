@@ -6,6 +6,8 @@ import {
   SLOT_HINTS,
   SLOT_LABELS,
   SLOT_MAX,
+  DEFAULT_BOT_PICK_SECONDS,
+  UNLIMITED_PICK_SECONDS,
   matchPreset,
   rosterSize,
   startingSpots,
@@ -17,7 +19,7 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { formatSeconds } from '../../lib/format';
+import { formatPickClock, formatSeconds } from '../../lib/format';
 import { supabase } from '../../supabase';
 import { Modal } from '../Modal/Modal';
 import { ToggleSwitch } from '../ToggleSwitch/ToggleSwitch';
@@ -32,7 +34,8 @@ interface ScoringFormatRow {
   rules: ScoringRules;
 }
 
-const SECONDS_OPTIONS = [15, 30, 45, 60, 90, 120, 180, 240, 300];
+const SECONDS_OPTIONS = [15, 30, 45, 60, 90, 120, 180, 240, 300, UNLIMITED_PICK_SECONDS];
+const BOT_SPEED_OPTIONS = [3, 5, 10, 15, 30];
 
 interface Props {
   settings: LobbySettings;
@@ -297,7 +300,7 @@ export function LeagueSettingsFields({ settings, onChange, nameField }: Props) {
                 >
                   {SECONDS_OPTIONS.map((s) => (
                     <option key={s} value={s}>
-                      {formatSeconds(s)}
+                      {formatPickClock(s)}
                     </option>
                   ))}
                 </select>
@@ -349,6 +352,22 @@ export function LeagueSettingsFields({ settings, onChange, nameField }: Props) {
             }
             placeholder="Unlimited"
           />
+        </label>
+        <label className="field">
+          <span>
+            Bot pick speed{' '}
+            <em className="muted">(how fast bots draft; capped by the round clock)</em>
+          </span>
+          <select
+            value={settings.botPickSeconds ?? DEFAULT_BOT_PICK_SECONDS}
+            onChange={(e) => set('botPickSeconds', Number(e.target.value))}
+          >
+            {BOT_SPEED_OPTIONS.map((s) => (
+              <option key={s} value={s}>
+                {formatSeconds(s)}
+              </option>
+            ))}
+          </select>
         </label>
       </section>
 

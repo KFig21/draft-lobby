@@ -7,6 +7,7 @@ import {
   draftablePositions,
   draftPositionForOverall,
   extractMentionedUsernames,
+  isUnlimitedPick,
   openSlots,
   overallForDraftPosition,
   roundsForSettings,
@@ -1575,6 +1576,10 @@ export function DraftBoardPage() {
   const onClockCellTotalSeconds = isComplete
     ? null
     : secondsForRound(round, lobby.settings.pickTiers);
+  // This round has no human clock — the header clock shows "∞" and no progress
+  // fills. (A bot on the clock still gets a finite deadline, handled by PickClock.)
+  const clockUnlimited =
+    !isComplete && isUnlimitedPick(secondsForRound(round, lobby.settings.pickTiers));
   const onClockCellElapsedPct =
     onClockCellSecondsLeft != null && onClockCellTotalSeconds
       ? Math.min(
@@ -2270,7 +2275,11 @@ export function DraftBoardPage() {
             )}
           </div>
           {!isComplete && !isStaging && (
-            <PickClock deadline={lobby.pick_deadline} frozenMs={lobby.pick_deadline_remaining_ms} />
+            <PickClock
+              deadline={lobby.pick_deadline}
+              frozenMs={lobby.pick_deadline_remaining_ms}
+              unlimited={clockUnlimited}
+            />
           )}
         </div>
         <div className="draft__right">

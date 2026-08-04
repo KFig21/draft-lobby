@@ -2,6 +2,7 @@ import {
   AUTO_PICK_SECONDS,
   computeFantasyPoints,
   draftPositionForOverall,
+  isUnlimitedPick,
   openSlots,
   overallForDraftPosition,
   roundsForSettings,
@@ -118,21 +119,33 @@ export async function onClockTeam(
   return (data as OnClockTeam) ?? null;
 }
 
-/** Bots and auto-draft teams get a short clock; everyone else gets the round timer. */
+/**
+ * Seconds on the clock for whoever's up. Bots/auto-draft teams get the lobby's
+ * bot pick clock, capped at the round's own clock (a bot never gets longer than
+ * a human would) — but an unlimited round places no cap, so bots still pick
+ * promptly. Humans get the round clock, which may be UNLIMITED (0) = no clock.
+ */
 export function clockSeconds(team: OnClockTeam | null, settings: LobbySettings, overall: number): number {
-  if (team && (team.is_bot || team.auto_draft)) return AUTO_PICK_SECONDS;
   const round = Math.floor((overall - 1) / settings.teamCount) + 1;
-  return secondsForRound(round, settings.pickTiers);
+  const roundSeconds = secondsForRound(round, settings.pickTiers);
+  if (team && (team.is_bot || team.auto_draft)) {
+    const bot = settings.botPickSeconds ?? AUTO_PICK_SECONDS;
+    return isUnlimitedPick(roundSeconds) ? bot : Math.min(bot, roundSeconds);
+  }
+  return roundSeconds; // may be UNLIMITED (0) — see computeDeadline
 }
 
-/** Deadline ISO string for whoever is on the clock at `overall`. */
+/** Deadline ISO string for whoever is on the clock at `overall`, or null when
+ * the clock is unlimited (an untimed round — the draft waits for the pick). */
 export async function computeDeadline(
   lobbyId: string,
   settings: LobbySettings,
   overall: number,
-): Promise<string> {
+): Promise<string | null> {
   const team = await onClockTeam(lobbyId, settings, overall);
-  return new Date(Date.now() + clockSeconds(team, settings, overall) * 1000).toISOString();
+  const secs = clockSeconds(team, settings, overall);
+  if (secs <= 0) return null;
+  return new Date(Date.now() + secs * 1000).toISOString();
 }
 
 /** A fresh, full clock duration (ms) for whoever is on the clock at `overall`

@@ -7,9 +7,13 @@ import './PickClock.scss';
 export function PickClock({
   deadline,
   frozenMs,
+  unlimited,
 }: {
   deadline: string | null;
   frozenMs?: number | null;
+  /** The round has no clock — show "∞" instead of a countdown. Only matters
+   * when `deadline` is null (a bot's finite clock still counts down normally). */
+  unlimited?: boolean;
 }) {
   const [now, setNow] = useState(() => Date.now());
 
@@ -19,6 +23,13 @@ export function PickClock({
   }, []);
 
   if (!deadline) {
+    if (unlimited) {
+      return (
+        <span className="clock clock--idle" title="No pick clock this round">
+          ∞
+        </span>
+      );
+    }
     if (frozenMs != null) {
       return <span className="clock clock--paused">{formatDuration(Math.max(0, Math.floor(frozenMs / 1000)))}</span>;
     }

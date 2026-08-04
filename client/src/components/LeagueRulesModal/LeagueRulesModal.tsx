@@ -6,6 +6,7 @@ import {
   SLOT_HINTS,
   SLOT_LABELS,
   groupScoringRules,
+  isUnlimitedPick,
   matchPreset,
   roundsForSettings,
   startingSpots,
@@ -22,7 +23,7 @@ import TimerOutlinedIcon from '@mui/icons-material/TimerOutlined';
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../auth/AuthContext';
 import { api } from '../../lib/api';
-import { formatSeconds } from '../../lib/format';
+import { formatPickClock } from '../../lib/format';
 import type { ProfileMini } from '../../lib/types';
 import { supabase } from '../../supabase';
 import { Avatar } from '../Avatar/Avatar';
@@ -90,13 +91,19 @@ export function LeagueRulesModal({ settings, defaultName, onClose }: Props) {
   // how much time it gives relative to the league's other tiers — more time
   // reads as calmer (accent), less as more urgent ($danger).
   const tierRanges = useMemo(() => {
-    const seconds = settings.pickTiers.map((t) => t.seconds);
-    const min = Math.min(...seconds);
-    const max = Math.max(...seconds);
+    // Rank by time relative to the other *finite* tiers; an unlimited tier is
+    // the calmest (most time), so it always maps to the top of the range.
+    const finite = settings.pickTiers.map((t) => t.seconds).filter((s) => !isUnlimitedPick(s));
+    const min = finite.length ? Math.min(...finite) : 0;
+    const max = finite.length ? Math.max(...finite) : 0;
     let start = 1;
     return settings.pickTiers.map((tier) => {
       const end = tier.untilRound ?? totalRounds;
-      const ratio = max === min ? 0.5 : (tier.seconds - min) / (max - min);
+      const ratio = isUnlimitedPick(tier.seconds)
+        ? 1
+        : max === min
+          ? 0.5
+          : (tier.seconds - min) / (max - min);
       const range = { start, end, seconds: tier.seconds, color: lerpColor(ratio) };
       start = end + 1;
       return range;
@@ -445,7 +452,7 @@ export function LeagueRulesModal({ settings, defaultName, onClose }: Props) {
                           : `Rounds ${range.start} → ${range.end}`}
                       </span>
                       <span className="rules-modal__scoreval" style={{ color: range.color }}>
-                        {formatSeconds(range.seconds)}
+                        {formatPickClock(range.seconds)}
                       </span>
                     </li>
                   ))}

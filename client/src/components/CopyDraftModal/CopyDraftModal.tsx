@@ -4,6 +4,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import PersonAddOutlinedIcon from '@mui/icons-material/PersonAddAltOutlined';
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { copyLobby, reinviteToLobby, type CopyLobbyResult } from '../../lib/lobbyCopy';
 import { useModalClose } from '../../lib/useModalClose';
@@ -145,7 +146,10 @@ export function CopyDraftModal({ source, onClose }: Props) {
     );
   }
 
-  return (
+  // Portaled to <body>: the My Drafts page sits inside the app layout, whose
+  // content column establishes a containing block, so a plain fixed-position
+  // backdrop would only cover that column (not the sidebar). Body-level escapes it.
+  return createPortal(
     <div
       className={`copy-draft__backdrop modal-anim-backdrop${closing ? ' is-closing' : ''}`}
       onClick={requestClose}
@@ -276,6 +280,7 @@ export function CopyDraftModal({ source, onClose }: Props) {
           </>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

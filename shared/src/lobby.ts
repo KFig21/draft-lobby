@@ -58,14 +58,32 @@ export const MIN_PICK_SECONDS = 15;
 export const MAX_PICK_SECONDS = 5 * 60; // 5 minutes
 
 /**
+ * Sentinel `seconds` value meaning "no clock" — humans on such a round are
+ * never timed out (the draft waits for their pick), so a mock can proceed at
+ * its own pace. Bots still pick on their own short clock. Zero rather than
+ * null keeps `seconds` a plain number everywhere; guard with isUnlimitedPick.
+ */
+export const UNLIMITED_PICK_SECONDS = 0;
+export function isUnlimitedPick(seconds: number): boolean {
+  return seconds === UNLIMITED_PICK_SECONDS;
+}
+
+/** Default bot pick clock (seconds) when a lobby hasn't set one. */
+export const DEFAULT_BOT_PICK_SECONDS = 5;
+
+/**
  * A pick-clock tier: every round up to and including `untilRound` gets
  * `seconds` on the clock. `untilRound: null` is the catch-all for the
  * remaining rounds. Tiers let leagues ramp the clock down over the draft
- * (e.g. early rounds 2:00 → mid 1:00 → late 0:30).
+ * (e.g. early rounds 2:00 → mid 1:00 → late 0:30). `seconds` is either in
+ * [MIN, MAX] or UNLIMITED_PICK_SECONDS (no clock).
  */
 export const pickTierSchema = z.object({
   untilRound: z.number().int().min(1).nullable(),
-  seconds: z.number().int().min(MIN_PICK_SECONDS).max(MAX_PICK_SECONDS),
+  seconds: z.number().int().refine(
+    (s) => s === UNLIMITED_PICK_SECONDS || (s >= MIN_PICK_SECONDS && s <= MAX_PICK_SECONDS),
+    { message: `Pick clock must be ${MIN_PICK_SECONDS}–${MAX_PICK_SECONDS}s, or no limit` },
+  ),
 });
 export type PickTier = z.infer<typeof pickTierSchema>;
 
@@ -109,6 +127,9 @@ export const lobbySettingsSchema = z.object({
   rosterComposition: rosterCompositionSchema,
   /** Per-round pick clock. */
   pickTiers: pickTiersSchema,
+  /** Seconds a bot / auto-draft team gets on the clock. Capped at runtime by
+   * the round's own clock (a bot never gets longer than a human would). */
+  botPickSeconds: z.number().int().min(1).max(MAX_PICK_SECONDS).default(DEFAULT_BOT_PICK_SECONDS),
   /** When on, a team that lets its clock expire is SKIPPED (the next team comes
    * on the clock) instead of auto-picked — the skipped team can still pick any
    * time afterward. Off = today's behavior (auto-pick on timeout). The skip cap
@@ -151,6 +172,7 @@ export const DEFAULT_LOBBY_SETTINGS: LobbySettings = {
   draftMode: 'LIVE',
   rosterComposition: DEFAULT_ROSTER,
   pickTiers: DEFAULT_PICK_TIERS,
+  botPickSeconds: DEFAULT_BOT_PICK_SECONDS,
   allowSkips: false,
   timeoutAllowance: null,
   keepersEnabled: false,

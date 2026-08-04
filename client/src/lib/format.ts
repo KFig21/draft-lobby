@@ -1,4 +1,4 @@
-import type { PickTier } from '@draft-lobby/shared';
+import { isUnlimitedPick, type PickTier } from '@draft-lobby/shared';
 
 /** Seconds → "m:ss", e.g. 120 → "2:00", 30 → "0:30". */
 export function formatSeconds(seconds: number): string {
@@ -7,12 +7,17 @@ export function formatSeconds(seconds: number): string {
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
+/** A pick-clock value for display — "No limit" for an unlimited tier. */
+export function formatPickClock(seconds: number): string {
+  return isUnlimitedPick(seconds) ? 'No limit' : formatSeconds(seconds);
+}
+
 /** Summarize pick-clock tiers, e.g. "2:00 → 0:30" (or "1:30" if flat). */
 export function clockSummary(tiers: PickTier[]): string {
   const first = tiers[0]?.seconds ?? 0;
   const last = tiers[tiers.length - 1]?.seconds ?? 0;
-  if (tiers.length === 1) return formatSeconds(first);
-  return `${formatSeconds(first)} → ${formatSeconds(last)}`;
+  if (tiers.length === 1) return formatPickClock(first);
+  return `${formatPickClock(first)} → ${formatPickClock(last)}`;
 }
 
 /** "Josh Allen" → "J. Allen" — a tighter name for narrow layouts (mobile
