@@ -293,14 +293,26 @@ export function RankingsPage() {
             </button>
           </div>
 
-          <input
-            className="rankings__search"
-            type="search"
-            placeholder="Search players…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            aria-label="Search players"
-          />
+          <div className="rankings__search-wrap">
+            <input
+              className="rankings__search"
+              type="search"
+              placeholder="Search players…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              aria-label="Search players"
+            />
+            {search && (
+              <button
+                type="button"
+                className="rankings__search-clear"
+                aria-label="Clear search"
+                onClick={() => setSearch('')}
+              >
+                <CloseIcon fontSize="small" />
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="chip-row rankings__positions">

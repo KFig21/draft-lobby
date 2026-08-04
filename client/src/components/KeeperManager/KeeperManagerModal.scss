@@ -764,6 +764,9 @@
   }
 
   &__row-team {
+    display: inline-flex;
+    align-items: center;
+    gap: $space * 0.5;
     color: $text-muted;
     font-size: 0.82rem;
   }

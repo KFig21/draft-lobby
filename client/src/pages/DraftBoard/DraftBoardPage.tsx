@@ -21,6 +21,7 @@ import StarIcon from '@mui/icons-material/Star';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlined';
 import CheckIcon from '@mui/icons-material/Check';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import CloseIcon from '@mui/icons-material/Close';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import EmojiEventsOutlinedIcon from '@mui/icons-material/EmojiEventsOutlined';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutlineOutlined';
@@ -1878,12 +1879,25 @@ export function DraftBoardPage() {
             </label>
           </div>
           <div className="pool__searchrow">
-            <input
-              className="pool__search"
-              placeholder="Search players…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+            <div className="pool__search-wrap">
+              <input
+                className="pool__search"
+                type="search"
+                placeholder="Search players…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+              {search && (
+                <button
+                  type="button"
+                  className="pool__search-clear"
+                  aria-label="Clear search"
+                  onClick={() => setSearch('')}
+                >
+                  <CloseIcon fontSize="small" />
+                </button>
+              )}
+            </div>
             {byeFilter}
           </div>
         </div>
@@ -2562,6 +2576,7 @@ export function DraftBoardPage() {
         <KeeperManagerModal
           lobbyId={id}
           teams={teams}
+          members={members}
           players={players}
           picks={picks}
           keeperOptions={keeperOptions}

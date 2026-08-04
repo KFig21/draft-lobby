@@ -53,6 +53,19 @@ export const AVATAR_EMOJI_CHOICES = [
   '👽',
 ] as const;
 
+/** A randomly-chosen avatar (emoji + color) for a brand-new account, before
+ * the user customizes it in onboarding. Non-deterministic, unlike
+ * defaultAvatar — two accounts created back-to-back won't look alike. */
+export function randomAvatar(): Avatar {
+  const pick = <T>(arr: readonly T[]): T =>
+    arr[Math.floor(Math.random() * arr.length)];
+  return {
+    bgColor: pick(AVATAR_BG_COLORS),
+    shape: 'circle',
+    emoji: pick(AVATAR_EMOJI_CHOICES),
+  };
+}
+
 /** Deterministic default avatar derived from a seed string (e.g. user id). */
 export function defaultAvatar(seed: string): Avatar {
   let hash = 0;

@@ -1,7 +1,7 @@
 import {
   USERNAME_MAX_LEN,
   USERNAME_MIN_LEN,
-  defaultAvatar,
+  randomAvatar,
   type Avatar as AvatarData,
 } from '@draft-lobby/shared';
 import type { SvgIconComponent } from '@mui/icons-material';
@@ -117,9 +117,10 @@ export function OnboardingPage() {
   const [step, setStep] = useState(0); // 0 = profile; 1..N = tour
   const [seeded, setSeeded] = useState(false);
   const [username, setUsername] = useState('');
-  const [avatar, setAvatar] = useState<AvatarData>(() =>
-    defaultAvatar(userId ?? 'seed'),
-  );
+  // Brand-new accounts get a random emoji + color (picked once on mount), which
+  // they can then customize. The seed effect below overrides this only if the
+  // profile already has a saved avatar.
+  const [avatar, setAvatar] = useState<AvatarData>(() => randomAvatar());
   // A fresh account starts from the app's true defaults, not whatever a
   // previous user left in this browser's per-device style prefs (these aren't
   // synced, so on a shared machine they'd otherwise carry over).

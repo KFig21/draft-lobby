@@ -16,12 +16,22 @@ import {
   type ParsedKeeperRow,
 } from '../../lib/keeperImport';
 import { useModalClose } from '../../lib/useModalClose';
-import type { KeeperOptionRow, PickRow, PlayerRow, TeamRow } from '../../lib/types';
+import { avatarForTeam } from '../../lib/teamAvatar';
+import type {
+  KeeperOptionRow,
+  MemberRow,
+  PickRow,
+  PlayerRow,
+  TeamRow,
+} from '../../lib/types';
+import { Avatar } from '../Avatar/Avatar';
 import './KeeperManagerModal.scss';
 
 interface Props {
   lobbyId: string;
   teams: TeamRow[];
+  /** Lobby members, for resolving each team's owner avatar in the lists. */
+  members: MemberRow[];
   players: PlayerRow[];
   /** Every pick in the lobby — keepers are the is_keeper ones; all of them
    * count as "already taken" for the search. Updates via the parent's realtime
@@ -167,6 +177,7 @@ function PlayerSearch({
 export function KeeperManagerModal({
   lobbyId,
   teams,
+  members,
   players,
   picks,
   keeperOptions,
@@ -179,6 +190,7 @@ export function KeeperManagerModal({
     () => [...teams].sort((a, b) => a.draft_position - b.draft_position),
     [teams],
   );
+  const teamById = useMemo(() => new Map(teams.map((t) => [t.id, t])), [teams]);
   const playersById = useMemo(() => new Map(players.map((p) => [p.id, p])), [players]);
   const draftedIds = useMemo(() => new Set(picks.map((p) => p.player_id)), [picks]);
   const keeperPicks = useMemo(
@@ -524,6 +536,7 @@ export function KeeperManagerModal({
               ) : (
                 keeperPicks.map((k) => {
                   const player = playersById.get(k.player_id);
+                  const team = teamById.get(k.team_id);
                   return (
                     <div key={k.id} className="keeper-modal__row">
                       <span className="keeper-modal__row-round">R{k.round}</span>
@@ -542,7 +555,12 @@ export function KeeperManagerModal({
                           'Player'
                         )}
                       </span>
-                      <span className="keeper-modal__row-team">{teamName(k.team_id)}</span>
+                      <span className="keeper-modal__row-team">
+                        {team && (
+                          <Avatar avatar={avatarForTeam(team, members)} size={18} />
+                        )}
+                        {teamName(k.team_id)}
+                      </span>
                       <button
                         className="keeper-modal__remove"
                         onClick={() => removeKeeper(k.id)}
@@ -629,6 +647,7 @@ export function KeeperManagerModal({
                   <div key={t.id} className={`keeper-modal__acc${open ? ' is-open' : ''}`}>
                     <button type="button" className="keeper-modal__acc-head" onClick={() => toggleTeam(t.id)}>
                       <ExpandMoreIcon className="keeper-modal__acc-chev" fontSize="small" />
+                      <Avatar avatar={avatarForTeam(t, members)} size={20} />
                       <span className="keeper-modal__acc-name">
                         {t.draft_position}. {t.name}
                       </span>
