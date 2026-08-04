@@ -164,9 +164,22 @@
     }
   }
 
-  &__emoji {
-    font-size: 3rem;
-    line-height: 1;
+  // Tour-step icon: sized via font-size (MUI SvgIcon is 1em square) and tinted
+  // with the theme accent so it reads as the step's focal point.
+  &__icon {
+    color: $primary;
+
+    :root[data-theme='dark'] & {
+      color: $accent;
+    }
+
+    // MUI's .MuiSvgIcon-root sets font-size: 1.5rem from a runtime-injected
+    // class that lands *after* this stylesheet, so a plain .onboarding__icon
+    // rule ties on specificity and loses on source order. Match both classes
+    // (0-2-0) to reliably win.
+    &.MuiSvgIcon-root {
+      font-size: 4.5rem;
+    }
   }
 
   &__prose {

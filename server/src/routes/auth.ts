@@ -1,9 +1,35 @@
+import {
+  USERNAME_MAX_LEN,
+  USERNAME_MIN_LEN,
+} from '@draft-lobby/shared';
 import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 import { env } from '../env.js';
 import { supabaseAdmin, supabaseAnon } from '../supabase.js';
 
 export const authRouter = Router();
+
+/**
+ * GET /api/auth/username-available?username=… — is a username free?
+ * Runs with the service role so it works for the signup screen, where the
+ * caller is unauthenticated and RLS would otherwise hide every profile row
+ * (profiles are SELECT-able only by authenticated users). Username existence
+ * is inherently revealed by any availability check, so this exposes nothing
+ * sensitive — unlike emails, which we never confirm here.
+ */
+authRouter.get('/username-available', async (req: Request, res: Response) => {
+  const username = String(req.query.username ?? '').trim();
+  if (username.length < USERNAME_MIN_LEN || username.length > USERNAME_MAX_LEN) {
+    res.status(400).json({ error: 'Invalid username' });
+    return;
+  }
+  const { data } = await supabaseAdmin
+    .from('profiles')
+    .select('id')
+    .ilike('username', username)
+    .maybeSingle();
+  res.json({ available: !data });
+});
 
 const loginSchema = z.object({
   identifier: z.string().min(1), // email or username

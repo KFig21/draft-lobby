@@ -6,6 +6,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../supabase';
 import { api } from '../../lib/api';
+import { isUsernameAvailable } from '../../lib/username';
 import './AuthPage.scss';
 
 type Mode = 'signin' | 'signup' | 'forgot';
@@ -49,13 +50,14 @@ export function AuthPage() {
     setUsernameStatus('checking');
     let cancelled = false;
     const t = setTimeout(async () => {
-      const { data } = await supabase
-        .from('profiles')
-        .select('id')
-        .ilike('username', trimmedUsername)
-        .maybeSingle();
-      if (cancelled) return;
-      setUsernameStatus(data ? 'taken' : 'available');
+      try {
+        const available = await isUsernameAvailable(trimmedUsername);
+        if (!cancelled) setUsernameStatus(available ? 'available' : 'taken');
+      } catch {
+        // Network/validation hiccup — don't block signup on the pre-check;
+        // the DB unique constraint is still the real gate at submit time.
+        if (!cancelled) setUsernameStatus('idle');
+      }
     }, 400);
     return () => {
       cancelled = true;
@@ -91,6 +93,15 @@ export function AuthPage() {
           },
         });
         if (error) throw error;
+        // With email confirmation on, Supabase deliberately hides "this email
+        // is already registered" behind a fake success — but the returned user
+        // has an empty `identities` array in that case. Detect it so we can
+        // send them to sign in instead of showing a check-inbox panel for an
+        // email that will never receive one.
+        if (data.user && (data.user.identities?.length ?? 0) === 0) {
+          setError('An account with that email already exists — try signing in.');
+          return;
+        }
         // Confirmation required: no session yet. Show the check-inbox panel.
         if (!data.session) {
           setPendingEmail(email);
@@ -190,10 +201,15 @@ export function AuthPage() {
     );
   }
 
+  // Block signup only on a *known* problem (too short, or confirmed taken) or a
+  // short password — not while a check is in flight or if the pre-check errored
+  // out. The DB unique constraint + submit-time guard are the real gate.
+  const usernameOk =
+    trimmedUsername.length >= USERNAME_MIN_LEN &&
+    usernameStatus !== 'taken' &&
+    usernameStatus !== 'short';
   const canSubmit =
-    !busy &&
-    (mode !== 'signup' ||
-      (usernameStatus === 'available' && password.length >= 8));
+    !busy && (mode !== 'signup' || (usernameOk && password.length >= 8));
 
   return (
     <main className="auth">

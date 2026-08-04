@@ -4,6 +4,10 @@ import {
   defaultAvatar,
   type Avatar as AvatarData,
 } from '@draft-lobby/shared';
+import type { SvgIconComponent } from '@mui/icons-material';
+import GroupsIcon from '@mui/icons-material/Groups';
+import MeetingRoomIcon from '@mui/icons-material/MeetingRoom';
+import TuneIcon from '@mui/icons-material/Tune';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
@@ -30,14 +34,14 @@ type UsernameStatus = 'idle' | 'checking' | 'available' | 'taken' | 'short';
 // The skippable guided-tour steps (everything after the mandatory profile
 // step). Kept declarative so the flow is just "profile, then these".
 interface TourStep {
-  emoji: string;
+  Icon: SvgIconComponent;
   title: string;
   body: ReactNode;
 }
 
 const TOUR: TourStep[] = [
   {
-    emoji: '📊',
+    Icon: TuneIcon,
     title: 'Rulesets & league sets',
     body: (
       <>
@@ -61,7 +65,7 @@ const TOUR: TourStep[] = [
     ),
   },
   {
-    emoji: '🤝',
+    Icon: GroupsIcon,
     title: 'Friends',
     body: (
       <>
@@ -82,7 +86,7 @@ const TOUR: TourStep[] = [
     ),
   },
   {
-    emoji: '🏈',
+    Icon: MeetingRoomIcon,
     title: 'Join or create a lobby',
     body: (
       <>
@@ -196,9 +200,13 @@ export function OnboardingPage() {
       return false;
     }
     setSaving(true);
+    // Completing this mandatory step *is* onboarding — stamp onboarded_at here,
+    // in the same write, so the account is captured the moment the profile is
+    // set. The guided tour that follows is optional: a user who abandons it is
+    // already onboarded and won't be sent back through /welcome.
     const { error } = await supabase
       .from('profiles')
-      .update({ username: trimmed, avatar })
+      .update({ username: trimmed, avatar, onboarded_at: new Date().toISOString() })
       .eq('id', userId);
     if (error) {
       setSaving(false);
@@ -212,15 +220,10 @@ export function OnboardingPage() {
     return true;
   }
 
-  /** Stamp onboarded_at and leave the flow. Called by Finish and Skip tour. */
-  async function finish() {
-    if (!userId) return;
+  /** Leave the flow. onboarded_at was already stamped when the profile step
+   * completed, so this just navigates home. */
+  function finish() {
     setFinishing(true);
-    await supabase
-      .from('profiles')
-      .update({ onboarded_at: new Date().toISOString() })
-      .eq('id', userId);
-    await refreshProfile();
     navigate('/home', { replace: true });
   }
 
@@ -369,14 +372,13 @@ function TourStepView({
   onSkip: () => void;
 }) {
   const isLast = index === count - 1;
+  const Icon = step.Icon;
   return (
     <div className="onboarding__body onboarding__body--tour">
       <button type="button" className="onboarding__skip" onClick={onSkip}>
         Skip tour
       </button>
-      <div className="onboarding__emoji" aria-hidden>
-        {step.emoji}
-      </div>
+      <Icon className="onboarding__icon" aria-hidden />
       <h1>{step.title}</h1>
       <div className="onboarding__prose">{step.body}</div>
       <div className="onboarding__actions">
