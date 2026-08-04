@@ -221,4 +221,56 @@
     color: $text-muted !important;
     font-size: 0.88rem !important;
   }
+
+  // Upcoming-feature callout — accent-tinted and bordered (vs. &__note's
+  // muted, neutral aside), so a "coming soon" tease actually reads as one.
+  &__highlight {
+    display: flex;
+    align-items: flex-start;
+    gap: $space;
+    padding: $space * 1.25;
+    border: 1px solid color-mix(in srgb, $primary 35%, transparent);
+    border-radius: $radius-sm;
+    background: color-mix(in srgb, $primary 8%, transparent);
+
+    :root[data-theme='dark'] & {
+      border-color: color-mix(in srgb, $accent 35%, transparent);
+      background: color-mix(in srgb, $accent 10%, transparent);
+    }
+  }
+
+  &__highlight-icon {
+    flex-shrink: 0;
+    margin-top: 2px;
+    color: $primary;
+
+    :root[data-theme='dark'] & {
+      color: $accent;
+    }
+  }
+
+  &__highlight-body {
+    display: flex;
+    flex-direction: column;
+    gap: $space * 0.35;
+
+    p {
+      margin: 0;
+      color: $text !important;
+      font-size: 0.88rem !important;
+      line-height: 1.5;
+    }
+  }
+
+  &__highlight-eyebrow {
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: $primary;
+
+    :root[data-theme='dark'] & {
+      color: $accent;
+    }
+  }
 }

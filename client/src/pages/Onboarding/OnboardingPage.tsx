@@ -7,6 +7,7 @@ import {
 import type { SvgIconComponent } from '@mui/icons-material';
 import GroupsIcon from '@mui/icons-material/Groups';
 import MeetingRoomIcon from '@mui/icons-material/MeetingRoom';
+import SmsOutlinedIcon from '@mui/icons-material/SmsOutlined';
 import TuneIcon from '@mui/icons-material/Tune';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -75,11 +76,17 @@ const TOUR: TourStep[] = [
           Friends make it quick to fill a lobby, and you'll see their public
           drafts and activity on their profile.
         </p>
-        <p className="onboarding__note">
-          Coming soon: invite anyone with a text link — if they don't have an
-          account yet, they'll be walked through signing up and friended
-          automatically.
-        </p>
+        <div className="onboarding__highlight">
+          <SmsOutlinedIcon className="onboarding__highlight-icon" fontSize="small" />
+          <div className="onboarding__highlight-body">
+            <span className="onboarding__highlight-eyebrow">Coming soon</span>
+            <p>
+              Invite anyone with a text link — they don't need an account to
+              start. Tap it, sign up in a few taps, and land already friended
+              with you.
+            </p>
+          </div>
+        </div>
       </>
     ),
   },

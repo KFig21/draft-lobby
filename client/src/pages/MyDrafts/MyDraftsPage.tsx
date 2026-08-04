@@ -2,6 +2,10 @@ import { SCORING_PRESETS, defaultAvatar, matchPreset } from '@draft-lobby/shared
 import ArchiveOutlinedIcon from '@mui/icons-material/ArchiveOutlined';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import PublicOutlinedIcon from '@mui/icons-material/PublicOutlined';
+import SensorsOutlinedIcon from '@mui/icons-material/SensorsOutlined';
+import SmartToyOutlinedIcon from '@mui/icons-material/SmartToyOutlined';
 import UnarchiveOutlinedIcon from '@mui/icons-material/UnarchiveOutlined';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
@@ -191,7 +195,17 @@ export function MyDraftsPage() {
               className={`segmented__opt${draftModeFilter === v ? ' segmented__opt--on' : ''}`}
               onClick={() => setDraftModeFilter(v)}
             >
-              {v === 'ALL' ? 'All' : v === 'LIVE' ? '🏈 Live' : '🤖 Mock'}
+              {v === 'ALL' ? (
+                'All'
+              ) : v === 'LIVE' ? (
+                <>
+                  <SensorsOutlinedIcon fontSize="inherit" /> Live
+                </>
+              ) : (
+                <>
+                  <SmartToyOutlinedIcon fontSize="inherit" /> Mock
+                </>
+              )}
             </button>
           ))}
         </div>
@@ -203,7 +217,17 @@ export function MyDraftsPage() {
               className={`segmented__opt${visibilityFilter === v ? ' segmented__opt--on' : ''}`}
               onClick={() => setVisibilityFilter(v)}
             >
-              {v === 'ALL' ? 'All' : v === 'PRIVATE' ? '🔒 Private' : '🌐 Open'}
+              {v === 'ALL' ? (
+                'All'
+              ) : v === 'PRIVATE' ? (
+                <>
+                  <LockOutlinedIcon fontSize="inherit" /> Private
+                </>
+              ) : (
+                <>
+                  <PublicOutlinedIcon fontSize="inherit" /> Open
+                </>
+              )}
             </button>
           ))}
         </div>
@@ -353,10 +377,26 @@ function LobbyList({
                 <div className="lobby-list__name-row">
                   <span className="lobby-list__name">{lobby.name}</span>
                   <span className="lobby-list__badge">
-                    {settings.draftMode === 'MOCK' ? '🤖 Mock' : '🏈 Live'}
+                    {settings.draftMode === 'MOCK' ? (
+                      <>
+                        <SmartToyOutlinedIcon fontSize="inherit" /> Mock
+                      </>
+                    ) : (
+                      <>
+                        <SensorsOutlinedIcon fontSize="inherit" /> Live
+                      </>
+                    )}
                   </span>
                   <span className="lobby-list__badge">
-                    {settings.visibility === 'OPEN' ? '🌐 Open' : '🔒 Private'}
+                    {settings.visibility === 'OPEN' ? (
+                      <>
+                        <PublicOutlinedIcon fontSize="inherit" /> Open
+                      </>
+                    ) : (
+                      <>
+                        <LockOutlinedIcon fontSize="inherit" /> Private
+                      </>
+                    )}
                   </span>
                 </div>
                 <span className="muted">

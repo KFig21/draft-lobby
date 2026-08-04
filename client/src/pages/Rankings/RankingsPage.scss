@@ -440,8 +440,10 @@
     cursor: pointer;
     user-select: none;
 
-    &:hover {
-      color: $text;
+    @include hover-only {
+      &:hover {
+        color: $text;
+      }
     }
 
     &.is-active {
@@ -459,8 +461,10 @@
     cursor: pointer;
     transition: background-color 120ms ease;
 
-    &:hover {
-      background: $bg-overlay;
+    @include hover-only {
+      &:hover {
+        background: $bg-overlay;
+      }
     }
   }
 
@@ -479,8 +483,10 @@
     color: $text-muted;
     cursor: pointer;
 
-    &:hover {
-      background: $bg-hover;
+    @include hover-only {
+      &:hover {
+        background: $bg-hover;
+      }
     }
 
     &.is-on {

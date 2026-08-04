@@ -93,6 +93,14 @@
     flex-wrap: wrap;
     align-items: center;
     gap: $space;
+
+    // Filter options carry an icon + label — align the icon to the text
+    // rather than the shared .segmented__opt's plain-text baseline flow.
+    .segmented__opt svg {
+      font-size: 1em;
+      vertical-align: -2px;
+      margin-right: 3px;
+    }
   }
 
   &__sort {
@@ -172,6 +180,9 @@
   }
 
   &__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
     padding: 1px 7px;
     border-radius: 999px;
     background: $bg-overlay;
@@ -179,5 +190,9 @@
     font-size: 0.68rem;
     font-weight: 700;
     white-space: nowrap;
+
+    svg {
+      font-size: 1.1em;
+    }
   }
 }
