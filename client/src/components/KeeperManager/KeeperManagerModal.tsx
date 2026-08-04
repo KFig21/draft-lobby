@@ -897,21 +897,16 @@ function ImportPanel({
   const hasTeamCol = columnsLabel.includes('team');
   return (
     <div className="keeper-modal__import">
-      <div className="keeper-modal__import-head">
-        <p className="keeper-modal__import-hint">
-          {hint}
-          <code>{columnsLabel}</code>.{' '}
-          {hasTeamCol &&
-            'Identify each team with a team column (its name or draft-slot number), or drop a team name on its own line as a header and list that team’s players below it. '}
-          Position is optional and either order works (<code>player, position</code> or{' '}
-          <code>position, player</code>); round defaults to 1 if left blank. You can{' '}
-          <strong>paste straight from your keeper spreadsheet</strong> — no need to convert to CSV
-          first.
-        </p>
-        <button type="button" className="keeper-modal__example" onClick={onDownloadExample}>
-          Download example
-        </button>
-      </div>
+      <p className="keeper-modal__import-hint">
+        {hint}
+        <code>{columnsLabel}</code>.{' '}
+        {hasTeamCol &&
+          'Identify each team with a team column (its name or draft-slot number), or drop a team name on its own line as a header and list that team’s players below it. '}
+        Position is optional and either order works (<code>player, position</code> or{' '}
+        <code>position, player</code>); round defaults to 1 if left blank. You can{' '}
+        <strong>paste straight from your keeper spreadsheet</strong> — no need to convert to CSV
+        first.
+      </p>
       <textarea
         ref={textareaRef}
         className="keeper-modal__textarea"
@@ -922,7 +917,12 @@ function ImportPanel({
         spellCheck={false}
       />
       <div className="keeper-modal__example-block">
-        <span className="keeper-modal__example-label">{altExample ? 'By team column' : 'Example'}</span>
+        <div className="keeper-modal__example-head">
+          <span className="keeper-modal__example-label">{altExample ? 'By team column' : 'Example'}</span>
+          <button type="button" className="keeper-modal__example" onClick={onDownloadExample}>
+            Download example
+          </button>
+        </div>
         <pre>{example}</pre>
       </div>
       {altExample && (

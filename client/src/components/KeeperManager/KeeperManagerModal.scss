@@ -184,13 +184,6 @@
     gap: $space;
   }
 
-  &__import-head {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: $space * 0.5;
-  }
-
   &__import-hint {
     margin: 0;
     color: $text-muted;
@@ -215,6 +208,27 @@
     font-weight: 700;
     cursor: pointer;
     white-space: nowrap;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  // Pairs the "Example"/"By team column" label with the download button on
+  // the same row — sits right above the sample, where it's actually useful,
+  // instead of up by the description text.
+  &__example-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $space;
+    margin-bottom: $space * 0.4;
+
+    // The label's own bottom margin (below) is for when it sits alone above a
+    // sample; here the row's margin already spaces it from the <pre>.
+    .keeper-modal__example-label {
+      margin-bottom: 0;
+    }
   }
 
   &__textarea {
