@@ -322,6 +322,11 @@ export function DraftBoardPage() {
   const [showMyKeepers, setShowMyKeepers] = useState(false);
   const [showAllKeepers, setShowAllKeepers] = useState(false);
   const [showTeamKeepers, setShowTeamKeepers] = useState(false);
+  // Set by a view modal's edit pencil — opens the Keeper Manager straight into
+  // "Let owners choose → Import by team" scoped to this team, instead of its
+  // default landing. Cleared on close so reopening via the normal button
+  // doesn't carry stale scoping.
+  const [keeperEditTeamId, setKeeperEditTeamId] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   // Only meaningful in full screen (the sidebar isn't mounted there) —
   // force-closed the moment full screen exits, since the sidebar comes back.
@@ -1578,6 +1583,15 @@ export function DraftBoardPage() {
         )
       : null;
 
+  // From a read-only keeper view modal's edit pencil: close it and open the
+  // Keeper Manager scoped straight to this team.
+  function openKeeperEditor(teamId: string) {
+    setKeeperEditTeamId(teamId);
+    setShowAllKeepers(false);
+    setShowTeamKeepers(false);
+    setShowKeepers(true);
+  }
+
   // Commissioner-only tools. Rendered twice — inline in the desktop top bar,
   // and again in a bar flush above the mobile bottom nav — with CSS (not this
   // function) deciding which copy is visible per breakpoint.
@@ -2581,7 +2595,11 @@ export function DraftBoardPage() {
           picks={picks}
           keeperOptions={keeperOptions}
           rounds={totalRounds}
-          onClose={() => setShowKeepers(false)}
+          initialOfferTeamId={keeperEditTeamId}
+          onClose={() => {
+            setShowKeepers(false);
+            setKeeperEditTeamId(null);
+          }}
         />
       )}
 
@@ -2604,6 +2622,7 @@ export function DraftBoardPage() {
           keeperOptions={keeperOptions}
           rosterComposition={lobby.settings.rosterComposition}
           onOpenPlayer={setDetailPlayer}
+          onEditTeam={isCommish ? openKeeperEditor : undefined}
           onClose={() => setShowAllKeepers(false)}
         />
       )}
@@ -2617,6 +2636,7 @@ export function DraftBoardPage() {
           rosterComposition={lobby.settings.rosterComposition}
           teamId={rosterTeamId}
           onOpenPlayer={setDetailPlayer}
+          onEditTeam={isCommish ? openKeeperEditor : undefined}
           onClose={() => setShowTeamKeepers(false)}
         />
       )}

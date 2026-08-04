@@ -384,7 +384,29 @@
   &__pool-head {
     display: flex;
     align-items: center;
-    justify-content: flex-end;
+    justify-content: space-between;
+    gap: $space;
+  }
+
+  // "Select team" — scopes the import panel above to this team, for pasting
+  // a roster straight into an already-open accordion instead of scrolling up
+  // to the "Import by team" dropdown.
+  &__select-team-btn {
+    flex-shrink: 0;
+    padding: $space * 0.35 $space * 0.75;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: $bg;
+    color: $text-muted;
+    font: inherit;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+
+    &:hover {
+      color: $text;
+      background: $bg-overlay;
+    }
   }
 
   // Editable round selector on a candidate row.

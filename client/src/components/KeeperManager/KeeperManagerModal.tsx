@@ -5,7 +5,14 @@ import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import GroupsIcon from '@mui/icons-material/Groups';
 import PersonIcon from '@mui/icons-material/Person';
-import { useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import {
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type RefObject,
+} from 'react';
 import { createPortal } from 'react-dom';
 import { api } from '../../lib/api';
 import {
@@ -40,6 +47,10 @@ interface Props {
   /** Owner-choice candidate pool, for the "Let owners choose" mode. */
   keeperOptions: KeeperOptionRow[];
   rounds: number;
+  /** Open straight into "Let owners choose → Import by team", scoped to this
+   * team and with its accordion expanded — used by the read-only view
+   * modal's edit pencil — instead of the default "Assign directly" landing. */
+  initialOfferTeamId?: string | null;
   onClose: () => void;
 }
 
@@ -182,6 +193,7 @@ export function KeeperManagerModal({
   picks,
   keeperOptions,
   rounds,
+  initialOfferTeamId = null,
   onClose,
 }: Props) {
   const { closing, requestClose } = useModalClose(onClose);
@@ -198,7 +210,7 @@ export function KeeperManagerModal({
     [picks],
   );
 
-  const [topMode, setTopMode] = useState<TopMode>('assign');
+  const [topMode, setTopMode] = useState<TopMode>(initialOfferTeamId ? 'offer' : 'assign');
   const [assignMode, setAssignMode] = useState<'manual' | 'import'>('manual');
   const [teamId, setTeamId] = useState<string>('');
   const [playerId, setPlayerId] = useState<string | null>(null);
@@ -210,18 +222,35 @@ export function KeeperManagerModal({
   const [importText, setImportText] = useState('');
   const [importBusy, setImportBusy] = useState(false);
   const [importResult, setImportResult] = useState<{ added: number; skipped: number } | null>(null);
+  // Scrolled/focused into view whenever "Select team" (in the accordion below)
+  // scopes the import to a specific team — the import panel sits above the
+  // accordion list, easy to miss otherwise.
+  const importTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Offer-pool import can be scoped to one team at a time — the team column
   // is then dropped from the pasted text since it's already picked here.
-  const [offerImportMode, setOfferImportMode] = useState<'all' | 'team'>('all');
-  const [offerImportTeamId, setOfferImportTeamId] = useState('');
+  const [offerImportMode, setOfferImportMode] = useState<'all' | 'team'>(
+    initialOfferTeamId ? 'team' : 'all',
+  );
+  const [offerImportTeamId, setOfferImportTeamId] = useState(initialOfferTeamId ?? '');
 
   // Offer-pool accordion: one team open at a time, with an inline add form
   // and an inline edit-player form (only one candidate editable at a time).
-  const [expandedTeam, setExpandedTeam] = useState<string | null>(null);
+  const [expandedTeam, setExpandedTeam] = useState<string | null>(initialOfferTeamId ?? null);
   const [addPlayerId, setAddPlayerId] = useState<string | null>(null);
   const [addRound, setAddRound] = useState(1);
   const [editingOptionId, setEditingOptionId] = useState<string | null>(null);
+
+  /** "Select team" (in the offer-pool accordion) — scope the import panel
+   * above to this team and bring it into view. */
+  function selectTeamForImport(id: string) {
+    setOfferImportMode('team');
+    setOfferImportTeamId(id);
+    requestAnimationFrame(() => {
+      importTextareaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      importTextareaRef.current?.focus();
+    });
+  }
 
   const teamScoped = topMode === 'offer' && offerImportMode === 'team';
   const parsed = useMemo(() => {
@@ -614,6 +643,7 @@ export function KeeperManagerModal({
             <ImportPanel
               importText={importText}
               setImportText={setImportText}
+              textareaRef={importTextareaRef}
               parsed={parsed}
               readyRows={readyRows}
               problemRows={problemRows}
@@ -659,6 +689,13 @@ export function KeeperManagerModal({
                     {open && (
                       <div className="keeper-modal__acc-body">
                         <div className="keeper-modal__pool-head">
+                          <button
+                            type="button"
+                            className="keeper-modal__select-team-btn"
+                            onClick={() => selectTeamForImport(t.id)}
+                          >
+                            Select team
+                          </button>
                           <span className="keeper-modal__count">
                             keeps
                             <button
@@ -803,6 +840,7 @@ export function KeeperManagerModal({
 function ImportPanel({
   importText,
   setImportText,
+  textareaRef,
   parsed,
   readyRows,
   problemRows,
@@ -821,6 +859,9 @@ function ImportPanel({
 }: {
   importText: string;
   setImportText: (v: string) => void;
+  /** Attached to the textarea so a caller (the offer-pool accordion's "Select
+   * team") can scroll/focus it into view after scoping the import. */
+  textareaRef?: RefObject<HTMLTextAreaElement>;
   parsed: ReturnType<typeof parseKeeperImport>;
   readyRows: ReturnType<typeof parseKeeperImport>['rows'];
   problemRows: ReturnType<typeof parseKeeperImport>['rows'];
@@ -869,6 +910,7 @@ function ImportPanel({
         </button>
       </div>
       <textarea
+        ref={textareaRef}
         className="keeper-modal__textarea"
         placeholder={example}
         value={importText}

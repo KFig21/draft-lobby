@@ -122,15 +122,23 @@ export function RankingsPage() {
     setShowScoringModal(false);
   }
 
-  // Clicking the active column again flips direction; switching columns
-  // picks the direction that makes sense for it (best-first for points,
-  // earliest-first for ADP, A→Z for name).
+  // Tri-state sort. A fresh column starts in its natural direction (best-first
+  // for points, earliest-first for ADP, A→Z for name); clicking the active
+  // column advances natural → reversed → reset, where reset falls back to the
+  // default ranking (points, high-to-low).
   function toggleSort(key: SortKey) {
-    if (sortKey === key) {
-      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
-    } else {
+    const natural: SortDir = key === 'points' ? 'desc' : 'asc';
+    if (sortKey !== key) {
       setSortKey(key);
-      setSortDir(key === 'points' ? 'desc' : 'asc');
+      setSortDir(natural);
+      return;
+    }
+    if (sortDir === natural) {
+      setSortDir(natural === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Third click — reset to the default ranking.
+      setSortKey('points');
+      setSortDir('desc');
     }
   }
 

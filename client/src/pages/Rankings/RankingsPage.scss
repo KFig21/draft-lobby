@@ -505,6 +505,15 @@
     min-width: 220px;
   }
 
+  // The Player header shares the flex &__player class with its data cells, but a
+  // flex table-cell breaks `position: sticky` in Chromium — that's why the
+  // Player header alone scrolled away on the column-header row while the plain
+  // table-cell headers stayed frozen. Force the <th> back to a normal sticky
+  // table-cell; the flex layout is only needed on the <td>.
+  th#{&}__player {
+    display: table-cell;
+  }
+
   // Position + within-position rank folded into one fixed-width chip (e.g.
   // "RB · 12") instead of a separate table column.
   &__pos {

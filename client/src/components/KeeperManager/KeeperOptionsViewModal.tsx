@@ -7,6 +7,7 @@ import {
 } from '@draft-lobby/shared';
 import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import { useMemo, useState } from 'react';
 import { useModalClose } from '../../lib/useModalClose';
 import { avatarForTeam } from '../../lib/teamAvatar';
@@ -28,6 +29,10 @@ interface Props {
   teamId?: string;
   /** Opens the full player-detail modal — omit to leave rows unclickable. */
   onOpenPlayer?: (player: PlayerRow) => void;
+  /** Commissioner-only: opens the Keeper Manager's "Let owners choose" import,
+   * scoped to this team. Omit to hide the edit pencil (e.g. for regular lobby
+   * members, who can't manage keepers). */
+  onEditTeam?: (teamId: string) => void;
   onClose: () => void;
 }
 
@@ -43,6 +48,7 @@ export function KeeperOptionsViewModal({
   rosterComposition,
   teamId,
   onOpenPlayer,
+  onEditTeam,
   onClose,
 }: Props) {
   const { closing, requestClose } = useModalClose(onClose);
@@ -103,6 +109,17 @@ export function KeeperOptionsViewModal({
             <Avatar avatar={avatarForTeam(shownTeams[0], members)} size={22} />
           )}
           {single ? `${shownTeams[0]?.name ?? 'Team'}’s keepers` : 'Keeper candidates'}
+          {single && onEditTeam && shownTeams[0] && (
+            <button
+              type="button"
+              className="keeper-view__edit-btn"
+              onClick={() => onEditTeam(shownTeams[0].id)}
+              aria-label={`Edit ${shownTeams[0].name}'s keepers`}
+              title="Edit this team's keepers"
+            >
+              <EditOutlinedIcon fontSize="inherit" />
+            </button>
+          )}
         </h2>
         {!single && (
           <>
@@ -153,6 +170,17 @@ export function KeeperOptionsViewModal({
                       <span className="keeper-view__team-pos">{t.draft_position}.</span>
                       <Avatar avatar={avatarForTeam(t, members)} size={18} />
                       {t.name}
+                      {onEditTeam && (
+                        <button
+                          type="button"
+                          className="keeper-view__edit-btn"
+                          onClick={() => onEditTeam(t.id)}
+                          aria-label={`Edit ${t.name}'s keepers`}
+                          title="Edit this team's keepers"
+                        >
+                          <EditOutlinedIcon fontSize="inherit" />
+                        </button>
+                      )}
                     </span>
                     <span className="keeper-view__team-count">
                       {kept}/{t.keeper_count}

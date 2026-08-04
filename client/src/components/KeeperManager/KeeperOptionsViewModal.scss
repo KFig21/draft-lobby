@@ -163,6 +163,31 @@
     font-size: 0.86rem;
   }
 
+  // Commissioner-only edit pencil, next to the team's name (grid header) or
+  // in the single-team title — jumps into the Keeper Manager's "Let owners
+  // choose → Import by team", already scoped to this team.
+  &__edit-btn {
+    display: inline-grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    border: none;
+    border-radius: 4px;
+    background: none;
+    color: $text-muted;
+    cursor: pointer;
+
+    &:hover {
+      color: $primary;
+      background: $bg-overlay;
+
+      :root[data-theme='dark'] & {
+        color: $accent;
+      }
+    }
+  }
+
   &__team-count {
     flex-shrink: 0;
     font-size: 0.72rem;
