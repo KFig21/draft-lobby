@@ -79,11 +79,11 @@ const TOUR: TourStep[] = [
         <div className="onboarding__highlight">
           <SmsOutlinedIcon className="onboarding__highlight-icon" fontSize="small" />
           <div className="onboarding__highlight-body">
-            <span className="onboarding__highlight-eyebrow">Coming soon</span>
+            <span className="onboarding__highlight-eyebrow">Invite anyone</span>
             <p>
-              Invite anyone with a text link — they don't need an account to
-              start. Tap it, sign up in a few taps, and land already friended
-              with you.
+              Grab your personal invite link from <strong>Friends</strong> and
+              text it to anyone. If they're new, they sign up in a few taps and
+              land already friended with you — no account needed to start.
             </p>
           </div>
         </div>

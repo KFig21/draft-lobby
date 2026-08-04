@@ -5,7 +5,7 @@ import { startDraftEngine } from './draftEngine.js';
 import { authRouter } from './routes/auth.js';
 import { lobbiesRouter } from './routes/lobbies.js';
 import { draftRouter } from './routes/draft.js';
-import { socialRouter } from './routes/social.js';
+import { socialRouter, publicSocialRouter } from './routes/social.js';
 import { feedRouter } from './routes/feed.js';
 import { usersRouter } from './routes/users.js';
 import { rulesetsRouter } from './routes/rulesets.js';
@@ -22,6 +22,9 @@ app.get('/api/health', (_req, res) => {
 app.use('/api/auth', authRouter);
 app.use('/api/lobbies', lobbiesRouter);
 app.use('/api/lobbies', draftRouter);
+// Public invite-resolve route first, then the authed friend routes — an
+// unmatched request (everything but GET /invite/:token) falls through.
+app.use('/api/friends', publicSocialRouter);
 app.use('/api/friends', socialRouter);
 app.use('/api/feed', feedRouter);
 app.use('/api/users', usersRouter);

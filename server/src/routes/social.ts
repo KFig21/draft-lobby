@@ -8,7 +8,55 @@ import { requireAuth, type AuthedRequest } from '../middleware/auth.js';
 import { supabaseAdmin } from '../supabase.js';
 
 export const socialRouter = Router();
+
+// Public friend-invite routes (no auth) — a not-yet-registered recipient must
+// be able to resolve who invited them before they have an account. Mounted at
+// the same /api/friends base but BEFORE the authed router (see index.ts).
+export const publicSocialRouter = Router();
+
 socialRouter.use(requireAuth);
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+interface InviteRow {
+  inviter_id: string;
+  revoked: boolean;
+  expires_at: string | null;
+}
+
+/** Resolve a friend-invite token to a live invite row, or null (missing /
+ * malformed / revoked / expired). */
+async function liveInvite(token: string): Promise<InviteRow | null> {
+  if (!UUID_RE.test(token)) return null;
+  const { data } = await supabaseAdmin
+    .from('friend_invites')
+    .select('inviter_id, revoked, expires_at')
+    .eq('token', token)
+    .maybeSingle();
+  const invite = data as InviteRow | null;
+  if (!invite || invite.revoked) return null;
+  if (invite.expires_at && new Date(invite.expires_at) < new Date()) return null;
+  return invite;
+}
+
+/** Get the caller's current (non-revoked) invite token, minting one if none. */
+async function currentInviteToken(userId: string): Promise<string> {
+  const { data: existing } = await supabaseAdmin
+    .from('friend_invites')
+    .select('token')
+    .eq('inviter_id', userId)
+    .eq('revoked', false)
+    .maybeSingle();
+  if (existing?.token) return existing.token as string;
+  const { data: created, error } = await supabaseAdmin
+    .from('friend_invites')
+    .insert({ inviter_id: userId })
+    .select('token')
+    .single();
+  if (error || !created) throw new Error(error?.message ?? 'Could not create invite');
+  return created.token as string;
+}
 
 interface Friendship {
   id: string;
@@ -195,4 +243,128 @@ socialRouter.post('/remove', async (req: AuthedRequest, res: Response) => {
     await supabaseAdmin.from('friendships').delete().eq('id', existing.id);
   }
   res.json({ ok: true });
+});
+
+// ── Friend-invite links ─────────────────────────────────────────────
+
+/**
+ * GET /api/friends/invite/:token (PUBLIC) — who does this invite link belong
+ * to? Returns the inviter's public profile so a recipient (possibly signed
+ * out, possibly with no account yet) can see who invited them. 404 for a
+ * missing/revoked/expired link.
+ */
+publicSocialRouter.get('/invite/:token', async (req, res: Response) => {
+  const invite = await liveInvite(req.params.token);
+  if (!invite) {
+    res.status(404).json({ error: 'This invite link is invalid or has expired.' });
+    return;
+  }
+  const { data: profile } = await supabaseAdmin
+    .from('profiles')
+    .select('id, username, avatar')
+    .eq('id', invite.inviter_id)
+    .maybeSingle();
+  if (!profile) {
+    res.status(404).json({ error: 'This invite link is invalid or has expired.' });
+    return;
+  }
+  res.json({ inviter: profile });
+});
+
+/** POST /api/friends/invite — get (or mint) the caller's shareable link. */
+socialRouter.post('/invite', async (req: AuthedRequest, res: Response) => {
+  try {
+    const token = await currentInviteToken(req.user!.id);
+    res.json({ token });
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Failed' });
+  }
+});
+
+/** POST /api/friends/invite/reset — revoke the current link and mint a new one. */
+socialRouter.post('/invite/reset', async (req: AuthedRequest, res: Response) => {
+  const me = req.user!.id;
+  await supabaseAdmin
+    .from('friend_invites')
+    .update({ revoked: true })
+    .eq('inviter_id', me)
+    .eq('revoked', false);
+  try {
+    const token = await currentInviteToken(me);
+    res.json({ token });
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Failed' });
+  }
+});
+
+/**
+ * POST /api/friends/invite/:token/redeem — the caller opened someone's invite
+ * link. Because both sides opted in (the inviter minted the link, the caller
+ * clicked it), this creates an *accepted* friendship straight away rather than
+ * a pending request. Idempotent; opening your own link is a no-op.
+ */
+socialRouter.post('/invite/:token/redeem', async (req: AuthedRequest, res: Response) => {
+  const me = req.user!.id;
+  const invite = await liveInvite(req.params.token);
+  if (!invite) {
+    res.status(404).json({ error: 'This invite link is invalid or has expired.' });
+    return;
+  }
+  const inviter = invite.inviter_id;
+
+  const { data: inviterProfile } = await supabaseAdmin
+    .from('profiles')
+    .select('id, username, avatar')
+    .eq('id', inviter)
+    .maybeSingle();
+  if (!inviterProfile) {
+    res.status(404).json({ error: 'This invite link is invalid or has expired.' });
+    return;
+  }
+
+  // Opening your own link — nothing to do.
+  if (inviter === me) {
+    res.json({ ok: true, self: true, inviter: inviterProfile });
+    return;
+  }
+
+  const existing = await findFriendship(me, inviter);
+  if (existing?.status === 'ACCEPTED') {
+    res.json({ ok: true, alreadyFriends: true, inviter: inviterProfile });
+    return;
+  }
+
+  if (existing) {
+    // A pending request in either direction — upgrade it to accepted.
+    await supabaseAdmin
+      .from('friendships')
+      .update({ status: 'ACCEPTED', updated_at: new Date().toISOString() })
+      .eq('id', existing.id);
+    // Clear any FRIEND_REQUEST notification I was sitting on from them.
+    await supabaseAdmin
+      .from('notifications')
+      .update({ status: 'ACCEPTED' })
+      .eq('user_id', me)
+      .eq('actor_id', inviter)
+      .eq('type', 'FRIEND_REQUEST')
+      .is('status', null);
+  } else {
+    // Fresh friendship. The inviter is the "requester" (they made the link),
+    // the redeemer accepted it — mirroring recordFriendAccepted's semantics.
+    const { error } = await supabaseAdmin
+      .from('friendships')
+      .insert({ requester_id: inviter, addressee_id: me, status: 'ACCEPTED' });
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+  }
+
+  await supabaseAdmin.from('notifications').insert({
+    user_id: inviter,
+    actor_id: me,
+    type: 'FRIEND_ACCEPTED',
+  });
+  await recordFriendAccepted(me, inviter);
+  res.json({ ok: true, inviter: inviterProfile });
 });

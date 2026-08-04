@@ -7,6 +7,7 @@ import {
   useLocation,
 } from 'react-router-dom';
 import { AuthProvider, useAuth } from './auth/AuthContext';
+import { PendingInviteRedeemer } from './auth/PendingInviteRedeemer';
 import { ErrorBoundary } from './components/ErrorBoundary/ErrorBoundary';
 import { Loader } from './components/Loader/Loader';
 import { MainLayout } from './components/Navbar/MainLayout';
@@ -23,6 +24,9 @@ const ResetPasswordPage = lazy(() =>
 );
 const OnboardingPage = lazy(() =>
   import('./pages/Onboarding/OnboardingPage').then((m) => ({ default: m.OnboardingPage })),
+);
+const FriendInvitePage = lazy(() =>
+  import('./pages/Invite/FriendInvitePage').then((m) => ({ default: m.FriendInvitePage })),
 );
 const DraftBoardPage = lazy(() =>
   import('./pages/DraftBoard/DraftBoardPage').then((m) => ({ default: m.DraftBoardPage })),
@@ -144,6 +148,7 @@ export default function App() {
       <AuthProvider>
         <NotificationsProvider>
         <ToastProvider>
+        <PendingInviteRedeemer />
         <BrowserRouter>
           <ScrollToTop />
           <RoutedErrorBoundary>
@@ -175,6 +180,10 @@ export default function App() {
               recovery link establishes a session, so PublicOnly would bounce
               it to /home before the user could set a new password. */}
           <Route path="/reset-password" element={<ResetPasswordPage />} />
+          {/* Friend-invite landing: public so a signed-out (or accountless)
+              recipient can see who invited them; it routes them to sign up /
+              sign in itself, stashing the token to redeem post-auth. */}
+          <Route path="/invite/:token" element={<FriendInvitePage />} />
           {/* First-run onboarding: session required, but outside the
               onboarding gate (wrapping it would loop). */}
           <Route

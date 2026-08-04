@@ -3,7 +3,7 @@ import {
   USERNAME_MIN_LEN,
 } from '@draft-lobby/shared';
 import { useEffect, useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../../supabase';
 import { api } from '../../lib/api';
 import { isUsernameAvailable } from '../../lib/username';
@@ -13,7 +13,11 @@ type Mode = 'signin' | 'signup' | 'forgot';
 type UsernameStatus = 'idle' | 'checking' | 'available' | 'taken' | 'short';
 
 export function AuthPage() {
-  const [mode, setMode] = useState<Mode>('signin');
+  const [searchParams] = useSearchParams();
+  // A friend-invite CTA links here with ?mode=signup to open on the sign-up tab.
+  const [mode, setMode] = useState<Mode>(
+    searchParams.get('mode') === 'signup' ? 'signup' : 'signin',
+  );
   const [identifier, setIdentifier] = useState(''); // email or username (sign in / forgot)
   const [email, setEmail] = useState(''); // sign up
   const [password, setPassword] = useState('');

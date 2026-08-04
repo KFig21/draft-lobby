@@ -1,11 +1,19 @@
 import { defaultAvatar } from '@draft-lobby/shared';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import IosShareIcon from '@mui/icons-material/IosShare';
 import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Avatar } from '../../components/Avatar/Avatar';
 import { Loader } from '../../components/Loader/Loader';
 import { ProfileLink } from '../../components/ProfileLink/ProfileLink';
 import { useAuth } from '../../auth/AuthContext';
 import { api } from '../../lib/api';
+import {
+  getMyInviteToken,
+  resetMyInviteToken,
+  inviteUrl,
+} from '../../lib/friendInvite';
 import { supabase } from '../../supabase';
 import { useInfiniteScroll } from '../../lib/useInfiniteScroll';
 import type { FriendshipRow, ProfileMini } from '../../lib/types';
@@ -164,6 +172,12 @@ export function FriendsPage() {
         <h1>Friends</h1>
       </header>
 
+      {/* Invite link */}
+      <section className="friends__section">
+        <h2>Invite a friend</h2>
+        <InviteShare />
+      </section>
+
       {/* Search */}
       <section className="friends__section">
         <h2>Find people</h2>
@@ -293,5 +307,98 @@ export function FriendsPage() {
         )}
       </section>
     </main>
+  );
+}
+
+/** Your personal, reusable friend-invite link — copy or share it, and anyone
+ * who opens it connects with you (signing up first if they're new). */
+function InviteShare() {
+  const [token, setToken] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [resetting, setResetting] = useState(false);
+
+  useEffect(() => {
+    void getMyInviteToken().then(setToken).catch(() => setToken(null));
+  }, []);
+
+  const url = token ? inviteUrl(token) : '';
+  const canShare = typeof navigator !== 'undefined' && !!navigator.share;
+
+  async function copy() {
+    if (!url) return;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      // Clipboard blocked — the link is still visible to select manually.
+    }
+  }
+
+  async function share() {
+    if (!url) return;
+    try {
+      await navigator.share({
+        title: 'Draft Lobby',
+        text: 'Connect with me on Draft Lobby',
+        url,
+      });
+    } catch {
+      // User dismissed the share sheet — nothing to do.
+    }
+  }
+
+  async function reset() {
+    setResetting(true);
+    try {
+      setToken(await resetMyInviteToken());
+    } catch {
+      // Keep the old link on failure.
+    } finally {
+      setResetting(false);
+    }
+  }
+
+  return (
+    <div className="friends__invite">
+      <p className="muted friends__invite-lead">
+        Share your link — anyone who opens it can connect with you, even if
+        they're new to Draft Lobby.
+      </p>
+      <div className="friends__invite-row">
+        <input
+          className="friends__invite-url"
+          value={url}
+          readOnly
+          placeholder="Generating link…"
+          onFocus={(e) => e.currentTarget.select()}
+          aria-label="Your invite link"
+        />
+        <button
+          type="button"
+          className="button button--primary friends__invite-copy"
+          onClick={copy}
+          disabled={!url}
+        >
+          <ContentCopyIcon fontSize="small" /> {copied ? 'Copied!' : 'Copy'}
+        </button>
+      </div>
+      <div className="friends__invite-actions">
+        {canShare && (
+          <button type="button" className="button friends__invite-btn" onClick={share} disabled={!url}>
+            <IosShareIcon fontSize="small" /> Share
+          </button>
+        )}
+        <button
+          type="button"
+          className="friends__invite-reset"
+          onClick={reset}
+          disabled={resetting || !token}
+          title="Revoke this link and create a new one"
+        >
+          <RefreshIcon fontSize="small" /> {resetting ? 'Resetting…' : 'Reset link'}
+        </button>
+      </div>
+    </div>
   );
 }

@@ -1,0 +1,100 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+.invite {
+  @include centered-page;
+
+  &__card {
+    @include card-surface;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $space * 1.5;
+    width: min(400px, 100%);
+    padding: $space * 4 $space * 3;
+    text-align: center;
+
+    h1 {
+      font-size: 1.4rem;
+      text-wrap: balance;
+
+      strong {
+        color: $primary;
+
+        :root[data-theme='dark'] & {
+          color: $accent;
+        }
+      }
+    }
+  }
+
+  &__lead {
+    margin: 0;
+    color: $text-muted;
+    font-size: 0.95rem;
+    line-height: 1.5;
+
+    strong {
+      color: $text;
+    }
+  }
+
+  &__avatar {
+    position: relative;
+  }
+
+  // Success check tucked onto the avatar corner.
+  &__check {
+    position: absolute;
+    right: -2px;
+    bottom: -2px;
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 999px;
+    border: 3px solid $bg-raised;
+    background: $primary;
+    color: #fff;
+
+    :root[data-theme='dark'] & {
+      background: $accent;
+      color: #05231a;
+    }
+  }
+
+  &__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  &__actions {
+    display: flex;
+    flex-direction: column;
+    gap: $space;
+    width: 100%;
+
+    .button {
+      width: 100%;
+    }
+  }
+
+  &__switch {
+    background: none;
+    border: none;
+    color: $text-muted;
+    cursor: pointer;
+    font-size: 0.85rem;
+
+    &:hover {
+      color: $text;
+    }
+  }
+
+  &__error {
+    margin: 0;
+    color: $danger;
+    font-size: 0.9rem;
+  }
+}
