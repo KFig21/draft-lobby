@@ -1002,7 +1002,12 @@ export function DraftBoardPage() {
       // Lazy-loaded — it's a sizable library only needed by the rare visitor
       // who actually exports a screenshot, not worth shipping in the main
       // draft-board bundle everyone downloads just to open a draft.
-      const { default: html2canvas } = await import('html2canvas');
+      // The "-pro" fork, not stock html2canvas: our board uses color-mix()
+      // (team/round highlights, urgency tints — see DraftGrid.scss), which
+      // Chrome serializes back out as a color(...) function on read; stock
+      // html2canvas's parser throws on that ("unsupported color function").
+      // The fork adds support for color()/color-mix()/oklch() etc.
+      const { default: html2canvas } = await import('html2canvas-pro');
       const canvas = await html2canvas(table, {
         backgroundColor: canvasColor || undefined,
         scale: Math.min(2, window.devicePixelRatio || 1),
