@@ -1012,6 +1012,15 @@ export function DraftBoardPage() {
       const overall = lobby.current_overall;
       const currentRound = Math.floor((overall - 1) / teamCount) + 1;
       const ownTeamId = teams.find((t) => t.owner_id === userId)?.id ?? null;
+      // Corner flags mirror the live board — only when the viewer has cell
+      // reactions/comments turned on (same gate DraftGrid uses).
+      const reactionPickIds = new Set<string>();
+      const commentPickIds = new Set<string>();
+      if (showCellReactions) {
+        for (const [pid, entry] of reactionsByPick)
+          if (Object.keys(entry.counts).length) reactionPickIds.add(pid);
+        for (const [pid, list] of commentsByPick) if (list.length) commentPickIds.add(pid);
+      }
       const canvas = renderBoardCanvas({
         teams,
         members,
@@ -1023,6 +1032,8 @@ export function DraftBoardPage() {
         currentRound,
         myTeamId: ownTeamId,
         cellStyle,
+        reactionPickIds,
+        commentPickIds,
         theme,
         anonymize,
         highlightMine,

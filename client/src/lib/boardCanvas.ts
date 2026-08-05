@@ -84,6 +84,10 @@ export interface BoardRenderOptions {
   myTeamId: string | null;
   /** Which pick-cell look to draw — mirrors the viewer's Settings preference. */
   cellStyle: DraftCellStyle;
+  /** Pick ids that have reactions / comments — draws the same corner flags as
+   * the live board. Omit to draw none. */
+  reactionPickIds?: Set<string>;
+  commentPickIds?: Set<string>;
   theme: 'dark' | 'light';
   /** Replace names/avatars with the draft-slot number. */
   anonymize: boolean;
@@ -137,35 +141,79 @@ function formatRoundPick(round: number, pickInRound: number, teamCount: number):
   return `${round}.${String(pickInRound).padStart(pad, '0')}`;
 }
 
-// A small vector padlock keeper flag. `chip` (default) draws it on a keeper-gold
-// disc with dark ink — reads on the position-colored fills of the Hybrid/Big
-// styles; without a chip it's a bare gold padlock for the neutral Clean cell.
-function drawKeeperLock(
-  ctx: CanvasRenderingContext2D,
-  cx: number,
-  cy: number,
-  keeper: string,
-  chip = true,
-): void {
-  ctx.save();
-  let ink = keeper;
-  if (chip) {
-    const size = 13;
-    roundRect(ctx, cx - size / 2, cy - size / 2, size, size, size / 2);
-    ctx.fillStyle = keeper;
-    ctx.fill();
-    ink = '#1a1a1a';
-  }
+// Small vector glyphs for the corner flags — a padlock (keeper) and a speech
+// bubble (comment). Drawn in `ink` at center (cx, cy).
+function padlock(ctx: CanvasRenderingContext2D, cx: number, cy: number, ink: string): void {
   ctx.strokeStyle = ink;
   ctx.fillStyle = ink;
   ctx.lineWidth = 1;
-  // shackle
   ctx.beginPath();
-  ctx.arc(cx, cy - 1.2, 2, Math.PI, 0);
+  ctx.arc(cx, cy - 1.2, 2, Math.PI, 0); // shackle
   ctx.stroke();
-  // body
-  ctx.fillRect(cx - 3, cy - 1.2, 6, 4.4);
-  ctx.restore();
+  ctx.fillRect(cx - 3, cy - 1.2, 6, 4.4); // body
+}
+
+function bubble(ctx: CanvasRenderingContext2D, cx: number, cy: number, ink: string): void {
+  ctx.fillStyle = ink;
+  roundRect(ctx, cx - 4, cy - 3.5, 8, 6, 2);
+  ctx.fill();
+  ctx.beginPath(); // little tail
+  ctx.moveTo(cx - 2, cy + 2);
+  ctx.lineTo(cx - 3.5, cy + 4);
+  ctx.lineTo(cx, cy + 2.5);
+  ctx.closePath();
+  ctx.fill();
+}
+
+interface CellFlags {
+  keeper: boolean;
+  comment: boolean;
+  reaction: boolean;
+}
+
+// The bottom-right corner flag row — keeper lock (rightmost), then comment,
+// then reaction "!!", stacking leftward like the live board (row-reverse).
+// `chip` styles (Hybrid/Big): each on a rounded disc hanging off the corner.
+// `bare` (Clean): flat muted glyphs tucked just inside the corner.
+function drawFlags(
+  ctx: CanvasRenderingContext2D,
+  cellX: number,
+  cellY: number,
+  flags: CellFlags,
+  posColor: string,
+  keeper: string,
+  bare: boolean,
+): void {
+  const size = bare ? 12 : 14;
+  const gap = bare ? 3 : 2;
+  let cx = cellX + CELL_W - (bare ? size / 2 + 2 : 4);
+  const cy = cellY + CELL_H - (bare ? size / 2 + 2 : 4);
+  const step = (fill: string, ink: string, draw: () => void) => {
+    ctx.save();
+    if (!bare) {
+      roundRect(ctx, cx - size / 2, cy - size / 2, size, size, size / 2);
+      ctx.fillStyle = fill;
+      ctx.fill();
+    }
+    ctx.fillStyle = ink;
+    draw();
+    ctx.restore();
+    cx -= size + gap;
+  };
+  if (flags.keeper) step(keeper, bare ? keeper : '#1a1a1a', () => padlock(ctx, cx, cy, bare ? keeper : '#1a1a1a'));
+  if (flags.comment) {
+    const ink = bare ? '#8a94a6' : '#1a1a1a';
+    step(posColor, ink, () => bubble(ctx, cx, cy, ink));
+  }
+  if (flags.reaction) {
+    const ink = bare ? '#8a94a6' : '#1a1a1a';
+    step(posColor, ink, () => {
+      ctx.font = `900 8px ${FONT}`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('!!', cx, cy + 0.5);
+    });
+  }
 }
 
 function nameScale(name: string): number {
@@ -215,6 +263,7 @@ function drawHybridCell(
   player: PlayerRow,
   pal: Palette,
   teamCount: number,
+  flags: CellFlags,
 ): void {
   const posColor = POSITION_COLORS[player.position as Position] ?? pal.textMuted;
   roundRect(ctx, x, y, CELL_W, CELL_H, RADIUS);
@@ -235,7 +284,7 @@ function drawHybridCell(
   ctx.fillText(fitText(ctx, `${player.nfl_team}${bye}`, maxW), tx, y + CELL_PAD + 27);
   const pickInRound = pick.overall - (pick.round - 1) * teamCount;
   ctx.fillText(formatRoundPick(pick.round, pickInRound, teamCount), tx, y + CELL_PAD + 39);
-  if (pick.is_keeper) drawKeeperLock(ctx, x + CELL_W - 10, y + CELL_H - 9, pal.keeper);
+  drawFlags(ctx, x, y, flags, posColor, pal.keeper, false);
 }
 
 function drawBoldCell(
@@ -245,6 +294,7 @@ function drawBoldCell(
   pick: PickRow,
   player: PlayerRow,
   pal: Palette,
+  flags: CellFlags,
 ): void {
   const posColor = POSITION_COLORS[player.position as Position] ?? pal.textMuted;
   roundRect(ctx, x, y, CELL_W, CELL_H, RADIUS);
@@ -264,7 +314,7 @@ function drawBoldCell(
     ctx.fillText(line, x + CELL_W / 2, ty);
     ty += lh;
   }
-  if (pick.is_keeper) drawKeeperLock(ctx, x + CELL_W - 10, y + CELL_H - 9, pal.keeper);
+  drawFlags(ctx, x, y, flags, posColor, pal.keeper, false);
 }
 
 function drawCleanCell(
@@ -274,6 +324,7 @@ function drawCleanCell(
   pick: PickRow,
   player: PlayerRow,
   pal: Palette,
+  flags: CellFlags,
 ): void {
   roundRect(ctx, x, y, CELL_W, CELL_H, RADIUS);
   ctx.fillStyle = pal.cellBg;
@@ -298,7 +349,8 @@ function drawCleanCell(
   ctx.font = `400 10px ${FONT}`;
   const bye = player.bye_week != null ? ` · ${player.bye_week}` : '';
   ctx.fillText(fitText(ctx, `${player.nfl_team}${bye}`, maxW), tx, y + CELL_PAD + 37);
-  if (pick.is_keeper) drawKeeperLock(ctx, x + CELL_W - 9, y + CELL_H - 8, pal.keeper, false);
+  const posColor = POSITION_COLORS[player.position as Position] ?? pal.textMuted;
+  drawFlags(ctx, x, y, flags, posColor, pal.keeper, true);
 }
 
 // Inset gold keeper outline shared by all three cell styles (matches the
@@ -308,6 +360,65 @@ function keeperOutline(ctx: CanvasRenderingContext2D, x: number, y: number, keep
   ctx.strokeStyle = keeper;
   ctx.lineWidth = 2;
   ctx.stroke();
+}
+
+// Emoji glyphs have no reliable text-metric center (the em box, ascent/descent
+// and the actual ink all disagree, and it varies by OS emoji font). So render
+// the emoji big on a scratch canvas, find its true ink bounding box by scanning
+// pixels, and blit that box centered — exact on any OS. Cached per emoji.
+const _scratch = document.createElement('canvas');
+const _emojiInk = new Map<string, { minX: number; minY: number; w: number; h: number } | null>();
+
+function drawCenteredEmoji(
+  ctx: CanvasRenderingContext2D,
+  emoji: string,
+  cx: number,
+  cy: number,
+  box: number,
+): void {
+  const F = 64;
+  const dim = F * 2;
+  let ink = _emojiInk.get(emoji);
+  if (ink === undefined) {
+    _scratch.width = dim;
+    _scratch.height = dim;
+    const sc = _scratch.getContext('2d', { willReadFrequently: true });
+    if (!sc) return;
+    sc.clearRect(0, 0, dim, dim);
+    sc.font = `${F}px ${FONT}`;
+    sc.textAlign = 'center';
+    sc.textBaseline = 'middle';
+    sc.fillText(emoji, dim / 2, dim / 2);
+    const data = sc.getImageData(0, 0, dim, dim).data;
+    let minX = dim;
+    let minY = dim;
+    let maxX = -1;
+    let maxY = -1;
+    for (let py = 0; py < dim; py++) {
+      for (let px = 0; px < dim; px++) {
+        if (data[(py * dim + px) * 4 + 3] > 12) {
+          if (px < minX) minX = px;
+          if (px > maxX) maxX = px;
+          if (py < minY) minY = py;
+          if (py > maxY) maxY = py;
+        }
+      }
+    }
+    ink = maxX < 0 ? null : { minX, minY, w: maxX - minX + 1, h: maxY - minY + 1 };
+    _emojiInk.set(emoji, ink);
+  }
+  if (!ink) return;
+  // Re-render at F (scratch may have been reused) and blit the ink box centered.
+  _scratch.width = dim;
+  _scratch.height = dim;
+  const sc = _scratch.getContext('2d');
+  if (!sc) return;
+  sc.font = `${F}px ${FONT}`;
+  sc.textAlign = 'center';
+  sc.textBaseline = 'middle';
+  sc.fillText(emoji, dim / 2, dim / 2);
+  const s = box / Math.max(ink.w, ink.h);
+  ctx.drawImage(_scratch, ink.minX, ink.minY, ink.w, ink.h, cx - (ink.w * s) / 2, cy - (ink.h * s) / 2, ink.w * s, ink.h * s);
 }
 
 function drawAvatar(
@@ -323,15 +434,8 @@ function drawAvatar(
   roundRect(ctx, x, y, size, size, r);
   ctx.fillStyle = avatar.bgColor;
   ctx.fill();
-  // Clip the emoji to the disc so a tall glyph can't spill past the shape.
-  ctx.clip();
-  // Geometric center — matches how the live Avatar centers the emoji (a
-  // flexbox center with line-height:1, i.e. the em box centered in the disc).
-  ctx.font = `${Math.round(size * 0.6)}px ${FONT}`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillStyle = '#000'; // ignored for color emoji; fallback for mono glyphs
-  ctx.fillText(avatar.emoji, x + size / 2, y + size / 2);
+  ctx.clip(); // keep a tall glyph inside the disc
+  drawCenteredEmoji(ctx, avatar.emoji, x + size / 2, y + size / 2, size * 0.72);
   ctx.restore();
 }
 
@@ -351,6 +455,8 @@ export function renderBoardCanvas(opts: BoardRenderOptions): HTMLCanvasElement {
     currentRound,
     myTeamId,
     cellStyle,
+    reactionPickIds,
+    commentPickIds,
     theme,
     anonymize,
     highlightMine,
@@ -485,10 +591,16 @@ export function renderBoardCanvas(opts: BoardRenderOptions): HTMLCanvasElement {
         return;
       }
 
-      // Filled pick — render in the viewer's selected cell style.
-      if (cellStyle === 'bold') drawBoldCell(ctx, x, y, pick, player, pal);
-      else if (cellStyle === 'clean') drawCleanCell(ctx, x, y, pick, player, pal);
-      else drawHybridCell(ctx, x, y, pick, player, pal, teamCount);
+      // Filled pick — render in the viewer's selected cell style, with the same
+      // keeper / comment / reaction corner flags the live board shows.
+      const flags: CellFlags = {
+        keeper: pick.is_keeper,
+        comment: commentPickIds?.has(pick.id) ?? false,
+        reaction: reactionPickIds?.has(pick.id) ?? false,
+      };
+      if (cellStyle === 'bold') drawBoldCell(ctx, x, y, pick, player, pal, flags);
+      else if (cellStyle === 'clean') drawCleanCell(ctx, x, y, pick, player, pal, flags);
+      else drawHybridCell(ctx, x, y, pick, player, pal, teamCount, flags);
     });
   }
 
