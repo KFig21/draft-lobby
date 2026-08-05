@@ -459,17 +459,17 @@
     opacity: 0.8;
   }
 
-  // Mobile: the stacked timer icon on top of the wrapped label made the
+  // Mobile: the big stacked timer icon on top of the wrapped label made the
   // on-the-clock cell taller than its row's pick cells, stretching the whole
-  // row. Drop the big icon and close the gap so the cell keeps the normal row
-  // height — the "On the clock" text alone is signal enough.
+  // row. Shrink the icon (1.5em → 1em) and close the gap so the cell keeps the
+  // normal row height.
   @media (max-width: #{$bp-md - 1px}) {
     &__onclock-icon {
-      display: none;
+      font-size: 1em;
     }
 
     &__onclock-label {
-      gap: 0;
+      gap: 0.1em;
     }
   }
 

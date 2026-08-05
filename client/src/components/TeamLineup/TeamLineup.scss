@@ -147,8 +147,10 @@
     color: $text;
   }
 
-  // Mobile: shrink so all six fit one row. Each chip shares the width equally
-  // (flex: 1); the label sizes to its text and the count fills the remainder.
+  // Mobile: shrink so all six fit one row, and make every chip identical —
+  // each shares the row width equally (flex: 1), the label segment is a fixed
+  // width (sized for the widest, "D/ST") so the split lines up across chips,
+  // and the count fills the equal remainder.
   @media (max-width: #{$bp-md - 1px}) {
     flex: 1 1 0;
     min-width: 0;
@@ -156,15 +158,16 @@
 
     &__pos {
       flex-shrink: 0;
+      width: 2rem;
       min-width: 0;
-      padding: 3px 4px;
+      padding: 3px 2px;
       letter-spacing: 0;
     }
 
     &__n {
       flex: 1;
       min-width: 0;
-      padding: 3px 4px;
+      padding: 3px 2px;
     }
   }
 }
