@@ -2141,7 +2141,7 @@ export function DraftBoardPage() {
                   checked={showDrafted}
                   onChange={(e) => setShowDrafted(e.target.checked)}
                 />
-                Show all
+                Show drafted
               </label>
             </div>
           </div>
