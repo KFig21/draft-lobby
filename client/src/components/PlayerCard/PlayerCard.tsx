@@ -117,6 +117,11 @@ export function PlayerCard({
           )}
         </div>
       </div>
+      {drafted && (
+        <span className="player-card__drafted-tag">
+          Drafted{draftedLabel ? <span className="player-card__drafted-pick">{draftedLabel}</span> : null}
+        </span>
+      )}
       <div className="player-card__stats">
         {player.proj_points != null && (
           <span className="player-card__proj">{player.proj_points.toFixed(1)}</span>
@@ -159,23 +164,17 @@ export function PlayerCard({
           )}
         </div>
       )}
-      {drafted ? (
-        <span className="player-card__drafted-tag">
-          Drafted{draftedLabel ? <span className="player-card__drafted-pick">{draftedLabel}</span> : null}
-        </span>
-      ) : (
-        onPick && (
-          <button
-            className="button button--primary player-card__draft"
-            onClick={(e) => {
-              e.stopPropagation();
-              onPick();
-            }}
-            disabled={disabled}
-          >
-            Draft
-          </button>
-        )
+      {!drafted && onPick && (
+        <button
+          className="button button--primary player-card__draft"
+          onClick={(e) => {
+            e.stopPropagation();
+            onPick();
+          }}
+          disabled={disabled}
+        >
+          Draft
+        </button>
       )}
     </div>
   );

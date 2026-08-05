@@ -109,27 +109,30 @@ export function CompactPlayerCard({
 
       <span className="compact-card__spacer" />
 
+      {/* When drafted, the pill sits to the left of the projection, which stays
+          in the far-right slot; otherwise the projection stays beside the
+          Draft button. */}
+      {drafted && (
+        <span className="compact-card__drafted-tag">
+          Drafted{draftedLabel ? <span className="compact-card__drafted-pick">{draftedLabel}</span> : null}
+        </span>
+      )}
+
       {player.proj_points != null && (
         <span className="compact-card__proj">{player.proj_points.toFixed(1)}</span>
       )}
 
-      {drafted ? (
-        <span className="compact-card__drafted-tag">
-          Drafted{draftedLabel ? <span className="compact-card__drafted-pick">{draftedLabel}</span> : null}
-        </span>
-      ) : (
-        onPick && (
-          <button
-            className="button button--primary compact-card__draft"
-            onClick={(e) => {
-              e.stopPropagation();
-              onPick();
-            }}
-            disabled={disabled}
-          >
-            Draft
-          </button>
-        )
+      {!drafted && onPick && (
+        <button
+          className="button button--primary compact-card__draft"
+          onClick={(e) => {
+            e.stopPropagation();
+            onPick();
+          }}
+          disabled={disabled}
+        >
+          Draft
+        </button>
       )}
     </div>
   );
