@@ -1,5 +1,6 @@
 import {
   DRAFT_RESULTS_LOCK_MS,
+  canDeleteLobby,
   defaultAvatar,
   extractMentionedUsernames,
   type Avatar as AvatarData,
@@ -1127,7 +1128,7 @@ export function LobbyRoomPage() {
 
         {actionError && <p className="room__error">{actionError}</p>}
 
-        {isCommish && !draftLive && (
+        {isCommish && canDeleteLobby(lobby.status) && (
           <div className="room__actions">
             <button
               className="button button--sm room__delete"

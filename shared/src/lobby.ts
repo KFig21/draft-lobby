@@ -213,6 +213,17 @@ export const SETTINGS_FIELD_GROUP: Record<keyof LobbySettings, SettingsGroup> = 
   timeoutAllowance: 'behavioral',
 };
 
+/**
+ * Whether a commissioner may permanently delete a lobby at this status. Only
+ * before the draft is under way — once picks/results exist (DRAFTING, PAUSED,
+ * COMPLETE) the board is preserved; members hide it from their own lists
+ * instead. Single gate for the client (to show the action) and the server
+ * (to enforce it).
+ */
+export function canDeleteLobby(status: LobbyStatus): boolean {
+  return status === 'SETUP' || status === 'SCHEDULED' || status === 'STAGING';
+}
+
 /** Which setting groups a commissioner may edit at a given lobby status. */
 export function settingsEditableGroups(status: LobbyStatus): Set<SettingsGroup> {
   switch (status) {

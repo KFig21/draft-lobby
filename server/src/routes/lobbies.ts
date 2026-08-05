@@ -4,6 +4,7 @@ import {
   CHAT_LOCK_MS,
   DEFAULT_LOBBY_SETTINGS,
   DRAFT_RESULTS_LOCK_MS,
+  canDeleteLobby,
   copyLobbySchema,
   createLobbySchema,
   joinLobbySchema,
@@ -530,6 +531,56 @@ lobbiesRouter.post('/:id/rename', async (req: AuthedRequest, res: Response) => {
     return;
   }
   res.json({ ok: true, name });
+});
+
+/**
+ * DELETE /api/lobbies/:id — commissioner permanently deletes a not-yet-drafting
+ * lobby (SETUP/SCHEDULED/STAGING). Cascades to every child row (teams, picks,
+ * keeper options, chat, reactions, votes, grades, memberships, invites,
+ * notifications, activity — all `on delete cascade` from lobbies). Once the
+ * draft is under way (DRAFTING/PAUSED/COMPLETE) the board is preserved and this
+ * 409s — members hide it from their own lists (POST /:id/archive) instead.
+ */
+lobbiesRouter.delete('/:id', async (req: AuthedRequest, res: Response) => {
+  const lobbyId = req.params.id;
+  const userId = req.user!.id;
+
+  // Same commish gate as rename — commissioner or sub-commissioner (the client
+  // shows the action to both, and this only ever touches a pre-draft lobby).
+  const { data: member } = await supabaseAdmin
+    .from('lobby_members')
+    .select('role')
+    .eq('lobby_id', lobbyId)
+    .eq('user_id', userId)
+    .maybeSingle();
+  const role = member?.role as string | undefined;
+  if (role !== 'COMMISSIONER' && role !== 'SUB_COMMISSIONER') {
+    res.status(403).json({ error: 'Only the commissioner can delete this draft' });
+    return;
+  }
+
+  const { data: lobby } = await supabaseAdmin
+    .from('lobbies')
+    .select('status')
+    .eq('id', lobbyId)
+    .maybeSingle();
+  if (!lobby) {
+    res.status(404).json({ error: 'Lobby not found' });
+    return;
+  }
+  if (!canDeleteLobby(lobby.status as LobbyStatus)) {
+    res.status(409).json({
+      error: "This draft is under way — it can't be deleted. Hide it from your list instead.",
+    });
+    return;
+  }
+
+  const { error } = await supabaseAdmin.from('lobbies').delete().eq('id', lobbyId);
+  if (error) {
+    res.status(500).json({ error: 'Failed to delete the draft' });
+    return;
+  }
+  res.json({ ok: true });
 });
 
 /** GET /api/lobbies/open — browsable lobbies anyone can join (pre-draft, not full). */

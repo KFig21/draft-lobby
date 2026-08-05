@@ -1,8 +1,9 @@
-import { SCORING_PRESETS, defaultAvatar, matchPreset } from '@draft-lobby/shared';
+import { SCORING_PRESETS, canDeleteLobby, defaultAvatar, matchPreset } from '@draft-lobby/shared';
 import ArchiveOutlinedIcon from '@mui/icons-material/ArchiveOutlined';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import PublicOutlinedIcon from '@mui/icons-material/PublicOutlined';
 import SensorsOutlinedIcon from '@mui/icons-material/SensorsOutlined';
@@ -11,6 +12,7 @@ import UnarchiveOutlinedIcon from '@mui/icons-material/UnarchiveOutlined';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Avatar } from '../../components/Avatar/Avatar';
+import { ConfirmModal } from '../../components/ConfirmModal/ConfirmModal';
 import { CopyDraftModal } from '../../components/CopyDraftModal/CopyDraftModal';
 import { Loader } from '../../components/Loader/Loader';
 import { useAuth } from '../../auth/AuthContext';
@@ -88,6 +90,9 @@ export function MyDraftsPage() {
 
   // The draft currently being copied (opens CopyDraftModal).
   const [copySource, setCopySource] = useState<MyLobby['lobby'] | null>(null);
+  // The draft pending delete (opens the confirm modal).
+  const [deleteTarget, setDeleteTarget] = useState<MyLobby | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!userId) return;
@@ -180,6 +185,22 @@ export function MyDraftsPage() {
     }
   }
 
+  async function confirmDeleteLobby() {
+    if (!deleteTarget) return;
+    const id = deleteTarget.lobby.id;
+    setDeleting(true);
+    try {
+      await api(`/lobbies/${id}`, { method: 'DELETE' });
+      setActive((prev) => prev.filter((r) => r.lobby.id !== id));
+      setArchived((prev) => prev.filter((r) => r.lobby.id !== id));
+      setDeleteTarget(null);
+    } catch {
+      // Keep the modal open so they can retry.
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   const pastPageCount = Math.max(1, Math.ceil(pastTotal / PAST_PAGE_SIZE));
 
   /** Copy action shared by every section's row. */
@@ -194,6 +215,22 @@ export function MyDraftsPage() {
       <ContentCopyIcon fontSize="small" />
     </button>
   );
+
+  /** Delete action — only for a commissioner on a not-yet-drafting draft; self-
+   * gates so it can be dropped into any section's row (returns null otherwise). */
+  const deleteButton = (row: MyLobby) =>
+    (row.role === 'COMMISSIONER' || row.role === 'SUB_COMMISSIONER') &&
+    canDeleteLobby(row.lobby.status) ? (
+      <button
+        type="button"
+        className="lobby-list__action lobby-list__action--danger"
+        aria-label={`Delete ${row.lobby.name}`}
+        title="Delete draft"
+        onClick={() => setDeleteTarget(row)}
+      >
+        <DeleteOutlineIcon fontSize="small" />
+      </button>
+    ) : null;
 
   return (
     <main className="my-drafts">
@@ -284,6 +321,7 @@ export function MyDraftsPage() {
                     >
                       <ArchiveOutlinedIcon fontSize="small" />
                     </button>
+                    {deleteButton(row)}
                   </>
                 )}
               />
@@ -370,6 +408,7 @@ export function MyDraftsPage() {
                       >
                         <UnarchiveOutlinedIcon fontSize="small" />
                       </button>
+                      {deleteButton(row)}
                     </>
                   )}
                 />
@@ -381,6 +420,21 @@ export function MyDraftsPage() {
 
       {copySource && (
         <CopyDraftModal source={copySource} onClose={() => setCopySource(null)} />
+      )}
+
+      {deleteTarget && (
+        <ConfirmModal
+          title="Delete this draft?"
+          confirmLabel="Delete draft"
+          busyLabel="Deleting…"
+          busy={deleting}
+          danger
+          onConfirm={confirmDeleteLobby}
+          onClose={() => setDeleteTarget(null)}
+        >
+          This permanently deletes <strong>{deleteTarget.lobby.name}</strong> and all of its
+          teams and settings. This can’t be undone.
+        </ConfirmModal>
       )}
     </main>
   );

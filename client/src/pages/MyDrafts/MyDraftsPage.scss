@@ -159,6 +159,13 @@
       background: $bg-overlay;
       color: $text;
     }
+
+    // Delete — reads danger on hover so it's clearly the destructive action.
+    &--danger:hover {
+      border-color: $danger;
+      background: color-mix(in srgb, $danger 12%, transparent);
+      color: $danger;
+    }
   }
 
   &__main {
