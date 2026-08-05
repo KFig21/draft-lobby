@@ -325,16 +325,13 @@ function drawAvatar(
   ctx.fill();
   // Clip the emoji to the disc so a tall glyph can't spill past the shape.
   ctx.clip();
+  // Geometric center — matches how the live Avatar centers the emoji (a
+  // flexbox center with line-height:1, i.e. the em box centered in the disc).
   ctx.font = `${Math.round(size * 0.6)}px ${FONT}`;
   ctx.textAlign = 'center';
-  // Center precisely on the glyph's real ink box rather than its font metrics —
-  // emoji baselines vary, and textBaseline:'middle' alone left them low.
-  ctx.textBaseline = 'alphabetic';
-  const m = ctx.measureText(avatar.emoji);
-  const asc = m.actualBoundingBoxAscent || size * 0.35;
-  const desc = m.actualBoundingBoxDescent || size * 0.1;
+  ctx.textBaseline = 'middle';
   ctx.fillStyle = '#000'; // ignored for color emoji; fallback for mono glyphs
-  ctx.fillText(avatar.emoji, x + size / 2, y + size / 2 + (asc - desc) / 2);
+  ctx.fillText(avatar.emoji, x + size / 2, y + size / 2);
   ctx.restore();
 }
 
@@ -360,7 +357,10 @@ export function renderBoardCanvas(opts: BoardRenderOptions): HTMLCanvasElement {
   } = opts;
   const pal = PALETTES[theme];
   const pad = opts.padding ?? 16;
-  const scale = opts.scale ?? Math.min(2, window.devicePixelRatio || 1);
+  // Floor at 2× so the PNG is crisp regardless of which display Chrome is on —
+  // a DPR-1 external monitor would otherwise render at half the resolution of
+  // the Retina laptop screen and look pixelated. Capped at 3× to bound size.
+  const scale = opts.scale ?? Math.min(3, Math.max(2, window.devicePixelRatio || 1));
 
   // Index picks by "round:teamId".
   const byCell = new Map<string, PickRow>();
