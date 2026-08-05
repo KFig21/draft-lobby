@@ -33,6 +33,16 @@
     padding-bottom: $space;
   }
 
+  // Row holding the "Overview" heading and any trailing content (the lobby
+  // room's status/mock badges). Just the h3 in the rules modal itself.
+  &__overview-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $space;
+    flex-wrap: wrap;
+  }
+
   // Icon next to a section title (Overview, Pick clock by round) — always
   // primary, in both light and dark mode. (The lobby room reuses this via
   // RulesOverview but overrides dark mode to muted; see room__overview.)

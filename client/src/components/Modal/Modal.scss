@@ -51,7 +51,19 @@
   }
 
   &__body {
+    // min-height:0 lets the body shrink below its content inside the flex
+    // column so it — and only it — scrolls, keeping header + footer pinned.
+    min-height: 0;
     overflow-y: auto;
     padding: $space * 2.5;
+  }
+
+  // Fixed action bar below the scroll area (opt-in via the Modal `footer`
+  // prop). A sibling of the body, so the body's scrollbar stops above it.
+  &__footer {
+    flex-shrink: 0;
+    padding: $space * 1.5 $space * 2.5;
+    border-top: 1px solid $border;
+    background: $bg-raised;
   }
 }

@@ -3,7 +3,19 @@
 .settings-editor {
   display: flex;
   flex-direction: column;
-  gap: $space * 2;
+  gap: $space * 1.5;
+
+  // The shared wizard sections carry generous page-level spacing; in this
+  // modal that reads as inflated, so tighten the section padding + inner gaps
+  // here only (the standalone wizard pages keep their roomier layout).
+  .wizard__section {
+    padding: $space * 1.75 $space * 2;
+    gap: $space * 1.25;
+  }
+
+  .wizard__fieldset {
+    gap: $space * 1.25;
+  }
 
   &__error {
     margin: 0;
@@ -11,13 +23,17 @@
     font-size: 0.9rem;
   }
 
+  // Just the button row now — the surrounding bar (border-top, padding,
+  // background) is the Modal's own .dialog__footer region. Buttons are sized
+  // down so the footer's height lines up with the header's.
   &__actions {
-    position: sticky;
-    bottom: 0;
     display: flex;
     justify-content: flex-end;
     gap: $space;
-    padding-top: $space;
-    background: $bg-raised;
+
+    .button {
+      padding: $space $space * 2;
+      font-size: 0.9rem;
+    }
   }
 }

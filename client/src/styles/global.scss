@@ -568,26 +568,6 @@ textarea {
   }
 }
 
-.scoring-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: $space * 0.4 $space;
-  border-radius: 999px;
-  background: rgba($primary, 0.18);
-  color: $primary-hover;
-  font-size: 0.75rem;
-  font-weight: 700;
-  white-space: nowrap;
-
-  // Redundant with the scoring-format <select> right below it, and on a
-  // narrow screen it just eats space next to the "Scoring format" heading —
-  // drop it there; the select is the source of truth either way.
-  @media (max-width: 480px) {
-    display: none;
-  }
-}
-
 // Status pill for "this is automated / read-only" indicators (bot auto-draft,
 // locked reactions, etc.) — a colored pill instead of plain muted text, so it
 // actually reads as a status rather than blending in.

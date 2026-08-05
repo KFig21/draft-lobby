@@ -18,6 +18,7 @@ import {
   type SettingsGroup,
 } from '@draft-lobby/shared';
 import AddIcon from '@mui/icons-material/Add';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import RemoveIcon from '@mui/icons-material/Remove';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { formatPickClock, formatSeconds } from '../../lib/format';
@@ -64,12 +65,20 @@ function SettingsGroupFieldset({
   children: ReactNode;
 }) {
   return (
-    <fieldset className="wizard__fieldset" disabled={!editable}>
+    <>
+      {/* Note sits outside the <fieldset> so the disabled-dimming doesn't wash
+          out the badge — it's the one thing that should stay legible. */}
       {!editable && (
-        <p className="wizard__locked-note">🔒 Locked once the draft is under way.</p>
+        <p className="wizard__locked-note">
+          <span className="bot-badge bot-badge--warn">
+            <LockOutlinedIcon fontSize="inherit" /> Locked once the draft is under way
+          </span>
+        </p>
       )}
-      {children}
-    </fieldset>
+      <fieldset className="wizard__fieldset" disabled={!editable}>
+        {children}
+      </fieldset>
+    </>
   );
 }
 
@@ -153,13 +162,6 @@ export function LeagueSettingsFields({ settings, onChange, nameField, editableGr
     const fmt = scoringFormats.find((f) => JSON.stringify(f.rules) === json);
     return fmt ? `format:${fmt.id}` : 'custom';
   }, [settings.scoring, scoringFormats]);
-  const scoringLabel = useMemo(() => {
-    const preset = matchPreset(settings.scoring);
-    if (preset) return SCORING_PRESETS[preset].label;
-    const json = JSON.stringify(settings.scoring);
-    const fmt = scoringFormats.find((f) => JSON.stringify(f.rules) === json);
-    return fmt ? fmt.name : 'Custom';
-  }, [settings.scoring, scoringFormats]);
   function onScoringSaved(fmt: SavedScoringFormat) {
     setScoringFormats((prev) => [
       ...prev.filter((f) => f.id !== fmt.id),
@@ -214,10 +216,7 @@ export function LeagueSettingsFields({ settings, onChange, nameField, editableGr
 
       {/* Scoring */}
       <section className="wizard__section">
-        <div className="wizard__section-head">
-          <h2>Scoring format</h2>
-          <span className="scoring-badge">🎯 {scoringLabel}</span>
-        </div>
+        <h2>Scoring format</h2>
         <SettingsGroupFieldset editable={canEdit('scoring')}>
           <select
             className="wizard__scoring-select"

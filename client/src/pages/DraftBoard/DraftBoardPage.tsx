@@ -343,11 +343,14 @@ export function DraftBoardPage() {
   const [screenshotHighlightMine, setScreenshotHighlightMine] = useState(false);
   const [screenshotBusy, setScreenshotBusy] = useState(false);
   const [screenshotError, setScreenshotError] = useState<string | null>(null);
-  // Bound to <DraftGrid anonymize> — flipped on only for the instant a capture
-  // runs (anonymize needs a real re-render since it changes cell *content*;
-  // the "highlight my team" toggle is handled in html2canvas's onclone since
-  // it's just a class strip). The live board's rendering is otherwise untouched.
+  // Both flipped on only for the instant a capture runs, then reset — the live
+  // board is otherwise untouched. `gridAnonymizing` swaps names→slots;
+  // `gridSuppressMine` drops the "my team" ring by making DraftGrid render with
+  // no myTeamId. Both go through a real re-render (not html2canvas's onclone,
+  // which proved unreliable for the ring) so what html2canvas reads off the
+  // live DOM is already exactly what we want in the image.
   const [gridAnonymizing, setGridAnonymizing] = useState(false);
+  const [gridSuppressMine, setGridSuppressMine] = useState(false);
   const gridTableRef = useRef<HTMLTableElement>(null);
   const [showKeepers, setShowKeepers] = useState(false);
   const [showMyKeepers, setShowMyKeepers] = useState(false);
@@ -1009,6 +1012,9 @@ export function DraftBoardPage() {
     if (mobileTab !== 'board') setMobileTab('board');
     if (centerView !== 'board') setCenterView('board');
     if (anonymize) setGridAnonymizing(true);
+    // Drop the "my team" ring for this capture by re-rendering the grid with no
+    // myTeamId — reliable, unlike stripping the class off html2canvas's clone.
+    if (!highlightMine) setGridSuppressMine(true);
     try {
       // Let React commit the tab/anonymize swap and the browser paint it
       // before html2canvas reads the DOM.
@@ -1032,17 +1038,6 @@ export function DraftBoardPage() {
       const raw = await html2canvas(table, {
         backgroundColor: canvasColor,
         scale,
-        // Strip the "my team" header ring from the *cloned* DOM html2canvas
-        // renders — not the live board — when the user didn't opt into it.
-        // Done here (at render time, on the clone) rather than via React state
-        // on the live board so a realtime re-render mid-capture can't re-add it.
-        onclone: (clonedDoc) => {
-          if (!highlightMine) {
-            clonedDoc
-              .querySelectorAll('.draft-grid__team--mine')
-              .forEach((el) => el.classList.remove('draft-grid__team--mine'));
-          }
-        },
       });
       // html2canvas crops exactly to the table's own box — composite it onto
       // a slightly larger canvas so the export has breathing room around it,
@@ -1062,6 +1057,7 @@ export function DraftBoardPage() {
       setScreenshotError(err instanceof Error ? err.message : 'Could not capture the board');
     } finally {
       setGridAnonymizing(false);
+      setGridSuppressMine(false);
       if (mobileTab !== prevMobileTab) setMobileTab(prevMobileTab);
       if (centerView !== prevCenterView) setCenterView(prevCenterView);
       setScreenshotBusy(false);
@@ -2223,7 +2219,7 @@ export function DraftBoardPage() {
               picks={picks}
               playersById={playersById}
               settings={lobby.settings}
-              myTeamId={myTeam?.id ?? null}
+              myTeamId={gridSuppressMine ? null : myTeam?.id ?? null}
               myUserId={userId}
               crownVotes={crownVotes}
               grades={grades}
@@ -2534,7 +2530,7 @@ export function DraftBoardPage() {
               picks={picks}
               playersById={playersById}
               settings={lobby.settings}
-              myTeamId={myTeam?.id ?? null}
+              myTeamId={gridSuppressMine ? null : myTeam?.id ?? null}
               myUserId={userId}
               crownVotes={crownVotes}
               grades={grades}
@@ -2553,7 +2549,7 @@ export function DraftBoardPage() {
               picks={picks}
               playersById={playersById}
               onClockTeamId={isComplete || isStaging ? null : onClockTeam?.id ?? null}
-              myTeamId={myTeam?.id ?? null}
+              myTeamId={gridSuppressMine ? null : myTeam?.id ?? null}
               currentRound={round}
               draftType={lobby.settings.draftType}
               onTeamClick={openTeamRoster}
@@ -3109,6 +3105,7 @@ export function DraftBoardPage() {
           lobbyId={lobby.id}
           status={lobby.status}
           settings={lobby.settings}
+          name={lobby.name}
           onClose={() => setShowLobbySettings(false)}
           onSaved={() => refetch()}
         />

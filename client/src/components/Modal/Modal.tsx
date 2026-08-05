@@ -6,11 +6,14 @@ interface Props {
   title: string;
   onClose: () => void;
   wide?: boolean;
+  /** Optional fixed bar below the scroll area (e.g. Save/Cancel actions) — a
+   * sibling of the body, so the body's scrollbar never runs across it. */
+  footer?: ReactNode;
   children: ReactNode;
 }
 
 /** A centered, scrollable dialog. Closes on overlay click or Escape. */
-export function Modal({ title, onClose, wide, children }: Props) {
+export function Modal({ title, onClose, wide, footer, children }: Props) {
   const { closing, requestClose } = useModalClose(onClose);
 
   useEffect(() => {
@@ -40,6 +43,7 @@ export function Modal({ title, onClose, wide, children }: Props) {
           </button>
         </header>
         <div className="dialog__body">{children}</div>
+        {footer && <footer className="dialog__footer">{footer}</footer>}
       </div>
     </div>
   );

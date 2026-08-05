@@ -11,7 +11,7 @@ import RepeatIcon from '@mui/icons-material/Repeat';
 import ScoreboardIcon from '@mui/icons-material/Scoreboard';
 import SwapVertIcon from '@mui/icons-material/SwapVert';
 import TimerOutlinedIcon from '@mui/icons-material/TimerOutlined';
-import { type ComponentType } from 'react';
+import { type ComponentType, type ReactNode } from 'react';
 import { clockSummary } from '../../lib/format';
 import './LeagueRulesModal.scss';
 
@@ -22,17 +22,28 @@ import './LeagueRulesModal.scss';
  * in a button that opens the full modal). Reuses LeagueRulesModal.scss's
  * classes rather than a copy, so the two stay visually identical without
  * duplicated CSS. */
-export function RulesOverview({ settings }: { settings: LobbySettings }) {
+export function RulesOverview({
+  settings,
+  headerExtra,
+}: {
+  settings: LobbySettings;
+  /** Optional content shown on the right of the "Overview" heading — the lobby
+   * room uses it for the status/mock badges (undefined in the rules modal). */
+  headerExtra?: ReactNode;
+}) {
   const preset = matchPreset(settings.scoring);
   const scoringLabel = preset ? SCORING_PRESETS[preset].label : 'Custom';
   const totalRounds = roundsForSettings(settings);
 
   return (
     <>
-      <h3 className="rules-modal__h3">
-        <AssignmentIcon fontSize="small" className="rules-modal__h-icon" />
-        Overview
-      </h3>
+      <div className="rules-modal__overview-head">
+        <h3 className="rules-modal__h3">
+          <AssignmentIcon fontSize="small" className="rules-modal__h-icon" />
+          Overview
+        </h3>
+        {headerExtra}
+      </div>
       <div className="rules-modal__overview">
         {(
           [

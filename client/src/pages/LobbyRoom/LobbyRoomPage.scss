@@ -53,6 +53,7 @@
   }
 
   &__title {
+    flex: 1;
     display: flex;
     align-items: center;
     gap: $space * 1.5;
@@ -64,28 +65,6 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-    }
-  }
-
-  // Renaming the draft itself — same input + icon-button shape as
-  // .team-list__edit/&__icon, sized for the header instead of a list row.
-  &__title-edit {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    gap: $space * 0.5;
-    min-width: 0;
-
-    input {
-      flex: 1;
-      min-width: 0;
-      padding: $space * 0.4 $space * 0.75;
-      border: 1px solid $border;
-      border-radius: $radius-sm;
-      background: $bg;
-      color: $text;
-      font-size: 1.15rem;
-      font-weight: 700;
     }
   }
 
@@ -111,6 +90,32 @@
     &:disabled {
       opacity: 0.35;
       cursor: not-allowed;
+    }
+  }
+
+  // The "Edit settings" affordance — same quiet icon treatment as
+  // &__title-icon, but a row (icon + label) pushed to the far right of the
+  // header, so it reads as the single entry point to the settings modal
+  // (name + rules live in there). On mobile it collapses to just the pencil.
+  &__title-settings {
+    width: auto;
+    height: 32px;
+    display: inline-flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 5px;
+    padding: 0 $space * 0.9;
+    font-size: 0.85rem;
+    font-weight: 700;
+
+    @media (max-width: #{$bp-md - 1px}) {
+      // Icon-only: drop the label and square the button back up.
+      padding: 0;
+      width: 32px;
+
+      .room__title-settings-label {
+        display: none;
+      }
     }
   }
 
@@ -178,13 +183,13 @@
     font-weight: 800;
   }
 
-  // Commissioner "Edit settings" — a quiet secondary action under the overview,
-  // sized down and self-aligned so it doesn't compete with the primary action.
-  &__edit-settings {
-    align-self: flex-start;
-    gap: 6px;
-    padding: $space * 0.75 $space * 1.5;
-    font-size: 0.9rem;
+  // Status + mock badges, relocated from the top bar to sit beside the
+  // "Overview" heading inside the card.
+  &__overview-badges {
+    display: inline-flex;
+    align-items: center;
+    gap: $space * 0.75;
+    padding-bottom: 8px;
   }
 
   // Icon next to a section heading ("Draft order", "Invite") — primary in
