@@ -643,6 +643,16 @@
     }
   }
 
+  // Commissioner mid-draft settings — desktop/fullscreen only; mobile reaches
+  // it via the nav drawer (between Lobby room and League rules).
+  &__draftsettings-btn {
+    display: none;
+
+    @include lg {
+      display: grid;
+    }
+  }
+
   // Full league rules (LeagueRulesModal) — desktop/fullscreen only, sits
   // between the fullscreen and settings buttons; mobile uses the nav drawer.
   &__rules-btn {

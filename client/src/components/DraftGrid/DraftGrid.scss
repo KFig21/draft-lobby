@@ -91,6 +91,20 @@
       box-shadow: inset 0 0 0 1px $primary;
     }
 
+    // Screenshot export ONLY — captureBoardScreenshot adds .draft-grid--export
+    // to the cloned board. There the live inset-shadow + color-mix fill renders
+    // muddy through html2canvas, so swap to a plain themed border (accent in
+    // dark, primary in light). The live board keeps the ring above unchanged.
+    .draft-grid--export &--mine::before {
+      border: 1px solid $accent;
+      background: $bg-overlay;
+      box-shadow: none;
+    }
+
+    :root[data-theme='light'] .draft-grid--export &--mine::before {
+      border-color: $primary;
+    }
+
     // Cross-highlight when hovering one of this team's picks.
     &--hi::before {
       background: color-mix(in srgb, $accent 22%, $bg-overlay);

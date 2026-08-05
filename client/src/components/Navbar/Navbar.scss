@@ -199,6 +199,10 @@
 
   &__divider {
     height: 1px;
+    // The panel is a scrolling flex column; without this an empty 1px item gets
+    // flex-shrunk to nothing once the content overflows (the text links keep
+    // their height, so only the dividers vanish).
+    flex-shrink: 0;
     background: $border;
     margin: $space * 0.5 0;
   }
