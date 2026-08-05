@@ -22,6 +22,7 @@ import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlined';
 import CheckIcon from '@mui/icons-material/Check';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import CloseIcon from '@mui/icons-material/Close';
+import DataObjectOutlinedIcon from '@mui/icons-material/DataObjectOutlined';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import EmojiEventsOutlinedIcon from '@mui/icons-material/EmojiEventsOutlined';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutlineOutlined';
@@ -115,7 +116,12 @@ import {
   type DraftCellStyle,
 } from '../../lib/draftCellStyle';
 import { mostCommonGrade } from '../../lib/draftGrade';
-import { downloadBoardScreenshot, exportDraftCsv, exportDraftExcel } from '../../lib/exportDraft';
+import {
+  downloadBoardScreenshot,
+  exportDraftCsv,
+  exportDraftExcel,
+  exportDraftJson,
+} from '../../lib/exportDraft';
 import { avatarForTeam } from '../../lib/teamAvatar';
 import { supabase } from '../../supabase';
 import { useToast } from '../../toast/ToastContext';
@@ -168,7 +174,7 @@ const MAX_SIDEBAR = 600;
 
 // Board screenshot: breathing room (px, pre-scale) around the captured table
 // — html2canvas otherwise crops exactly to the table's own box, edge to edge.
-const BOARD_SCREENSHOT_PADDING = 32;
+const BOARD_SCREENSHOT_PADDING = 16;
 
 /** Counts up from `since`, ticking every second — how long a pause has lasted. */
 function PausedDuration({ since }: { since: string }) {
@@ -975,10 +981,11 @@ export function DraftBoardPage() {
     }
   }
 
-  function doExport(kind: 'csv' | 'xls') {
+  function doExport(kind: 'csv' | 'xls' | 'json') {
     const opts = { lobbyName: lobby?.name ?? 'draft', picks, teamsById, playersById };
     if (kind === 'csv') exportDraftCsv(opts);
-    else exportDraftExcel(opts);
+    else if (kind === 'xls') exportDraftExcel(opts);
+    else exportDraftJson(opts);
   }
 
   /**
@@ -1008,6 +1015,12 @@ export function DraftBoardPage() {
       if (document.fonts?.ready) await document.fonts.ready;
       const table = gridTableRef.current;
       if (!table) throw new Error('Could not find the board to capture');
+      // Belt-and-suspenders on top of the gridSuppressMine/gridAnonymizing
+      // React state above: strip the "mine" ring directly from the DOM right
+      // before capturing, synchronously, with no dependency on a re-render +
+      // paint having actually landed by now.
+      const mineEl = !highlightMine ? table.querySelector('.draft-grid__team--mine') : null;
+      mineEl?.classList.remove('draft-grid__team--mine');
       const canvasColor = getComputedStyle(table).getPropertyValue('--grid-canvas').trim() || '#000';
       // Lazy-loaded — it's a sizable library only needed by the rare visitor
       // who actually exports a screenshot, not worth shipping in the main
@@ -2960,6 +2973,19 @@ export function DraftBoardPage() {
                     <span>
                       <strong>Excel</strong>
                       <span className="muted">A formatted workbook (.xlsx)</span>
+                    </span>
+                  </button>
+                  <button
+                    className="button draft-export-options__opt"
+                    onClick={() => {
+                      doExport('json');
+                      setShowExport(false);
+                    }}
+                  >
+                    <DataObjectOutlinedIcon fontSize="small" />
+                    <span>
+                      <strong>JSON</strong>
+                      <span className="muted">Typed data, for scripts and other tools</span>
                     </span>
                   </button>
                 </>

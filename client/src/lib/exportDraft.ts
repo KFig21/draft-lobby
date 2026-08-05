@@ -90,6 +90,36 @@ export function exportDraftExcel(opts: ExportOptions): void {
   );
 }
 
+/**
+ * Download the draft as JSON — one typed object per pick, in draft order.
+ * Meant for feeding into another tool/script, so it uses real types (numbers,
+ * a boolean for isKeeper, null for a missing team/player) rather than the
+ * display-formatted strings CSV/Excel use.
+ */
+export function exportDraftJson(opts: ExportOptions): void {
+  const data = [...opts.picks]
+    .sort((a, b) => a.overall - b.overall)
+    .map((p) => {
+      const team = opts.teamsById.get(p.team_id);
+      const player = opts.playersById.get(p.player_id);
+      return {
+        overall: p.overall,
+        round: p.round,
+        team: team?.name ?? null,
+        player: player?.name ?? null,
+        position: player?.position ?? null,
+        nflTeam: player?.nfl_team ?? null,
+        byeWeek: player?.bye_week ?? null,
+        isKeeper: p.is_keeper,
+      };
+    });
+  triggerDownload(
+    JSON.stringify(data, null, 2),
+    `${slugify(opts.lobbyName)}-draft.json`,
+    'application/json',
+  );
+}
+
 /** Save a captured board screenshot canvas (see html2canvas usage in
  * DraftBoardPage) as a PNG download. */
 export function downloadBoardScreenshot(
