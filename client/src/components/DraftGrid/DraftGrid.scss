@@ -459,6 +459,20 @@
     opacity: 0.8;
   }
 
+  // Mobile: the stacked timer icon on top of the wrapped label made the
+  // on-the-clock cell taller than its row's pick cells, stretching the whole
+  // row. Drop the big icon and close the gap so the cell keeps the normal row
+  // height — the "On the clock" text alone is signal enough.
+  @media (max-width: #{$bp-md - 1px}) {
+    &__onclock-icon {
+      display: none;
+    }
+
+    &__onclock-label {
+      gap: 0;
+    }
+  }
+
   // Fullscreen ("TV mode") — stretch to fill the available space instead of
   // sitting at the grid's natural fixed size. Width: table-layout: fixed
   // means only the header row's widths matter, so giving the round column an
