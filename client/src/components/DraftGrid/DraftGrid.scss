@@ -468,12 +468,18 @@
   // (emotion injects later). Qualify with the label parent (0,2,0) so this
   // actually beats it. Same tied-specificity trap seen elsewhere in the app.
   @media (max-width: #{$bp-md - 1px}) {
-    &__onclock-label &__onclock-icon {
-      font-size: 1em;
+    &__onclock-label {
+      // Icon inline with the text (row) so "On the clock" wraps beside it on
+      // two lines instead of the icon stacking on its own row above the text —
+      // shorter overall, and lets the icon be bigger without re-stretching.
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: 0 0.3em;
+      line-height: 1.1;
     }
 
-    &__onclock-label {
-      gap: 0.1em;
+    &__onclock-label &__onclock-icon {
+      font-size: 1.6em;
     }
   }
 
