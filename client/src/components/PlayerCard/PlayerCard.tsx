@@ -36,6 +36,9 @@ export interface PlayerCardProps {
    * already share their bye week. Colors the bye number — 1 turns yellow,
    * 2+ turns red. Omit/0 to leave it uncolored. */
   byeClashCount?: number;
+  /** Which stat the big number reflects: 'proj' (this season's projection,
+   * default) or 'prev' (last season's actual points). */
+  statMode?: 'proj' | 'prev';
 }
 
 /** The roomy ("comfy") player-pool row: color-coded position, name, a second
@@ -57,9 +60,11 @@ export function PlayerCard({
   drafted,
   draftedLabel,
   byeClashCount,
+  statMode = 'proj',
 }: PlayerCardProps) {
   const color = POSITION_COLORS[player.position as Position];
   const injury = INJURY_ABBR[player.injury_status];
+  const points = statMode === 'prev' ? player.prev_points : player.proj_points;
 
   return (
     <div
@@ -119,13 +124,12 @@ export function PlayerCard({
       </div>
       {drafted && (
         <span className="player-card__drafted-tag">
-          Drafted{draftedLabel ? <span className="player-card__drafted-pick">{draftedLabel}</span> : null}
+          <span className="player-card__drafted-word">Drafted</span>
+          {draftedLabel ? <span className="player-card__drafted-pick">{draftedLabel}</span> : null}
         </span>
       )}
       <div className="player-card__stats">
-        {player.proj_points != null && (
-          <span className="player-card__proj">{player.proj_points.toFixed(1)}</span>
-        )}
+        <span className="player-card__proj">{points != null ? points.toFixed(1) : '—'}</span>
         {player.adp != null && (
           <span className="player-card__adp">ADP {player.adp.toFixed(1)}</span>
         )}

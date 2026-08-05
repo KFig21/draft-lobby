@@ -39,25 +39,42 @@
     }
   }
 
+  // Compact stacked box (tiny "DRAFTED" over the bold pick slot) rather than a
+  // wide inline pill — the player's NAME is the priority, so this stays narrow
+  // and never squeezes the name column. Hidden entirely on mobile, where the
+  // struck-through name already signals "off the board" (see the media query).
   &__drafted-tag {
     flex-shrink: 0;
     display: inline-flex;
+    flex-direction: column;
     align-items: center;
-    gap: $space * 0.5;
-    padding: $space * 0.5 $space;
+    justify-content: center;
+    gap: 0;
+    padding: 2px $space * 0.6;
     border-radius: $radius-sm;
     background: $bg-overlay;
+    line-height: 1.1;
+    text-align: center;
+
+    @media (max-width: #{$bp-md - 1px}) {
+      display: none;
+    }
+  }
+
+  &__drafted-word {
     color: $text-muted;
-    font-size: 0.7rem;
+    font-size: 0.55rem;
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.03em;
   }
 
-  // The "round.pick" slot appended to "Drafted" (e.g. 5.06) — tabular figures
-  // so the dot/digits line up, tinted to stand out from the muted label.
+  // The "round.pick" slot (e.g. 5.06) — tabular figures so the dot/digits line
+  // up, tinted to stand out from the muted label above it.
   &__drafted-pick {
     color: $text;
+    font-size: 0.78rem;
+    font-weight: 800;
     font-variant-numeric: tabular-nums;
   }
 
@@ -99,6 +116,22 @@
     display: flex;
     align-items: center;
     gap: $space * 0.75;
+    // The name is the most important thing on the row — let it truncate with an
+    // ellipsis rather than wrap to two lines when the row gets tight.
+    min-width: 0;
+
+    // Badges (keeper/injury) never shrink; the name text absorbs the squeeze.
+    .player-card__keeper-badge,
+    .injury-badge {
+      flex-shrink: 0;
+    }
+  }
+
+  &__name-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   &__sub {

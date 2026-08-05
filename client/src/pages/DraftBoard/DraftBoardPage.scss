@@ -1427,6 +1427,26 @@
         padding: 6px 8px;
       }
     }
+
+    // Mobile: instead of wrapping the position chips onto a second (and third)
+    // line, keep them on ONE swipeable strip — the single biggest space saver
+    // in the filter section. Desktop/fullscreen keep the wrapping .chip-row.
+    @media (max-width: #{$bp-md - 1px}) {
+      .chip-row {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+
+        &::-webkit-scrollbar {
+          display: none;
+        }
+
+        > * {
+          flex-shrink: 0;
+        }
+      }
+    }
   }
 
   // "Bookmarked"/"favorites" chips need icon+text alignment the plain
@@ -1454,12 +1474,15 @@
     color: $keeper;
   }
 
-  // Small "Show drafted" checkbox sitting after the filter chips — reveals
-  // already-drafted players (dimmed) in the pool instead of hiding them.
+  // "Show all" checkbox — reveals already-drafted players (dimmed) in the pool
+  // instead of hiding them. Lives on the toggle row next to the stat/sort
+  // segments; stays on that line rather than wrapping.
   &__showdrafted {
     display: inline-flex;
+    flex-shrink: 0;
     align-items: center;
     gap: $space * 0.5;
+    white-space: nowrap;
     font-size: 0.78rem;
     color: $text-muted;
     cursor: pointer;
@@ -1594,15 +1617,67 @@
   // tighter) chip row above.
   &__searchrow {
     display: flex;
+    flex-wrap: wrap;
     gap: $space;
-    align-items: flex-start;
+    align-items: center;
   }
 
   &__search-wrap {
     position: relative;
     display: flex;
-    flex: 1;
-    min-width: 0;
+    // Grows to fill the row, but a healthy basis means the stat/sort toggles
+    // sit beside it on desktop/fullscreen and wrap to their own compact line
+    // only once the viewport gets phone-narrow.
+    flex: 1 1 220px;
+    min-width: 180px;
+  }
+
+  // Stat lens + sort toggles (+ the Hide-byes dropdown on desktop) — kept on
+  // one flex line that wraps under the search box on narrow screens.
+  &__toggles {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: $space * 0.75;
+  }
+
+  // Two-option segmented control (Proj/Last yr, Pts/ADP): a single bordered
+  // pill split into buttons, the active one filled with $primary like a chip.
+  &__seg {
+    display: inline-flex;
+    flex-shrink: 0;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    overflow: hidden;
+    background: $bg;
+  }
+
+  &__seg-btn {
+    padding: $space * 0.5 $space * 0.9;
+    border: none;
+    background: none;
+    color: $text-muted;
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 700;
+    line-height: 1.4;
+    white-space: nowrap;
+    cursor: pointer;
+
+    & + & {
+      border-left: 1px solid $border;
+    }
+
+    @media (hover: hover) {
+      &:hover:not(.is-active) {
+        color: $text;
+      }
+    }
+
+    &.is-active {
+      background: $primary;
+      color: #fff;
+    }
   }
 
   &__search {

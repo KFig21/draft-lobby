@@ -146,24 +146,22 @@
     font-size: 0.75rem;
   }
 
+  // Shows just the pick slot (e.g. 1.09). Kept narrow so it never eats into the
+  // name, and hidden on mobile where the struck-through name is signal enough.
   &__drafted-tag {
     flex-shrink: 0;
     display: inline-flex;
     align-items: center;
-    gap: $space * 0.4;
-    padding: $space * 0.35 $space * 0.75;
+    padding: $space * 0.3 $space * 0.6;
     border-radius: $radius-sm;
     background: $bg-overlay;
-    color: $text-muted;
-    font-size: 0.64rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-  }
-
-  // The "round.pick" slot appended to "Drafted" (e.g. 5.06).
-  &__drafted-pick {
     color: $text;
+    font-size: 0.66rem;
+    font-weight: 800;
     font-variant-numeric: tabular-nums;
+
+    @media (max-width: #{$bp-md - 1px}) {
+      display: none;
+    }
   }
 }

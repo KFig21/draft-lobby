@@ -266,6 +266,11 @@ export function DraftBoardPage() {
   // Drafted players are hidden from the pool by default; this reveals them
   // (dimmed, non-draftable) so you can still see/favorite who's gone.
   const [showDrafted, setShowDrafted] = useState(false);
+  // Pool stat lens: 'proj' shows this season's projections (points + position
+  // rank), 'prev' shows last season's actuals. Sort key: 'points' sorts by the
+  // currently-shown stat's points, 'adp' by average draft position.
+  const [statMode, setStatMode] = useState<'proj' | 'prev'>('proj');
+  const [sortMode, setSortMode] = useState<'points' | 'adp'>('points');
   // Per-device pool-row density (Settings, or the in-room settings modal).
   // The two layouts are separate components, chosen here at the render call.
   const PoolCard = cardStyle === 'compact' ? CompactPlayerCard : PlayerCard;
@@ -1381,7 +1386,7 @@ export function DraftBoardPage() {
 
   const available = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return players.filter((p) => {
+    const rows = players.filter((p) => {
       if (!showDrafted && draftedIds.has(p.id)) return false;
       if (filter === 'QUEUE') {
         if (!queue.includes(p.id)) return false;
@@ -1398,7 +1403,32 @@ export function DraftBoardPage() {
       if (q && !p.name.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [players, draftedIds, filter, search, queue, favoriteIds, excludedByeWeeks, showDrafted]);
+    // Sort by the active lens: points (of the shown stat, descending) or ADP
+    // (ascending). Missing values always sink to the bottom either way.
+    const pointsOf = (p: PlayerRow) => (statMode === 'prev' ? p.prev_points : p.proj_points);
+    rows.sort((a, b) => {
+      if (sortMode === 'adp') {
+        const av = a.adp ?? Infinity;
+        const bv = b.adp ?? Infinity;
+        return av - bv;
+      }
+      const av = pointsOf(a) ?? -Infinity;
+      const bv = pointsOf(b) ?? -Infinity;
+      return bv - av;
+    });
+    return rows;
+  }, [
+    players,
+    draftedIds,
+    filter,
+    search,
+    queue,
+    favoriteIds,
+    excludedByeWeeks,
+    showDrafted,
+    statMode,
+    sortMode,
+  ]);
   // Only offer bye weeks that actually appear in the pool right now (not a
   // fixed 1-18 list) — so the filter row shrinks as the board fills up.
   const availableByeWeeks = useMemo(() => {
@@ -1931,6 +1961,9 @@ export function DraftBoardPage() {
     // Next to the chips there's room to spare on the desktop sidebar, but in
     // the fullscreen Menu modal the chip row is already tight, so it moves
     // down next to the search box instead.
+    // Hidden for now (felt like clutter) — flip SHOW_BYE_FILTER to re-enable;
+    // all the wiring below stays intact so it's a one-line switch.
+    const SHOW_BYE_FILTER = false;
     const byeFilter = availableByeWeeks.length > 0 && (
       <div className="pool__byefilter" ref={byeDropdownRef}>
         <button
@@ -1979,7 +2012,8 @@ export function DraftBoardPage() {
               <PoolCard
                 key={p.id}
                 player={p}
-                posRank={p.proj_rank}
+                statMode={statMode}
+                posRank={statMode === 'prev' ? p.prev_rank : p.proj_rank}
                 queued
                 onQueue={() => toggleQueue(p.id)}
                 onFavorite={canFavorite ? () => toggleFavorite(p.id) : undefined}
@@ -2044,14 +2078,6 @@ export function DraftBoardPage() {
                 <span className="chip__count">{favoriteIds?.size ?? 0}</span>
               </button>
             )}
-            <label className="pool__showdrafted">
-              <input
-                type="checkbox"
-                checked={showDrafted}
-                onChange={(e) => setShowDrafted(e.target.checked)}
-              />
-              Show drafted
-            </label>
           </div>
           <div className="pool__searchrow">
             <div className="pool__search-wrap">
@@ -2073,7 +2099,51 @@ export function DraftBoardPage() {
                 </button>
               )}
             </div>
-            {byeFilter}
+            <div className="pool__toggles">
+              <div className="pool__seg" role="group" aria-label="Stat view">
+                <button
+                  type="button"
+                  className={`pool__seg-btn ${statMode === 'proj' ? 'is-active' : ''}`}
+                  onClick={() => setStatMode('proj')}
+                >
+                  Proj
+                </button>
+                <button
+                  type="button"
+                  className={`pool__seg-btn ${statMode === 'prev' ? 'is-active' : ''}`}
+                  onClick={() => setStatMode('prev')}
+                >
+                  Last yr
+                </button>
+              </div>
+              <div className="pool__seg" role="group" aria-label="Sort by">
+                <button
+                  type="button"
+                  className={`pool__seg-btn ${sortMode === 'points' ? 'is-active' : ''}`}
+                  onClick={() => setSortMode('points')}
+                  title="Sort by points"
+                >
+                  Pts
+                </button>
+                <button
+                  type="button"
+                  className={`pool__seg-btn ${sortMode === 'adp' ? 'is-active' : ''}`}
+                  onClick={() => setSortMode('adp')}
+                  title="Sort by average draft position"
+                >
+                  ADP
+                </button>
+              </div>
+              {SHOW_BYE_FILTER && byeFilter}
+              <label className="pool__showdrafted" title="Include already-drafted players">
+                <input
+                  type="checkbox"
+                  checked={showDrafted}
+                  onChange={(e) => setShowDrafted(e.target.checked)}
+                />
+                Show all
+              </label>
+            </div>
           </div>
         </div>
         <div className="pool__list">
@@ -2083,7 +2153,8 @@ export function DraftBoardPage() {
               <PoolCard
                 key={p.id}
                 player={p}
-                posRank={p.proj_rank}
+                statMode={statMode}
+                posRank={statMode === 'prev' ? p.prev_rank : p.proj_rank}
                 drafted={isDrafted}
                 draftedLabel={isDrafted ? pickLabelByPlayerId.get(p.id) : undefined}
                 onPick={!isDrafted && canPick ? () => pick(p) : undefined}

@@ -26,9 +26,11 @@ export function CompactPlayerCard({
   posRank,
   drafted,
   draftedLabel,
+  statMode = 'proj',
 }: PlayerCardProps) {
   const color = POSITION_COLORS[player.position as Position];
   const injury = INJURY_ABBR[player.injury_status];
+  const points = statMode === 'prev' ? player.prev_points : player.proj_points;
 
   return (
     <div
@@ -112,15 +114,16 @@ export function CompactPlayerCard({
       {/* When drafted, the pill sits to the left of the projection, which stays
           in the far-right slot; otherwise the projection stays beside the
           Draft button. */}
+      {/* Just the pick slot (e.g. 1.09) — the struck-through name already says
+          "drafted", so dropping the word keeps this narrow and off the name.
+          Hidden entirely on mobile (see SCSS). */}
       {drafted && (
-        <span className="compact-card__drafted-tag">
-          Drafted{draftedLabel ? <span className="compact-card__drafted-pick">{draftedLabel}</span> : null}
+        <span className="compact-card__drafted-tag" title="Drafted">
+          {draftedLabel ?? 'Drafted'}
         </span>
       )}
 
-      {player.proj_points != null && (
-        <span className="compact-card__proj">{player.proj_points.toFixed(1)}</span>
-      )}
+      <span className="compact-card__proj">{points != null ? points.toFixed(1) : '—'}</span>
 
       {!drafted && onPick && (
         <button
