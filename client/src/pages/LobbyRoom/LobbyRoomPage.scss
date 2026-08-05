@@ -478,9 +478,12 @@
   font-weight: 700;
   cursor: pointer;
 
-  &:hover:not(:disabled) {
-    border-color: $accent;
-    color: $text;
+  // Hover-gated so the tapped state doesn't stick on touch (see hover-only).
+  @include hover-only {
+    &:hover:not(:disabled) {
+      border-color: $accent;
+      color: $text;
+    }
   }
 
   &:disabled {
@@ -494,10 +497,12 @@
     color: $warning;
     background: color-mix(in srgb, $warning 12%, transparent);
 
-    &:hover:not(:disabled) {
-      border-color: $warning;
-      color: $warning;
-      background: color-mix(in srgb, $warning 20%, transparent);
+    @include hover-only {
+      &:hover:not(:disabled) {
+        border-color: $warning;
+        color: $warning;
+        background: color-mix(in srgb, $warning 20%, transparent);
+      }
     }
   }
 }

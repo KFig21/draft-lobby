@@ -1,4 +1,5 @@
 @use 'variables' as *;
+@use 'mixins' as *;
 
 // $keeper (variables.scss) is shared with the board's keeper cell outline so the
 // modal and the cells it creates read as the same feature.
@@ -39,8 +40,10 @@
     color: $text-muted;
     cursor: pointer;
 
-    &:hover {
-      color: $text;
+    @include hover-only {
+      &:hover {
+        color: $text;
+      }
     }
   }
 
@@ -91,8 +94,10 @@
       color: $text-muted;
     }
 
-    &:hover {
-      border-color: color-mix(in srgb, $keeper 50%, transparent);
+    @include hover-only {
+      &:hover {
+        border-color: color-mix(in srgb, $keeper 50%, transparent);
+      }
     }
 
     &.is-active {
@@ -209,8 +214,10 @@
     cursor: pointer;
     white-space: nowrap;
 
-    &:hover {
-      text-decoration: underline;
+    @include hover-only {
+      &:hover {
+        text-decoration: underline;
+      }
     }
   }
 
@@ -290,8 +297,10 @@
     line-height: 1.6;
     cursor: pointer;
 
-    &:hover {
-      background: color-mix(in srgb, $primary 15%, transparent);
+    @include hover-only {
+      &:hover {
+        background: color-mix(in srgb, $primary 15%, transparent);
+      }
     }
   }
 
@@ -347,8 +356,10 @@
     white-space: nowrap;
     cursor: pointer;
 
-    &:hover {
-      background: color-mix(in srgb, $primary 15%, transparent);
+    @include hover-only {
+      &:hover {
+        background: color-mix(in srgb, $primary 15%, transparent);
+      }
     }
   }
 
@@ -418,8 +429,10 @@
     text-align: left;
     cursor: pointer;
 
-    &:hover {
-      background: $bg-overlay;
+    @include hover-only {
+      &:hover {
+        background: $bg-overlay;
+      }
     }
   }
 
@@ -476,8 +489,10 @@
     font-weight: 700;
     cursor: pointer;
 
-    &:hover {
-      background: color-mix(in srgb, $danger 12%, transparent);
+    @include hover-only {
+      &:hover {
+        background: color-mix(in srgb, $danger 12%, transparent);
+      }
     }
   }
 
@@ -508,16 +523,20 @@
     border-color: $danger;
     color: $danger;
 
-    &:hover {
-      background: color-mix(in srgb, $danger 15%, transparent);
+    @include hover-only {
+      &:hover {
+        background: color-mix(in srgb, $danger 15%, transparent);
+      }
     }
   }
 
   &__clear-no {
     color: $text;
 
-    &:hover {
-      background: $bg-overlay;
+    @include hover-only {
+      &:hover {
+        background: $bg-overlay;
+      }
     }
   }
 
@@ -542,8 +561,10 @@
     font-weight: 700;
     cursor: pointer;
 
-    &:hover:not(:disabled) {
-      background: color-mix(in srgb, $danger 12%, transparent);
+    @include hover-only {
+      &:hover:not(:disabled) {
+        background: color-mix(in srgb, $danger 12%, transparent);
+      }
     }
 
     &:disabled {
@@ -567,23 +588,38 @@
     font-weight: 700;
     cursor: pointer;
 
-    &:hover {
-      color: $text;
-      background: $bg-overlay;
+    @include hover-only {
+      &:hover {
+        color: $text;
+        background: $bg-overlay;
+      }
     }
   }
 
   // Editable round selector on a candidate row.
   &__round-sel {
     flex-shrink: 0;
-    padding: 2px 4px;
+    // Suppress the native select arrow (iOS renders it solid black, ignoring
+    // dark mode) and draw our own themed chevron instead — text-muted colored,
+    // matching desktop, in both light and dark.
+    appearance: none;
+    -webkit-appearance: none;
+    padding: 2px 18px 2px 4px;
     border: 1px solid $border;
     border-radius: $radius-sm;
-    background: $bg;
+    background-color: $bg;
+    background-repeat: no-repeat;
+    background-position: right 4px center;
+    background-size: 9px;
+    background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'><path d='M2.5,4.5L6,8L9.5,4.5' fill='none' stroke='%238a94a6' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/></svg>");
     color: $keeper;
     font: inherit;
     font-size: 0.75rem;
     font-weight: 800;
+
+    :root[data-theme='light'] & {
+      background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'><path d='M2.5,4.5L6,8L9.5,4.5' fill='none' stroke='%23667085' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+    }
   }
 
   // Manual add-a-player row inside an open team.
@@ -597,7 +633,10 @@
   }
 
   &__add-input {
-    flex: 1;
+    // Fill the search wrapper (a position:relative span, not a flex parent, so
+    // `flex` here is ignored) — otherwise the input keeps its intrinsic width
+    // and, on a narrow screen, overflows under the "Add" button.
+    width: 100%;
     min-width: 0;
     padding: $space * 0.5 $space * 0.75;
     border: 1px solid $border;
@@ -705,9 +744,11 @@
     cursor: pointer;
     transition: color 120ms ease, background 120ms ease;
 
-    &:hover:not(:disabled) {
-      color: $keeper;
-      background: $bg-overlay;
+    @include hover-only {
+      &:hover:not(:disabled) {
+        color: $keeper;
+        background: $bg-overlay;
+      }
     }
 
     &.is-kept {
@@ -805,8 +846,10 @@
       text-align: left;
       cursor: pointer;
 
-      &:hover {
-        background: $bg-overlay;
+      @include hover-only {
+        &:hover {
+          background: $bg-overlay;
+        }
       }
     }
   }
@@ -945,13 +988,21 @@
     cursor: pointer;
     transition: opacity 120ms ease;
 
-    .keeper-modal__row:hover & {
-      opacity: 1;
+    @include hover-only {
+      .keeper-modal__row:hover & {
+        opacity: 1;
+      }
+
+      &:hover {
+        color: $keeper;
+        background: $bg-overlay;
+      }
     }
 
-    &:hover {
-      color: $keeper;
-      background: $bg-overlay;
+    // Touch has no hover to reveal it — keep the pencil visible so it stays
+    // tappable (and doesn't flash in via a sticky tap-hover).
+    @media (hover: none) {
+      opacity: 1;
     }
   }
 
@@ -995,9 +1046,11 @@
     color: $text-muted;
     cursor: pointer;
 
-    &:hover:not(:disabled) {
-      color: $danger;
-      background: $bg-overlay;
+    @include hover-only {
+      &:hover:not(:disabled) {
+        color: $danger;
+        background: $bg-overlay;
+      }
     }
 
     &:disabled {
