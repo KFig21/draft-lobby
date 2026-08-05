@@ -302,18 +302,19 @@ function drawBoldCell(
   ctx.fill();
   if (pick.is_keeper) keeperOutline(ctx, x, y, pal.keeper);
 
-  const fs = 15 * nameScale(player.name);
+  const fs = 16.5 * nameScale(player.name);
   const lh = fs * 1.15;
   ctx.fillStyle = '#000';
   ctx.font = `800 ${fs}px ${FONT}`;
   ctx.textAlign = 'center';
-  ctx.textBaseline = 'alphabetic';
+  // Center each line on its own vertical middle so the whole block sits on the
+  // cell's true center (baseline math left it riding high).
+  ctx.textBaseline = 'middle';
   const lines = wrapLines(ctx, player.name, CELL_W - 10, 3);
-  let ty = y + (CELL_H - lines.length * lh) / 2 + fs * 0.82;
-  for (const line of lines) {
-    ctx.fillText(line, x + CELL_W / 2, ty);
-    ty += lh;
-  }
+  const cy = y + CELL_H / 2;
+  lines.forEach((line, i) => {
+    ctx.fillText(line, x + CELL_W / 2, cy - ((lines.length - 1) * lh) / 2 + i * lh);
+  });
   drawFlags(ctx, x, y, flags, posColor, pal.keeper, false);
 }
 
