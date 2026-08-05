@@ -43,6 +43,7 @@ import MenuIcon from '@mui/icons-material/Menu';
 import MenuBookOutlinedIcon from '@mui/icons-material/MenuBookOutlined';
 import PauseIcon from '@mui/icons-material/Pause';
 import PauseCircleOutlineIcon from '@mui/icons-material/PauseCircleOutlineOutlined';
+import PhotoCameraOutlinedIcon from '@mui/icons-material/PhotoCameraOutlined';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import SettingsIcon from '@mui/icons-material/Settings';
 import SkipNextIcon from '@mui/icons-material/SkipNext';
@@ -114,7 +115,7 @@ import {
   type DraftCellStyle,
 } from '../../lib/draftCellStyle';
 import { mostCommonGrade } from '../../lib/draftGrade';
-import { exportDraftCsv, exportDraftExcel } from '../../lib/exportDraft';
+import { downloadBoardScreenshot, exportDraftCsv, exportDraftExcel } from '../../lib/exportDraft';
 import { avatarForTeam } from '../../lib/teamAvatar';
 import { supabase } from '../../supabase';
 import { useToast } from '../../toast/ToastContext';
@@ -318,6 +319,17 @@ export function DraftBoardPage() {
   const [rollbackTarget, setRollbackTarget] = useState<RollbackTarget | null>(null);
   const [rollbackConfirmText, setRollbackConfirmText] = useState('');
   const [showExport, setShowExport] = useState(false);
+  // Board screenshot (see captureBoardScreenshot): 'menu' shows the CSV/Excel/
+  // screenshot choices, 'screenshot' shows the anonymize checkbox + download.
+  const [exportStep, setExportStep] = useState<'menu' | 'screenshot'>('menu');
+  const [screenshotAnonymize, setScreenshotAnonymize] = useState(false);
+  const [screenshotBusy, setScreenshotBusy] = useState(false);
+  const [screenshotError, setScreenshotError] = useState<string | null>(null);
+  // Bound to <DraftGrid anonymize>, separate from the checkbox above — only
+  // flips true for the instant the capture runs, so the live board never
+  // shows anonymized names outside of that.
+  const [gridAnonymizing, setGridAnonymizing] = useState(false);
+  const gridTableRef = useRef<HTMLTableElement>(null);
   const [showKeepers, setShowKeepers] = useState(false);
   const [showMyKeepers, setShowMyKeepers] = useState(false);
   const [showAllKeepers, setShowAllKeepers] = useState(false);
@@ -958,6 +970,53 @@ export function DraftBoardPage() {
     const opts = { lobbyName: lobby?.name ?? 'draft', picks, teamsById, playersById };
     if (kind === 'csv') exportDraftCsv(opts);
     else exportDraftExcel(opts);
+  }
+
+  /**
+   * Capture the draft board as a PNG. Targets the <table> itself (via
+   * gridTableRef) rather than its scrolling wrappers, so html2canvas renders
+   * the full board at its natural size regardless of what's currently
+   * scrolled into view. Forces the board into view first — a hidden mobile
+   * tab or the post-draft Rankings toggle would otherwise leave it at zero
+   * size — and restores whatever was showing afterward.
+   */
+  async function captureBoardScreenshot(anonymize: boolean) {
+    if (!lobby) return;
+    setScreenshotError(null);
+    setScreenshotBusy(true);
+    const prevMobileTab = mobileTab;
+    const prevCenterView = centerView;
+    if (mobileTab !== 'board') setMobileTab('board');
+    if (centerView !== 'board') setCenterView('board');
+    if (anonymize) setGridAnonymizing(true);
+    try {
+      // Let React commit the tab/anonymize swap and the browser paint it
+      // before html2canvas reads the DOM.
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      );
+      if (document.fonts?.ready) await document.fonts.ready;
+      const table = gridTableRef.current;
+      if (!table) throw new Error('Could not find the board to capture');
+      const canvasColor = getComputedStyle(table).getPropertyValue('--grid-canvas').trim();
+      // Lazy-loaded — it's a sizable library only needed by the rare visitor
+      // who actually exports a screenshot, not worth shipping in the main
+      // draft-board bundle everyone downloads just to open a draft.
+      const { default: html2canvas } = await import('html2canvas');
+      const canvas = await html2canvas(table, {
+        backgroundColor: canvasColor || undefined,
+        scale: Math.min(2, window.devicePixelRatio || 1),
+      });
+      downloadBoardScreenshot(canvas, lobby.name, anonymize);
+      setShowExport(false);
+    } catch (err) {
+      setScreenshotError(err instanceof Error ? err.message : 'Could not capture the board');
+    } finally {
+      setGridAnonymizing(false);
+      if (mobileTab !== prevMobileTab) setMobileTab(prevMobileTab);
+      if (centerView !== prevCenterView) setCenterView(prevCenterView);
+      setScreenshotBusy(false);
+    }
   }
 
   const derived = useMemo(() => {
@@ -2290,12 +2349,17 @@ export function DraftBoardPage() {
           )}
         </div>
         <div className="draft__right">
-          {isComplete && (
-            <button className="draft__export-btn" onClick={() => setShowExport(true)}>
-              <FileDownloadOutlinedIcon fontSize="small" />
-              <span className="draft__btn-label">Export</span>
-            </button>
-          )}
+          <button
+            className="draft__export-btn"
+            onClick={() => {
+              setExportStep('menu');
+              setScreenshotError(null);
+              setShowExport(true);
+            }}
+          >
+            <FileDownloadOutlinedIcon fontSize="small" />
+            <span className="draft__btn-label">Export</span>
+          </button>
           {!isComplete && RequestPauseButton({ compact: true })}
           {isFullscreen && (
             <button
@@ -2440,6 +2504,8 @@ export function DraftBoardPage() {
               fillRowHeight={fsRowHeight}
               onMyClockCellClick={openPlayersPool}
               onCommishClockCellClick={isCommish ? openPlayersPool : undefined}
+              tableRef={gridTableRef}
+              anonymize={gridAnonymizing}
               onClockUrgency={onClockCellUrgency}
               onClockFlashing={onClockCellFlashing}
               onClockElapsedPct={onClockCellElapsedPct}
@@ -2834,35 +2900,90 @@ export function DraftBoardPage() {
         })()}
 
       {showExport && (
-        <Modal title="Export draft" onClose={() => setShowExport(false)}>
-          <div className="draft-export-options">
-            <button
-              className="button draft-export-options__opt"
-              onClick={() => {
-                doExport('csv');
-                setShowExport(false);
-              }}
-            >
-              <InsertDriveFileOutlinedIcon fontSize="small" />
-              <span>
-                <strong>CSV</strong>
-                <span className="muted">A plain spreadsheet file (.csv)</span>
-              </span>
-            </button>
-            <button
-              className="button draft-export-options__opt"
-              onClick={() => {
-                doExport('xls');
-                setShowExport(false);
-              }}
-            >
-              <TableChartOutlinedIcon fontSize="small" />
-              <span>
-                <strong>Excel</strong>
-                <span className="muted">A formatted workbook (.xlsx)</span>
-              </span>
-            </button>
-          </div>
+        <Modal
+          title={exportStep === 'screenshot' ? 'Board screenshot' : 'Export draft'}
+          onClose={() => setShowExport(false)}
+        >
+          {exportStep === 'menu' ? (
+            <div className="draft-export-options">
+              {isComplete && (
+                <>
+                  <button
+                    className="button draft-export-options__opt"
+                    onClick={() => {
+                      doExport('csv');
+                      setShowExport(false);
+                    }}
+                  >
+                    <InsertDriveFileOutlinedIcon fontSize="small" />
+                    <span>
+                      <strong>CSV</strong>
+                      <span className="muted">A plain spreadsheet file (.csv)</span>
+                    </span>
+                  </button>
+                  <button
+                    className="button draft-export-options__opt"
+                    onClick={() => {
+                      doExport('xls');
+                      setShowExport(false);
+                    }}
+                  >
+                    <TableChartOutlinedIcon fontSize="small" />
+                    <span>
+                      <strong>Excel</strong>
+                      <span className="muted">A formatted workbook (.xlsx)</span>
+                    </span>
+                  </button>
+                </>
+              )}
+              <button
+                className="button draft-export-options__opt"
+                onClick={() => setExportStep('screenshot')}
+              >
+                <PhotoCameraOutlinedIcon fontSize="small" />
+                <span>
+                  <strong>Board screenshot</strong>
+                  <span className="muted">A PNG image of the draft board</span>
+                </span>
+              </button>
+            </div>
+          ) : (
+            <div className="draft-export-screenshot">
+              <label className="draft-export-screenshot__toggle">
+                <input
+                  type="checkbox"
+                  checked={screenshotAnonymize}
+                  onChange={(e) => setScreenshotAnonymize(e.target.checked)}
+                />
+                <span>
+                  <strong>Anonymize team names</strong>
+                  <span className="muted">
+                    Replace names and avatars with draft slot numbers — for sharing
+                    outside the league.
+                  </span>
+                </span>
+              </label>
+              {screenshotError && <p className="draft-export-screenshot__error">{screenshotError}</p>}
+              <div className="draft-export-screenshot__actions">
+                <button
+                  type="button"
+                  className="button"
+                  onClick={() => setExportStep('menu')}
+                  disabled={screenshotBusy}
+                >
+                  Back
+                </button>
+                <button
+                  type="button"
+                  className="button button--primary"
+                  onClick={() => captureBoardScreenshot(screenshotAnonymize)}
+                  disabled={screenshotBusy}
+                >
+                  {screenshotBusy ? 'Capturing…' : 'Download PNG'}
+                </button>
+              </div>
+            </div>
+          )}
         </Modal>
       )}
 

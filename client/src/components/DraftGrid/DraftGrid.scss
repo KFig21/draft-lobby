@@ -26,8 +26,12 @@
   // Colour of the gaps between cards (the board canvas showing through the
   // border-spacing) — mirrors .draft/.draft-grid__corner. The sticky-header
   // gap masks below use it so a scrolled body cell reads as the normal grid
-  // gap rather than peeking out.
+  // gap rather than peeking out. Also set as the table's own background (not
+  // just relied on from an ancestor) so a screenshot export of just this
+  // <table> — outside its normal scroll-container ancestry — still has the
+  // right backing behind the gaps instead of showing through as transparent.
   --grid-canvas: #{$bg};
+  background: var(--grid-canvas);
 
   :root[data-theme='light'] & {
     --grid-canvas: #{$bg-raised};
@@ -128,6 +132,20 @@
     margin-right: 5px;
   }
 
+  // Anonymized screenshot export: stands in for the avatar, showing only the
+  // draft slot number — no chosen emoji/color to identify the real owner.
+  &__team-slot {
+    display: grid;
+    place-items: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: $bg-overlay;
+    color: $text-muted;
+    font-size: 0.62rem;
+    font-weight: 800;
+  }
+
   &__round {
     left: 0; // frozen on the left edge of the board
     color: $text-muted;
@@ -149,9 +167,15 @@
       transition: background 120ms ease;
     }
 
-    // Cross-highlight when hovering a pick in this round.
+    // Cross-highlight when hovering a pick in this round. $accent (bright
+    // mint) is tuned for dark backgrounds — too washed out on light, so light
+    // mode swaps to $primary (the darker teal), same as the rest of the app.
     &--hi {
       color: $accent;
+
+      :root[data-theme='light'] & {
+        color: $primary;
+      }
     }
 
     &--hi::before {

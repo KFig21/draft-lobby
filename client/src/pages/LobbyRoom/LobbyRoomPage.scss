@@ -740,6 +740,18 @@
     }
   }
 
+  // The save checkmark, once the name has actually changed — filled and
+  // colored so it reads as "there are unsaved changes here" rather than a
+  // static icon indistinguishable from Cancel next to it.
+  &__icon--save.is-dirty:not(:disabled) {
+    background: $primary;
+    color: #fff;
+
+    &:hover {
+      background: $primary-hover;
+    }
+  }
+
   // Reveal the pencil on hover (still tappable on touch, which has no hover).
   &__edit-btn {
     opacity: 0.55;

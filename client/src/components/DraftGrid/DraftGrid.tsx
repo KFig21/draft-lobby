@@ -65,6 +65,13 @@ interface Props {
    * back to it. When set, skipped cells the viewer doesn't own become buttons.
    * (round, teamId) identifies the slot; the page resolves it to an overall. */
   onRollbackSkipped?: (round: number, teamId: string) => void;
+  /** Attached to the underlying <table> — lets a caller (the board screenshot
+   * export) capture its full natural size regardless of the scroll wrappers
+   * clipping it on screen. */
+  tableRef?: React.Ref<HTMLTableElement>;
+  /** Screenshot export: replace team names/avatars with their draft slot
+   * number, so a shared image doesn't reveal real names to strangers. */
+  anonymize?: boolean;
 }
 
 /**
@@ -97,6 +104,8 @@ export function DraftGrid({
   onClockElapsedPct,
   skippedCells,
   onRollbackSkipped,
+  tableRef,
+  anonymize = false,
 }: Props) {
   // Index picks by "round:teamId" for O(1) cell lookup.
   const byCell = new Map<string, PickRow>();
@@ -108,6 +117,7 @@ export function DraftGrid({
   return (
     <div className="grid-scroll">
       <table
+        ref={tableRef}
         className={`draft-grid${fill ? ' draft-grid--fill' : ''}`}
         style={fillRowHeight ? { ['--fs-row-h' as string]: `${fillRowHeight}px` } : undefined}
       >
@@ -127,12 +137,18 @@ export function DraftGrid({
                   type="button"
                   className="draft-grid__team-btn"
                   onClick={() => onTeamClick?.(team.id)}
-                  title={`View ${team.name}'s lineup`}
+                  title={anonymize ? undefined : `View ${team.name}'s lineup`}
                 >
-                  <span className="draft-grid__team-avatar">
-                    <Avatar avatar={avatarForTeam(team, members)} size={16} />
-                  </span>
-                  {team.name}
+                  {anonymize ? (
+                    <span className="draft-grid__team-avatar draft-grid__team-slot">
+                      {team.draft_position}
+                    </span>
+                  ) : (
+                    <span className="draft-grid__team-avatar">
+                      <Avatar avatar={avatarForTeam(team, members)} size={16} />
+                    </span>
+                  )}
+                  {anonymize ? `Slot ${team.draft_position}` : team.name}
                   {team.is_prev_champion && <ChampionBadge size={13} />}
                 </button>
               </th>

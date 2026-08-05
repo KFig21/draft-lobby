@@ -898,6 +898,9 @@ export function LobbyRoomPage() {
                   isCommish ||
                   (team.owner_id === userId && !isComplete && !lobby.team_names_locked);
                 const editing = editingTeamId === team.id;
+                // Unsaved edit — highlight the checkmark so it reads as "save
+                // me" instead of a static, always-present icon.
+                const nameDirty = editing && editName.trim() !== team.name;
                 const otherUserId =
                   team.owner_id && team.owner_id !== userId ? team.owner_id : null;
                 const rel = otherUserId ? relations.get(otherUserId) : undefined;
@@ -955,8 +958,11 @@ export function LobbyRoomPage() {
                           <span className="team-list__spacer" />
                           <button
                             type="submit"
-                            className="team-list__icon"
-                            aria-label="Save team name"
+                            className={`team-list__icon team-list__icon--save${
+                              nameDirty ? ' is-dirty' : ''
+                            }`}
+                            aria-label={nameDirty ? 'Save changes' : 'Save team name'}
+                            title={nameDirty ? 'You have unsaved changes' : undefined}
                             disabled={savingName || !editName.trim()}
                           >
                             <CheckIcon fontSize="small" />

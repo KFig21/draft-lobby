@@ -89,3 +89,24 @@ export function exportDraftExcel(opts: ExportOptions): void {
     'application/vnd.ms-excel',
   );
 }
+
+/** Save a captured board screenshot canvas (see html2canvas usage in
+ * DraftBoardPage) as a PNG download. */
+export function downloadBoardScreenshot(
+  canvas: HTMLCanvasElement,
+  lobbyName: string,
+  anonymized: boolean,
+): void {
+  const filename = `${slugify(lobbyName)}-board${anonymized ? '-anonymized' : ''}.png`;
+  canvas.toBlob((blob) => {
+    if (!blob) return;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }, 'image/png');
+}

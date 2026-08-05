@@ -1701,3 +1701,47 @@
     }
   }
 }
+
+.draft-export-screenshot {
+  display: flex;
+  flex-direction: column;
+  gap: $space * 1.5;
+
+  &__toggle {
+    display: flex;
+    align-items: flex-start;
+    gap: $space;
+    padding: $space * 1.5;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    cursor: pointer;
+
+    input {
+      margin-top: 3px;
+      flex-shrink: 0;
+    }
+
+    span {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .muted {
+      font-size: 0.8rem;
+      font-weight: 400;
+    }
+  }
+
+  &__error {
+    margin: 0;
+    color: $danger;
+    font-size: 0.85rem;
+  }
+
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: $space;
+  }
+}
