@@ -89,16 +89,17 @@ export function LobbyRoomPage() {
   const [savingOrder, setSavingOrder] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
 
-  // Mobile: chat is a bottom drawer; desktop keeps the right sidebar.
+  // Mobile: chat is a bottom drawer; desktop/tablet-landscape keeps the right
+  // sidebar. 1024px mirrors $bp-lg (see variables.scss) — keep them in sync.
   const [isDesktop, setIsDesktop] = useState(
-    () => typeof window !== 'undefined' && window.matchMedia('(min-width: 1100px)').matches,
+    () => typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches,
   );
   // Mobile chat drawer: collapsed handle → open (~80%) → full screen.
   const [chatView, setChatView] = useState<'closed' | 'open' | 'full'>('closed');
   const [chatUnread, setChatUnread] = useState(0);
   const chatActive = chatView !== 'closed';
   useEffect(() => {
-    const mq = window.matchMedia('(min-width: 1100px)');
+    const mq = window.matchMedia('(min-width: 1024px)');
     const onChange = () => setIsDesktop(mq.matches);
     mq.addEventListener('change', onChange);
     return () => mq.removeEventListener('change', onChange);

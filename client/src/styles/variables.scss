@@ -49,5 +49,11 @@ $radius-sm: 6px;
 $space: 8px;
 
 // Breakpoints (mobile-first)
+// md: tablet-portrait and up gets the sidebar nav + roomier content.
+// lg: the "desktop / tablet-landscape" tier where two-pane layouts (draft
+// board + sidebar, lobby-room chat) turn on. Set at 1024 so landscape iPads
+// (base iPad 1024, iPad 9th 1080) and iPad Pro 12.9 portrait (1024) get the
+// full layout instead of falling back to the mobile single-panel view.
+// NOTE: the LobbyRoom JS matchMedia hook mirrors this — keep them in sync.
 $bp-md: 768px;
-$bp-lg: 1100px;
+$bp-lg: 1024px;
