@@ -98,6 +98,7 @@
   }
 
   &__opt {
+    position: relative;
     display: flex;
     align-items: center;
     gap: $space;
@@ -126,6 +127,31 @@
     &:disabled {
       opacity: 0.5;
       cursor: not-allowed;
+    }
+
+    // Saving: keep the row crisp (not the disabled 0.5 dim) so the spinner and
+    // the optimistic flip stay clearly visible under the scrim.
+    &.is-busy:disabled {
+      opacity: 1;
+      cursor: progress;
+    }
+  }
+
+  // Scrim + spinner over the row while its select is saving — feedback that
+  // it's working, with the just-flipped state faintly visible underneath.
+  &__opt-loading {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    border-radius: $radius-sm;
+    background: color-mix(in srgb, $bg-raised 55%, transparent);
+
+    .loader__spinner {
+      width: 18px;
+      height: 18px;
+      border-width: 2px;
     }
   }
 

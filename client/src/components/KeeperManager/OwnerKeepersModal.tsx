@@ -3,10 +3,11 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CloseIcon from '@mui/icons-material/Close';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { api } from '../../lib/api';
 import { useModalClose } from '../../lib/useModalClose';
 import type { KeeperOptionRow, PlayerRow, TeamRow } from '../../lib/types';
+import { Loader } from '../Loader/Loader';
 import './OwnerKeepersModal.scss';
 
 interface Props {
@@ -33,26 +34,60 @@ export function OwnerKeepersModal({ lobbyId, team, options, players, locked, onC
   const playersById = useMemo(() => new Map(players.map((p) => [p.id, p])), [players]);
   const sorted = useMemo(() => [...options].sort((a, b) => a.round - b.round), [options]);
 
-  const [busyId, setBusyId] = useState<string | null>(null);
+  // Options with an in-flight select POST — their row shows a saving spinner.
+  const [busyIds, setBusyIds] = useState<Set<string>>(new Set());
+  // Optimistic selected overrides (option id → selected) so a click flips the
+  // row instantly rather than waiting on the POST + realtime round-trip; each
+  // is dropped once the incoming options prop catches up (effect below).
+  const [pending, setPending] = useState<Map<string, boolean>>(new Map());
   const [error, setError] = useState<string | null>(null);
 
-  const chosen = options.filter((o) => o.selected).length;
+  const isSelected = (o: KeeperOptionRow) => pending.get(o.id) ?? o.selected;
+  const chosen = options.filter((o) => isSelected(o)).length;
   const atLimit = chosen >= team.keeper_count;
 
   async function toggle(option: KeeperOptionRow) {
-    setBusyId(option.id);
+    if (busyIds.has(option.id)) return;
+    const next = !isSelected(option);
+    setPending((m) => new Map(m).set(option.id, next));
+    setBusyIds((s) => new Set(s).add(option.id));
     setError(null);
     try {
       await api(`/lobbies/${lobbyId}/keeper-options/${option.id}/select`, {
         method: 'POST',
-        body: { selected: !option.selected },
+        body: { selected: next },
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not update keeper');
+      setPending((m) => {
+        const n = new Map(m);
+        n.delete(option.id);
+        return n;
+      });
     } finally {
-      setBusyId(null);
+      setBusyIds((s) => {
+        const n = new Set(s);
+        n.delete(option.id);
+        return n;
+      });
     }
   }
+
+  // Drop each optimistic override once the real data reflects it (or diverges).
+  useEffect(() => {
+    setPending((prev) => {
+      if (prev.size === 0) return prev;
+      let changed = false;
+      const next = new Map(prev);
+      for (const o of options) {
+        if (next.has(o.id) && next.get(o.id) === o.selected) {
+          next.delete(o.id);
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [options]);
 
   return (
     <div
@@ -99,17 +134,26 @@ export function OwnerKeepersModal({ lobbyId, team, options, players, locked, onC
           ) : (
             sorted.map((o) => {
               const player = playersById.get(o.player_id);
-              const disabled = locked || busyId === o.id || (!o.selected && atLimit);
+              const selected = isSelected(o);
+              const busy = busyIds.has(o.id);
+              const disabled = locked || busy || (!selected && atLimit);
               return (
                 <button
                   key={o.id}
                   type="button"
-                  className={`owner-keepers__opt${o.selected ? ' is-selected' : ''}`}
+                  className={`owner-keepers__opt${selected ? ' is-selected' : ''}${
+                    busy ? ' is-busy' : ''
+                  }`}
                   onClick={() => toggle(o)}
                   disabled={disabled}
                 >
+                  {busy && (
+                    <span className="owner-keepers__opt-loading" aria-hidden>
+                      <Loader />
+                    </span>
+                  )}
                   <span className="owner-keepers__check">
-                    {o.selected ? (
+                    {selected ? (
                       <CheckCircleIcon fontSize="small" />
                     ) : (
                       <RadioButtonUncheckedIcon fontSize="small" />
