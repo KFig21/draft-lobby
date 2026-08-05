@@ -772,6 +772,65 @@ draftRouter.delete('/:id/keeper-options/:optionId', async (req: AuthedRequest, r
 });
 
 /**
+ * POST /api/lobbies/:id/keeper-options/clear — commissioner clears every keeper
+ * option, optionally scoped to one team via { teamId }. Selected candidates have
+ * a materialized keeper pick, so those picks are dropped first.
+ */
+draftRouter.post('/:id/keeper-options/clear', async (req: AuthedRequest, res: Response) => {
+  const lobbyId = req.params.id;
+  const role = await getRole(lobbyId, req.user!.id);
+  if (!isCommish(role)) {
+    res.status(403).json({ error: 'Only the commissioner can clear keeper options' });
+    return;
+  }
+
+  const { data: lobby } = await supabaseAdmin
+    .from('lobbies')
+    .select('status')
+    .eq('id', lobbyId)
+    .maybeSingle();
+  if (!lobby) {
+    res.status(404).json({ error: 'Lobby not found' });
+    return;
+  }
+  if (lobby.status === 'DRAFTING' || lobby.status === 'PAUSED' || lobby.status === 'COMPLETE') {
+    res.status(409).json({ error: 'Keepers can only be changed before the draft starts' });
+    return;
+  }
+
+  const teamId = typeof req.body?.teamId === 'string' ? req.body.teamId : null;
+
+  // Selected candidates → drop their materialized keeper picks first.
+  let selQuery = supabaseAdmin
+    .from('keeper_options')
+    .select('player_id')
+    .eq('lobby_id', lobbyId)
+    .eq('selected', true);
+  if (teamId) selQuery = selQuery.eq('team_id', teamId);
+  const { data: selected } = await selQuery;
+  const playerIds = (selected ?? []).map((o) => o.player_id);
+  if (playerIds.length > 0) {
+    let pickDel = supabaseAdmin
+      .from('picks')
+      .delete()
+      .eq('lobby_id', lobbyId)
+      .eq('is_keeper', true)
+      .in('player_id', playerIds);
+    if (teamId) pickDel = pickDel.eq('team_id', teamId);
+    await pickDel;
+  }
+
+  let del = supabaseAdmin.from('keeper_options').delete().eq('lobby_id', lobbyId);
+  if (teamId) del = del.eq('team_id', teamId);
+  const { error } = await del;
+  if (error) {
+    res.status(500).json({ error: 'Could not clear keeper options' });
+    return;
+  }
+  res.json({ ok: true });
+});
+
+/**
  * POST /api/lobbies/:id/keeper-options/:optionId/select — the team's owner (or
  * the commissioner) keeps/unkeeps a candidate. Keeping materializes an
  * is_keeper pick at the team's slot for that round; unkeeping removes it.

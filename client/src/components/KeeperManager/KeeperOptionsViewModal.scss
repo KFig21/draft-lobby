@@ -240,6 +240,52 @@
         }
       }
     }
+
+    // Non-selected row whose team is already at its keeper limit (select mode).
+    &--blocked {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+  }
+
+  // The keep/unkeep radio shown on each row in select mode.
+  &__selecticon {
+    flex-shrink: 0;
+    color: $text-muted;
+    font-size: 1.05rem !important;
+
+    &.is-on {
+      color: $keeper;
+    }
+  }
+
+  // Commissioner "Select keepers" toggle bar under the title.
+  &__selectbar {
+    display: flex;
+    align-items: center;
+    gap: $space;
+    flex-wrap: wrap;
+    margin-bottom: $space;
+  }
+
+  &__selecttoggle {
+    display: inline-flex;
+    align-items: center;
+    gap: $space * 0.6;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: $text;
+    cursor: pointer;
+  }
+
+  &__selecthint {
+    font-size: 0.8rem;
+    color: $text-muted;
+  }
+
+  &__selecterror {
+    font-size: 0.8rem;
+    color: $danger;
   }
 
   &__round {

@@ -15,6 +15,9 @@ export interface ParsedKeeperRow {
   playerId: string | null;
   error: string | null;
   suggestion: { playerId: string; name: string } | null;
+  /** Closest team when the team name didn't resolve — powers the "did you mean"
+   * + the assign-team dropdown in the import preview. */
+  teamSuggestion: { teamId: string; name: string } | null;
 }
 
 export interface KeeperImportResult {
@@ -34,7 +37,7 @@ interface RawRow {
 // Match despite punctuation/suffix noise: "C.J. Stroud" ⇄ "CJ Stroud",
 // "Amon-Ra St. Brown" ⇄ "Amon Ra St Brown", "Chris Godwin Jr." ⇄ "Chris Godwin".
 const SUFFIXES = new Set(['jr', 'sr', 'ii', 'iii', 'iv', 'v']);
-function normalizeName(s: string): string {
+export function normalizeName(s: string): string {
   return s
     .toLowerCase()
     .replace(/[.'’,]/g, '')
@@ -137,6 +140,33 @@ function suggest(norm: string, idx: Indices): { playerId: string; name: string }
   return best ? { playerId: best.id, name: best.name } : null;
 }
 
+/** Closest team to a name that didn't resolve — a containment match either way
+ * ("Fig" ⊂ "KFig21", or a header typed longer than the team name) ranks above a
+ * plain typo, which is bounded by edit distance so we suggest rather than guess. */
+function suggestTeam(
+  raw: string,
+  teams: TeamRow[],
+): { teamId: string; name: string } | null {
+  const norm = normalizeName(raw);
+  if (norm.length < 2) return null;
+  let best: { score: number; id: string; name: string } | null = null;
+  for (const t of teams) {
+    const tn = normalizeName(t.name);
+    if (!tn) continue;
+    let score: number;
+    if (tn === norm) score = 0;
+    else if (tn.includes(norm) || norm.includes(tn)) score = 1;
+    else {
+      const d = editDistance(norm, tn);
+      const limit = Math.max(2, Math.floor(Math.max(norm.length, tn.length) * 0.4));
+      if (d > limit) continue;
+      score = 1 + d;
+    }
+    if (!best || score < best.score) best = { score, id: t.id, name: t.name };
+  }
+  return best ? { teamId: best.id, name: best.name } : null;
+}
+
 // ── Parsing ─────────────────────────────────────────────────────────
 function rawFromJson(o: Record<string, unknown>): RawRow {
   const pick = (...keys: string[]): string => {
@@ -205,19 +235,19 @@ function classifyRestCols(cols: string[]): { player: string; position: string; r
 }
 
 /**
- * `resolveTeamName` matches a team by NAME only; `resolveTeamAny` also accepts a
- * draft-slot number. Both are used by the import-all path to attach a team to
- * each row two universal ways (auto-detected, no mode toggle):
+ * `resolveTeamAny` matches a team by name or draft-slot number — used by the
+ * import-all path to attach a team to each row two universal ways (auto-
+ * detected, no mode toggle):
  *   1. Team column — a cell (name or slot #) on the row itself.
- *   2. Section header — a line that is just a team NAME (not a bare number, so
- *      a stray "5" can't be mistaken for a section); rows below it inherit that
- *      team until the next header. Explicit team columns override the section.
- * The team-scoped ("Import by team") path passes neither and skips all of this.
+ *   2. Section header — a lone line that isn't a bare number (so a stray "5"
+ *      can't be mistaken for a section); rows below it inherit that team until
+ *      the next header, whether or not the name resolves (an unresolved one is
+ *      flagged for assignment). Explicit team columns override the section.
+ * The team-scoped ("Import by team") path passes no team column and skips this.
  */
 function parseRaw(
   text: string,
   hasTeamColumn: boolean,
-  resolveTeamName: (s: string) => string | null,
   resolveTeamAny: (s: string) => string | null,
 ): { raws: RawRow[]; parseError: string | null } {
   const trimmed = text.trim();
@@ -260,8 +290,12 @@ function parseRaw(
       return;
     }
 
-    // Section header: a lone team name on its own line starts a section.
-    if (nonEmpty.length === 1 && resolveTeamName(nonEmpty[0]) != null) {
+    // Section header: a lone line (not a bare number) starts a section — even
+    // when the name doesn't match a team. A mistyped/unknown header ("Fig" vs
+    // "KFig21") is then captured as this section's team and flagged for
+    // assignment, rather than silently swallowed as a player of the *previous*
+    // section (which would misattribute every keeper listed under it).
+    if (nonEmpty.length === 1 && !/^\d+$/.test(nonEmpty[0].trim())) {
       sectionTeam = nonEmpty[0];
       return;
     }
@@ -298,13 +332,22 @@ export function parseKeeperImport(
   players: PlayerRow[],
   defaultRound = 1,
   fixedTeamId: string | null = null,
+  /** Commissioner-assigned team names → teamId (keyed by normalizeName), for
+   * headers/columns that didn't match on their own. See the assign-team UI. */
+  teamOverrides: Record<string, string> = {},
 ): KeeperImportResult {
   const teamByName = new Map(teams.map((t) => [t.name.trim().toLowerCase(), t.id]));
   const teamByPos = new Map(teams.map((t) => [String(t.draft_position), t.id]));
-  const resolveTeamName = (s: string) => teamByName.get(s.trim().toLowerCase()) ?? null;
+  const teamIds = new Set(teams.map((t) => t.id));
+  const overrideFor = (s: string) => {
+    const id = teamOverrides[normalizeName(s)];
+    return id && teamIds.has(id) ? id : null;
+  };
+  const resolveTeamName = (s: string) =>
+    overrideFor(s) ?? teamByName.get(s.trim().toLowerCase()) ?? null;
   const resolveTeamAny = (s: string) => resolveTeamName(s) ?? teamByPos.get(s.trim()) ?? null;
 
-  const { raws, parseError } = parseRaw(text, fixedTeamId == null, resolveTeamName, resolveTeamAny);
+  const { raws, parseError } = parseRaw(text, fixedTeamId == null, resolveTeamAny);
   if (parseError) return { rows: [], parseError };
 
   const fixedTeamName = fixedTeamId ? (teams.find((t) => t.id === fixedTeamId)?.name ?? '') : '';
@@ -335,13 +378,21 @@ export function parseKeeperImport(
     const roundNum = r.round.trim() ? Number(r.round) : defaultRound;
     const round = Number.isInteger(roundNum) && roundNum >= 1 ? roundNum : defaultRound;
 
+    // Closest team, for an unresolved (non-scoped) team name — drives the
+    // assign-team dropdown's default and the "did you mean" hint.
+    const teamSuggestion =
+      !fixedTeamId && !teamId && r.team.trim() ? suggestTeam(r.team, teams) : null;
+
     let error: string | null = null;
     if (!rawName) error = 'Missing player name';
     else if (!playerId) {
       error = `Player "${r.player}" not found`;
       if (suggestion) error += ` — did you mean ${suggestion.name}?`;
     } else if (!fixedTeamId && !r.team.trim()) error = 'Missing team';
-    else if (!fixedTeamId && !teamId) error = `Team "${r.team}" not found`;
+    else if (!fixedTeamId && !teamId) {
+      error = `Team "${r.team}" not found`;
+      if (teamSuggestion) error += ` — assign it below (did you mean ${teamSuggestion.name}?)`;
+    }
 
     return {
       team: fixedTeamId ? fixedTeamName : r.team,
@@ -352,6 +403,7 @@ export function parseKeeperImport(
       playerId,
       error,
       suggestion,
+      teamSuggestion,
     };
   });
 

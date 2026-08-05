@@ -5,14 +5,18 @@ import {
   type Position,
   type RosterComposition,
 } from '@draft-lobby/shared';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
 import { useMemo, useState } from 'react';
+import { api } from '../../lib/api';
 import { useModalClose } from '../../lib/useModalClose';
 import { avatarForTeam } from '../../lib/teamAvatar';
 import type { KeeperOptionRow, MemberRow, PlayerRow, TeamRow } from '../../lib/types';
 import { Avatar } from '../Avatar/Avatar';
+import { ToggleSwitch } from '../ToggleSwitch/ToggleSwitch';
 import './KeeperOptionsViewModal.scss';
 
 interface Props {
@@ -21,6 +25,11 @@ interface Props {
   members: MemberRow[];
   players: PlayerRow[];
   keeperOptions: KeeperOptionRow[];
+  /** Needed to POST selections when `canSelect` is on. */
+  lobbyId?: string;
+  /** Commissioner + keepers still editable (pre-draft): shows a "Select
+   * keepers" toggle that turns rows into keep/unkeep controls for any team. */
+  canSelect?: boolean;
   /** Which positions get a filter pill — a league that doesn't roster K/DEF
    * shouldn't offer them as filters. */
   rosterComposition: RosterComposition;
@@ -46,12 +55,36 @@ export function KeeperOptionsViewModal({
   players,
   keeperOptions,
   rosterComposition,
+  lobbyId,
+  canSelect,
   teamId,
   onOpenPlayer,
   onEditTeam,
   onClose,
 }: Props) {
   const { closing, requestClose } = useModalClose(onClose);
+
+  // Commissioner "select keepers" mode — off by default so this stays a viewer.
+  const [selectMode, setSelectMode] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [selectError, setSelectError] = useState<string | null>(null);
+  const selectable = !!canSelect && !!lobbyId;
+
+  async function toggleSelect(o: KeeperOptionRow) {
+    if (!lobbyId) return;
+    setBusyId(o.id);
+    setSelectError(null);
+    try {
+      await api(`/lobbies/${lobbyId}/keeper-options/${o.id}/select`, {
+        method: 'POST',
+        body: { selected: !o.selected },
+      });
+    } catch (err) {
+      setSelectError(err instanceof Error ? err.message : 'Could not update keeper');
+    } finally {
+      setBusyId(null);
+    }
+  }
 
   const draftable = useMemo(() => draftablePositions(rosterComposition), [rosterComposition]);
   const playersById = useMemo(() => new Map(players.map((p) => [p.id, p])), [players]);
@@ -121,6 +154,27 @@ export function KeeperOptionsViewModal({
             </button>
           )}
         </h2>
+        {selectable && (
+          <div className="keeper-view__selectbar">
+            <label className="keeper-view__selecttoggle">
+              <ToggleSwitch
+                label="Select keepers"
+                checked={selectMode}
+                onChange={(v) => {
+                  setSelectMode(v);
+                  setSelectError(null);
+                }}
+              />
+              <span>Select keepers</span>
+            </label>
+            {selectMode && (
+              <span className="keeper-view__selecthint">
+                Click a candidate to keep or unkeep it for its team.
+              </span>
+            )}
+            {selectError && <span className="keeper-view__selecterror">{selectError}</span>}
+          </div>
+        )}
         {!single && (
           <>
             <p className="keeper-view__intro">
@@ -195,27 +249,55 @@ export function KeeperOptionsViewModal({
                   <ul className="keeper-view__list">
                     {opts.map((o) => {
                       const player = playersById.get(o.player_id);
-                      const clickable = player && onOpenPlayer;
+                      // Select mode: rows keep/unkeep instead of opening the
+                      // player. A non-selected row is blocked once the team is
+                      // at its keeper limit (server enforces this too).
+                      const keepBlocked = selectMode && !o.selected && kept >= t.keeper_count;
+                      const rowSelectable =
+                        selectMode && selectable && !!player && !keepBlocked && busyId !== o.id;
+                      const openable = !selectMode && player && onOpenPlayer;
+                      const onActivate = rowSelectable
+                        ? () => toggleSelect(o)
+                        : openable
+                          ? () => onOpenPlayer(player)
+                          : undefined;
                       return (
                         <li
                           key={o.id}
                           className={`keeper-view__opt${o.selected ? ' is-selected' : ''}${
-                            clickable ? ' keeper-view__opt--clickable' : ''
-                          }`}
-                          onClick={clickable ? () => onOpenPlayer(player) : undefined}
-                          role={clickable ? 'button' : undefined}
-                          tabIndex={clickable ? 0 : undefined}
+                            onActivate ? ' keeper-view__opt--clickable' : ''
+                          }${keepBlocked ? ' keeper-view__opt--blocked' : ''}`}
+                          onClick={onActivate}
+                          role={onActivate ? 'button' : undefined}
+                          tabIndex={onActivate ? 0 : undefined}
+                          title={
+                            keepBlocked
+                              ? `${t.name} is at its keeper limit (${t.keeper_count})`
+                              : undefined
+                          }
                           onKeyDown={
-                            clickable
+                            onActivate
                               ? (e) => {
                                   if (e.key === 'Enter' || e.key === ' ') {
                                     e.preventDefault();
-                                    onOpenPlayer(player);
+                                    onActivate();
                                   }
                                 }
                               : undefined
                           }
                         >
+                          {selectMode &&
+                            (o.selected ? (
+                              <CheckCircleIcon
+                                className="keeper-view__selecticon is-on"
+                                fontSize="inherit"
+                              />
+                            ) : (
+                              <RadioButtonUncheckedIcon
+                                className="keeper-view__selecticon"
+                                fontSize="inherit"
+                              />
+                            ))}
                           <span className="keeper-view__round">R{o.round}</span>
                           <span className="keeper-view__player">
                             {player ? (
@@ -232,7 +314,9 @@ export function KeeperOptionsViewModal({
                               'Player'
                             )}
                           </span>
-                          {o.selected && <CheckIcon fontSize="inherit" className="keeper-view__check" />}
+                          {!selectMode && o.selected && (
+                            <CheckIcon fontSize="inherit" className="keeper-view__check" />
+                          )}
                         </li>
                       );
                     })}

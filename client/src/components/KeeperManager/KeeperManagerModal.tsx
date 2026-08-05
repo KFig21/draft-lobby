@@ -22,6 +22,7 @@ import {
   KEEPER_IMPORT_EXAMPLE,
   KEEPER_IMPORT_EXAMPLE_BY_TEAM,
   KEEPER_IMPORT_EXAMPLE_SECTIONED,
+  normalizeName,
   parseKeeperImport,
   type ParsedKeeperRow,
 } from '../../lib/keeperImport';
@@ -72,12 +73,16 @@ function PlayerSearch({
   value,
   onChange,
   placeholder = 'Search players…',
+  autoFocus = false,
 }: {
   players: PlayerRow[];
   excludeIds: Set<string>;
   value: string | null;
   onChange: (playerId: string | null) => void;
   placeholder?: string;
+  /** Focus the input on mount. Off by default — in the offer accordion it would
+   * scroll the just-expanded team to the bottom (the add row) on open. */
+  autoFocus?: boolean;
 }) {
   const [search, setSearch] = useState('');
   const wrapRef = useRef<HTMLSpanElement>(null);
@@ -149,7 +154,7 @@ function PlayerSearch({
         placeholder={placeholder}
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        autoFocus
+        autoFocus={autoFocus}
       />
       {matches.length > 0 &&
         pos &&
@@ -223,6 +228,10 @@ export function KeeperManagerModal({
   const [error, setError] = useState<string | null>(null);
 
   const [importText, setImportText] = useState('');
+  // Commissioner-assigned team names (normalizeName → teamId) for import-all
+  // headers/columns that didn't match a team on their own (e.g. "Fig" → the
+  // KFig21 team). Fed back into parseKeeperImport so those rows resolve.
+  const [teamOverrides, setTeamOverrides] = useState<Record<string, string>>({});
   const [importBusy, setImportBusy] = useState(false);
   const [importResult, setImportResult] = useState<{ added: number; skipped: number } | null>(null);
   // Scrolled/focused into view whenever "Select team" (in the accordion below)
@@ -261,8 +270,24 @@ export function KeeperManagerModal({
   const teamScoped = topMode === 'offer' && offerImportMode === 'team';
   const parsed = useMemo(() => {
     if (teamScoped && !offerImportTeamId) return { rows: [], parseError: null };
-    return parseKeeperImport(importText, teams, players, 1, teamScoped ? offerImportTeamId : null);
-  }, [importText, teams, players, teamScoped, offerImportTeamId]);
+    return parseKeeperImport(
+      importText,
+      teams,
+      players,
+      1,
+      teamScoped ? offerImportTeamId : null,
+      teamOverrides,
+    );
+  }, [importText, teams, players, teamScoped, offerImportTeamId, teamOverrides]);
+  function assignTeam(name: string, teamId: string) {
+    const key = normalizeName(name);
+    setTeamOverrides((prev) => {
+      const next = { ...prev };
+      if (teamId) next[key] = teamId;
+      else delete next[key];
+      return next;
+    });
+  }
   const readyRows = useMemo(() => parsed.rows.filter((r) => !r.error), [parsed]);
   const problemRows = useMemo(() => parsed.rows.filter((r) => r.error), [parsed]);
 
@@ -283,6 +308,7 @@ export function KeeperManagerModal({
     setAddPlayerId(null);
     setAddRound(1);
     setEditingOptionId(null);
+    setClearConfirm(null);
   }
 
   const teamName = (id: string) => teams.find((t) => t.id === id)?.name ?? 'Team';
@@ -398,6 +424,27 @@ export function KeeperManagerModal({
       setError(err instanceof Error ? err.message : 'Could not remove candidate');
     } finally {
       setRemovingId(null);
+    }
+  }
+
+  // Which "clear keepers" prompt is showing its yes/no confirm: a team id, the
+  // sentinel '__all__', or none.
+  const [clearConfirm, setClearConfirm] = useState<string | null>(null);
+  const [clearing, setClearing] = useState(false);
+  /** Clear every keeper option (whole lobby, or scoped to `teamId`). */
+  async function clearOptions(teamId?: string) {
+    setClearing(true);
+    setError(null);
+    try {
+      await api(`/lobbies/${lobbyId}/keeper-options/clear`, {
+        method: 'POST',
+        body: teamId ? { teamId } : {},
+      });
+      setClearConfirm(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not clear keepers');
+    } finally {
+      setClearing(false);
     }
   }
 
@@ -542,6 +589,7 @@ export function KeeperManagerModal({
                     excludeIds={draftedIds}
                     value={playerId}
                     onChange={setPlayerId}
+                    autoFocus
                   />
                 </label>
 
@@ -574,6 +622,9 @@ export function KeeperManagerModal({
                 onDownloadExample={() => downloadExample(KEEPER_IMPORT_EXAMPLE)}
                 onImport={importKeepers}
                 onApplySuggestion={applySuggestion}
+                teams={orderedTeams}
+                teamOverrides={teamOverrides}
+                onAssignTeam={assignTeam}
                 importBusy={importBusy}
                 importResult={importResult}
                 hint="Paste from a spreadsheet, CSV, or JSON with columns "
@@ -679,6 +730,9 @@ export function KeeperManagerModal({
               }
               onImport={importOffer}
               onApplySuggestion={applySuggestion}
+              teams={orderedTeams}
+              teamOverrides={teamOverrides}
+              onAssignTeam={assignTeam}
               importBusy={importBusy}
               importResult={importResult}
               hint={
@@ -723,6 +777,36 @@ export function KeeperManagerModal({
                           >
                             Select team
                           </button>
+                          {opts.length > 0 &&
+                            (clearConfirm === t.id ? (
+                              <span className="keeper-modal__clear-confirm">
+                                Clear all {opts.length}?
+                                <button
+                                  type="button"
+                                  className="keeper-modal__clear-no"
+                                  onClick={() => setClearConfirm(null)}
+                                  disabled={clearing}
+                                >
+                                  No
+                                </button>
+                                <button
+                                  type="button"
+                                  className="keeper-modal__clear-yes"
+                                  onClick={() => clearOptions(t.id)}
+                                  disabled={clearing}
+                                >
+                                  Yes
+                                </button>
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                className="keeper-modal__clear-btn"
+                                onClick={() => setClearConfirm(t.id)}
+                              >
+                                Clear keepers
+                              </button>
+                            ))}
                           <span className="keeper-modal__count">
                             keeps
                             <button
@@ -793,6 +877,7 @@ export function KeeperManagerModal({
                                       if (id) void updateOption(o.id, { playerId: id });
                                     }}
                                     placeholder="Replace with…"
+                                    autoFocus
                                   />
                                   <button
                                     type="button"
@@ -875,6 +960,40 @@ export function KeeperManagerModal({
                 );
               })}
             </div>
+
+            <div className="keeper-modal__clear-all">
+              {clearConfirm === '__all__' ? (
+                <span className="keeper-modal__clear-confirm">
+                  Clear every team’s keepers?
+                  <button
+                    type="button"
+                    className="keeper-modal__clear-no"
+                    onClick={() => setClearConfirm(null)}
+                    disabled={clearing}
+                  >
+                    No
+                  </button>
+                  <button
+                    type="button"
+                    className="keeper-modal__clear-yes"
+                    onClick={() => clearOptions()}
+                    disabled={clearing}
+                  >
+                    Yes
+                  </button>
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  className="keeper-modal__clear-all-btn"
+                  onClick={() => setClearConfirm('__all__')}
+                  disabled={keeperOptions.length === 0}
+                >
+                  <DeleteOutlineIcon fontSize="small" />
+                  Clear all keepers
+                </button>
+              )}
+            </div>
           </>
         )}
       </div>
@@ -895,6 +1014,9 @@ function ImportPanel({
   onDownloadExample,
   onImport,
   onApplySuggestion,
+  teams,
+  teamOverrides,
+  onAssignTeam,
   importBusy,
   importResult,
   hint,
@@ -913,6 +1035,9 @@ function ImportPanel({
   parsed: ReturnType<typeof parseKeeperImport>;
   readyRows: ReturnType<typeof parseKeeperImport>['rows'];
   problemRows: ReturnType<typeof parseKeeperImport>['rows'];
+  teams: TeamRow[];
+  teamOverrides: Record<string, string>;
+  onAssignTeam: (name: string, teamId: string) => void;
   onDownloadExample: () => void;
   onImport: () => void;
   onApplySuggestion: (row: ParsedKeeperRow) => void;
@@ -940,6 +1065,21 @@ function ImportPanel({
   }
 
   const hasTeamCol = columnsLabel.includes('team');
+  // Unique team names in the paste that didn't resolve — each gets an assign
+  // dropdown so a mistyped/unknown header ("Fig") can be mapped to a real team.
+  const unresolvedTeams = (() => {
+    const m = new Map<
+      string,
+      { name: string; count: number; suggestion: ParsedKeeperRow['teamSuggestion'] }
+    >();
+    for (const r of parsed.rows) {
+      if (r.teamId || !r.team.trim()) continue;
+      const entry = m.get(r.team) ?? { name: r.team, count: 0, suggestion: r.teamSuggestion };
+      entry.count += 1;
+      m.set(r.team, entry);
+    }
+    return [...m.values()];
+  })();
   return (
     <div className="keeper-modal__import">
       <p className="keeper-modal__import-hint">
@@ -983,6 +1123,45 @@ function ImportPanel({
             <span className="keeper-modal__ready">{readyRows.length} ready</span>
             {problemRows.length > 0 && <span className="keeper-modal__problem">{problemRows.length} to fix</span>}
           </div>
+          {unresolvedTeams.length > 0 && (
+            <div className="keeper-modal__assign">
+              <p className="keeper-modal__assign-hint">
+                These team names didn’t match — assign each to a team (its players
+                are attributed to whoever you pick):
+              </p>
+              {unresolvedTeams.map((u) => {
+                const assigned = teamOverrides[normalizeName(u.name)] ?? '';
+                return (
+                  <div className="keeper-modal__assign-row" key={u.name}>
+                    <span className="keeper-modal__assign-name">
+                      “{u.name}” <span className="muted">· {u.count}</span>
+                    </span>
+                    <select
+                      className="keeper-modal__assign-select"
+                      value={assigned}
+                      onChange={(e) => onAssignTeam(u.name, e.target.value)}
+                    >
+                      <option value="">Select team…</option>
+                      {teams.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name} (#{t.draft_position})
+                        </option>
+                      ))}
+                    </select>
+                    {u.suggestion && assigned !== u.suggestion.teamId && (
+                      <button
+                        type="button"
+                        className="keeper-modal__assign-suggest"
+                        onClick={() => onAssignTeam(u.name, u.suggestion!.teamId)}
+                      >
+                        Use {u.suggestion.name}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
           {problemRows.length > 0 && (
             <ul className="keeper-modal__problems">
               {problemRows.slice(0, 8).map((r, i) => (

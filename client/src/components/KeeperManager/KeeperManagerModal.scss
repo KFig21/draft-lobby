@@ -295,6 +295,63 @@
     }
   }
 
+  // Assign-team block: maps unresolved team headers/columns to real teams.
+  &__assign {
+    margin-top: $space * 0.75;
+    padding: $space;
+    border: 1px solid color-mix(in srgb, $warning 45%, transparent);
+    border-radius: $radius-sm;
+    background: color-mix(in srgb, $warning 8%, transparent);
+    display: flex;
+    flex-direction: column;
+    gap: $space * 0.6;
+  }
+
+  &__assign-hint {
+    margin: 0;
+    color: $text-muted;
+    font-size: 0.8rem;
+  }
+
+  &__assign-row {
+    display: flex;
+    align-items: center;
+    gap: $space * 0.6;
+    flex-wrap: wrap;
+  }
+
+  &__assign-name {
+    font-size: 0.85rem;
+    font-weight: 700;
+  }
+
+  &__assign-select {
+    flex: 1;
+    min-width: 140px;
+    padding: $space * 0.4 $space * 0.6;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: $bg;
+    color: $text;
+    font-size: 0.82rem;
+  }
+
+  &__assign-suggest {
+    padding: $space * 0.3 $space * 0.75;
+    border: 1px solid $primary;
+    border-radius: 999px;
+    background: none;
+    color: $primary;
+    font-size: 0.75rem;
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+
+    &:hover {
+      background: color-mix(in srgb, $primary 15%, transparent);
+    }
+  }
+
   &__import-result {
     margin: 0;
     color: $text-muted;
@@ -401,8 +458,98 @@
   &__pool-head {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: $space;
+    gap: $space * 0.6;
+    flex-wrap: wrap;
+  }
+
+  // "Clear keepers" (per team) — a quiet danger-tinted button next to
+  // "Select team"; swaps to an inline yes/no confirm before wiping the team.
+  &__clear-btn {
+    flex-shrink: 0;
+    padding: $space * 0.35 $space * 0.75;
+    border: 1px solid color-mix(in srgb, $danger 45%, transparent);
+    border-radius: $radius-sm;
+    background: none;
+    color: $danger;
+    font: inherit;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+
+    &:hover {
+      background: color-mix(in srgb, $danger 12%, transparent);
+    }
+  }
+
+  // Inline "Clear all N? Yes / No" confirm (per team and clear-all).
+  &__clear-confirm {
+    display: inline-flex;
+    align-items: center;
+    gap: $space * 0.4;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: $text-muted;
+  }
+
+  &__clear-yes,
+  &__clear-no {
+    padding: $space * 0.3 $space * 0.7;
+    border: 1px solid $border;
+    border-radius: 999px;
+    background: none;
+    color: $text;
+    font: inherit;
+    font-size: 0.72rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  &__clear-yes {
+    border-color: $danger;
+    color: $danger;
+
+    &:hover {
+      background: color-mix(in srgb, $danger 15%, transparent);
+    }
+  }
+
+  &__clear-no {
+    color: $text;
+
+    &:hover {
+      background: $bg-overlay;
+    }
+  }
+
+  // "Clear all keepers" — full-width danger action at the bottom of the pool.
+  &__clear-all {
+    display: flex;
+    justify-content: center;
+    margin-top: $space;
+  }
+
+  &__clear-all-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: $space * 0.4;
+    padding: $space * 0.5 $space * 1.25;
+    border: 1px solid color-mix(in srgb, $danger 50%, transparent);
+    border-radius: $radius-sm;
+    background: none;
+    color: $danger;
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      background: color-mix(in srgb, $danger 12%, transparent);
+    }
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
   }
 
   // "Select team" — scopes the import panel above to this team, for pasting
@@ -510,6 +657,7 @@
     display: inline-flex;
     align-items: center;
     gap: $space * 0.5;
+    margin-left: auto; // push the keeps stepper to the right of the pool head
     font-size: 0.75rem;
     color: $text-muted;
 

@@ -2816,6 +2816,8 @@ export function DraftBoardPage() {
           players={players}
           keeperOptions={keeperOptions}
           rosterComposition={lobby.settings.rosterComposition}
+          lobbyId={lobby.id}
+          canSelect={isCommish && isStaging}
           onOpenPlayer={setDetailPlayer}
           onEditTeam={isCommish ? openKeeperEditor : undefined}
           onClose={() => setShowAllKeepers(false)}
@@ -2829,6 +2831,8 @@ export function DraftBoardPage() {
           players={players}
           keeperOptions={keeperOptions}
           rosterComposition={lobby.settings.rosterComposition}
+          lobbyId={lobby.id}
+          canSelect={isCommish && isStaging}
           teamId={rosterTeamId}
           onOpenPlayer={setDetailPlayer}
           onEditTeam={isCommish ? openKeeperEditor : undefined}
