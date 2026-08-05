@@ -8,13 +8,17 @@ import {
   createLobbySchema,
   joinLobbySchema,
   lobbySettingsSchema,
+  mergeEditableSettings,
+  normalizeTiers,
   overallForDraftPosition,
   renameLobbySchema,
   roundsForSettings,
+  updateLobbySettingsSchema,
   type LobbySettings,
+  type LobbyStatus,
 } from '@draft-lobby/shared';
 import { requireAuth, type AuthedRequest } from '../middleware/auth.js';
-import { claimSeat, usernameOf } from '../draftEngine.js';
+import { claimSeat, resyncKeepers, usernameOf } from '../draftEngine.js';
 import { supabaseAdmin } from '../supabase.js';
 
 export const lobbiesRouter = Router();
@@ -360,6 +364,108 @@ lobbiesRouter.post('/:id/copy', async (req: AuthedRequest, res: Response) => {
   }
 
   res.status(201).json({ lobby, members });
+});
+
+/**
+ * PATCH /api/lobbies/:id/settings — commissioner edits the lobby's settings.
+ * Which fields actually take effect depends on how far the draft has progressed
+ * (see mergeEditableSettings): everything pre-draft, scoring + clocks at STAGING,
+ * clocks/skips only once DRAFTING/PAUSED, nothing once COMPLETE. Structural
+ * changes (team count, draft type, roster) are additionally guarded so they
+ * can't orphan seated teams or strand keepers.
+ */
+lobbiesRouter.patch('/:id/settings', async (req: AuthedRequest, res: Response) => {
+  const lobbyId = req.params.id;
+  const userId = req.user!.id;
+
+  const parsed = updateLobbySettingsSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.flatten() });
+    return;
+  }
+  const incoming = parsed.data.settings;
+
+  const { data: member } = await supabaseAdmin
+    .from('lobby_members')
+    .select('role')
+    .eq('lobby_id', lobbyId)
+    .eq('user_id', userId)
+    .maybeSingle();
+  const role = member?.role as string | undefined;
+  if (role !== 'COMMISSIONER' && role !== 'SUB_COMMISSIONER') {
+    res.status(403).json({ error: 'Only the commissioner can change settings' });
+    return;
+  }
+
+  const { data: lobby } = await supabaseAdmin
+    .from('lobbies')
+    .select('status, settings')
+    .eq('id', lobbyId)
+    .maybeSingle();
+  if (!lobby) {
+    res.status(404).json({ error: 'Lobby not found' });
+    return;
+  }
+  const status = lobby.status as LobbyStatus;
+  if (status === 'COMPLETE') {
+    res.status(409).json({ error: 'Settings are locked once the draft is complete' });
+    return;
+  }
+  const current = lobby.settings as LobbySettings;
+
+  // Keep only the fields editable at this phase; the name is owned by /rename.
+  const merged = mergeEditableSettings(current, incoming, status);
+  merged.name = current.name;
+  merged.pickTiers = normalizeTiers(merged.pickTiers, roundsForSettings(merged));
+
+  // Structural changes are only reachable pre-draft, but guard regardless so a
+  // change can't orphan a seated team or strand a keeper past the last round.
+  const structuralChanged =
+    merged.teamCount !== current.teamCount ||
+    merged.draftType !== current.draftType ||
+    JSON.stringify(merged.rosterComposition) !== JSON.stringify(current.rosterComposition);
+  if (structuralChanged) {
+    const { count: teamCount } = await supabaseAdmin
+      .from('teams')
+      .select('id', { count: 'exact', head: true })
+      .eq('lobby_id', lobbyId);
+    if ((teamCount ?? 0) > merged.teamCount) {
+      res.status(400).json({
+        error: `Can't drop to ${merged.teamCount} teams — ${teamCount} are already seated. Remove teams first.`,
+      });
+      return;
+    }
+    const newRounds = roundsForSettings(merged);
+    const { data: deepestKeeper } = await supabaseAdmin
+      .from('picks')
+      .select('round')
+      .eq('lobby_id', lobbyId)
+      .eq('is_keeper', true)
+      .order('round', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const maxKeeperRound = (deepestKeeper?.round as number | undefined) ?? 0;
+    if (maxKeeperRound > newRounds) {
+      res.status(400).json({
+        error: `This roster is only ${newRounds} rounds but a keeper is set in round ${maxKeeperRound} — remove it first.`,
+      });
+      return;
+    }
+  }
+
+  const { error } = await supabaseAdmin
+    .from('lobbies')
+    .update({ settings: merged })
+    .eq('id', lobbyId);
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
+
+  // A changed board shape moves where keepers sit — recompute their overalls.
+  if (structuralChanged) await resyncKeepers(lobbyId, merged);
+
+  res.json({ settings: merged });
 });
 
 /**

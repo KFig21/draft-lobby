@@ -48,6 +48,7 @@ import PhotoCameraOutlinedIcon from '@mui/icons-material/PhotoCameraOutlined';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import SettingsIcon from '@mui/icons-material/Settings';
 import SkipNextIcon from '@mui/icons-material/SkipNext';
+import TuneOutlinedIcon from '@mui/icons-material/TuneOutlined';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
 import SmartToyOutlinedIcon from '@mui/icons-material/SmartToyOutlined';
 import SportsFootballIcon from '@mui/icons-material/SportsFootball';
@@ -81,6 +82,7 @@ import { LockInModal } from '../../components/LockInModal/LockInModal';
 import { Modal } from '../../components/Modal/Modal';
 import { NavDrawer } from '../../components/Navbar/NavDrawer';
 import { PickClock } from '../../components/PickClock/PickClock';
+import { SettingsEditorModal } from '../../components/SettingsEditorModal/SettingsEditorModal';
 import { PickModal, type PickComment } from '../../components/PickModal/PickModal';
 import type { Reactor } from '../../components/ReactorsModal/ReactorsModal';
 import { PlayerCard } from '../../components/PlayerCard/PlayerCard';
@@ -208,7 +210,7 @@ export function DraftBoardPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { session } = useAuth();
   const { showToast } = useToast();
-  const { lobby, teams, members, picks, keeperOptions, loading } = useLobby(id);
+  const { lobby, teams, members, picks, keeperOptions, loading, refetch } = useLobby(id);
   const { players: rawPlayers, loading: playersLoading } = usePlayers();
   // Recomputed from each player's raw stat line under this lobby's own
   // scoring rules — so bot picks, lineup order, and every player card here
@@ -329,6 +331,8 @@ export function DraftBoardPage() {
   const [rollbackTarget, setRollbackTarget] = useState<RollbackTarget | null>(null);
   const [rollbackConfirmText, setRollbackConfirmText] = useState('');
   const [showExport, setShowExport] = useState(false);
+  // Commissioner mid-draft settings editor (clocks + skips at this phase).
+  const [showLobbySettings, setShowLobbySettings] = useState(false);
   // Board screenshot (see captureBoardScreenshot): 'menu' shows the CSV/Excel/
   // screenshot choices, 'screenshot' shows the export options + download.
   const [exportStep, setExportStep] = useState<'menu' | 'screenshot'>('menu');
@@ -2443,6 +2447,19 @@ export function DraftBoardPage() {
               <FullscreenIcon fontSize="small" />
             )}
           </button>
+          {/* Commissioner only: edit the live-safe settings (pick clock, bot
+              clock, skip rules) mid-draft. Same modal as the lobby room, but it
+              gates itself to what's editable at the current status. */}
+          {isCommish && !isComplete && (
+            <button
+              className="draft__icon-btn draft__draftsettings-btn"
+              onClick={() => setShowLobbySettings(true)}
+              aria-label="Draft settings"
+              title="Draft settings (clocks & skips)"
+            >
+              <TuneOutlinedIcon fontSize="small" />
+            </button>
+          )}
           {/* Desktop/fullscreen only (see &__rules-btn) — full league rules.
               Mobile reaches it via the nav drawer instead. */}
           <button
@@ -3084,6 +3101,16 @@ export function DraftBoardPage() {
           toastPrefs={toastPrefs}
           onToastsEnabledChange={updateToastsEnabled}
           onToastCategoryChange={updateToastCategory}
+        />
+      )}
+
+      {showLobbySettings && (
+        <SettingsEditorModal
+          lobbyId={lobby.id}
+          status={lobby.status}
+          settings={lobby.settings}
+          onClose={() => setShowLobbySettings(false)}
+          onSaved={() => refetch()}
         />
       )}
     </div>

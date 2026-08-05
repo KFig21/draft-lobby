@@ -1,0 +1,23 @@
+@use 'variables' as *;
+
+.settings-editor {
+  display: flex;
+  flex-direction: column;
+  gap: $space * 2;
+
+  &__error {
+    margin: 0;
+    color: $danger;
+    font-size: 0.9rem;
+  }
+
+  &__actions {
+    position: sticky;
+    bottom: 0;
+    display: flex;
+    justify-content: flex-end;
+    gap: $space;
+    padding-top: $space;
+    background: $bg-raised;
+  }
+}

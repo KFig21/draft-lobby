@@ -39,6 +39,7 @@ import { DraftChat } from '../../components/DraftChat/DraftChat';
 import { ErrorScreen } from '../../components/ErrorScreen/ErrorScreen';
 import { LeagueRulesModal } from '../../components/LeagueRulesModal/LeagueRulesModal';
 import { RulesOverview } from '../../components/LeagueRulesModal/RulesOverview';
+import { SettingsEditorModal } from '../../components/SettingsEditorModal/SettingsEditorModal';
 import { Loader } from '../../components/Loader/Loader';
 import { useAuth } from '../../auth/AuthContext';
 import { useLobby } from '../../hooks/useLobby';
@@ -61,6 +62,7 @@ export function LobbyRoomPage() {
   const { players } = usePlayers();
   const [starting, setStarting] = useState(false);
   const [showRules, setShowRules] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [botBusy, setBotBusy] = useState(false);
   const [namesLockBusy, setNamesLockBusy] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -699,6 +701,16 @@ export function LobbyRoomPage() {
           </span>
         </button>
 
+        {isCommish && !isComplete && (
+          <button
+            type="button"
+            className="button room__edit-settings"
+            onClick={() => setShowSettings(true)}
+          >
+            <EditOutlinedIcon fontSize="small" /> Edit settings
+          </button>
+        )}
+
         {/* Primary action sits between the overview and the draft order. */}
         <div className="room__primary-action">
           {roomOpen ? (
@@ -1327,6 +1339,16 @@ export function LobbyRoomPage() {
           settings={s}
           defaultName={lobby.name}
           onClose={() => setShowRules(false)}
+        />
+      )}
+
+      {showSettings && (
+        <SettingsEditorModal
+          lobbyId={lobby.id}
+          status={lobby.status}
+          settings={s}
+          onClose={() => setShowSettings(false)}
+          onSaved={() => refetch()}
         />
       )}
     </main>

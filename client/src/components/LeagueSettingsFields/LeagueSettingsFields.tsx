@@ -15,6 +15,7 @@ import {
   type PickTier,
   type RosterSlot,
   type ScoringRules,
+  type SettingsGroup,
 } from '@draft-lobby/shared';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
@@ -27,6 +28,11 @@ import {
   ScoringFormatCreatorPage,
   type SavedScoringFormat,
 } from '../../pages/ScoringFormatCreator/ScoringFormatCreatorPage';
+// The wizard/lineup/timer-tiers class styles this markup uses live in the lobby
+// wizard's stylesheet. Import it here so the fields are styled wherever the
+// component is used (the wizards, and now the settings-editor modal), not only
+// on pages that happen to import that sheet themselves.
+import '../../pages/LobbyWizard/LobbyWizardPage.scss';
 
 interface ScoringFormatRow {
   id: string;
@@ -42,6 +48,29 @@ interface Props {
   onChange: (next: LobbySettings) => void;
   /** Optional field (e.g. league name) rendered at the top of the Basics section. */
   nameField?: ReactNode;
+  /** When set (the settings editor), only these groups' inputs are enabled; the
+   * rest render disabled with a "locked" note. Omit (the wizards) = all editable. */
+  editableGroups?: Set<SettingsGroup>;
+}
+
+/** A disabled-when-locked section wrapper: <fieldset disabled> natively greys
+ * out and disables every control inside (inputs, selects, buttons, the toggle),
+ * with a short note explaining why. */
+function SettingsGroupFieldset({
+  editable,
+  children,
+}: {
+  editable: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <fieldset className="wizard__fieldset" disabled={!editable}>
+      {!editable && (
+        <p className="wizard__locked-note">🔒 Locked once the draft is under way.</p>
+      )}
+      {children}
+    </fieldset>
+  );
 }
 
 /**
@@ -49,9 +78,12 @@ interface Props {
  * shared by the League wizard and the Lobby creator. Renders as a set of
  * `.wizard__section` blocks; the host supplies the surrounding form + name.
  */
-export function LeagueSettingsFields({ settings, onChange, nameField }: Props) {
+export function LeagueSettingsFields({ settings, onChange, nameField, editableGroups }: Props) {
   const [scoringFormats, setScoringFormats] = useState<ScoringFormatRow[]>([]);
   const [showScoringModal, setShowScoringModal] = useState(false);
+
+  // No `editableGroups` (the wizards) = everything editable.
+  const canEdit = (group: SettingsGroup) => !editableGroups || editableGroups.has(group);
 
   useEffect(() => {
     void supabase
@@ -143,39 +175,41 @@ export function LeagueSettingsFields({ settings, onChange, nameField }: Props) {
       <section className="wizard__section">
         <h2>Basics</h2>
         {nameField}
-        <div className="wizard__grid wizard__grid--2">
-          <label className="field">
-            <span>Teams</span>
-            <select
-              value={settings.teamCount}
-              onChange={(e) => set('teamCount', Number(e.target.value))}
-            >
-              {Array.from({ length: 31 }, (_, i) => i + 2).map((n) => (
-                <option key={n} value={n}>
-                  {n}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="field">
-            <span>Draft type</span>
-            <select
-              value={settings.draftType}
-              onChange={(e) => set('draftType', e.target.value as LobbySettings['draftType'])}
-            >
-              <option value="SNAKE">Snake</option>
-              <option value="STRAIGHT">Straight</option>
-            </select>
-          </label>
-        </div>
-        <div className="wizard__toggle-row">
-          <span>Enable keepers</span>
-          <ToggleSwitch
-            label="Enable keepers"
-            checked={settings.keepersEnabled}
-            onChange={(checked) => set('keepersEnabled', checked)}
-          />
-        </div>
+        <SettingsGroupFieldset editable={canEdit('structural')}>
+          <div className="wizard__grid wizard__grid--2">
+            <label className="field">
+              <span>Teams</span>
+              <select
+                value={settings.teamCount}
+                onChange={(e) => set('teamCount', Number(e.target.value))}
+              >
+                {Array.from({ length: 31 }, (_, i) => i + 2).map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field">
+              <span>Draft type</span>
+              <select
+                value={settings.draftType}
+                onChange={(e) => set('draftType', e.target.value as LobbySettings['draftType'])}
+              >
+                <option value="SNAKE">Snake</option>
+                <option value="STRAIGHT">Straight</option>
+              </select>
+            </label>
+          </div>
+          <div className="wizard__toggle-row">
+            <span>Enable keepers</span>
+            <ToggleSwitch
+              label="Enable keepers"
+              checked={settings.keepersEnabled}
+              onChange={(checked) => set('keepersEnabled', checked)}
+            />
+          </div>
+        </SettingsGroupFieldset>
       </section>
 
       {/* Scoring */}
@@ -184,36 +218,38 @@ export function LeagueSettingsFields({ settings, onChange, nameField }: Props) {
           <h2>Scoring format</h2>
           <span className="scoring-badge">🎯 {scoringLabel}</span>
         </div>
-        <select
-          className="wizard__scoring-select"
-          value={currentScoringChoice}
-          onChange={(e) => setScoringByChoice(e.target.value)}
-        >
-          <optgroup label="Presets">
-            {(Object.keys(SCORING_PRESETS) as (keyof typeof SCORING_PRESETS)[]).map((p) => (
-              <option key={p} value={`preset:${p}`}>
-                {SCORING_PRESETS[p].label}
-              </option>
-            ))}
-          </optgroup>
-          {scoringFormats.length > 0 && (
-            <optgroup label="Your saved formats">
-              {scoringFormats.map((f) => (
-                <option key={f.id} value={`format:${f.id}`}>
-                  {f.name} (custom)
+        <SettingsGroupFieldset editable={canEdit('scoring')}>
+          <select
+            className="wizard__scoring-select"
+            value={currentScoringChoice}
+            onChange={(e) => setScoringByChoice(e.target.value)}
+          >
+            <optgroup label="Presets">
+              {(Object.keys(SCORING_PRESETS) as (keyof typeof SCORING_PRESETS)[]).map((p) => (
+                <option key={p} value={`preset:${p}`}>
+                  {SCORING_PRESETS[p].label}
                 </option>
               ))}
             </optgroup>
-          )}
-          {currentScoringChoice === 'custom' && <option value="custom">Custom</option>}
-        </select>
-        <button
-          type="button"
-          className="wizard__link"
-          onClick={() => setShowScoringModal(true)}
-        >
-          + Create a custom scoring format
-        </button>
+            {scoringFormats.length > 0 && (
+              <optgroup label="Your saved formats">
+                {scoringFormats.map((f) => (
+                  <option key={f.id} value={`format:${f.id}`}>
+                    {f.name} (custom)
+                  </option>
+                ))}
+              </optgroup>
+            )}
+            {currentScoringChoice === 'custom' && <option value="custom">Custom</option>}
+          </select>
+          <button
+            type="button"
+            className="wizard__link"
+            onClick={() => setShowScoringModal(true)}
+          >
+            + Create a custom scoring format
+          </button>
+        </SettingsGroupFieldset>
       </section>
 
       {/* Lineup */}
@@ -225,42 +261,44 @@ export function LeagueSettingsFields({ settings, onChange, nameField }: Props) {
             {rounds} rounds
           </span>
         </div>
-        <div className="lineup">
-          {ROSTER_SLOTS.map((slot) => {
-            const count = rosterMap.get(slot) ?? 0;
-            return (
-              <div className="lineup__slot" key={slot}>
-                <span className="lineup__label">
-                  {SLOT_LABELS[slot]}
-                  {SLOT_HINTS[slot] && (
-                    <span className="lineup__hint">{SLOT_HINTS[slot]}</span>
-                  )}
-                </span>
-                <div className="lineup__stepper">
-                  <button
-                    type="button"
-                    className="lineup__step"
-                    aria-label={`Fewer ${SLOT_LABELS[slot]}`}
-                    disabled={count === 0}
-                    onClick={() => stepSlot(slot, -1)}
-                  >
-                    <RemoveIcon fontSize="small" />
-                  </button>
-                  <span className="lineup__count">{count}</span>
-                  <button
-                    type="button"
-                    className="lineup__step"
-                    aria-label={`More ${SLOT_LABELS[slot]}`}
-                    disabled={count >= SLOT_MAX[slot]}
-                    onClick={() => stepSlot(slot, 1)}
-                  >
-                    <AddIcon fontSize="small" />
-                  </button>
+        <SettingsGroupFieldset editable={canEdit('structural')}>
+          <div className="lineup">
+            {ROSTER_SLOTS.map((slot) => {
+              const count = rosterMap.get(slot) ?? 0;
+              return (
+                <div className="lineup__slot" key={slot}>
+                  <span className="lineup__label">
+                    {SLOT_LABELS[slot]}
+                    {SLOT_HINTS[slot] && (
+                      <span className="lineup__hint">{SLOT_HINTS[slot]}</span>
+                    )}
+                  </span>
+                  <div className="lineup__stepper">
+                    <button
+                      type="button"
+                      className="lineup__step"
+                      aria-label={`Fewer ${SLOT_LABELS[slot]}`}
+                      disabled={count === 0}
+                      onClick={() => stepSlot(slot, -1)}
+                    >
+                      <RemoveIcon fontSize="small" />
+                    </button>
+                    <span className="lineup__count">{count}</span>
+                    <button
+                      type="button"
+                      className="lineup__step"
+                      aria-label={`More ${SLOT_LABELS[slot]}`}
+                      disabled={count >= SLOT_MAX[slot]}
+                      onClick={() => stepSlot(slot, 1)}
+                    >
+                      <AddIcon fontSize="small" />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        </SettingsGroupFieldset>
       </section>
 
       {/* Pick clock */}
@@ -270,6 +308,7 @@ export function LeagueSettingsFields({ settings, onChange, nameField }: Props) {
           Set the clock by round. Limits: {formatSeconds(MIN_PICK_SECONDS)}–
           {formatSeconds(MAX_PICK_SECONDS)}.
         </p>
+        <SettingsGroupFieldset editable={canEdit('behavioral')}>
         <div className="timer-tiers">
           {settings.pickTiers.map((tier, i) => {
             const isCatchAll = tier.untilRound === null;
@@ -372,6 +411,7 @@ export function LeagueSettingsFields({ settings, onChange, nameField }: Props) {
             ))}
           </select>
         </label>
+        </SettingsGroupFieldset>
       </section>
 
       {showScoringModal && (
@@ -383,27 +423,6 @@ export function LeagueSettingsFields({ settings, onChange, nameField }: Props) {
   );
 }
 
-/** Clean up user-entered tiers: clamp/sort boundaries, dedupe, ensure a catch-all. */
-export function normalizeTiers(tiers: PickTier[], rounds: number): PickTier[] {
-  const bounded = tiers
-    .filter((t) => t.untilRound !== null)
-    .map((t) => ({
-      untilRound: Math.min(Math.max(1, t.untilRound as number), Math.max(1, rounds - 1)),
-      seconds: t.seconds,
-    }))
-    .sort((a, b) => (a.untilRound as number) - (b.untilRound as number));
-  const seen = new Set<number>();
-  const deduped: PickTier[] = [];
-  for (let i = bounded.length - 1; i >= 0; i--) {
-    const r = bounded[i].untilRound as number;
-    if (!seen.has(r)) {
-      seen.add(r);
-      deduped.unshift(bounded[i]);
-    }
-  }
-  const catchAll = tiers.find((t) => t.untilRound === null) ?? {
-    untilRound: null,
-    seconds: 60,
-  };
-  return [...deduped, catchAll];
-}
+// Moved to @draft-lobby/shared so the server can normalize tiers too; re-exported
+// here for existing importers (the wizards).
+export { normalizeTiers } from '@draft-lobby/shared';

@@ -185,6 +185,102 @@ export const DEFAULT_LOBBY_SETTINGS: LobbySettings = {
   scoring: DEFAULT_SCORING_RULES,
 };
 
+// ── Editing an existing lobby's settings ────────────────────────────
+// Which settings a commissioner may change depends on how far the draft has
+// progressed, so an edit can never corrupt an in-progress board. Fields are
+// grouped by how risky they are to change:
+//   structural  — changes the board's shape (team count, draft type, roster/
+//                 rounds, keepers on/off) + pre-draft metadata. Pre-draft only.
+//   scoring     — only drives displayed projections/points, never the picks.
+//                 Editable until the draft actually starts.
+//   behavioral  — pick clock, bot clock, skip rules. Only affect FUTURE picks'
+//                 deadlines, so they're safe to change any time before COMPLETE.
+export type SettingsGroup = 'structural' | 'scoring' | 'behavioral';
+
+export const SETTINGS_FIELD_GROUP: Record<keyof LobbySettings, SettingsGroup> = {
+  name: 'structural', // edited via /rename, not the settings editor
+  teamCount: 'structural',
+  draftType: 'structural',
+  visibility: 'structural',
+  draftMode: 'structural',
+  rosterComposition: 'structural',
+  keepersEnabled: 'structural',
+  scheduledStart: 'structural',
+  scoring: 'scoring',
+  pickTiers: 'behavioral',
+  botPickSeconds: 'behavioral',
+  allowSkips: 'behavioral',
+  timeoutAllowance: 'behavioral',
+};
+
+/** Which setting groups a commissioner may edit at a given lobby status. */
+export function settingsEditableGroups(status: LobbyStatus): Set<SettingsGroup> {
+  switch (status) {
+    case 'SETUP':
+    case 'SCHEDULED':
+      return new Set(['structural', 'scoring', 'behavioral']);
+    case 'STAGING':
+      return new Set(['scoring', 'behavioral']);
+    case 'DRAFTING':
+    case 'PAUSED':
+      return new Set(['behavioral']);
+    case 'COMPLETE':
+      return new Set();
+  }
+}
+
+/**
+ * Apply a proposed settings edit, keeping only the fields whose group is
+ * editable at `status` and preserving the current value for the rest. The
+ * single gate both the client (to disable inputs) and the server (to enforce)
+ * rely on, so a client can never change a field it isn't allowed to.
+ */
+export function mergeEditableSettings(
+  current: LobbySettings,
+  incoming: LobbySettings,
+  status: LobbyStatus,
+): LobbySettings {
+  const groups = settingsEditableGroups(status);
+  const out = { ...current };
+  for (const key of Object.keys(SETTINGS_FIELD_GROUP) as (keyof LobbySettings)[]) {
+    if (groups.has(SETTINGS_FIELD_GROUP[key])) {
+      (out[key] as LobbySettings[typeof key]) = incoming[key];
+    }
+  }
+  return out;
+}
+
+/** Clean up user-entered pick tiers: clamp/sort boundaries, dedupe, ensure a
+ * catch-all. Shared by the settings editor (client) and the PATCH endpoint. */
+export function normalizeTiers(tiers: PickTier[], rounds: number): PickTier[] {
+  const bounded = tiers
+    .filter((t) => t.untilRound !== null)
+    .map((t) => ({
+      untilRound: Math.min(Math.max(1, t.untilRound as number), Math.max(1, rounds - 1)),
+      seconds: t.seconds,
+    }))
+    .sort((a, b) => (a.untilRound as number) - (b.untilRound as number));
+  const seen = new Set<number>();
+  const deduped: PickTier[] = [];
+  for (let i = bounded.length - 1; i >= 0; i--) {
+    const r = bounded[i].untilRound as number;
+    if (!seen.has(r)) {
+      seen.add(r);
+      deduped.unshift(bounded[i]);
+    }
+  }
+  const catchAll = tiers.find((t) => t.untilRound === null) ?? {
+    untilRound: null,
+    seconds: 60,
+  };
+  return [...deduped, catchAll];
+}
+
+/** Payload for PATCH /api/lobbies/:id/settings — the full desired settings; the
+ * server keeps only the fields editable at the lobby's current status. */
+export const updateLobbySettingsSchema = z.object({ settings: lobbySettingsSchema });
+export type UpdateLobbySettingsInput = z.infer<typeof updateLobbySettingsSchema>;
+
 /** A reusable league template = a saved, named LobbySettings bundle. */
 export const createTemplateSchema = z.object({
   name: z.string().min(1).max(40),

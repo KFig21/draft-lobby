@@ -61,6 +61,29 @@
     flex-wrap: wrap;
   }
 
+  // Groups a section's controls so the settings editor can disable a whole
+  // group (structural / scoring / behavioral) at once via <fieldset disabled>.
+  // Reset native fieldset chrome and behave like the flex column it replaces.
+  &__fieldset {
+    display: flex;
+    flex-direction: column;
+    gap: $space * 2;
+    min-width: 0; // fieldsets default to min-width: min-content, breaks flex
+    margin: 0;
+    padding: 0;
+    border: 0;
+
+    &:disabled {
+      opacity: 0.55;
+    }
+  }
+
+  &__locked-note {
+    margin: 0;
+    font-size: 0.82rem;
+    color: $text-muted;
+  }
+
   &__scoring-select {
     padding: $space * 1.5;
     border: 1px solid $border;

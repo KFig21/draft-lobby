@@ -178,6 +178,15 @@
     font-weight: 800;
   }
 
+  // Commissioner "Edit settings" — a quiet secondary action under the overview,
+  // sized down and self-aligned so it doesn't compete with the primary action.
+  &__edit-settings {
+    align-self: flex-start;
+    gap: 6px;
+    padding: $space * 0.75 $space * 1.5;
+    font-size: 0.9rem;
+  }
+
   // Icon next to a section heading ("Draft order", "Invite") — primary in
   // light mode, muted in dark, same split used by the rules modal's own
   // section icons (&__h-icon).
