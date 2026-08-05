@@ -57,3 +57,9 @@ $space: 8px;
 // NOTE: the LobbyRoom JS matchMedia hook mirrors this — keep them in sync.
 $bp-md: 768px;
 $bp-lg: 1024px;
+// xl: a *third* column's worth of room. Used where a surface already has the
+// app nav sidebar + main content and wants to add ANOTHER pane (the lobby
+// room's chat sidebar) — that third column doesn't fit at 1024 (iPad Pro 12.9
+// portrait), so it waits for 1100. NOTE: the LobbyRoom JS matchMedia mirrors
+// this — keep them in sync.
+$bp-xl: 1100px;
