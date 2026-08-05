@@ -133,6 +133,7 @@
   }
 
   &__team {
+    position: relative;
     display: flex;
     flex-direction: column;
     gap: $space * 0.6;
@@ -146,6 +147,20 @@
       border: none;
       background: none;
     }
+  }
+
+  // Shown over a team's card while a keeper select is saving — a translucent
+  // scrim + centered spinner so the commissioner sees it's working and doesn't
+  // re-click. The optimistic row flip is still faintly visible underneath.
+  &__team-loading {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: grid;
+    place-items: center;
+    border-radius: $radius-sm;
+    background: color-mix(in srgb, $bg 68%, transparent);
+    cursor: progress;
   }
 
   &__team-head {

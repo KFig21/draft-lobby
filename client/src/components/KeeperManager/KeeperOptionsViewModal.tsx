@@ -10,12 +10,13 @@ import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { api } from '../../lib/api';
 import { useModalClose } from '../../lib/useModalClose';
 import { avatarForTeam } from '../../lib/teamAvatar';
 import type { KeeperOptionRow, MemberRow, PlayerRow, TeamRow } from '../../lib/types';
 import { Avatar } from '../Avatar/Avatar';
+import { Loader } from '../Loader/Loader';
 import { ToggleSwitch } from '../ToggleSwitch/ToggleSwitch';
 import './KeeperOptionsViewModal.scss';
 
@@ -66,25 +67,61 @@ export function KeeperOptionsViewModal({
 
   // Commissioner "select keepers" mode — off by default so this stays a viewer.
   const [selectMode, setSelectMode] = useState(false);
-  const [busyId, setBusyId] = useState<string | null>(null);
+  // Options with an in-flight select POST — the team card shows a loader while
+  // any of its options are busy.
+  const [busyIds, setBusyIds] = useState<Set<string>>(new Set());
+  // Optimistic selected overrides (option id → selected) so a click flips the
+  // row instantly instead of waiting on the POST + realtime round-trip. Each is
+  // dropped once the incoming keeperOptions prop catches up (effect below).
+  const [pending, setPending] = useState<Map<string, boolean>>(new Map());
   const [selectError, setSelectError] = useState<string | null>(null);
   const selectable = !!canSelect && !!lobbyId;
 
+  const isSelected = (o: KeeperOptionRow) => pending.get(o.id) ?? o.selected;
+
   async function toggleSelect(o: KeeperOptionRow) {
-    if (!lobbyId) return;
-    setBusyId(o.id);
+    if (!lobbyId || busyIds.has(o.id)) return;
+    const next = !isSelected(o);
+    setPending((m) => new Map(m).set(o.id, next));
+    setBusyIds((s) => new Set(s).add(o.id));
     setSelectError(null);
     try {
       await api(`/lobbies/${lobbyId}/keeper-options/${o.id}/select`, {
         method: 'POST',
-        body: { selected: !o.selected },
+        body: { selected: next },
       });
     } catch (err) {
       setSelectError(err instanceof Error ? err.message : 'Could not update keeper');
+      // Roll back the optimistic flip.
+      setPending((m) => {
+        const n = new Map(m);
+        n.delete(o.id);
+        return n;
+      });
     } finally {
-      setBusyId(null);
+      setBusyIds((s) => {
+        const n = new Set(s);
+        n.delete(o.id);
+        return n;
+      });
     }
   }
+
+  // Drop each optimistic override once the real data reflects it (or diverges).
+  useEffect(() => {
+    setPending((prev) => {
+      if (prev.size === 0) return prev;
+      let changed = false;
+      const next = new Map(prev);
+      for (const o of keeperOptions) {
+        if (next.has(o.id) && next.get(o.id) === o.selected) {
+          next.delete(o.id);
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [keeperOptions]);
 
   const draftable = useMemo(() => draftablePositions(rosterComposition), [rosterComposition]);
   const playersById = useMemo(() => new Map(players.map((p) => [p.id, p])), [players]);
@@ -215,9 +252,15 @@ export function KeeperOptionsViewModal({
                     const p = playersById.get(o.player_id);
                     return p && posFilter.has(p.position as Position);
                   });
-            const kept = allOpts.filter((o) => o.selected).length;
+            const kept = allOpts.filter((o) => isSelected(o)).length;
+            const teamBusy = allOpts.some((o) => busyIds.has(o.id));
             return (
               <div key={t.id} className="keeper-view__team">
+                {teamBusy && (
+                  <div className="keeper-view__team-loading" aria-hidden>
+                    <Loader />
+                  </div>
+                )}
                 {!single && (
                   <div className="keeper-view__team-head">
                     <span className="keeper-view__team-name">
@@ -252,9 +295,9 @@ export function KeeperOptionsViewModal({
                       // Select mode: rows keep/unkeep instead of opening the
                       // player. A non-selected row is blocked once the team is
                       // at its keeper limit (server enforces this too).
-                      const keepBlocked = selectMode && !o.selected && kept >= t.keeper_count;
+                      const keepBlocked = selectMode && !isSelected(o) && kept >= t.keeper_count;
                       const rowSelectable =
-                        selectMode && selectable && !!player && !keepBlocked && busyId !== o.id;
+                        selectMode && selectable && !!player && !keepBlocked && !busyIds.has(o.id);
                       const openable = !selectMode && player && onOpenPlayer;
                       const onActivate = rowSelectable
                         ? () => toggleSelect(o)
@@ -264,7 +307,7 @@ export function KeeperOptionsViewModal({
                       return (
                         <li
                           key={o.id}
-                          className={`keeper-view__opt${o.selected ? ' is-selected' : ''}${
+                          className={`keeper-view__opt${isSelected(o) ? ' is-selected' : ''}${
                             onActivate ? ' keeper-view__opt--clickable' : ''
                           }${keepBlocked ? ' keeper-view__opt--blocked' : ''}`}
                           onClick={onActivate}
@@ -287,7 +330,7 @@ export function KeeperOptionsViewModal({
                           }
                         >
                           {selectMode &&
-                            (o.selected ? (
+                            (isSelected(o) ? (
                               <CheckCircleIcon
                                 className="keeper-view__selecticon is-on"
                                 fontSize="inherit"
@@ -314,7 +357,7 @@ export function KeeperOptionsViewModal({
                               'Player'
                             )}
                           </span>
-                          {!selectMode && o.selected && (
+                          {!selectMode && isSelected(o) && (
                             <CheckIcon fontSize="inherit" className="keeper-view__check" />
                           )}
                         </li>
