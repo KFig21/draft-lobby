@@ -1022,6 +1022,7 @@ export function DraftBoardPage() {
         draftType: lobby.settings.draftType,
         currentRound,
         myTeamId: ownTeamId,
+        cellStyle,
         theme,
         anonymize,
         highlightMine,

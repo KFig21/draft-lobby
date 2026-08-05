@@ -148,7 +148,9 @@ export function DraftGrid({
                       <Avatar avatar={avatarForTeam(team, members)} size={16} />
                     </span>
                   )}
-                  {anonymize ? `Slot ${team.draft_position}` : team.name}
+                  <span className="draft-grid__team-name">
+                    {anonymize ? `Slot ${team.draft_position}` : team.name}
+                  </span>
                   {team.is_prev_champion && <ChampionBadge size={13} />}
                 </button>
               </th>

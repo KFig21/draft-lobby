@@ -64,8 +64,9 @@
     white-space: nowrap;
     font-size: 0.7rem;
     max-width: 120px;
-    // No overflow:hidden here — name truncation is handled by &__team-btn (its
-    // own overflow:hidden + ellipsis, constrained to this cell's max-width).
+    // Center the avatar + name group in the cell; the name truncates via
+    // &__team-name's own ellipsis (constrained to this cell's max-width).
+    text-align: center;
     background: var(--grid-canvas); // opaque backing
     box-shadow: 0 0 0 4px var(--grid-canvas); // fills the surrounding gaps
 
@@ -110,20 +111,28 @@
   &__team-btn {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     max-width: 100%;
+    min-width: 0;
     border: none;
     background: none;
     padding: 0;
     color: inherit;
     font: inherit;
     cursor: pointer;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
 
     &:hover {
       color: $primary-hover;
     }
+  }
+
+  // Name text — the ellipsizing part of the header (avatar + champion badge
+  // stay put; the name absorbs the squeeze and truncates).
+  &__team-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   &__team-avatar {

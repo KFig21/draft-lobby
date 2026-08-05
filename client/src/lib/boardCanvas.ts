@@ -1,4 +1,5 @@
 import { POSITION_COLORS, type DraftType, type Position } from '@draft-lobby/shared';
+import type { DraftCellStyle } from './draftCellStyle';
 import { avatarForTeam } from './teamAvatar';
 import type { MemberRow, PickRow, PlayerRow, TeamRow } from './types';
 
@@ -14,10 +15,9 @@ import type { MemberRow, PickRow, PlayerRow, TeamRow } from './types';
  * canvas API, so the output is identical on every machine, OS and browser —
  * verifying it anywhere proves it everywhere.
  *
- * The export renders the canonical "default" (Hybrid) cell look — a
- * position-colored cell with an abbreviated name, team/bye, and the
- * round.pick — regardless of the viewer's per-device cell-style preference,
- * and shows only made picks (no transient on-the-clock / skipped overlays).
+ * The export mirrors the viewer's selected cell style ('default'/Hybrid,
+ * 'bold'/Big screen, or 'clean'), and shows only made picks (no transient
+ * on-the-clock / skipped overlays).
  */
 
 const FONT =
@@ -82,6 +82,8 @@ export interface BoardRenderOptions {
   draftType: DraftType;
   currentRound: number;
   myTeamId: string | null;
+  /** Which pick-cell look to draw — mirrors the viewer's Settings preference. */
+  cellStyle: DraftCellStyle;
   theme: 'dark' | 'light';
   /** Replace names/avatars with the draft-slot number. */
   anonymize: boolean;
@@ -135,21 +137,27 @@ function formatRoundPick(round: number, pickInRound: number, teamCount: number):
   return `${round}.${String(pickInRound).padStart(pad, '0')}`;
 }
 
-// Draw a small vector padlock (keeper flag) centered in a keeper-gold chip.
+// A small vector padlock keeper flag. `chip` (default) draws it on a keeper-gold
+// disc with dark ink — reads on the position-colored fills of the Hybrid/Big
+// styles; without a chip it's a bare gold padlock for the neutral Clean cell.
 function drawKeeperLock(
   ctx: CanvasRenderingContext2D,
   cx: number,
   cy: number,
   keeper: string,
+  chip = true,
 ): void {
-  const chip = 13;
   ctx.save();
-  roundRect(ctx, cx - chip / 2, cy - chip / 2, chip, chip, chip / 2);
-  ctx.fillStyle = keeper;
-  ctx.fill();
-  // padlock in a dark ink so it reads on the gold chip
-  ctx.strokeStyle = '#1a1a1a';
-  ctx.fillStyle = '#1a1a1a';
+  let ink = keeper;
+  if (chip) {
+    const size = 13;
+    roundRect(ctx, cx - size / 2, cy - size / 2, size, size, size / 2);
+    ctx.fillStyle = keeper;
+    ctx.fill();
+    ink = '#1a1a1a';
+  }
+  ctx.strokeStyle = ink;
+  ctx.fillStyle = ink;
   ctx.lineWidth = 1;
   // shackle
   ctx.beginPath();
@@ -158,6 +166,148 @@ function drawKeeperLock(
   // body
   ctx.fillRect(cx - 3, cy - 1.2, 6, 4.4);
   ctx.restore();
+}
+
+function nameScale(name: string): number {
+  const l = name.length;
+  if (l <= 13) return 1;
+  if (l <= 16) return 0.88;
+  if (l <= 19) return 0.76;
+  return 0.66;
+}
+
+// Greedy word-wrap into at most maxLines; the last line is ellipsized if the
+// text overflows. Mirrors BoldPickCell's 3-line clamp / break-word behavior.
+function wrapLines(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  maxWidth: number,
+  maxLines: number,
+): string[] {
+  const words = text.split(/\s+/);
+  const lines: string[] = [];
+  let cur = '';
+  for (const w of words) {
+    const trial = cur ? `${cur} ${w}` : w;
+    if (!cur || ctx.measureText(trial).width <= maxWidth) {
+      cur = trial;
+    } else {
+      lines.push(cur);
+      cur = w;
+      if (lines.length === maxLines) break;
+    }
+  }
+  if (cur && lines.length < maxLines) lines.push(cur);
+  if (lines.join(' ').length < text.replace(/\s+/g, ' ').length) {
+    let last = lines[lines.length - 1] ?? '';
+    while (last.length > 1 && ctx.measureText(`${last}…`).width > maxWidth) last = last.slice(0, -1);
+    lines[lines.length - 1] = `${last}…`;
+  }
+  return lines;
+}
+
+// ── Per-style pick-cell renderers (top-left of the cell is x,y) ──────────
+function drawHybridCell(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  pick: PickRow,
+  player: PlayerRow,
+  pal: Palette,
+  teamCount: number,
+): void {
+  const posColor = POSITION_COLORS[player.position as Position] ?? pal.textMuted;
+  roundRect(ctx, x, y, CELL_W, CELL_H, RADIUS);
+  ctx.fillStyle = posColor;
+  ctx.fill();
+  if (pick.is_keeper) keeperOutline(ctx, x, y, pal.keeper);
+
+  const tx = x + CELL_PAD;
+  const maxW = CELL_W - CELL_PAD * 2;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = '#000';
+  ctx.font = `800 14px ${FONT}`;
+  ctx.fillText(fitText(ctx, abbreviateName(player.name, player.position), maxW), tx, y + CELL_PAD + 13);
+  ctx.fillStyle = 'rgba(0,0,0,0.65)';
+  ctx.font = `600 9px ${FONT}`;
+  const bye = player.bye_week != null ? `  ·  Bye ${player.bye_week}` : '';
+  ctx.fillText(fitText(ctx, `${player.nfl_team}${bye}`, maxW), tx, y + CELL_PAD + 27);
+  const pickInRound = pick.overall - (pick.round - 1) * teamCount;
+  ctx.fillText(formatRoundPick(pick.round, pickInRound, teamCount), tx, y + CELL_PAD + 39);
+  if (pick.is_keeper) drawKeeperLock(ctx, x + CELL_W - 10, y + CELL_H - 9, pal.keeper);
+}
+
+function drawBoldCell(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  pick: PickRow,
+  player: PlayerRow,
+  pal: Palette,
+): void {
+  const posColor = POSITION_COLORS[player.position as Position] ?? pal.textMuted;
+  roundRect(ctx, x, y, CELL_W, CELL_H, RADIUS);
+  ctx.fillStyle = posColor;
+  ctx.fill();
+  if (pick.is_keeper) keeperOutline(ctx, x, y, pal.keeper);
+
+  const fs = 15 * nameScale(player.name);
+  const lh = fs * 1.15;
+  ctx.fillStyle = '#000';
+  ctx.font = `800 ${fs}px ${FONT}`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'alphabetic';
+  const lines = wrapLines(ctx, player.name, CELL_W - 10, 3);
+  let ty = y + (CELL_H - lines.length * lh) / 2 + fs * 0.82;
+  for (const line of lines) {
+    ctx.fillText(line, x + CELL_W / 2, ty);
+    ty += lh;
+  }
+  if (pick.is_keeper) drawKeeperLock(ctx, x + CELL_W - 10, y + CELL_H - 9, pal.keeper);
+}
+
+function drawCleanCell(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  pick: PickRow,
+  player: PlayerRow,
+  pal: Palette,
+): void {
+  roundRect(ctx, x, y, CELL_W, CELL_H, RADIUS);
+  ctx.fillStyle = pal.cellBg;
+  ctx.fill();
+  roundRect(ctx, x + 0.5, y + 0.5, CELL_W - 1, CELL_H - 1, RADIUS);
+  ctx.strokeStyle = pal.border;
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  if (pick.is_keeper) keeperOutline(ctx, x, y, pal.keeper);
+
+  const tx = x + CELL_PAD;
+  const maxW = CELL_W - CELL_PAD * 2;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = POSITION_COLORS[player.position as Position] ?? pal.textMuted;
+  ctx.font = `800 10px ${FONT}`;
+  ctx.fillText(player.position, tx, y + CELL_PAD + 9);
+  ctx.fillStyle = pal.text;
+  ctx.font = `600 12px ${FONT}`;
+  ctx.fillText(fitText(ctx, player.name, maxW), tx, y + CELL_PAD + 24);
+  ctx.fillStyle = pal.textMuted;
+  ctx.font = `400 10px ${FONT}`;
+  const bye = player.bye_week != null ? ` · ${player.bye_week}` : '';
+  ctx.fillText(fitText(ctx, `${player.nfl_team}${bye}`, maxW), tx, y + CELL_PAD + 37);
+  if (pick.is_keeper) drawKeeperLock(ctx, x + CELL_W - 9, y + CELL_H - 8, pal.keeper, false);
+}
+
+// Inset gold keeper outline shared by all three cell styles (matches the
+// board's `.draft-grid__cell--keeper` 2px outline).
+function keeperOutline(ctx: CanvasRenderingContext2D, x: number, y: number, keeper: string): void {
+  roundRect(ctx, x + 1, y + 1, CELL_W - 2, CELL_H - 2, RADIUS - 1);
+  ctx.strokeStyle = keeper;
+  ctx.lineWidth = 2;
+  ctx.stroke();
 }
 
 function drawAvatar(
@@ -173,12 +323,18 @@ function drawAvatar(
   roundRect(ctx, x, y, size, size, r);
   ctx.fillStyle = avatar.bgColor;
   ctx.fill();
-  ctx.font = `${Math.round(size * 0.62)}px ${FONT}`;
+  // Clip the emoji to the disc so a tall glyph can't spill past the shape.
+  ctx.clip();
+  ctx.font = `${Math.round(size * 0.6)}px ${FONT}`;
   ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  // Color emoji ignore fillStyle; this is only a fallback for monochrome glyphs.
-  ctx.fillStyle = '#000';
-  ctx.fillText(avatar.emoji, x + size / 2, y + size / 2 + size * 0.04);
+  // Center precisely on the glyph's real ink box rather than its font metrics —
+  // emoji baselines vary, and textBaseline:'middle' alone left them low.
+  ctx.textBaseline = 'alphabetic';
+  const m = ctx.measureText(avatar.emoji);
+  const asc = m.actualBoundingBoxAscent || size * 0.35;
+  const desc = m.actualBoundingBoxDescent || size * 0.1;
+  ctx.fillStyle = '#000'; // ignored for color emoji; fallback for mono glyphs
+  ctx.fillText(avatar.emoji, x + size / 2, y + size / 2 + (asc - desc) / 2);
   ctx.restore();
 }
 
@@ -197,6 +353,7 @@ export function renderBoardCanvas(opts: BoardRenderOptions): HTMLCanvasElement {
     draftType,
     currentRound,
     myTeamId,
+    cellStyle,
     theme,
     anonymize,
     highlightMine,
@@ -246,36 +403,41 @@ export function renderBoardCanvas(opts: BoardRenderOptions): HTMLCanvasElement {
       ctx.stroke();
     }
 
-    const inset = 8;
+    // Avatar (or slot disc) + name, centered as a group in the cell, with the
+    // name ellipsized if it's too long to fit.
+    const inset = 6;
     const avSize = 16;
+    const avGap = 5;
     const avY = y + (HEADER_H - avSize) / 2;
-    let textX = x + inset;
+    const crown = team.is_prev_champion ? ' 🏆' : '';
+    const label = anonymize ? `Slot ${team.draft_position}` : team.name;
+    ctx.font = `600 11px ${FONT}`;
+    const maxNameW = CELL_W - inset * 2 - avSize - avGap;
+    const name = fitText(ctx, `${label}${crown}`, maxNameW);
+    const nameW = ctx.measureText(name).width;
+    const groupW = avSize + avGap + nameW;
+    const startX = x + Math.max(inset, (CELL_W - groupW) / 2);
+
     if (anonymize) {
-      // Slot disc + "Slot N".
       ctx.save();
-      roundRect(ctx, x + inset, avY, avSize, avSize, avSize / 2);
+      roundRect(ctx, startX, avY, avSize, avSize, avSize / 2);
       ctx.fillStyle = pal.slotBg;
       ctx.fill();
       ctx.fillStyle = pal.textMuted;
       ctx.font = `800 10px ${FONT}`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(String(team.draft_position), x + inset + avSize / 2, avY + avSize / 2 + 0.5);
+      ctx.fillText(String(team.draft_position), startX + avSize / 2, avY + avSize / 2 + 0.5);
       ctx.restore();
-      textX = x + inset + avSize + 5;
     } else {
-      drawAvatar(ctx, avatarForTeam(team, members), x + inset, avY, avSize);
-      textX = x + inset + avSize + 5;
+      drawAvatar(ctx, avatarForTeam(team, members), startX, avY, avSize);
     }
 
     ctx.fillStyle = pal.text;
     ctx.font = `600 11px ${FONT}`;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    const crown = team.is_prev_champion ? ' 🏆' : '';
-    const label = anonymize ? `Slot ${team.draft_position}` : team.name;
-    const maxTextW = x + CELL_W - inset - (textX - x);
-    ctx.fillText(fitText(ctx, `${label}${crown}`, maxTextW), textX, y + HEADER_H / 2 + 0.5);
+    ctx.fillText(name, startX + avSize + avGap, y + HEADER_H / 2 + 0.5);
   });
 
   // ── Round column + cells ───────────────────────────────────────────
@@ -323,46 +485,10 @@ export function renderBoardCanvas(opts: BoardRenderOptions): HTMLCanvasElement {
         return;
       }
 
-      // Filled pick — position-colored fill (Hybrid look).
-      const posColor = POSITION_COLORS[player.position as Position] ?? pal.textMuted;
-      roundRect(ctx, x, y, CELL_W, CELL_H, RADIUS);
-      ctx.fillStyle = posColor;
-      ctx.fill();
-      if (pick.is_keeper) {
-        // Keeper: inset gold outline (matches --keeper outline on the board).
-        roundRect(ctx, x + 1, y + 1, CELL_W - 2, CELL_H - 2, RADIUS - 1);
-        ctx.strokeStyle = pal.keeper;
-        ctx.lineWidth = 2;
-        ctx.stroke();
-      }
-
-      const tx = x + CELL_PAD;
-      const maxW = CELL_W - CELL_PAD * 2;
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'alphabetic';
-
-      // Name (abbreviated), bold black.
-      ctx.fillStyle = '#000';
-      ctx.font = `800 14px ${FONT}`;
-      ctx.fillText(
-        fitText(ctx, abbreviateName(player.name, player.position), maxW),
-        tx,
-        y + CELL_PAD + 13,
-      );
-
-      // Team · Bye.
-      ctx.fillStyle = 'rgba(0,0,0,0.65)';
-      ctx.font = `600 9px ${FONT}`;
-      const bye = player.bye_week != null ? `  ·  Bye ${player.bye_week}` : '';
-      ctx.fillText(fitText(ctx, `${player.nfl_team}${bye}`, maxW), tx, y + CELL_PAD + 27);
-
-      // round.pick.
-      const pickInRound = pick.overall - (pick.round - 1) * teamCount;
-      ctx.fillText(formatRoundPick(pick.round, pickInRound, teamCount), tx, y + CELL_PAD + 39);
-
-      if (pick.is_keeper) {
-        drawKeeperLock(ctx, x + CELL_W - 10, y + CELL_H - 9, pal.keeper);
-      }
+      // Filled pick — render in the viewer's selected cell style.
+      if (cellStyle === 'bold') drawBoldCell(ctx, x, y, pick, player, pal);
+      else if (cellStyle === 'clean') drawCleanCell(ctx, x, y, pick, player, pal);
+      else drawHybridCell(ctx, x, y, pick, player, pal, teamCount);
     });
   }
 
