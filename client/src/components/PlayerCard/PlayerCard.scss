@@ -41,8 +41,8 @@
 
   // Compact stacked box (tiny "DRAFTED" over the bold pick slot) rather than a
   // wide inline pill — the player's NAME is the priority, so this stays narrow
-  // and never squeezes the name column. Hidden entirely on mobile, where the
-  // struck-through name already signals "off the board" (see the media query).
+  // and never squeezes the name column. On mobile it shrinks to just the pick
+  // number (see the media query below) to stay out of the name's way.
   &__drafted-tag {
     flex-shrink: 0;
     display: inline-flex;
@@ -56,8 +56,11 @@
     line-height: 1.1;
     text-align: center;
 
+    // Mobile: drop the "Drafted" label, keep just the pick slot (e.g. 1.01).
     @media (max-width: #{$bp-md - 1px}) {
-      display: none;
+      .player-card__drafted-word {
+        display: none;
+      }
     }
   }
 

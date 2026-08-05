@@ -146,8 +146,8 @@
     font-size: 0.75rem;
   }
 
-  // Shows just the pick slot (e.g. 1.09). Kept narrow so it never eats into the
-  // name, and hidden on mobile where the struck-through name is signal enough.
+  // Shows just the pick slot (e.g. 1.09) — narrow enough to sit on every
+  // breakpoint without eating into the name.
   &__drafted-tag {
     flex-shrink: 0;
     display: inline-flex;
@@ -159,9 +159,5 @@
     font-size: 0.66rem;
     font-weight: 800;
     font-variant-numeric: tabular-nums;
-
-    @media (max-width: #{$bp-md - 1px}) {
-      display: none;
-    }
   }
 }
