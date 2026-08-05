@@ -463,8 +463,12 @@
   // on-the-clock cell taller than its row's pick cells, stretching the whole
   // row. Shrink the icon (1.5em → 1em) and close the gap so the cell keeps the
   // normal row height.
+  // The icon is a MUI SvgIcon — .MuiSvgIcon-root sets its font-size and ties
+  // specificity with a lone .draft-grid__onclock-icon, winning on source order
+  // (emotion injects later). Qualify with the label parent (0,2,0) so this
+  // actually beats it. Same tied-specificity trap seen elsewhere in the app.
   @media (max-width: #{$bp-md - 1px}) {
-    &__onclock-icon {
+    &__onclock-label &__onclock-icon {
       font-size: 1em;
     }
 
