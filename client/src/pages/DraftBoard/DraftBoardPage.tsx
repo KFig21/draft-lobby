@@ -339,11 +339,11 @@ export function DraftBoardPage() {
   const [screenshotHighlightMine, setScreenshotHighlightMine] = useState(false);
   const [screenshotBusy, setScreenshotBusy] = useState(false);
   const [screenshotError, setScreenshotError] = useState<string | null>(null);
-  // Bound to <DraftGrid anonymize>/myTeamId, separate from the checkboxes
-  // above — only flip for the instant the capture runs, so the live board's
-  // own rendering never changes outside of that.
+  // Bound to <DraftGrid anonymize> — flipped on only for the instant a capture
+  // runs (anonymize needs a real re-render since it changes cell *content*;
+  // the "highlight my team" toggle is handled in html2canvas's onclone since
+  // it's just a class strip). The live board's rendering is otherwise untouched.
   const [gridAnonymizing, setGridAnonymizing] = useState(false);
-  const [gridSuppressMine, setGridSuppressMine] = useState(false);
   const gridTableRef = useRef<HTMLTableElement>(null);
   const [showKeepers, setShowKeepers] = useState(false);
   const [showMyKeepers, setShowMyKeepers] = useState(false);
@@ -1005,22 +1005,15 @@ export function DraftBoardPage() {
     if (mobileTab !== 'board') setMobileTab('board');
     if (centerView !== 'board') setCenterView('board');
     if (anonymize) setGridAnonymizing(true);
-    if (!highlightMine) setGridSuppressMine(true);
     try {
-      // Let React commit the tab/anonymize/highlight swap and the browser
-      // paint it before html2canvas reads the DOM.
+      // Let React commit the tab/anonymize swap and the browser paint it
+      // before html2canvas reads the DOM.
       await new Promise<void>((resolve) =>
         requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
       );
       if (document.fonts?.ready) await document.fonts.ready;
       const table = gridTableRef.current;
       if (!table) throw new Error('Could not find the board to capture');
-      // Belt-and-suspenders on top of the gridSuppressMine/gridAnonymizing
-      // React state above: strip the "mine" ring directly from the DOM right
-      // before capturing, synchronously, with no dependency on a re-render +
-      // paint having actually landed by now.
-      const mineEl = !highlightMine ? table.querySelector('.draft-grid__team--mine') : null;
-      mineEl?.classList.remove('draft-grid__team--mine');
       const canvasColor = getComputedStyle(table).getPropertyValue('--grid-canvas').trim() || '#000';
       // Lazy-loaded — it's a sizable library only needed by the rare visitor
       // who actually exports a screenshot, not worth shipping in the main
@@ -1032,7 +1025,21 @@ export function DraftBoardPage() {
       // The fork adds support for color()/color-mix()/oklch() etc.
       const { default: html2canvas } = await import('html2canvas-pro');
       const scale = Math.min(2, window.devicePixelRatio || 1);
-      const raw = await html2canvas(table, { backgroundColor: canvasColor, scale });
+      const raw = await html2canvas(table, {
+        backgroundColor: canvasColor,
+        scale,
+        // Strip the "my team" header ring from the *cloned* DOM html2canvas
+        // renders — not the live board — when the user didn't opt into it.
+        // Done here (at render time, on the clone) rather than via React state
+        // on the live board so a realtime re-render mid-capture can't re-add it.
+        onclone: (clonedDoc) => {
+          if (!highlightMine) {
+            clonedDoc
+              .querySelectorAll('.draft-grid__team--mine')
+              .forEach((el) => el.classList.remove('draft-grid__team--mine'));
+          }
+        },
+      });
       // html2canvas crops exactly to the table's own box — composite it onto
       // a slightly larger canvas so the export has breathing room around it,
       // same background color so the padding reads as part of the board.
@@ -1051,7 +1058,6 @@ export function DraftBoardPage() {
       setScreenshotError(err instanceof Error ? err.message : 'Could not capture the board');
     } finally {
       setGridAnonymizing(false);
-      setGridSuppressMine(false);
       if (mobileTab !== prevMobileTab) setMobileTab(prevMobileTab);
       if (centerView !== prevCenterView) setCenterView(prevCenterView);
       setScreenshotBusy(false);
@@ -2530,9 +2536,7 @@ export function DraftBoardPage() {
               picks={picks}
               playersById={playersById}
               onClockTeamId={isComplete || isStaging ? null : onClockTeam?.id ?? null}
-              // Suppressed for the instant a screenshot capture runs, unless
-              // "Highlight my team" was checked — see captureBoardScreenshot.
-              myTeamId={gridSuppressMine ? null : myTeam?.id ?? null}
+              myTeamId={myTeam?.id ?? null}
               currentRound={round}
               draftType={lobby.settings.draftType}
               onTeamClick={openTeamRoster}
