@@ -87,6 +87,14 @@
     .muted {
       font-size: 0.8rem;
     }
+
+    // Keep the download action to a single line with snug padding — on a
+    // phone-width modal the default button padding was forcing a 2-line wrap.
+    .button {
+      flex-shrink: 0;
+      padding: $space * 0.6 $space * 1.1;
+      white-space: nowrap;
+    }
   }
 }
 

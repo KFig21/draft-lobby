@@ -82,7 +82,7 @@ export function GradeExportModal(props: Props) {
   const footer = (
     <div className="grade-export__foot">
       <span className="muted">
-        {mode === 'single' ? '1 image' : `${cards.length} images`} · portrait, phone-sized
+        {mode === 'single' ? '1 image' : `${cards.length} images`}
       </span>
       <button type="button" className="button button--primary" onClick={downloadAll} disabled={busy}>
         {busy ? 'Downloading…' : mode === 'single' ? 'Download image' : 'Download all'}
