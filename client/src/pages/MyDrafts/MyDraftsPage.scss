@@ -6,7 +6,7 @@
   flex-direction: column;
   gap: $space * 3;
 
-  > * {
+  >* {
     width: 100%;
     max-width: 720px;
     margin-inline: auto;
@@ -162,6 +162,7 @@
     justify-items: center;
     padding: $space * 0.5;
     border-left: 1px solid $border;
+    background: $bg;
   }
 
   &__action {
@@ -240,20 +241,26 @@
     align-items: stretch;
   }
 
+  .lobby-list__row {
+    border-radius: inherit;
+    border-bottom: 1px solid $border;
+  }
+
   .lobby-list__actions {
     display: flex;
     grid-template-columns: none;
     padding: 0;
     border-left: none;
-    border-top: 1px solid $border;
+    background: $bg;
   }
 
   .lobby-list__action {
     flex: 1;
     width: auto;
-    height: 44px;
+    height: 32px;
     gap: $space * 0.6;
-    color: $text;
+    color: $text-muted;
+    border-radius: 0px;
 
     // Divider between adjacent buttons.
     &:not(:last-child) {
@@ -263,6 +270,11 @@
     // Delete reads destructive statically here — there's no hover on touch.
     &--danger {
       color: $danger;
+    }
+
+    // Slightly smaller icons on mobile so they sit better beside the labels.
+    svg {
+      font-size: 1rem;
     }
   }
 
