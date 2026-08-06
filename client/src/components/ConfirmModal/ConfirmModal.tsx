@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { useModalClose } from '../../lib/useModalClose';
 import './ConfirmModal.scss';
 
@@ -28,7 +29,11 @@ export function ConfirmModal({
   confirmDisabled = false,
 }: Props) {
   const { closing, requestClose } = useModalClose(onClose);
-  return (
+  // Portal to <body> so the fixed backdrop always covers the full viewport —
+  // rendered inline it becomes a child of whatever page invoked it, and a page
+  // that clamps its direct children (e.g. .my-drafts > * { max-width }) would
+  // shrink the backdrop to that column instead of the whole screen.
+  return createPortal(
     <div
       className={`confirm-modal__backdrop modal-anim-backdrop${closing ? ' is-closing' : ''}`}
       onClick={() => !busy && requestClose()}
@@ -54,6 +59,7 @@ export function ConfirmModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
