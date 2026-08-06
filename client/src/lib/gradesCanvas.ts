@@ -113,7 +113,7 @@ function posPill(ctx: CanvasRenderingContext2D, pos: string, x: number, y: numbe
 
 // Fractional part of a projection is drawn at this fraction of the whole-number
 // size, so the big value reads first and the ".x" is a quiet suffix.
-const PROJ_DECIMAL_SCALE = 0.75;
+const PROJ_DECIMAL_SCALE = 0.82;
 
 /**
  * Draw a projection like "308.5" with the fractional part smaller than the
@@ -144,17 +144,27 @@ function drawProj(
   const decFont = `${it}${weight} ${intPx * PROJ_DECIMAL_SCALE}px ${family}`;
 
   ctx.fillStyle = color;
-  ctx.textBaseline = baseline;
   ctx.textAlign = 'left';
   ctx.font = intFont;
-  const intW = ctx.measureText(intStr).width;
+  const im = ctx.measureText(intStr);
+  const intW = im.width;
   ctx.font = decFont;
   const decW = ctx.measureText(decStr).width;
   const left = align === 'right' ? x - (intW + decW) : x;
+
+  // Both parts share ONE baseline so the small ".x" sits on the big number's
+  // baseline (not centered on its own smaller box). A 'middle' request is
+  // converted to that shared alphabetic baseline using the integer glyph's real
+  // ascent/descent, keeping the whole number vertically centered on `y`.
+  let baseY = y;
+  if (baseline === 'middle') {
+    baseY = y + (im.actualBoundingBoxAscent - im.actualBoundingBoxDescent) / 2;
+  }
+  ctx.textBaseline = baseline === 'middle' ? 'alphabetic' : baseline;
   ctx.font = intFont;
-  ctx.fillText(intStr, left, y);
+  ctx.fillText(intStr, left, baseY);
   ctx.font = decFont;
-  ctx.fillText(decStr, left + intW, y);
+  ctx.fillText(decStr, left + intW, baseY);
 }
 
 function slug(name: string): string {
