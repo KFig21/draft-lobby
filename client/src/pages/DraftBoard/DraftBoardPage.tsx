@@ -353,6 +353,11 @@ export function DraftBoardPage() {
   const [screenshotHighlightMine, setScreenshotHighlightMine] = useState(false);
   const [screenshotBusy, setScreenshotBusy] = useState(false);
   const [screenshotError, setScreenshotError] = useState<string | null>(null);
+  // Rendered board PNG shown as a preview in the export modal — as a data-URL
+  // <img> so it can be long-pressed → "Save to Photos" on mobile. The canvas is
+  // kept alongside for the explicit Download action.
+  const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
+  const screenshotCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const [showKeepers, setShowKeepers] = useState(false);
   const [showMyKeepers, setShowMyKeepers] = useState(false);
   const [showAllKeepers, setShowAllKeepers] = useState(false);
@@ -1005,6 +1010,22 @@ export function DraftBoardPage() {
    * Because it renders from data, it needs neither the board scrolled into
    * view nor a live table ref.
    */
+  // Reset the export modal back to a clean menu (clears any stale preview).
+  function resetExport() {
+    setExportStep('menu');
+    setScreenshotError(null);
+    setScreenshotUrl(null);
+    screenshotCanvasRef.current = null;
+  }
+
+  // Download the already-rendered board PNG (the one shown in the preview).
+  function downloadBoardImage() {
+    const canvas = screenshotCanvasRef.current;
+    if (canvas && lobby) downloadBoardScreenshot(canvas, lobby.name, screenshotAnonymize);
+  }
+
+  // Render the board to a canvas and show it as a preview; the user then saves
+  // it (Download button, or long-press → Save to Photos on the preview image).
   async function captureBoardScreenshot(anonymize: boolean, highlightMine: boolean) {
     if (!lobby) return;
     setScreenshotError(null);
@@ -1043,8 +1064,8 @@ export function DraftBoardPage() {
         highlightMine,
         padding: BOARD_SCREENSHOT_PADDING,
       });
-      downloadBoardScreenshot(canvas, lobby.name, anonymize);
-      setShowExport(false);
+      screenshotCanvasRef.current = canvas;
+      setScreenshotUrl(canvas.toDataURL('image/png'));
     } catch (err) {
       setScreenshotError(err instanceof Error ? err.message : 'Could not capture the board');
     } finally {
@@ -2373,18 +2394,6 @@ export function DraftBoardPage() {
           <div className="draft__status">
             {isComplete ? (
               <strong className="draft__complete">
-                {/* Gold sheen paint-server for the trophy. Kept 0×0/absolute
-                    (not display:none, which drops the gradient in Safari). */}
-                <svg className="draft__gold-def" width="0" height="0" aria-hidden focusable="false">
-                  <defs>
-                    <linearGradient id="draftGoldSheen" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#fff3c4" />
-                      <stop offset="42%" stopColor="#f7cf4b" />
-                      <stop offset="62%" stopColor="#e0a92b" />
-                      <stop offset="100%" stopColor="#b3801d" />
-                    </linearGradient>
-                  </defs>
-                </svg>
                 <EmojiEventsIcon className="draft__complete-trophy" fontSize="small" /> Draft complete
               </strong>
             ) : isStaging ? (
@@ -2555,14 +2564,17 @@ export function DraftBoardPage() {
           </button>
           <ThemeToggle className="draft__icon-btn draft__theme-btn" />
           {/* Mobile-only: the desktop top bar has the full Export menu, but on a
-              phone there's no export button — this is the quick "save the board
-              as a PNG to share" action, using the same deterministic renderer. */}
+              phone there's no export button — this opens the same board-screenshot
+              options (anonymize / highlight) so it can be saved to the gallery. */}
           {!isStaging && (
             <button
               type="button"
               className="draft__icon-btn draft__boardpng-btn"
-              onClick={() => captureBoardScreenshot(screenshotAnonymize, screenshotHighlightMine)}
-              disabled={screenshotBusy}
+              onClick={() => {
+                resetExport();
+                setExportStep('screenshot');
+                setShowExport(true);
+              }}
               aria-label="Save board as image"
               title="Save the board as a PNG to share"
             >
@@ -3086,7 +3098,10 @@ export function DraftBoardPage() {
       {showExport && (
         <Modal
           title={exportStep === 'screenshot' ? 'Board screenshot' : 'Export draft'}
-          onClose={() => setShowExport(false)}
+          onClose={() => {
+            setShowExport(false);
+            resetExport();
+          }}
         >
           {exportStep === 'menu' ? (
             <div className="draft-export-options">
@@ -3148,7 +3163,12 @@ export function DraftBoardPage() {
               )}
               <button
                 className="button draft-export-options__opt"
-                onClick={() => setExportStep('screenshot')}
+                onClick={() => {
+                  setScreenshotUrl(null);
+                  screenshotCanvasRef.current = null;
+                  setScreenshotError(null);
+                  setExportStep('screenshot');
+                }}
               >
                 <PhotoCameraOutlinedIcon fontSize="small" />
                 <span>
@@ -3163,7 +3183,10 @@ export function DraftBoardPage() {
                 <input
                   type="checkbox"
                   checked={screenshotAnonymize}
-                  onChange={(e) => setScreenshotAnonymize(e.target.checked)}
+                  onChange={(e) => {
+                    setScreenshotAnonymize(e.target.checked);
+                    setScreenshotUrl(null); // stale — re-render with the new choice
+                  }}
                 />
                 <span>
                   <strong>Anonymize team names</strong>
@@ -3177,7 +3200,10 @@ export function DraftBoardPage() {
                 <input
                   type="checkbox"
                   checked={screenshotHighlightMine}
-                  onChange={(e) => setScreenshotHighlightMine(e.target.checked)}
+                  onChange={(e) => {
+                    setScreenshotHighlightMine(e.target.checked);
+                    setScreenshotUrl(null);
+                  }}
                 />
                 <span>
                   <strong>Highlight my team</strong>
@@ -3187,24 +3213,55 @@ export function DraftBoardPage() {
                 </span>
               </label>
               {screenshotError && <p className="draft-export-screenshot__error">{screenshotError}</p>}
-              <div className="draft-export-screenshot__actions">
-                <button
-                  type="button"
-                  className="button"
-                  onClick={() => setExportStep('menu')}
-                  disabled={screenshotBusy}
-                >
-                  Back
-                </button>
-                <button
-                  type="button"
-                  className="button button--primary"
-                  onClick={() => captureBoardScreenshot(screenshotAnonymize, screenshotHighlightMine)}
-                  disabled={screenshotBusy}
-                >
-                  {screenshotBusy ? 'Capturing…' : 'Download PNG'}
-                </button>
-              </div>
+
+              {screenshotUrl ? (
+                <>
+                  <div className="draft-export-screenshot__preview">
+                    <img src={screenshotUrl} alt="Draft board preview" />
+                  </div>
+                  <p className="draft-export-screenshot__hint">
+                    Long-press the image to save it to your photos — or use Download below.
+                  </p>
+                  <div className="draft-export-screenshot__actions">
+                    <button
+                      type="button"
+                      className="button"
+                      onClick={() => {
+                        setScreenshotUrl(null);
+                        screenshotCanvasRef.current = null;
+                      }}
+                    >
+                      Options
+                    </button>
+                    <button
+                      type="button"
+                      className="button button--primary"
+                      onClick={downloadBoardImage}
+                    >
+                      <FileDownloadOutlinedIcon fontSize="small" /> Download PNG
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="draft-export-screenshot__actions">
+                  <button
+                    type="button"
+                    className="button"
+                    onClick={() => setExportStep('menu')}
+                    disabled={screenshotBusy}
+                  >
+                    Back
+                  </button>
+                  <button
+                    type="button"
+                    className="button button--primary"
+                    onClick={() => captureBoardScreenshot(screenshotAnonymize, screenshotHighlightMine)}
+                    disabled={screenshotBusy}
+                  >
+                    {screenshotBusy ? 'Rendering…' : 'Create image'}
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </Modal>

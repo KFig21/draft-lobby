@@ -423,8 +423,14 @@
     gap: $space;
     min-width: 0;
     flex-wrap: wrap;
+    // Mobile (flex, not grid): balance the two rails so &__center stays dead
+    // centered no matter what sits in either rail (e.g. the lone share button
+    // on the right). flex-grow only spends *free* space, so the tight drafting
+    // state is unaffected — grid takes over entirely at lg.
+    flex: 1 1 0;
 
     @include lg {
+      flex: 0 1 auto;
       justify-self: start;
     }
   }
@@ -589,8 +595,11 @@
     justify-content: flex-end;
     gap: $space;
     row-gap: $space * 0.5;
+    // Mirror &__left so the rails are symmetric and &__center stays centered.
+    flex: 1 1 0;
 
     @include lg {
+      flex: 0 1 auto;
       justify-self: end;
     }
   }
@@ -843,17 +852,10 @@
       background-clip: text;
     }
 
-    // The gold-sheen paint-server lives here but must not take up space.
-    .draft__gold-def {
-      position: absolute;
-      width: 0;
-      height: 0;
-    }
-
-    // Shiny gold trophy via the SVG gradient; falls back to the theme keeper
-    // gold if the paint server can't be resolved.
+    // Solid gold trophy (theme-aware keeper gold). Set explicitly since the
+    // parent's clipped-gradient text uses color: transparent.
     .draft__complete-trophy {
-      fill: url(#draftGoldSheen) #{$keeper};
+      color: $keeper;
     }
   }
 
@@ -1861,5 +1863,47 @@
     display: flex;
     justify-content: flex-end;
     gap: $space;
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      gap: $space * 0.4;
+
+      svg {
+        font-size: 1.15em;
+      }
+    }
+  }
+
+  // Rendered board preview — long-press → "Save to Photos" on mobile.
+  &__preview {
+    display: flex;
+    justify-content: center;
+    padding: $space;
+    border-radius: $radius;
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid $border;
+
+    img {
+      display: block;
+      max-width: 100%;
+      max-height: 52vh;
+      height: auto;
+      border-radius: $radius-sm;
+      box-shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.55);
+    }
+  }
+
+  &__hint {
+    margin: 0;
+    text-align: center;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: $accent;
+    padding: $space * 0.6 $space * 1.1;
+    border: 1px solid $accent;
+    border-radius: 999px;
+    align-self: center;
+    background: color-mix(in srgb, $accent 12%, transparent);
   }
 }
