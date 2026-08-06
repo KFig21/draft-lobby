@@ -536,7 +536,7 @@ function renderTeam(model: LeagueGrade, card: TeamGradeCard, scale: number): HTM
       posPill(ctx, row.player.position, PAD + 34, cy - 8, 34, 16);
       const nameX = PAD + 76;
       text(ctx, row.player.name, nameX, cy - 5, '600 12.5', TEXT, 'left', 'middle', CARD_W - PAD - nameX - 44);
-      text(ctx, row.player.nfl_team, nameX, cy + 9, '500 9', MUTED, 'left', 'middle');
+      text(ctx, row.player.nfl_team, nameX, cy + 8, '500 9', MUTED, 'left', 'middle');
       // Projected points in Futura italic, fractional part smaller. Futura's
       // 'middle' baseline sits high, so place the baseline explicitly (cy + 4.5)
       // to center the digits on the row.
