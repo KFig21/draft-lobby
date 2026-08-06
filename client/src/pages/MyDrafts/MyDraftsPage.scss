@@ -203,3 +203,24 @@
     }
   }
 }
+
+// ── Mobile: stack a row's actions beneath it ────────────────────────
+// On a phone the row + its 1–3 action buttons don't fit side by side — the
+// buttons squeeze the meta into a tall multi-line wrap and stretch into full-
+// height bars. Let the row take the full width and wrap the actions into a
+// tidy right-aligned row beneath it (square touch targets, not stretched).
+@media (max-width: #{$bp-md - 1px}) {
+  .lobby-list__item {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .lobby-list__row {
+    flex-basis: 100%;
+  }
+
+  .lobby-list__action {
+    width: 44px;
+    height: 44px;
+  }
+}
