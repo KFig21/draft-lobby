@@ -5,7 +5,8 @@ import type { LeagueGrade, PickValue, TeamGradeCard } from './draftGradeExport';
 /**
  * Deterministic PNG renderer for the shareable draft-grade cards — same
  * canvas-only approach as boardCanvas.ts (no html2canvas), so the output is
- * identical on every machine. Cards are portrait 9:16 (phone/story size),
+ * identical on every machine. Cards are a fixed portrait width and sized to
+ * their content height (so short cards don't trail off into empty space),
  * committed to the app's dark look for a consistent share graphic.
  *
  * Two modes: a single "all teams" summary card, or a full breakdown (a league
@@ -13,8 +14,8 @@ import type { LeagueGrade, PickValue, TeamGradeCard } from './draftGradeExport';
  */
 
 const CARD_W = 390;
-const CARD_H = 693; // 9:16
 const PAD = 22;
+const FOOTER_H = 44; // rule + label + bottom padding below the content
 
 // Dark share-card palette (committed, not theme-aware).
 const TEXT = '#eef3f4';
@@ -35,8 +36,10 @@ export interface GradeCard {
 type Align = CanvasTextAlign;
 type Baseline = CanvasTextBaseline;
 
-/** Set font (`"<weight> <size>"`, px + app font appended), color, alignment,
- * and draw — optionally fitting to maxW. */
+// A shared offscreen context for pre-layout text measurement (e.g. wrapping a
+// verdict blurb to know a card's height before it's created).
+const _measure = document.createElement('canvas').getContext('2d');
+
 function text(
   ctx: CanvasRenderingContext2D,
   str: string,
@@ -93,23 +96,24 @@ function slug(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'team';
 }
 
-function beginCard(scale: number): { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D } {
+/** Create a card canvas of the given content height and paint its background. */
+function beginCard(scale: number, H: number): { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D } {
   const canvas = document.createElement('canvas');
   canvas.width = Math.round(CARD_W * scale);
-  canvas.height = Math.round(CARD_H * scale);
+  canvas.height = Math.round(H * scale);
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Could not get a 2D drawing context');
   ctx.scale(scale, scale);
-  const g = ctx.createLinearGradient(0, 0, 0, CARD_H);
+  const g = ctx.createLinearGradient(0, 0, 0, H);
   g.addColorStop(0, '#0d1214');
   g.addColorStop(1, '#0a0e10');
   ctx.fillStyle = g;
-  ctx.fillRect(0, 0, CARD_W, CARD_H);
+  ctx.fillRect(0, 0, CARD_W, H);
   const rg = ctx.createRadialGradient(CARD_W * 0.5, -30, 20, CARD_W * 0.5, -30, 300);
   rg.addColorStop(0, 'rgba(19,58,55,0.85)');
   rg.addColorStop(1, 'rgba(19,58,55,0)');
   ctx.fillStyle = rg;
-  ctx.fillRect(0, 0, CARD_W, CARD_H);
+  ctx.fillRect(0, 0, CARD_W, Math.min(H, 360));
   return { canvas, ctx };
 }
 
@@ -126,25 +130,31 @@ function brandRow(ctx: CanvasRenderingContext2D, right: string): void {
   text(ctx, right, CARD_W - PAD, y + 1, '700 10.5', MUTED, 'right', 'middle', CARD_W * 0.52);
 }
 
-function footer(ctx: CanvasRenderingContext2D, left: string, right: string): void {
-  const y = CARD_H - 22;
-  hline(ctx, PAD, y - 14, CARD_W - PAD);
+/** Draw the title block (eyebrow + league name + meta); returns the y the
+ * content below should start at. */
+function titleBlock(ctx: CanvasRenderingContext2D, eyebrow: string, name: string, meta: string): number {
+  text(ctx, eyebrow, PAD, 60, '800 11', MINT);
+  text(ctx, name, PAD, 88, '850 27', TEXT, 'left', 'alphabetic', CARD_W - PAD * 2);
+  text(ctx, meta, PAD, 107, '600 11.5', MUTED, 'left', 'alphabetic', CARD_W - PAD * 2);
+  return 124;
+}
+
+function footer(ctx: CanvasRenderingContext2D, H: number, left: string, right: string): void {
+  const y = H - 16;
+  hline(ctx, PAD, H - 34, CARD_W - PAD);
   text(ctx, left, PAD, y, '600 10.5', MUTED, 'left', 'middle', CARD_W * 0.6);
   text(ctx, right, CARD_W - PAD, y, '600 10.5', MUTED, 'right', 'middle');
 }
 
 // ── Card 1: all teams on one page ──────────────────────────────────────
 function renderAllTeams(model: LeagueGrade, scale: number): HTMLCanvasElement {
-  const { canvas, ctx } = beginCard(scale);
-  brandRow(ctx, `${model.season} · Draft grades`);
-  text(ctx, 'FINAL DRAFT GRADES', PAD, 60, '800 11', MINT);
-  text(ctx, model.lobbyName, PAD, 88, '850 27', TEXT, 'left', 'alphabetic', CARD_W - PAD * 2);
-  text(ctx, `${model.teamCount} teams · ${model.scoringLabel} · ${model.draftTypeLabel}`, PAD, 107, '600 11.5', MUTED, 'left', 'alphabetic', CARD_W - PAD * 2);
-
   const top = 124;
-  const bottom = CARD_H - 46;
+  const rowH = 45;
   const n = Math.max(1, model.teams.length);
-  const rowH = Math.min(46, (bottom - top) / n);
+  const H = Math.round(top + n * rowH + FOOTER_H);
+  const { canvas, ctx } = beginCard(scale, H);
+  brandRow(ctx, `${model.season} · Draft grades`);
+  titleBlock(ctx, 'FINAL DRAFT GRADES', model.lobbyName, `${model.teamCount} teams · ${model.scoringLabel} · ${model.draftTypeLabel}`);
 
   model.teams.forEach((t, i) => {
     const y = top + i * rowH;
@@ -168,79 +178,99 @@ function renderAllTeams(model: LeagueGrade, scale: number): HTMLCanvasElement {
     text(ctx, 'PROJ', badgeX - 12, cy + 9, '700 8', MUTED, 'right', 'middle');
   });
 
-  footer(ctx, `🏆 Best draft: ${model.championName}`, model.dateLabel);
+  footer(ctx, H, `🏆 Best draft: ${model.championName}`, model.dateLabel);
   return canvas;
+}
+
+// A reusable stat/callout box; returns its bottom y.
+function statBox(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  label: string,
+  labelColor: string,
+  value: string,
+  valueFont: string,
+  valueColor: string,
+  sub?: string,
+): void {
+  roundRect(ctx, x, y, w, h, 12);
+  ctx.fillStyle = PANEL;
+  ctx.fill();
+  roundRect(ctx, x + 0.5, y + 0.5, w - 1, h - 1, 12);
+  ctx.strokeStyle = LINE;
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  text(ctx, label, x + 12, y + 16, '800 9.5', labelColor);
+  text(ctx, value, x + 12, y + (sub ? 36 : 40), valueFont, valueColor, 'left', 'alphabetic', w - 24);
+  if (sub) text(ctx, sub, x + 12, y + 50, '600 10', MUTED, 'left', 'alphabetic', w - 24);
 }
 
 // ── Card 2: league cover ───────────────────────────────────────────────
 function renderLeague(model: LeagueGrade, scale: number): HTMLCanvasElement {
-  const { canvas, ctx } = beginCard(scale);
+  // Lay out top-to-bottom with a running cursor so the card ends at its content.
+  const podiumTop = 140;
+  const bigSize = 56;
+  const podiumBottom = podiumTop + bigSize + 16 + 13 + 22 + 18; // name + owner + badge + rank
+  const statTop = podiumBottom + 14;
+  const boxH = 58;
+  const calloutH = 46;
+  const distLabelY = statTop + boxH + 8 + calloutH + 8 + calloutH + 22;
+  const barsTop = distLabelY + 12;
+  const barMax = 46;
+  const distBottom = barsTop + barMax + 18; // bars + letter labels
+  const H = Math.round(distBottom + FOOTER_H);
+
+  const { canvas, ctx } = beginCard(scale, H);
   brandRow(ctx, 'Draft recap');
-  text(ctx, `${model.season} SEASON`, PAD, 60, '800 11', MINT);
-  text(ctx, model.lobbyName, PAD, 88, '850 27', TEXT, 'left', 'alphabetic', CARD_W - PAD * 2);
-  text(ctx, `${model.teamCount} teams · ${model.scoringLabel} · ${model.draftTypeLabel} · ${model.rounds} rounds`, PAD, 107, '600 11.5', MUTED, 'left', 'alphabetic', CARD_W - PAD * 2);
+  titleBlock(ctx, `${model.season} SEASON`, model.lobbyName, `${model.teamCount} teams · ${model.scoringLabel} · ${model.draftTypeLabel} · ${model.rounds} rounds`);
 
   // Podium: 2 · 1 · 3
   const podium = [model.teams[1], model.teams[0], model.teams[2]];
   const centerX = CARD_W / 2;
   const gap = 116;
   const cols = [
-    { x: centerX - gap, card: podium[0], size: 42, crown: false },
-    { x: centerX, card: podium[1], size: 56, crown: true },
-    { x: centerX + gap, card: podium[2], size: 42, crown: false },
+    { x: centerX - gap, card: podium[0], size: 42 },
+    { x: centerX, card: podium[1], size: bigSize, crown: true },
+    { x: centerX + gap, card: podium[2], size: 42 },
   ];
-  const topY = 150;
   for (const col of cols) {
     if (!col.card) continue;
-    if (col.crown) drawCenteredEmoji(ctx, '👑', col.x, topY - 12, 18);
-    drawAvatar(ctx, col.card.avatar, col.x - col.size / 2, topY, col.size);
-    const ny = topY + col.size + 16;
+    const avY = podiumTop + (bigSize - col.size); // bottom-align the avatars
+    if (col.crown) drawCenteredEmoji(ctx, '👑', col.x, avY - 12, 18);
+    drawAvatar(ctx, col.card.avatar, col.x - col.size / 2, avY, col.size);
+    const ny = podiumTop + bigSize + 16;
     text(ctx, col.card.team.name, col.x, ny, '750 11.5', TEXT, 'center', 'middle', 104);
     text(ctx, col.card.ownerLabel, col.x, ny + 13, '600 10', MUTED, 'center', 'middle', 104);
     gradeBadge(ctx, col.card.grade, col.x - 13, ny + 22, 26, 12);
-    text(ctx, `#${col.card.rank}`, col.x, ny + 52, '800 10', MUTED, 'center', 'middle');
+    text(ctx, `#${col.card.rank}`, col.x, ny + 54, '800 10', MUTED, 'center', 'middle');
   }
 
   // Stat boxes
   const colW = (CARD_W - PAD * 2 - 8) / 2;
-  const g1Top = 314;
-  const boxH = 58;
-  const statBox = (x: number, y: number, w: number, h: number, label: string, labelColor: string, value: string, valueFont: string, valueColor: string, sub?: string) => {
-    roundRect(ctx, x, y, w, h, 12);
-    ctx.fillStyle = PANEL;
-    ctx.fill();
-    roundRect(ctx, x + 0.5, y + 0.5, w - 1, h - 1, 12);
-    ctx.strokeStyle = LINE;
-    ctx.lineWidth = 1;
-    ctx.stroke();
-    text(ctx, label, x + 12, y + 16, '800 9.5', labelColor);
-    text(ctx, value, x + 12, y + (sub ? 36 : 40), valueFont, valueColor, 'left', 'alphabetic', w - 24);
-    if (sub) text(ctx, sub, x + 12, y + 50, '600 10', MUTED, 'left', 'alphabetic', w - 24);
-  };
+  statBox(ctx, PAD, statTop, colW, boxH, 'LEAGUE AVG', MUTED, model.avgGrade ?? '—', '850 22', model.avgGrade ? DRAFT_GRADE_COLORS[model.avgGrade] : MUTED, 'across all rosters');
+  statBox(ctx, PAD + colW + 8, statTop, colW, boxH, 'TOP PROJECTION', MUTED, num(model.topProjection), '850 22', TEXT, model.championName);
 
-  statBox(PAD, g1Top, colW, boxH, 'LEAGUE AVG', MUTED, model.avgGrade ?? '—', '850 22', model.avgGrade ? DRAFT_GRADE_COLORS[model.avgGrade] : MUTED, 'across all rosters');
-  statBox(PAD + colW + 8, g1Top, colW, boxH, 'TOP PROJECTION', MUTED, num(model.topProjection), '850 22', TEXT, model.championName);
-
-  const stealY = g1Top + boxH + 8;
   const fullW = CARD_W - PAD * 2;
+  const stealY = statTop + boxH + 8;
   if (model.leagueSteal) {
     const s = model.leagueSteal;
-    statBox(PAD, stealY, fullW, 46, '🥷 STEAL OF THE DRAFT', MINT, `${s.player.name} · ${s.player.position}`, '800 14', TEXT, `R${s.round} to ${s.team.name} — +${Math.max(0, s.valueRounds)} rds of value`);
+    statBox(ctx, PAD, stealY, fullW, calloutH, '🥷 STEAL OF THE DRAFT', MINT, `${s.player.name} · ${s.player.position}`, '800 14', TEXT, `R${s.round} to ${s.team.name} — +${Math.max(0, s.valueRounds)} rds of value`);
   }
-  const reachY = stealY + 54;
+  const reachY = stealY + calloutH + 8;
   if (model.leagueReach) {
     const r = model.leagueReach;
-    statBox(PAD, reachY, fullW, 46, '📈 BIGGEST REACH', REACH, `${r.player.name} · ${r.player.position}`, '800 14', TEXT, `R${r.round} by ${r.team.name} — ${Math.abs(Math.min(0, r.valueRounds))} rds early`);
+    statBox(ctx, PAD, reachY, fullW, calloutH, '📈 BIGGEST REACH', REACH, `${r.player.name} · ${r.player.position}`, '800 14', TEXT, `R${r.round} by ${r.team.name} — ${Math.abs(Math.min(0, r.valueRounds))} rds early`);
   }
 
   // Grade distribution
-  const distTop = reachY + 68;
-  text(ctx, 'GRADE DISTRIBUTION', PAD, distTop, '800 9.5', MUTED);
+  text(ctx, 'GRADE DISTRIBUTION', PAD, distLabelY, '800 9.5', MUTED);
   const colors: Record<string, string> = { A: '#3fd6a5', B: '#8bd23f', C: '#f6a642', D: '#f2793a', F: '#f8577d' };
   const maxCount = Math.max(1, ...model.distribution.map((d) => d.count));
-  const barMax = 46;
   const bw = (CARD_W - PAD * 2 - 4 * 8) / 5;
-  const baseY = distTop + 16 + barMax;
+  const baseY = barsTop + barMax;
   model.distribution.forEach((d, i) => {
     const x = PAD + i * (bw + 8);
     const h = d.count === 0 ? 4 : Math.round((d.count / maxCount) * barMax);
@@ -251,21 +281,49 @@ function renderLeague(model: LeagueGrade, scale: number): HTMLCanvasElement {
     text(ctx, d.letter, x + bw / 2, baseY + 12, '800 10', MUTED, 'center', 'middle');
   });
 
-  footer(ctx, 'Swipe → for every team', model.dateLabel);
+  footer(ctx, H, 'Swipe → for every team', model.dateLabel);
   return canvas;
 }
 
 // ── Card 3+: one team ──────────────────────────────────────────────────
 function renderTeam(model: LeagueGrade, card: TeamGradeCard, scale: number): HTMLCanvasElement {
-  const { canvas, ctx } = beginCard(scale);
-  brandRow(ctx, `${model.lobbyName} · ${model.season}`);
   const tint = DRAFT_GRADE_COLORS[card.grade];
+  const hy = 50;
+  const hh = 120;
+  const hw = CARD_W - PAD * 2;
+
+  // Lineup geometry.
+  const starters = card.starters;
+  const luLabelY = hy + hh + 26;
+  const luTop = luLabelY + 12;
+  const rowH = 27;
+  const luBottom = luTop + starters.length * rowH;
+
+  // Highlights.
+  const hlY = luBottom + 12;
+  const hlH = 50;
+
+  // Verdict — measure the blurb up front so the card ends at the right height.
+  const blurbX = PAD + 44;
+  const blurbW = CARD_W - PAD - blurbX;
+  let blurb: string;
+  if (card.peerComment) blurb = `“${card.peerComment}”`;
+  else if (card.peerGrade) blurb = `Peers graded this roster ${card.peerGrade}${card.crownVotes ? ` · ${card.crownVotes} crown vote${card.crownVotes > 1 ? 's' : ''}` : ''}.`;
+  else blurb = 'No peer grades in yet.';
+  let blurbLines = [blurb];
+  if (_measure) {
+    _measure.font = `italic 600 12px ${FONT}`;
+    blurbLines = wrapLines(_measure, blurb, blurbW, 3);
+  }
+  const vY = hlY + hlH + 14;
+  const verdictH = Math.max(52, 24 + blurbLines.length * 16 + 8);
+  const H = Math.round(vY + verdictH + FOOTER_H);
+
+  const { canvas, ctx } = beginCard(scale, H);
+  brandRow(ctx, `${model.lobbyName} · ${model.season}`);
 
   // Hero panel
   const hx = PAD;
-  const hy = 50;
-  const hw = CARD_W - PAD * 2;
-  const hh = 120;
   roundRect(ctx, hx, hy, hw, hh, 16);
   ctx.fillStyle = PANEL;
   ctx.fill();
@@ -313,40 +371,34 @@ function renderTeam(model: LeagueGrade, card: TeamGradeCard, scale: number): HTM
   metric(hx + 250, `👑 ${card.crownVotes}`, 'CROWN VOTES');
 
   // Lineup
-  const luLabelY = hy + hh + 26;
   text(ctx, 'OPTIMAL STARTING LINEUP', PAD, luLabelY, '800 9.5', MUTED);
   text(ctx, 'PROJ', CARD_W - PAD, luLabelY, '800 9.5', MUTED, 'right');
-
-  const starters = card.starters;
-  const luTop = luLabelY + 12;
-  const luBudget = 232;
-  const rowH = Math.min(28, luBudget / Math.max(1, starters.length));
   starters.forEach((row, i) => {
     const y = luTop + i * rowH;
     const cy = y + rowH / 2;
     if (i > 0) hline(ctx, PAD, y, CARD_W - PAD);
-    text(ctx, row.slot === 'SUPERFLEX' ? 'SFLX' : row.slot, PAD + 15, cy, '800 9.5', MUTED, 'center', 'middle');
-    const pos = row.player?.position ?? row.slot;
-    posPill(ctx, pos.length > 3 ? row.slot.slice(0, 3) : pos, PAD + 34, cy - 8, 34, 16);
+    const slotLabel = row.slot === 'SUPERFLEX' ? 'SFLX' : row.slot;
+    text(ctx, slotLabel, PAD + 15, cy, '800 9.5', MUTED, 'center', 'middle');
     if (row.player) {
+      posPill(ctx, row.player.position, PAD + 34, cy - 8, 34, 16);
       const nameX = PAD + 76;
       text(ctx, row.player.name, nameX, cy - 4, '700 12.5', TEXT, 'left', 'middle', CARD_W - PAD - nameX - 44);
       text(ctx, row.player.nfl_team, nameX, cy + 8, '600 10', MUTED, 'left', 'middle');
       text(ctx, num(row.player.proj_points ?? 0), CARD_W - PAD, cy, '750 12.5', TEXT, 'right', 'middle');
     } else {
+      posPill(ctx, slotLabel.slice(0, 3), PAD + 34, cy - 8, 34, 16);
       text(ctx, 'Empty', PAD + 76, cy, '600 12', MUTED, 'left', 'middle');
       text(ctx, '—', CARD_W - PAD, cy, '750 12.5', MUTED, 'right', 'middle');
     }
   });
 
   // Highlights
-  const hlY = luTop + starters.length * rowH + 12;
   const colW = (CARD_W - PAD * 2 - 8) / 2;
   const hlBox = (x: number, labelColor: string, label: string, v: PickValue | null, sign: '+' | '-') => {
-    roundRect(ctx, x, hlY, colW, 50, 11);
+    roundRect(ctx, x, hlY, colW, hlH, 11);
     ctx.fillStyle = 'rgba(255,255,255,0.015)';
     ctx.fill();
-    roundRect(ctx, x + 0.5, hlY + 0.5, colW - 1, 49, 11);
+    roundRect(ctx, x + 0.5, hlY + 0.5, colW - 1, hlH - 1, 11);
     ctx.strokeStyle = LINE;
     ctx.lineWidth = 1;
     ctx.stroke();
@@ -363,23 +415,14 @@ function renderTeam(model: LeagueGrade, card: TeamGradeCard, scale: number): HTM
   hlBox(PAD + colW + 8, REACH, '📈 BIGGEST REACH', card.biggestReach, '-');
 
   // Verdict
-  const vY = hlY + 62;
   hline(ctx, PAD, vY, CARD_W - PAD);
   gradeBadge(ctx, card.peerGrade, PAD, vY + 12, 30, 13);
   text(ctx, 'PEERS', PAD + 15, vY + 50, '800 8.5', MUTED, 'center', 'middle');
-  const blurbX = PAD + 44;
-  const blurbW = CARD_W - PAD - blurbX;
-  let blurb: string;
-  if (card.peerComment) blurb = `“${card.peerComment}”`;
-  else if (card.peerGrade) blurb = `Peers graded this roster ${card.peerGrade}${card.crownVotes ? ` · ${card.crownVotes} crown vote${card.crownVotes > 1 ? 's' : ''}` : ''}.`;
-  else blurb = 'No peer grades in yet.';
-  ctx.font = `italic 600 12px ${FONT}`;
-  const lines = wrapLines(ctx, blurb, blurbW, 3);
-  lines.forEach((ln, i) => {
+  blurbLines.forEach((ln, i) => {
     text(ctx, ln, blurbX, vY + 24 + i * 16, 'italic 600 12', FAINT, 'left', 'alphabetic');
   });
 
-  footer(ctx, model.lobbyName, model.dateLabel);
+  footer(ctx, H, model.lobbyName, model.dateLabel);
   return canvas;
 }
 
