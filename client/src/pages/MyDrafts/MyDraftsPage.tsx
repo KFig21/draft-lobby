@@ -4,6 +4,7 @@ import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlineOutlined';
+import EventOutlinedIcon from '@mui/icons-material/EventOutlined';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import PublicOutlinedIcon from '@mui/icons-material/PublicOutlined';
 import SensorsOutlinedIcon from '@mui/icons-material/SensorsOutlined';
@@ -26,11 +27,13 @@ const PAST_PAGE_SIZE = 10;
 type DraftModeFilter = 'ALL' | 'LIVE' | 'MOCK';
 type VisibilityFilter = 'ALL' | 'PRIVATE' | 'OPEN';
 type SortOrder = 'NEWEST' | 'OLDEST' | 'NAME';
+// The fantasy season to filter by, or 'ALL' for every year.
+type YearFilter = number | 'ALL';
 
 interface MyLobby {
   role: string;
   archived: boolean;
-  lobby: Pick<LobbyRow, 'id' | 'name' | 'status' | 'settings' | 'created_at'>;
+  lobby: Pick<LobbyRow, 'id' | 'name' | 'status' | 'settings' | 'created_at' | 'season'>;
 }
 
 interface RawRow {
@@ -86,7 +89,28 @@ export function MyDraftsPage() {
 
   const [draftModeFilter, setDraftModeFilter] = useState<DraftModeFilter>('ALL');
   const [visibilityFilter, setVisibilityFilter] = useState<VisibilityFilter>('ALL');
+  const [yearFilter, setYearFilter] = useState<YearFilter>('ALL');
   const [sortOrder, setSortOrder] = useState<SortOrder>('NEWEST');
+
+  // Every season the user has a draft in — populates the year filter dropdown.
+  // Fetched once (independent of the active filters) so switching years never
+  // shrinks the list of years you can switch back to.
+  const [availableYears, setAvailableYears] = useState<number[]>([]);
+  useEffect(() => {
+    if (!userId) return;
+    void supabase
+      .from('lobby_members')
+      .select('lobbies!inner ( season )')
+      .eq('user_id', userId)
+      .then(({ data }) => {
+        const years = new Set<number>();
+        for (const r of (data ?? []) as unknown as RawRow[]) {
+          const lobby = Array.isArray(r.lobbies) ? r.lobbies[0] : r.lobbies;
+          if (lobby?.season != null) years.add(lobby.season);
+        }
+        setAvailableYears([...years].sort((a, b) => b - a));
+      });
+  }, [userId]);
 
   // The draft currently being copied (opens CopyDraftModal).
   const [copySource, setCopySource] = useState<MyLobby['lobby'] | null>(null);
@@ -99,13 +123,13 @@ export function MyDraftsPage() {
     setSectionsLoading(true);
     let activeQ = supabase
       .from('lobby_members')
-      .select('role, archived, lobbies!inner ( id, name, status, settings, created_at )')
+      .select('role, archived, lobbies!inner ( id, name, status, settings, created_at, season )')
       .eq('user_id', userId)
       .eq('archived', false)
       .neq('lobbies.status', 'COMPLETE');
     let archivedQ = supabase
       .from('lobby_members')
-      .select('role, archived, lobbies!inner ( id, name, status, settings, created_at )')
+      .select('role, archived, lobbies!inner ( id, name, status, settings, created_at, season )')
       .eq('user_id', userId)
       .eq('archived', true);
     if (draftModeFilter !== 'ALL') {
@@ -116,6 +140,10 @@ export function MyDraftsPage() {
       activeQ = activeQ.eq('lobbies.settings->>visibility', visibilityFilter);
       archivedQ = archivedQ.eq('lobbies.settings->>visibility', visibilityFilter);
     }
+    if (yearFilter !== 'ALL') {
+      activeQ = activeQ.eq('lobbies.season', yearFilter);
+      archivedQ = archivedQ.eq('lobbies.season', yearFilter);
+    }
     Promise.all([activeQ, archivedQ]).then(([activeRes, archivedRes]) => {
       setActive(
         sortMyLobbies(toMyLobbies((activeRes.data ?? []) as unknown as RawRow[]), sortOrder),
@@ -125,7 +153,7 @@ export function MyDraftsPage() {
       );
       setSectionsLoading(false);
     });
-  }, [userId, draftModeFilter, visibilityFilter, sortOrder]);
+  }, [userId, draftModeFilter, visibilityFilter, yearFilter, sortOrder]);
 
   const loadPast = useCallback(
     (page: number) => {
@@ -133,12 +161,13 @@ export function MyDraftsPage() {
       setPastLoading(true);
       let q = supabase
         .from('lobby_members')
-        .select('role, archived, lobbies!inner ( id, name, status, settings, created_at )')
+        .select('role, archived, lobbies!inner ( id, name, status, settings, created_at, season )')
         .eq('user_id', userId)
         .eq('archived', false)
         .eq('lobbies.status', 'COMPLETE');
       if (draftModeFilter !== 'ALL') q = q.eq('lobbies.settings->>draftMode', draftModeFilter);
       if (visibilityFilter !== 'ALL') q = q.eq('lobbies.settings->>visibility', visibilityFilter);
+      if (yearFilter !== 'ALL') q = q.eq('lobbies.season', yearFilter);
       // No server-side range/order here — see sortMyLobbies for why. The full
       // set of a single user's past drafts is small, so fetching it all and
       // paginating the (correctly) sorted array client-side is cheap.
@@ -149,7 +178,7 @@ export function MyDraftsPage() {
         setPastLoading(false);
       });
     },
-    [userId, draftModeFilter, visibilityFilter, sortOrder],
+    [userId, draftModeFilter, visibilityFilter, yearFilter, sortOrder],
   );
 
   useEffect(() => {
@@ -160,7 +189,7 @@ export function MyDraftsPage() {
   useEffect(() => {
     setPastPage(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draftModeFilter, visibilityFilter, sortOrder]);
+  }, [draftModeFilter, visibilityFilter, yearFilter, sortOrder]);
 
   async function setLobbyArchived(row: MyLobby, archivedNext: boolean) {
     // Optimistic — the flag is personal so there's no conflict to reconcile.
@@ -314,6 +343,23 @@ export function MyDraftsPage() {
             </button>
           ))}
         </div>
+        {availableYears.length > 1 && (
+          <select
+            className="my-drafts__sort my-drafts__year"
+            value={yearFilter}
+            onChange={(e) =>
+              setYearFilter(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))
+            }
+            aria-label="Filter by season"
+          >
+            <option value="ALL">All years</option>
+            {availableYears.map((y) => (
+              <option key={y} value={y}>
+                {y} season
+              </option>
+            ))}
+          </select>
+        )}
         <select
           className="my-drafts__sort"
           value={sortOrder}
@@ -465,6 +511,9 @@ function LobbyList({
               <div className="lobby-list__main">
                 <div className="lobby-list__name-row">
                   <span className="lobby-list__name">{lobby.name}</span>
+                  <span className="lobby-list__badge lobby-list__badge--season">
+                    <EventOutlinedIcon fontSize="inherit" /> {lobby.season}
+                  </span>
                   <span className="lobby-list__badge">
                     {settings.draftMode === 'MOCK' ? (
                       <>

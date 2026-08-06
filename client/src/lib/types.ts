@@ -17,6 +17,8 @@ export interface LobbyRow {
   commissioner_id: string;
   settings: LobbySettings;
   status: LobbyStatus;
+  /** Fantasy season this draft is for (e.g. 2026) — see migration 0040. */
+  season: number;
   current_overall: number;
   pick_deadline: string | null;
   pick_deadline_remaining_ms: number | null;

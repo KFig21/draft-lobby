@@ -57,6 +57,10 @@ lobbiesRouter.post('/', async (req: AuthedRequest, res: Response) => {
       password_hash: hashPassword(password ?? ''),
       settings,
       status: 'SETUP',
+      // The fantasy season this draft is for — same convention as the player
+      // importer's SEASON. Tags the draft (My Drafts year badge/filter) and
+      // will select its player_seasons data in Phase 2.
+      season: new Date().getUTCFullYear(),
       results_public: resultsPublic,
       chat_public: chatPublic,
       public_voting_allowed: publicVotingAllowed,
