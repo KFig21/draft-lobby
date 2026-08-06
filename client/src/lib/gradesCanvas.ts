@@ -111,8 +111,50 @@ function posPill(ctx: CanvasRenderingContext2D, pos: string, x: number, y: numbe
   text(ctx, pos, x + w / 2, y + h / 2 + 0.5, '700 10', '#0b0f11', 'center', 'middle');
 }
 
-function num(n: number): string {
-  return Math.round(n).toLocaleString('en-US');
+// Fractional part of a projection is drawn at this fraction of the whole-number
+// size, so the big value reads first and the ".x" is a quiet suffix.
+const PROJ_DECIMAL_SCALE = 0.75;
+
+/**
+ * Draw a projection like "308.5" with the fractional part smaller than the
+ * whole-number part (they share a baseline). `intPx` is the whole-number size;
+ * the ".x" is drawn at intPx * PROJ_DECIMAL_SCALE.
+ */
+function drawProj(
+  ctx: CanvasRenderingContext2D,
+  value: number,
+  x: number,
+  y: number,
+  intPx: number,
+  color: string,
+  opts: {
+    align?: 'left' | 'right';
+    weight?: string;
+    family?: string;
+    italic?: boolean;
+    baseline?: Baseline;
+  } = {},
+): void {
+  const { align = 'left', weight = '600', family = FONT, italic = false, baseline = 'alphabetic' } = opts;
+  const [intRaw, dec] = (Math.round(value * 10) / 10).toFixed(1).split('.');
+  const intStr = Number(intRaw).toLocaleString('en-US');
+  const decStr = `.${dec}`;
+  const it = italic ? 'italic ' : '';
+  const intFont = `${it}${weight} ${intPx}px ${family}`;
+  const decFont = `${it}${weight} ${intPx * PROJ_DECIMAL_SCALE}px ${family}`;
+
+  ctx.fillStyle = color;
+  ctx.textBaseline = baseline;
+  ctx.textAlign = 'left';
+  ctx.font = intFont;
+  const intW = ctx.measureText(intStr).width;
+  ctx.font = decFont;
+  const decW = ctx.measureText(decStr).width;
+  const left = align === 'right' ? x - (intW + decW) : x;
+  ctx.font = intFont;
+  ctx.fillText(intStr, left, y);
+  ctx.font = decFont;
+  ctx.fillText(decStr, left + intW, y);
 }
 
 function slug(name: string): string {
@@ -234,7 +276,7 @@ function renderAllTeams(model: LeagueGrade, scale: number): HTMLCanvasElement {
     text(ctx, t.ownerLabel, nameX, cy + 9, '500 11', MUTED, 'left', 'middle', CARD_W - nameX - 96);
     const badgeX = CARD_W - PAD - 28;
     gradeBadge(ctx, t.grade, badgeX, cy - 14, 28, 13);
-    text(ctx, num(t.starterPoints), badgeX - 12, cy - 3, '600 12', TEXT, 'right', 'middle');
+    drawProj(ctx, t.starterPoints, badgeX - 12, cy - 3, 12, TEXT, { align: 'right', baseline: 'middle' });
     text(ctx, 'PROJ', badgeX - 12, cy + 9, '600 8', MUTED, 'right', 'middle');
   });
 
@@ -285,7 +327,7 @@ function projBox(
   w: number,
   h: number,
   label: string,
-  value: string,
+  value: number,
   color: string,
   numSize: number,
   sub?: string,
@@ -298,11 +340,7 @@ function projBox(
   ctx.lineWidth = 1;
   ctx.stroke();
   text(ctx, label, x + 12, y + 17, '700 9', MUTED, 'left', 'alphabetic', w - 20);
-  ctx.font = `italic 600 ${numSize}px ${FUTURA}`;
-  ctx.fillStyle = color;
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'alphabetic';
-  ctx.fillText(fitText(ctx, value, w - 24), x + 12, y + 42);
+  drawProj(ctx, value, x + 12, y + 42, numSize, color, { weight: '600', family: FUTURA, italic: true });
   if (sub) text(ctx, sub, x + 12, y + 56, '500 9.5', MUTED, 'left', 'alphabetic', w - 20);
 }
 
@@ -353,9 +391,9 @@ function renderLeague(model: LeagueGrade, scale: number): HTMLCanvasElement {
   const gap3 = 8;
   const colW3 = (CARD_W - PAD * 2 - gap3 * 2) / 3;
   const projBase = 22;
-  projBox(ctx, PAD, statTop, colW3, projBoxH, 'TOP PROJECTION', num(model.topProjection), '#3fd6a5', projBase * 1, model.topProjName);
-  projBox(ctx, PAD + colW3 + gap3, statTop, colW3, projBoxH, 'AVG PROJECTION', num(model.avgProjection), '#f6a642', projBase * .88);
-  projBox(ctx, PAD + (colW3 + gap3) * 2, statTop, colW3, projBoxH, 'LOW PROJECTION', num(model.lowProjection), '#f8577d', projBase * 0.78, model.lowProjName);
+  projBox(ctx, PAD, statTop, colW3, projBoxH, 'TOP PROJECTION', model.topProjection, '#3fd6a5', projBase * 1, model.topProjName);
+  projBox(ctx, PAD + colW3 + gap3, statTop, colW3, projBoxH, 'AVG PROJECTION', model.avgProjection, '#f6a642', projBase * .88);
+  projBox(ctx, PAD + (colW3 + gap3) * 2, statTop, colW3, projBoxH, 'LOW PROJECTION', model.lowProjection, '#f8577d', projBase * 0.78, model.lowProjName);
 
   const fullW = CARD_W - PAD * 2;
   const stealY = statTop + projBoxH + gapY;
@@ -465,7 +503,8 @@ function renderTeam(model: LeagueGrade, card: TeamGradeCard, scale: number): HTM
     text(ctx, value, x, my, '750 19', TEXT, 'left', 'alphabetic');
     text(ctx, lab, x, my + 13, '600 9', MUTED, 'left', 'alphabetic');
   };
-  metric(hx + 14, num(card.starterPoints), 'PROJ STARTER PTS');
+  drawProj(ctx, card.starterPoints, hx + 14, my, 19, TEXT, { weight: '750' });
+  text(ctx, 'PROJ STARTER PTS', hx + 14, my + 13, '600 9', MUTED, 'left', 'alphabetic');
   metric(hx + 150, `#${card.rank}`, 'LEAGUE RANK');
   // Crown votes — trophy icon + count (replaces the 👑 emoji).
   const cvX = hx + 250;
@@ -487,13 +526,15 @@ function renderTeam(model: LeagueGrade, card: TeamGradeCard, scale: number): HTM
       const nameX = PAD + 76;
       text(ctx, row.player.name, nameX, cy - 5, '600 12.5', TEXT, 'left', 'middle', CARD_W - PAD - nameX - 44);
       text(ctx, row.player.nfl_team, nameX, cy + 9, '500 10', MUTED, 'left', 'middle');
-      // Projected points in Futura italic. Futura's 'middle' baseline sits high,
-      // so place the baseline explicitly to center the digits on the row.
-      ctx.font = `italic 500 13.5px ${FUTURA}`;
-      ctx.fillStyle = TEXT;
-      ctx.textAlign = 'right';
-      ctx.textBaseline = 'alphabetic';
-      ctx.fillText(num(row.player.proj_points ?? 0), CARD_W - PAD, cy + 4.5);
+      // Projected points in Futura italic, fractional part smaller. Futura's
+      // 'middle' baseline sits high, so place the baseline explicitly (cy + 4.5)
+      // to center the digits on the row.
+      drawProj(ctx, row.player.proj_points ?? 0, CARD_W - PAD, cy + 4.5, 13.5, TEXT, {
+        align: 'right',
+        weight: '500',
+        family: FUTURA,
+        italic: true,
+      });
     } else {
       posPill(ctx, slotLabel.slice(0, 3), PAD + 34, cy - 8, 34, 16);
       text(ctx, 'Empty', PAD + 76, cy, '500 12', MUTED, 'left', 'middle');
