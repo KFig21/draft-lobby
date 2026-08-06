@@ -498,7 +498,7 @@ function LobbyList({
                 {lobby.status}
               </span>
             </Link>
-            {renderAction?.(row)}
+            {renderAction && <div className="lobby-list__actions">{renderAction(row)}</div>}
           </li>
         );
       })}
