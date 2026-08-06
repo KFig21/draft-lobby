@@ -77,6 +77,7 @@ export function TeamLineup({
     const pos = playersById.get(p.player_id)?.position as Position | undefined;
     if (pos) posCounts[pos] += 1;
   }
+  const rosterSize = POSITIONS.reduce((sum, pos) => sum + posCounts[pos], 0);
 
   return (
     <div className="lineup-view">
@@ -121,18 +122,24 @@ export function TeamLineup({
 
       {belowSelect}
 
-      <div className="lineup-view__composition">
-        {POSITIONS.map((pos) => (
-          <span
-            key={pos}
-            className="roster-count"
-            style={{ ['--pos' as string]: POSITION_COLORS[pos] }}
-          >
-            <span className="roster-count__pos">{pos === 'DEF' ? 'D/ST' : pos}</span>
-            <span className="roster-count__n">{posCounts[pos]}</span>
-          </span>
-        ))}
-      </div>
+      <section className="lineup-view__section">
+        <h4 className="lineup-view__section-title">
+          <span>Position breakdown</span>
+          <span className="lineup-view__section-count">{rosterSize}</span>
+        </h4>
+        <div className="lineup-view__composition">
+          {POSITIONS.map((pos) => (
+            <span
+              key={pos}
+              className="roster-count"
+              style={{ ['--pos' as string]: POSITION_COLORS[pos] }}
+            >
+              <span className="roster-count__pos">{pos === 'DEF' ? 'D/ST' : pos}</span>
+              <span className="roster-count__n">{posCounts[pos]}</span>
+            </span>
+          ))}
+        </div>
+      </section>
 
       <section className="lineup-view__section">
         <h4 className="lineup-view__section-title">

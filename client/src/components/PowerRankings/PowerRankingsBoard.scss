@@ -275,6 +275,12 @@
       gap: 8px;
     }
 
+    // Proj total: vertically centered but kept left-aligned (it's wider, with
+    // the +/- delta beside the value).
+    &--vc {
+      justify-content: center;
+    }
+
     &__lab {
       font-size: 9px;
       font-weight: 700;
