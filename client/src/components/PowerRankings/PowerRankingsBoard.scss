@@ -37,11 +37,48 @@
     padding: 14px;
   }
 
-  &__topline {
+  &__header {
     flex: 0 0 auto;
     display: flex;
-    justify-content: flex-end;
-    padding: 10px 14px 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 12px 14px;
+    border-bottom: 1px solid $border;
+  }
+
+  &__header-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+
+    h2 {
+      margin: 0;
+      font-size: 19px;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      white-space: nowrap;
+    }
+  }
+
+  &__help {
+    display: grid;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    border: none;
+    border-radius: 50%;
+    background: $bg-overlay;
+    color: $text-muted;
+    font-size: 13px;
+    cursor: pointer;
+    flex: 0 0 auto;
+
+    &:hover {
+      color: $text;
+      background: $bg-hover;
+    }
   }
 
   &__share {
@@ -57,6 +94,7 @@
     font-size: 12px;
     font-weight: 600;
     cursor: pointer;
+    flex: 0 0 auto;
 
     &:hover {
       background: $bg-hover;
@@ -99,8 +137,11 @@
 
     &.is-active {
       background: $bg-raised;
-      border-color: $bstrong;
-      box-shadow: inset 3px 0 0 $accent;
+      border-color: $accent;
+
+      :root[data-theme='light'] & {
+        border-color: $primary;
+      }
     }
 
     &.is-mine .prb-rank__name {
@@ -113,7 +154,10 @@
       text-align: center;
       color: $text-muted;
       &.m1 { color: $keeper; }
-      &.m2 { color: #c4ccd2; }
+      &.m2 {
+        color: #c4ccd2;
+        :root[data-theme='light'] & { color: #8a94a6; }
+      }
       &.m3 { color: #d08a52; }
     }
 
@@ -207,7 +251,9 @@
   &-metrics {
     display: grid;
     grid-template-columns: 1fr 1fr;
+    grid-auto-rows: 1fr; // all four tiles share one height
     gap: 9px;
+    height: 100%;
   }
 
   &-metric {
@@ -217,8 +263,8 @@
     padding: 10px 12px;
     display: flex;
     flex-direction: column;
-    gap: 3px;
-    justify-content: center;
+    gap: 6px;
+    justify-content: space-between; // label pinned to the top, value to the bottom
 
     &__lab {
       font-size: 9px;
@@ -241,6 +287,15 @@
         gap: 5px;
         svg { color: $keeper; font-size: 18px; }
       }
+
+      // Grade-coloured proj total — the A/B greens are bright for dark mode but
+      // too washed out as text on the light theme, so darken them there.
+      &--proj {
+        color: var(--grade);
+        :root[data-theme='light'] & {
+          color: color-mix(in srgb, var(--grade) 62%, #0b1014);
+        }
+      }
     }
 
     &__row {
@@ -259,7 +314,10 @@
       gap: 3px;
       font-variant-numeric: tabular-nums;
       small { font-size: 9px; font-weight: 600; color: $text-muted; letter-spacing: 0.03em; }
-      &.pos { color: $accent; }
+      &.pos {
+        color: $accent;
+        :root[data-theme='light'] & { color: $primary; }
+      }
       &.neg { color: $danger; }
     }
   }
@@ -297,7 +355,7 @@
       top: 0;
       height: 100%;
       border-radius: 6px;
-      opacity: 0.55;
+      opacity: 0.7;
     }
 
     &__knob {
@@ -397,7 +455,12 @@
       flex: 0 0 auto;
     }
 
-    &__nm { min-width: 0; }
+    &__nm {
+      display: flex;
+      align-items: baseline;
+      gap: 7px;
+      min-width: 0;
+    }
 
     &__name {
       font-weight: 650;
@@ -405,6 +468,8 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      flex: 0 1 auto;
+      min-width: 0;
     }
 
     &__keeper {
@@ -418,7 +483,7 @@
       vertical-align: 1px;
     }
 
-    &__team { color: $text-muted; font-size: 11px; margin-top: 1px; }
+    &__team { color: $text-muted; font-size: 11px; flex: 0 0 auto; }
 
     &__pp {
       font-size: 13.5px;
@@ -639,5 +704,16 @@
     font-size: 12.5px;
     cursor: pointer;
     &:hover { background: $primary-hover; }
+  }
+}
+
+// Help modal body — rendered in a portal, so it lives outside .prb.
+.prb-help {
+  p {
+    margin: 0 0 12px;
+    font-size: 14px;
+    line-height: 1.55;
+    color: $text;
+    &:last-child { margin-bottom: 0; }
   }
 }

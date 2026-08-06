@@ -11,10 +11,11 @@ import {
 } from '@draft-lobby/shared';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
+import InfoOutlineIcon from '@mui/icons-material/InfoOutlined';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import ThumbDownAltIcon from '@mui/icons-material/ThumbDownAlt';
 import ThumbUpAltIcon from '@mui/icons-material/ThumbUpAlt';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { buildLineup, computePowerRankings } from '../../lib/powerRankings';
 import { avatarForTeam } from '../../lib/teamAvatar';
 import type {
@@ -28,6 +29,7 @@ import type {
 } from '../../lib/types';
 import { Avatar } from '../Avatar/Avatar';
 import { GradeBadge } from '../GradeBadge/GradeBadge';
+import { Modal } from '../Modal/Modal';
 import './PowerRankingsBoard.scss';
 
 interface Props {
@@ -162,6 +164,7 @@ export function PowerRankingsBoard({
   // Selection: prefer the viewer's own team, fall back to #1. Derived so it
   // stays valid if teams change; clicks update the underlying state.
   const [picked, setPicked] = useState<string | null>(myTeamId ?? null);
+  const [showHelp, setShowHelp] = useState(false);
   const selectedId =
     picked && rankings.some((r) => r.team.id === picked)
       ? picked
@@ -290,16 +293,29 @@ export function PowerRankingsBoard({
   };
 
   return (
+    <>
     <div className="prb">
       {/* ── LEFT: standings ─────────────────────────────── */}
       <div className="prb__col prb__col--left">
-        {onExportGrades && (
-          <div className="prb__topline">
-            <button type="button" className="prb__share" onClick={onExportGrades}>
-              <FileDownloadOutlinedIcon fontSize="inherit" /> Share grades
+        <div className="prb__header">
+          <div className="prb__header-title">
+            <h2>Power Rankings</h2>
+            <button
+              type="button"
+              className="prb__help"
+              onClick={() => setShowHelp(true)}
+              aria-label="How grades work"
+              title="How grades work"
+            >
+              <InfoOutlineIcon fontSize="inherit" />
             </button>
           </div>
-        )}
+          {onExportGrades && (
+            <button type="button" className="prb__share" onClick={onExportGrades}>
+              <FileDownloadOutlinedIcon fontSize="inherit" /> Share
+            </button>
+          )}
+        </div>
         <div className="prb__scroll">
           {rankings.map((r) => {
             const t = r.team;
@@ -376,8 +392,8 @@ export function PowerRankingsBoard({
                 <span className="prb-metric__lab">PROJ STARTER PTS</span>
                 <span className="prb-metric__row">
                   <span
-                    className="prb-metric__val"
-                    style={{ color: DRAFT_GRADE_COLORS[selected.grade] }}
+                    className="prb-metric__val prb-metric__val--proj"
+                    style={{ ['--grade']: DRAFT_GRADE_COLORS[selected.grade] } as CSSProperties}
                   >
                     <ProjPoints value={selected.starterPoints} />
                   </span>
@@ -579,5 +595,25 @@ export function PowerRankingsBoard({
         </div>
       </div>
     </div>
+    {showHelp && (
+      <Modal title="How grades are calculated" onClose={() => setShowHelp(false)}>
+        <div className="prb-help">
+          <p>
+            Every team is ranked by the projected points of its <b>optimal starting lineup</b> —
+            the best players it drafted, slotted into the league’s starting positions (flex and
+            superflex included), bench excluded.
+          </p>
+          <p>
+            Those totals are put on a sliding scale: the highest earns <b>A+</b>, the lowest{' '}
+            <b>F</b>, and everyone else lands in between based on how their total compares.
+          </p>
+          <p>
+            The <b>peer grades</b> and <b>crown votes</b> are separate — the league’s own opinion,
+            shown alongside the projected grade, and they can (and often will) disagree with it.
+          </p>
+        </div>
+      </Modal>
+    )}
+    </>
   );
 }
