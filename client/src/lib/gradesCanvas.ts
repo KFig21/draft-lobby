@@ -357,7 +357,10 @@ function renderTeam(model: LeagueGrade, card: TeamGradeCard, scale: number): HTM
     vContent += 18; // single fallback line
   }
   const verdictH = Math.max(52, 14 + vContent);
-  const H = Math.round(vY + verdictH + FOOTER_H);
+  // Centered, grade-colored rank badge sits between the verdict and the footer.
+  const rankBadgeH = 26;
+  const rankBadgeY = vY + verdictH + 8;
+  const H = Math.round(rankBadgeY + rankBadgeH + FOOTER_H);
 
   const { canvas, ctx } = beginCard(scale, H);
   brandRow(ctx, `${model.lobbyName} · ${model.season}`);
@@ -382,18 +385,6 @@ function renderTeam(model: LeagueGrade, card: TeamGradeCard, scale: number): HTM
   ctx.strokeStyle = LINE;
   ctx.lineWidth = 1;
   ctx.stroke();
-
-  // rank pill
-  ctx.font = `700 10px ${FONT}`;
-  const rankLabel = `#${card.rank} of ${model.teamCount}`;
-  const lw = ctx.measureText(rankLabel).width + 18;
-  roundRect(ctx, hx + 14, hy + 12, lw, 20, 999);
-  ctx.fillStyle = 'rgba(255,255,255,0.05)';
-  ctx.fill();
-  ctx.strokeStyle = LINE;
-  ctx.lineWidth = 1;
-  ctx.stroke();
-  text(ctx, rankLabel, hx + 14 + lw / 2, hy + 22, '700 10', MUTED, 'center', 'middle');
 
   drawAvatar(ctx, card.avatar, hx + 14, hy + 46, 40);
   text(ctx, card.team.name, hx + 64, hy + 62, '750 18', TEXT, 'left', 'alphabetic', hw - 64 - 66);
@@ -485,6 +476,15 @@ function renderTeam(model: LeagueGrade, card: TeamGradeCard, scale: number): HTM
   } else {
     text(ctx, 'No peer grades in yet.', blurbX, vY + 28, 'italic 500 12', FAINT);
   }
+
+  // Rank badge — centered, filled with the team's draft-grade color.
+  const rankLabel = `#${card.rank} of ${model.teamCount}`;
+  ctx.font = `800 11px ${FONT}`;
+  const rbW = ctx.measureText(rankLabel).width + 28;
+  roundRect(ctx, (CARD_W - rbW) / 2, rankBadgeY, rbW, rankBadgeH, 999);
+  ctx.fillStyle = tint;
+  ctx.fill();
+  text(ctx, rankLabel, CARD_W / 2, rankBadgeY + rankBadgeH / 2 + 0.5, '800 11', ON_GRADE, 'center', 'middle');
 
   footer(ctx, H, model.lobbyName, model.dateLabel);
   return canvas;
