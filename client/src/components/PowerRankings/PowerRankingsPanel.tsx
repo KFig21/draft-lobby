@@ -125,7 +125,7 @@ export function PowerRankingsPanel({
             </div>
             {onExportGrades && (
               <button type="button" className="power-rankings__export" onClick={onExportGrades}>
-                <FileDownloadOutlinedIcon fontSize="inherit" /> Share draft grades
+                <FileDownloadOutlinedIcon fontSize="inherit" /> Share
               </button>
             )}
           </div>
