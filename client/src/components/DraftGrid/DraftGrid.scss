@@ -459,6 +459,17 @@
     opacity: 0.8;
   }
 
+  // Desktop & tablet: trim the timer icon down to 0.9× its box for a slightly
+  // smaller look. Qualified with the label parent (0,2,0) so it beats MUI's own
+  // .MuiSvgIcon-root width/height (tied specificity — same trap noted on the
+  // mobile override below). Mobile keeps its own inline size (further down).
+  @media (min-width: #{$bp-md}) {
+    &__onclock-label &__onclock-icon {
+      width: 0.9em;
+      height: 0.9em;
+    }
+  }
+
   // Mobile: the big stacked timer icon on top of the wrapped label made the
   // on-the-clock cell taller than its row's pick cells, stretching the whole
   // row. Shrink the icon (1.5em → 1em) and close the gap so the cell keeps the
