@@ -22,7 +22,8 @@ export interface PickValue {
   player: PlayerRow;
   round: number;
   adpRound: number;
-  /** adpRound − round: how many rounds later than ADP the player was taken. */
+  /** round − adpRound: how many rounds later than ADP the player was taken
+   * (+ = a value/steal, − = a reach). */
   valueRounds: number;
 }
 
@@ -93,17 +94,20 @@ function pickValues(
     if (teamId && pick.team_id !== teamId) continue;
     const player = playersById.get(pick.player_id);
     if (!player || player.adp == null) continue;
-    const raw = player.adp - pick.overall; // + = taken later than ADP (value)
+    // + = the actual pick number is LATER than ADP → drafted at a discount
+    // (a value/steal); − = taken EARLIER than ADP (a reach).
+    const raw = pick.overall - player.adp;
+    const adpRound = Math.max(1, Math.ceil(player.adp / teamCount));
     const entry: PickValue & { team_id: string; raw: number } = {
       player,
       round: pick.round,
-      adpRound: Math.max(1, Math.ceil(player.adp / teamCount)),
-      valueRounds: Math.max(1, Math.ceil(player.adp / teamCount)) - pick.round,
+      adpRound,
+      valueRounds: pick.round - adpRound, // + rounds later than ADP = value
       team_id: pick.team_id,
       raw,
     };
-    if (!best || raw > best.raw) best = entry;
-    if (!reach || raw < reach.raw) reach = entry;
+    if (!best || raw > best.raw) best = entry; // most value
+    if (!reach || raw < reach.raw) reach = entry; // biggest reach
   }
   const strip = (e: typeof best) =>
     e ? { player: e.player, round: e.round, adpRound: e.adpRound, valueRounds: e.valueRounds, team_id: e.team_id } : null;
