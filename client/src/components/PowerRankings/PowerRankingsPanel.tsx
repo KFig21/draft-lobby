@@ -50,6 +50,10 @@ interface Props {
   onPickClick?: (pick: PickRow) => void;
   /** When set, shows a "Share draft grades" button that opens the PNG export. */
   onExportGrades?: () => void;
+  /** Recap mode (the post-draft outro modal): a read-only standings list —
+   * hides the peer-grade indicators and the per-row "League grades received" +
+   * "Your take" sections, since crowning/grading lives in the Power Rankings tab. */
+  readOnly?: boolean;
 }
 
 /**
@@ -75,6 +79,7 @@ export function PowerRankingsPanel({
   onGrade,
   onPickClick,
   onExportGrades,
+  readOnly = false,
 }: Props) {
   const [showHelp, setShowHelp] = useState(false);
 
@@ -137,12 +142,16 @@ export function PowerRankingsPanel({
             <span className="power-rankings__legend-item">
               <GradeBadge grade="A" size={16} /> App grade (projected)
             </span>
-            <span className="power-rankings__legend-item">
-              <EmojiEventsOutlinedIcon fontSize="inherit" /> Crown votes from the league
-            </span>
-            <span className="power-rankings__legend-item">
-              <b>Peer</b> — grade the league gave them
-            </span>
+            {!readOnly && (
+              <>
+                <span className="power-rankings__legend-item">
+                  <EmojiEventsOutlinedIcon fontSize="inherit" /> Crown votes from the league
+                </span>
+                <span className="power-rankings__legend-item">
+                  <b>Peer</b> — grade the league gave them
+                </span>
+              </>
+            )}
           </div>
           {locked && (
             <p className="power-rankings__locked">
@@ -176,6 +185,7 @@ export function PowerRankingsPanel({
               locked={locked}
               canVote={canVote}
               canGrade={canGrade}
+              readOnly={readOnly}
               onVote={() => onVote(row.team.id)}
               onGrade={(grade, comment) => onGrade(row.team.id, grade, comment)}
               onPickClick={onPickClick}
@@ -229,6 +239,7 @@ function RankRow({
   locked,
   canVote,
   canGrade,
+  readOnly,
   onVote,
   onGrade,
   onPickClick,
@@ -251,6 +262,7 @@ function RankRow({
   locked: boolean;
   canVote: boolean;
   canGrade: boolean;
+  readOnly: boolean;
   onVote: () => void;
   onGrade: (grade: DraftGrade, comment: string) => void;
   onPickClick?: (pick: PickRow) => void;
@@ -304,21 +316,23 @@ function RankRow({
           </span>
         </span>
 
-        <span className="pr-row__side">
-          <span className="pr-row__votes" title="Crown votes">
-            <EmojiEventsIcon fontSize="inherit" /> {voteCount}
+        {!readOnly && (
+          <span className="pr-row__side">
+            <span className="pr-row__votes" title="Crown votes">
+              <EmojiEventsIcon fontSize="inherit" /> {voteCount}
+            </span>
+            <span className="pr-row__peer">
+              Peer{' '}
+              {peerGrade ? (
+                <>
+                  <b>{peerGrade}</b> · {teamGrades.length}
+                </>
+              ) : (
+                <span className="muted">—</span>
+              )}
+            </span>
           </span>
-          <span className="pr-row__peer">
-            Peer{' '}
-            {peerGrade ? (
-              <>
-                <b>{peerGrade}</b> · {teamGrades.length}
-              </>
-            ) : (
-              <span className="muted">—</span>
-            )}
-          </span>
-        </span>
+        )}
 
         <GradeBadge grade={grade} size={46} />
 
@@ -327,7 +341,7 @@ function RankRow({
 
       {open && (
         <div className="pr-row__detail">
-          <div className="pr-row__detail-grid">
+          <div className={`pr-row__detail-grid${readOnly ? ' pr-row__detail-grid--solo' : ''}`}>
             <section className="pr-row__col">
               <h4 className="pr-row__col-title">
                 Projected starting lineup · {starterPoints.toFixed(1)} pts
@@ -367,6 +381,7 @@ function RankRow({
               </ul>
             </section>
 
+            {!readOnly && (
             <section className="pr-row__col">
               <h4 className="pr-row__col-title">
                 League grades received{teamGrades.length > 0 ? ` · ${teamGrades.length}` : ''}
@@ -445,6 +460,7 @@ function RankRow({
                 )
               )}
             </section>
+            )}
           </div>
         </div>
       )}

@@ -81,28 +81,65 @@
     line-height: 1.4;
   }
 
+  // Grade "hero" card: tinted by the grade color, badge on the right, rank +
+  // caption on the left. --grade is set inline from DRAFT_GRADE_COLORS.
   &__grade {
+    --grade: #{$primary};
+    position: relative;
     display: flex;
-    flex-wrap: wrap;
     align-items: center;
-    gap: $space;
+    justify-content: space-between;
+    gap: $space * 1.5;
     margin-bottom: $space * 2;
-    padding: $space * 1.25;
-    border: 1px solid $border;
-    border-radius: $radius-sm;
-    background: $bg;
+    padding: $space * 1.5 $space * 1.75;
+    border: 1px solid color-mix(in srgb, var(--grade) 45%, $border);
+    border-radius: $radius;
+    background:
+      radial-gradient(
+        130% 150% at 108% -10%,
+        color-mix(in srgb, var(--grade) 26%, transparent),
+        transparent 62%
+      ),
+      $bg;
+    overflow: hidden;
+
+    // Soft glow behind the badge to give the card some depth.
+    .grade-badge {
+      flex-shrink: 0;
+      box-shadow: 0 8px 22px -6px color-mix(in srgb, var(--grade) 70%, transparent);
+    }
+  }
+
+  &__grade-info {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
   }
 
   &__grade-label {
-    font-size: 0.8rem;
-    font-weight: 700;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
     color: $text-muted;
   }
 
-  // (Grade badge itself now rendered by the shared <GradeBadge> component.)
+  &__grade-rank {
+    font-size: 1.55rem;
+    font-weight: 800;
+    line-height: 1.05;
+    color: $text;
+    font-variant-numeric: tabular-nums;
+
+    .muted {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: $text-muted;
+    }
+  }
 
   &__grade-note {
-    flex-basis: 100%;
     font-size: 0.75rem;
   }
 
@@ -121,6 +158,28 @@
     flex-direction: column;
     gap: $space * 0.75;
     margin-bottom: $space * 2;
+  }
+
+  // Each roster row: a "round.pick" tag, then the player card.
+  &__roster-row {
+    display: flex;
+    align-items: center;
+    gap: $space * 0.75;
+
+    .player-card {
+      flex: 1;
+      min-width: 0;
+    }
+  }
+
+  &__pick-num {
+    flex-shrink: 0;
+    width: 2.6rem;
+    text-align: center;
+    font-size: 0.78rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: $text-muted;
   }
 
   &__continue {

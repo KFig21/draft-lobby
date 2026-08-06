@@ -436,6 +436,14 @@
     @include md {
       grid-template-columns: 1.1fr 1fr;
     }
+
+    // Recap mode (outro modal): only the lineup column — keep it full width
+    // instead of leaving the grades column's empty half.
+    &--solo {
+      @include md {
+        grid-template-columns: 1fr;
+      }
+    }
   }
 
   &__col {

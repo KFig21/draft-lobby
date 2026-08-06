@@ -1,6 +1,6 @@
-import type { DraftGrade, LobbySettings } from '@draft-lobby/shared';
+import { DRAFT_GRADE_COLORS, type DraftGrade, type LobbySettings } from '@draft-lobby/shared';
 import CloseIcon from '@mui/icons-material/Close';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type CSSProperties } from 'react';
 import { computePowerRankings } from '../../lib/powerRankings';
 import { useModalClose } from '../../lib/useModalClose';
 import type {
@@ -85,23 +85,37 @@ export function DraftOutroModal({
             <>
               <h2 className="draft-outro__heading">Draft complete! 🏈</h2>
               {myRank && (
-                <div className="draft-outro__grade">
-                  <span className="draft-outro__grade-label">Your draft grade</span>
-                  <GradeBadge grade={myRank.grade} size={56} />
-                  <span className="muted draft-outro__grade-note">
-                    #{myRank.rank} of {rankings.length} by projected starting-lineup points.
-                  </span>
+                <div
+                  className="draft-outro__grade"
+                  style={{ '--grade': DRAFT_GRADE_COLORS[myRank.grade] } as CSSProperties}
+                >
+                  <div className="draft-outro__grade-info">
+                    <span className="draft-outro__grade-label">Your draft grade</span>
+                    <span className="draft-outro__grade-rank">
+                      #{myRank.rank} <span className="muted">of {rankings.length}</span>
+                    </span>
+                    <span className="muted draft-outro__grade-note">
+                      by projected starting-lineup points
+                    </span>
+                  </div>
+                  <GradeBadge grade={myRank.grade} size={68} />
                 </div>
               )}
               <div className="draft-outro__section-label">Your roster</div>
               <ul className="draft-outro__roster">
                 {myPicks.map((p) => {
                   const player = playersById.get(p.player_id);
-                  return player ? (
-                    <li key={p.id}>
+                  if (!player) return null;
+                  const round = Math.floor((p.overall - 1) / settings.teamCount) + 1;
+                  const inRound = ((p.overall - 1) % settings.teamCount) + 1;
+                  return (
+                    <li key={p.id} className="draft-outro__roster-row">
+                      <span className="draft-outro__pick-num">
+                        {round}.{String(inRound).padStart(2, '0')}
+                      </span>
                       <PlayerCard player={player} />
                     </li>
-                  ) : null;
+                  );
                 })}
               </ul>
               <button
@@ -116,8 +130,9 @@ export function DraftOutroModal({
             <>
               <h2 className="draft-outro__heading">How’d everyone else do?</h2>
               <p className="muted draft-outro__intro">
-                Crown the roster you think won the draft, and leave a grade + a
-                quick note on the rest. {locked ? '' : 'You can change these anytime for the next 24 hours.'}
+                Here’s how the league stacked up by projected starting-lineup points.
+                Crown the winner and grade every roster anytime from the{' '}
+                <b>Power Rankings</b> tab.
               </p>
               <PowerRankingsPanel
                 teams={teams}
@@ -132,6 +147,7 @@ export function DraftOutroModal({
                 locked={locked}
                 onVote={onVote}
                 onGrade={onGrade}
+                readOnly
               />
               <button
                 type="button"
