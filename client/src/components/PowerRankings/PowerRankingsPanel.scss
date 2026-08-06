@@ -641,4 +641,10 @@
       font-size: 0.85rem;
     }
   }
+
+  &__grade-error {
+    margin: $space*0.5 0 0;
+    color: $danger;
+    font-size: 0.8rem;
+  }
 }

@@ -2,6 +2,7 @@ import {
   DRAFT_GRADES,
   POSITION_COLORS,
   SLOT_LABELS,
+  containsSlur,
   type DraftGrade,
   type LobbySettings,
   type Position,
@@ -270,6 +271,17 @@ function RankRow({
   const [open, setOpen] = useState(rank === 1);
   const [pendingGrade, setPendingGrade] = useState<DraftGrade>(myGrade?.grade ?? 'B');
   const [comment, setComment] = useState(myGrade?.comment ?? '');
+  const [commentError, setCommentError] = useState<string | null>(null);
+
+  const submitGrade = () => {
+    const body = comment.trim();
+    if (containsSlur(body)) {
+      setCommentError('That comment contains language that isn’t allowed here');
+      return;
+    }
+    setCommentError(null);
+    onGrade(pendingGrade, body || 'No notes');
+  };
 
   const peerGrade = useMemo(() => mostCommonGrade(teamGrades), [teamGrades]);
   const starters = useMemo(
@@ -440,21 +452,27 @@ function RankRow({
                       )}
                     </div>
                     {canGrade && !locked && (
-                      <div className="pr-row__grade-input">
-                        <input
-                          value={comment}
-                          onChange={(e) => setComment(e.target.value.slice(0, 140))}
-                          placeholder="Say something about this roster… (optional)"
-                          maxLength={140}
-                        />
-                        <button
-                          type="button"
-                          className={`button button--sm${myGrade ? '' : ' button--primary'}`}
-                          onClick={() => onGrade(pendingGrade, comment.trim() || 'No notes')}
-                        >
-                          {myGrade ? 'Update' : 'Submit'}
-                        </button>
-                      </div>
+                      <>
+                        <div className="pr-row__grade-input">
+                          <input
+                            value={comment}
+                            onChange={(e) => {
+                              setComment(e.target.value.slice(0, 140));
+                              if (commentError) setCommentError(null);
+                            }}
+                            placeholder="Say something about this roster… (optional)"
+                            maxLength={140}
+                          />
+                          <button
+                            type="button"
+                            className={`button button--sm${myGrade ? '' : ' button--primary'}`}
+                            onClick={submitGrade}
+                          >
+                            {myGrade ? 'Update' : 'Submit'}
+                          </button>
+                        </div>
+                        {commentError && <p className="pr-row__grade-error">{commentError}</p>}
+                      </>
                     )}
                   </div>
                 )
