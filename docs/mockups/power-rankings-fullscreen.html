@@ -1,0 +1,505 @@
+<title>Power Rankings — Fullscreen redesign</title>
+<style>
+  :root{
+    --bg:#0b0f11; --raised:#141b1f; --overlay:#1b242a; --hover:#212c33;
+    --border:rgba(255,255,255,0.08); --border-strong:rgba(255,255,255,0.14);
+    --text:#eef3f4; --muted:#8a94a6; --faint:#c3ccce;
+    --accent:#3fd6a5; --primary:#137a83; --primary-hover:#178691; --danger:#f8577d;
+    --gold:#f0b73e; --canvas:#0c1113;
+    --qb:#f8577d; --rb:#3fd6a5; --wr:#4aa8ff; --te:#f6a642; --k:#b98bff; --def:#8a94a6;
+    --radius:10px; --radius-sm:6px; --sp:8px;
+    --font:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Ubuntu,sans-serif;
+    --futura:Futura,'Futura PT','Century Gothic','Trebuchet MS',sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--canvas);color:var(--text);font-family:var(--font);
+    -webkit-font-smoothing:antialiased;height:100vh;overflow:hidden;display:flex;flex-direction:column}
+  .tnum{font-variant-numeric:tabular-nums}
+  /* Projected points — Futura italic with a smaller decimal, matching the
+     grade-export PNG cards (see gradesCanvas drawProj). */
+  .proj{font-family:var(--futura);font-style:italic;font-weight:600;font-variant-numeric:tabular-nums}
+  .proj .dec{font-size:0.77em}
+  .mi{display:inline-block;vertical-align:-0.14em;flex:0 0 auto}
+
+  /* ── Top bar ─────────────────────────────────────────── */
+  .topbar{display:flex;align-items:center;gap:calc(var(--sp)*1.5);
+    padding:10px 16px;background:linear-gradient(180deg,#0f1518,#0b1013);
+    border-bottom:1px solid var(--border);flex:0 0 auto;z-index:5}
+  .brand{display:flex;align-items:center;gap:9px;font-weight:750;font-size:15px}
+  .brand .mark{width:26px;height:26px;border-radius:7px;background:var(--accent);
+    display:grid;place-items:center}
+  .topbar .league{color:var(--muted);font-size:12.5px;margin-left:2px}
+  .topbar .spacer{flex:1}
+  .tbtn{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;
+    border:1px solid var(--border-strong);background:var(--overlay);color:var(--faint);
+    border-radius:8px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer}
+  .tbtn:hover{background:var(--hover);color:var(--text)}
+  .tbtn--primary{background:var(--primary);border-color:transparent;color:#eafff8}
+  .tbtn--primary:hover{background:var(--primary-hover)}
+
+  /* ── 3-column shell ──────────────────────────────────── */
+  /* Center is capped so it stops sprawling; the feed column absorbs the slack. */
+  .cols{flex:1;display:grid;grid-template-columns:352px minmax(0,700px) minmax(400px,1fr);
+    min-height:0}
+  .col{min-height:0;display:flex;flex-direction:column;border-right:1px solid var(--border)}
+  .col:last-child{border-right:none}
+  .col__body{flex:1;min-height:0;overflow-y:auto;padding:14px}
+  .col__body::-webkit-scrollbar{width:9px}
+  .col__body::-webkit-scrollbar-thumb{background:var(--overlay);border-radius:9px;
+    border:2px solid var(--canvas)}
+
+  /* ── Grade badge ─────────────────────────────────────── */
+  .gb{display:inline-grid;place-items:center;border-radius:7px;font-weight:800;color:#05231a;flex:0 0 auto}
+
+  /* ── LEFT: rankings list ─────────────────────────────── */
+  .rank-row{display:grid;grid-template-columns:24px 34px 1fr auto;align-items:center;gap:10px;
+    width:100%;text-align:left;padding:9px 10px;border:1px solid transparent;border-radius:var(--radius);
+    background:none;color:inherit;font:inherit;cursor:pointer;margin-bottom:4px}
+  .rank-row:hover{background:var(--raised)}
+  .rank-row.is-active{background:var(--raised);border-color:var(--border-strong);
+    box-shadow:inset 3px 0 0 var(--accent)}
+  .rank-row.is-mine .rank-name{color:var(--accent)}
+  .rank-medal{font-weight:800;font-size:13px;text-align:center;color:var(--muted)}
+  .rank-medal.m1{color:var(--gold)} .rank-medal.m2{color:#c4ccd2} .rank-medal.m3{color:#d08a52}
+  .rank-av{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-size:17px}
+  .rank-mid{min-width:0}
+  .rank-line{display:flex;align-items:center;gap:7px;min-width:0}
+  .rank-name{font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rank-owner{color:var(--muted);font-weight:500;font-size:11px;flex:0 1 auto;white-space:nowrap;
+    overflow:hidden;text-overflow:ellipsis}
+  .rank-crown{margin-left:auto;display:inline-flex;align-items:center;gap:3px;font-size:11.5px;
+    font-weight:800;color:var(--gold);white-space:nowrap;flex:0 0 auto}
+  .rank-meta{display:flex;align-items:center;gap:8px;margin-top:5px}
+  .bar{flex:1;height:5px;border-radius:5px;background:var(--overlay);overflow:hidden;min-width:40px}
+  .bar > i{display:block;height:100%;border-radius:5px}
+  .rank-pts{font-size:11.5px;color:var(--faint);font-weight:600;white-space:nowrap}
+  .rank-pts b{color:var(--text)}
+
+  /* ── MIDDLE: roster breakdown ────────────────────────── */
+  .team-head{display:flex;align-items:center;gap:13px;padding:2px 2px 15px}
+  .team-head__av{width:50px;height:50px;border-radius:50%;display:grid;place-items:center;
+    font-size:25px;flex:0 0 auto}
+  .team-head__id{min-width:0}
+  .team-head__name{font-size:21px;font-weight:800;line-height:1.1;letter-spacing:-.01em}
+  .team-head__owner{color:var(--muted);font-size:13px;margin-top:2px}
+
+  /* Overview: 2×2 metric tiles on the left, position ranges on the right. */
+  .overview{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;
+    margin-bottom:20px;align-items:stretch}
+  .metrics{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+  .metric{background:var(--raised);border:1px solid var(--border);border-radius:var(--radius);
+    padding:10px 12px;display:flex;flex-direction:column;gap:3px;justify-content:center}
+  .metric__lab{font-size:9px;font-weight:700;letter-spacing:.06em;color:var(--muted)}
+  .metric__val{font-size:20px;font-weight:800;line-height:1;display:flex;align-items:center;gap:6px}
+  .metric__val small{font-size:12px;color:var(--muted);font-weight:600}
+  .metric__row{display:flex;align-items:baseline;gap:7px;flex-wrap:wrap}
+  .metric__delta{font-size:11px;font-weight:700;white-space:nowrap;display:flex;align-items:baseline;gap:3px}
+  .metric__delta small{font-size:9px;font-weight:600;color:var(--muted);letter-spacing:.03em}
+  .metric__delta.pos{color:var(--accent)} .metric__delta.neg{color:var(--danger)}
+
+  .posbars{display:flex;flex-direction:column;justify-content:center;gap:11px;
+    border-left:1px solid var(--border);padding-left:18px}
+  .posbar{display:grid;grid-template-columns:30px 10px 1fr 16px;align-items:center;gap:8px;font-size:11px}
+  .posbar__lab{font-weight:800;color:var(--faint)}
+  .posbar__z{color:var(--muted);font-weight:600;text-align:right}
+  .posbar__max{color:var(--muted);font-weight:600}
+  .posbar__track{position:relative;height:6px;border-radius:6px;background:var(--overlay)}
+  .posbar__fill{position:absolute;left:0;top:0;height:100%;border-radius:6px;
+    background:var(--pc);opacity:.55}
+  .posbar__knob{position:absolute;top:50%;transform:translate(-50%,-50%);min-width:18px;height:18px;
+    padding:0 4px;border-radius:9px;background:var(--pc);color:#0b0f11;font-weight:800;font-size:10.5px;
+    display:grid;place-items:center;box-shadow:0 0 0 2px var(--bg)}
+
+  .sec{margin-bottom:16px}
+  .sec__title{display:flex;align-items:center;justify-content:space-between;margin:0 0 8px;
+    font-size:11.5px;font-weight:750;letter-spacing:.04em;color:var(--muted);text-transform:uppercase}
+  .sec__title.is-bench{color:#7f8896}
+  .sec__cnt{background:var(--overlay);color:var(--faint);border-radius:999px;
+    padding:1px 8px;font-size:11px;font-weight:700}
+  .slot{display:grid;grid-template-columns:44px 1fr auto;align-items:center;gap:12px;
+    padding:8px 10px;border-radius:var(--radius-sm)}
+  .slot:hover{background:var(--raised)}
+  .slot + .slot{border-top:1px solid var(--border)}
+  .slot__lab{font-size:11px;font-weight:800;color:var(--muted);text-align:center;
+    background:var(--overlay);border-radius:5px;padding:4px 0}
+  .slot__player{display:flex;align-items:center;gap:10px;min-width:0}
+  .slot__pos{width:30px;text-align:center;font-size:10px;font-weight:800;color:#0b0f11;
+    background:var(--pc);border-radius:5px;padding:3px 0;flex:0 0 auto}
+  .slot__nm{min-width:0}
+  .slot__name{font-weight:650;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .slot__team{color:var(--muted);font-size:11px;margin-top:1px}
+  .slot__pp{font-size:13.5px;font-weight:700;color:var(--faint)}
+  .slot__pp small{color:var(--muted);font-size:10.5px}
+  .keeper-tag{font-size:9px;font-weight:800;color:var(--gold);border:1px solid var(--gold);
+    border-radius:4px;padding:1px 4px;margin-left:6px;vertical-align:1px}
+
+  .bye{display:grid;grid-template-columns:52px 26px 1fr;align-items:center;gap:10px;
+    padding:7px 10px;border-radius:var(--radius-sm)}
+  .bye + .bye{border-top:1px solid var(--border)}
+  .bye.is-stacked{background:rgba(248,87,125,0.06)}
+  .bye__wk{font-size:11px;font-weight:700;color:var(--faint)}
+  .bye__n{font-size:11px;font-weight:800;text-align:center;background:var(--overlay);
+    border-radius:5px;padding:2px 0}
+  .bye__players{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px}
+  .bye__p{display:inline-flex;align-items:center;gap:5px;color:var(--faint)}
+  .bye__d{width:7px;height:7px;border-radius:50%;background:var(--pc)}
+
+  /* ── RIGHT: peer grade feed (composer docked at the bottom) ─── */
+  .col--feed{min-height:0}
+  .feed{flex:1;min-height:0;overflow-y:auto;padding:14px}
+  .feed::-webkit-scrollbar{width:9px}
+  .feed::-webkit-scrollbar-thumb{background:var(--overlay);border-radius:9px;border:2px solid var(--canvas)}
+  .feed__inner{max-width:640px;margin:0 auto}
+  .grade-card{display:grid;grid-template-columns:34px 1fr;gap:11px;padding:12px;
+    background:var(--raised);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px}
+  .grade-card.is-you{border-color:color-mix(in srgb,var(--accent) 45%,var(--border));
+    background:linear-gradient(180deg,rgba(63,214,165,0.06),var(--raised))}
+  .gc__meta{display:flex;align-items:center;gap:7px;margin-bottom:5px}
+  .gc__author{font-weight:700;font-size:13px}
+  .gc__you{font-size:9px;font-weight:800;letter-spacing:.05em;color:var(--accent);
+    border:1px solid color-mix(in srgb,var(--accent) 50%,transparent);border-radius:4px;padding:1px 5px}
+  .gc__time{color:var(--muted);font-size:11px;margin-left:auto}
+  .gc__comment{font-size:13px;line-height:1.45;color:var(--faint)}
+  .gc__actions{display:flex;align-items:center;gap:6px;margin-top:9px}
+  .react{display:inline-flex;align-items:center;gap:5px;height:27px;padding:0 10px;
+    border:1px solid var(--border);background:var(--overlay);color:var(--muted);
+    border-radius:999px;font:inherit;font-size:12px;font-weight:600;cursor:pointer}
+  .react:hover{background:var(--hover);color:var(--faint)}
+  .react.up.is-on{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 45%,transparent);
+    background:rgba(63,214,165,0.12)}
+  .react.down.is-on{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 45%,transparent);
+    background:rgba(248,87,125,0.12)}
+  .gc__net{margin-left:auto;font-size:11px;color:var(--muted);font-weight:600}
+
+  .dock{flex:0 0 auto;border-top:1px solid var(--border);
+    background:linear-gradient(180deg,rgba(255,255,255,0.015),var(--canvas));padding:14px}
+  .dock__inner{max-width:640px;margin:0 auto}
+  .composer__title{font-size:12px;font-weight:750;margin:0 0 10px;display:flex;
+    align-items:center;justify-content:space-between}
+  .composer__title .who{color:var(--muted);font-weight:600}
+  .crown-btn{display:inline-flex;align-items:center;gap:6px;width:100%;justify-content:center;
+    height:36px;border:1px solid var(--gold);background:transparent;color:var(--gold);
+    border-radius:8px;font:inherit;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:10px}
+  .crown-btn.is-on{background:var(--gold);color:#241a00}
+  .pills{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px}
+  .pill{width:34px;height:30px;border:1px solid var(--border-strong);background:var(--overlay);
+    color:var(--faint);border-radius:7px;font:inherit;font-size:12px;font-weight:800;cursor:pointer;
+    display:grid;place-items:center}
+  .pill:hover{background:var(--hover)}
+  .pill.is-on{color:#05231a}
+  .composer__input{display:flex;gap:8px}
+  .composer__input textarea{flex:1;min-width:0;resize:none;height:38px;padding:9px 10px;
+    border-radius:var(--radius-sm);border:1px solid var(--border-strong);background:var(--bg);
+    color:var(--text);font:inherit;font-size:12.5px;line-height:1.35}
+  .composer__input textarea::placeholder{color:var(--muted)}
+  .post-btn{flex:0 0 auto;align-self:stretch;padding:0 15px;border:none;background:var(--primary);
+    color:#eafff8;border-radius:var(--radius-sm);font:inherit;font-weight:700;font-size:12.5px;cursor:pointer}
+  .post-btn:hover{background:var(--primary-hover)}
+  .note{font-size:12px;color:var(--muted);line-height:1.5;text-align:center;
+    padding:10px 12px;background:rgba(255,255,255,0.02);border:1px dashed var(--border);border-radius:8px}
+</style>
+
+<div class="topbar">
+  <div class="brand"><span class="mark"><svg class="mi" viewBox="0 0 24 24" width="15" height="15"><path fill="#106482" d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94.63 1.5 1.98 2.63 3.61 2.96V19H7v2h10v-2h-4v-3.1c1.63-.33 2.98-1.46 3.61-2.96C19.08 12.63 21 10.55 21 8V7c0-1.1-.9-2-2-2zM5 8V7h2v3.82C5.84 10.4 5 9.3 5 8zm14 0c0 1.3-.84 2.4-2 2.82V7h2v1z"/></svg></span> Power&nbsp;Rankings</div>
+  <span class="league">Dynasty Warriors ’25 · 12 teams · PPR · Snake</span>
+  <span class="spacer"></span>
+  <button class="tbtn"><svg class="mi" viewBox="0 0 24 24" width="15" height="15"><path fill="currentColor" d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg> Export grades</button>
+  <button class="tbtn tbtn--primary"><svg class="mi" viewBox="0 0 24 24" width="15" height="15"><path fill="currentColor" d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/></svg> Exit fullscreen</button>
+</div>
+
+<div class="cols">
+  <div class="col"><div class="col__body" id="left"></div></div>
+  <div class="col"><div class="col__body" id="mid"></div></div>
+  <div class="col col--feed">
+    <div class="feed"><div class="feed__inner" id="feed"></div></div>
+    <div class="dock"><div class="dock__inner" id="dock"></div></div>
+  </div>
+</div>
+
+<script>
+const GRADES=['A+','A','A-','B+','B','B-','C+','C','C-','D+','D','D-','F'];
+const GC={'A+':'#3fd6a5','A':'#3fd6a5','A-':'#3fd6a5','B+':'#8bd23f','B':'#8bd23f','B-':'#8bd23f',
+  'C+':'#f6a642','C':'#f6a642','C-':'#f6a642','D+':'#f2793a','D':'#f2793a','D-':'#f2793a','F':'#f8577d'};
+const PC={QB:'var(--qb)',RB:'var(--rb)',WR:'var(--wr)',TE:'var(--te)',K:'var(--k)',DEF:'var(--def)'};
+const posLabel=p=>p==='DEF'?'D/ST':p;
+
+// MUI icon paths (24×24), drawn inline so they match the app's iconography.
+const ICON={
+  trophy:'M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94.63 1.5 1.98 2.63 3.61 2.96V19H7v2h10v-2h-4v-3.1c1.63-.33 2.98-1.46 3.61-2.96C19.08 12.63 21 10.55 21 8V7c0-1.1-.9-2-2-2zM5 8V7h2v3.82C5.84 10.4 5 9.3 5 8zm14 0c0 1.3-.84 2.4-2 2.82V7h2v1z',
+  up:'M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z',
+  down:'M15 3H6c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L9.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2zm4 0v12h4V3h-4z',
+};
+function mi(name,size,color){
+  return `<svg class="mi" viewBox="0 0 24 24" width="${size}" height="${size}"${color?` style="color:${color}"`:''}><path fill="currentColor" d="${ICON[name]}"/></svg>`;
+}
+// Projected points as Futura-italic int + smaller decimal (shared baseline).
+function projHTML(v){
+  const [i,d]=v.toFixed(1).split('.');
+  return `<span class="proj">${(+i).toLocaleString('en-US')}<span class="dec">.${d}</span></span>`;
+}
+
+const P={
+ QB:[['Josh Allen','BUF',372.4,7],['Lamar Jackson','BAL',361.2,14],['Jalen Hurts','PHI',348.9,9],
+     ['Patrick Mahomes','KC',340.1,10],['Jayden Daniels','WAS',312.4,14],['Justin Herbert','LAC',305.7,5],
+     ['Dak Prescott','DAL',302.2,10],['Drake Maye','NE',298.5,14],['Baker Mayfield','TB',296.1,11],
+     ['Kyler Murray','ARI',291.8,8],['Caleb Williams','CHI',288.3,7],['Bo Nix','DEN',284.6,12]],
+ RB:[['Saquon Barkley','PHI',318.5,9],['Bijan Robinson','ATL',309.2,5],['Jahmyr Gibbs','DET',301.7,8],
+     ['Christian McCaffrey','SF',295.6,9],['Derrick Henry','BAL',289.1,14],['De’Von Achane','MIA',278.9,6],
+     ['Jonathan Taylor','IND',268.4,11],['Josh Jacobs','GB',262.8,5],['Kyren Williams','LAR',259.4,6],
+     ['Breece Hall','NYJ',256.2,9],['Bucky Irving','TB',251.3,11],['Ashton Jeanty','LV',248.9,8],
+     ['Chase Brown','CIN',244.7,10],['James Cook','BUF',240.1,7]],
+ WR:[['Ja’Marr Chase','CIN',342.6,10],['Justin Jefferson','MIN',328.4,6],['CeeDee Lamb','DAL',315.9,10],
+     ['Amon-Ra St. Brown','DET',308.2,8],['Puka Nacua','LAR',301.5,6],['Tyreek Hill','MIA',296.8,6],
+     ['Malik Nabers','NYG',289.3,11],['Nico Collins','HOU',284.7,6],['Brian Thomas Jr.','JAX',279.1,8],
+     ['Garrett Wilson','NYJ',264.5,9],['Drake London','ATL',271.4,5],['Terry McLaurin','WAS',268.9,14],
+     ['Tee Higgins','CIN',262.3,10],['DK Metcalf','SEA',255.2,8],['Jaxon Smith-Njigba','SEA',258.7,8],
+     ['Deebo Samuel','WAS',241.6,14],['Keenan Allen','LAC',238.4,5]],
+ TE:[['Brock Bowers','LV',248.3,8],['Trey McBride','ARI',241.7,8],['George Kittle','SF',228.4,9],
+     ['Sam LaPorta','DET',219.6,8],['Mark Andrews','BAL',205.2,14],['Travis Kelce','KC',198.7,10],
+     ['T.J. Hockenson','MIN',189.4,6]],
+ K:[['Brandon Aubrey','DAL',152.1,10],['Justin Tucker','BAL',148.2,14],['Cameron Dicker','LAC',143.8,5],
+    ['Harrison Butker','KC',145.6,10],['Ka’imi Fairbairn','HOU',141.3,6],['Jake Bates','DET',139.7,8]],
+ DEF:[['PHI','PHI',124.7,9],['PIT','PIT',122.8,9],['BAL','BAL',121.2,14],['DEN','DEN',120.3,12],
+      ['BUF','BUF',119.5,7],['LAR','LAR',118.4,6],['HOU','HOU',116.9,6],['MIN','MIN',115.6,6]]};
+
+const TEAMS=[
+ {name:'Jon',owner:'jon',emoji:'🐉',color:'#2f9e6f',crowns:5,mine:false},
+ {name:'BHow',owner:'bhow',emoji:'🦅',color:'#c98a2b',crowns:3,mine:false},
+ {name:'The Boo',owner:'theboo',emoji:'👻',color:'#b04a4a',crowns:4,mine:false},
+ {name:'KFig21',owner:'kfig21',emoji:'🤖',color:'#2b6e8f',crowns:2,mine:true},
+ {name:'Karas',owner:'karas',emoji:'🐢',color:'#3f9e57',crowns:1,mine:false},
+ {name:'Hollywood',owner:'hollywood',emoji:'🌴',color:'#3f8f6a',crowns:2,mine:false},
+ {name:'Rose',owner:'rose',emoji:'🌹',color:'#c14e6a',crowns:0,mine:false},
+ {name:'DenR',owner:'denr',emoji:'🔮',color:'#7a5bb0',crowns:1,mine:false},
+ {name:'Chad',owner:'chad',emoji:'🦈',color:'#5b74b0',crowns:0,mine:false},
+ {name:'Frankie',owner:'frankie',emoji:'🍅',color:'#b0463f',crowns:0,mine:false},
+ {name:'Tim',owner:'tim',emoji:'🌟',color:'#c9a02b',crowns:0,mine:false},
+ {name:'Nordy',owner:'nordy',emoji:'🎃',color:'#8f5bb0',crowns:0,mine:false},
+];
+
+const STARTERS=[['QB','QB'],['RB','RB'],['RB','RB'],['WR','WR'],['WR','WR'],['TE','TE'],
+  ['FLEX','WR'],['K','K'],['DEF','DEF']];
+const BENCH=[['Bench','RB'],['Bench','WR'],['Bench','TE'],['Bench','QB']];
+
+function buildRoster(ti){
+  const used={QB:0,RB:0,WR:0,TE:0,K:0,DEF:0};
+  const take=(pos,off)=>{const pool=P[pos];const i=(off+ti*3+used[pos])%pool.length;used[pos]++;
+    const[name,team,proj,bye]=pool[i];return{pos,name,team,proj,bye}};
+  const starters=STARTERS.map(([slot,pos])=>({slot,...take(pos, pos==='WR'?2:0)}));
+  const bench=BENCH.map(([slot,pos])=>({slot,...take(pos,5)}));
+  return{starters,bench};
+}
+
+const rosters=TEAMS.map((t,i)=>buildRoster(i));
+const starterPts=rosters.map(r=>r.starters.reduce((s,x)=>s+x.proj,0));
+const leagueAvg=starterPts.reduce((a,b)=>a+b,0)/starterPts.length;
+const order=TEAMS.map((_,i)=>i).sort((a,b)=>starterPts[b]-starterPts[a]);
+const rankOf=[],gradeOf=[];
+const hi=Math.max(...starterPts),lo=Math.min(...starterPts);
+order.forEach((idx,pos)=>{rankOf[idx]=pos+1;
+  const norm=(starterPts[idx]-lo)/(hi-lo||1);
+  gradeOf[idx]=GRADES[Math.round((1-norm)*(GRADES.length-1))];});
+const strengthOf=starterPts.map(p=>(p-lo)/(hi-lo||1));
+
+const POS=['QB','RB','WR','TE','K','DEF'];
+const posCountsAll=rosters.map(r=>{const c={QB:0,RB:0,WR:0,TE:0,K:0,DEF:0};
+  [...r.starters,...r.bench].forEach(p=>c[p.pos]++);return c;});
+const leagueMaxPos={};POS.forEach(p=>leagueMaxPos[p]=Math.max(...posCountsAll.map(c=>c[p])));
+
+const COMMENTS=[
+ ['Loaded at WR — this is the roster to beat.','A'],
+ ['Reached on the QB but the backfield is elite.','B+'],
+ ['Zero-RB build and I kind of love it here.','B'],
+ ['Byes are brutal, four starters off the same week.','C+'],
+ ['Best value in the whole draft at the TE spot.','A-'],
+ ['Kicker in the double-digit rounds? Bold.','B-'],
+ ['Handcuffed his own RB1 — smart, sneaky deep.','A-'],
+ ['Great names, thin depth. One injury from trouble.','C+'],
+ ['Crowned. Terrifying start-to-finish.','A+'],
+ ['Solid floor, capped ceiling. Fair grade.','B'],
+ ['Overpaid for the shiny WR2, missed better value.','C'],
+ ['Two studs then a huge cliff. Risky.','C-'],
+];
+const RATERS=['nordy','frankie','hollywood','karas','chad','rose','tim','theboo','denr','bhow'];
+const TIMES=['2h','5h','8h','11h','1d','1d','2d'];
+function buildFeed(ti){
+  const n=4+(ti%3);const out=[];
+  for(let k=0;k<n;k++){const c=COMMENTS[(ti*3+k)%COMMENTS.length];
+    out.push({author:RATERS[(ti+k)%RATERS.length],grade:c[1],comment:c[0],
+      up:3+((ti*7+k*5)%14),down:(ti+k)%5,time:TIMES[k%TIMES.length],vote:0,you:false});}
+  return out;
+}
+const feeds=TEAMS.map((_,i)=>buildFeed(i));
+function peerConsensus(feed){
+  if(!feed.length)return{grade:null,count:0};
+  const tally={};feed.forEach(f=>tally[f.grade]=(tally[f.grade]||0)+1);
+  const grade=Object.keys(tally).sort((a,b)=>tally[b]-tally[a])[0];
+  return{grade,count:feed.length};
+}
+
+let sel=order[0];
+
+function gbEl(grade,size,fs){
+  return `<span class="gb" style="width:${size}px;height:${size}px;background:${GC[grade]};font-size:${fs||size*0.44}px">${grade}</span>`;
+}
+function avEl(t,cls){return `<span class="${cls}" style="background:${t.color}">${t.emoji}</span>`;}
+
+/* ── LEFT ── */
+function renderLeft(){
+  document.getElementById('left').innerHTML=order.map(idx=>{
+    const t=TEAMS[idx],r=rankOf[idx];
+    const medal=r<=3?`m${r}`:'';
+    return `<button class="rank-row ${idx===sel?'is-active':''} ${t.mine?'is-mine':''}" data-i="${idx}">
+      <span class="rank-medal ${medal}">${r}</span>
+      ${avEl(t,'rank-av')}
+      <span class="rank-mid">
+        <span class="rank-line">
+          <span class="rank-name">${t.name}</span>
+          <span class="rank-owner">@${t.owner}</span>
+          ${t.crowns?`<span class="rank-crown">${mi('trophy',13)} ${t.crowns}</span>`:''}
+        </span>
+        <span class="rank-meta">
+          <span class="bar"><i style="width:${10+85*strengthOf[idx]}%;background:${GC[gradeOf[idx]]}"></i></span>
+          <span class="rank-pts tnum"><b>${starterPts[idx].toFixed(1)}</b> proj</span>
+        </span>
+      </span>
+      ${gbEl(gradeOf[idx],30,13)}
+    </button>`;
+  }).join('');
+  document.querySelectorAll('.rank-row').forEach(b=>b.onclick=()=>{sel=+b.dataset.i;renderAll();
+    document.getElementById('mid').scrollTop=0;
+    document.querySelector('.feed').scrollTop=0;});
+}
+
+/* ── MIDDLE ── */
+function renderMid(){
+  const t=TEAMS[sel],ro=rosters[sel],pc=posCountsAll[sel];
+  const delta=starterPts[sel]-leagueAvg;
+  const byeMap={};[...ro.starters,...ro.bench].forEach(p=>{(byeMap[p.bye]=byeMap[p.bye]||[]).push(p);});
+  const byes=Object.keys(byeMap).map(Number).sort((a,b)=>a-b);
+
+  const slotRow=(p,keeper)=>`<div class="slot">
+      <span class="slot__lab">${p.slot==='DEF'?'D/ST':p.slot}</span>
+      <span class="slot__player">
+        <span class="slot__pos" style="--pc:${PC[p.pos]}">${posLabel(p.pos)}</span>
+        <span class="slot__nm">
+          <span class="slot__name">${p.name}${keeper?'<span class="keeper-tag">K</span>':''}</span>
+          <span class="slot__team">${p.pos==='DEF'?p.team+' D/ST':p.team}</span>
+        </span>
+      </span>
+      <span class="slot__pp">${projHTML(p.proj)}<small> pts</small></span>
+    </div>`;
+
+  const posbar=pos=>{const c=pc[pos],mx=Math.max(1,leagueMaxPos[pos]),x=c/mx*100;
+    return `<div class="posbar" style="--pc:${PC[pos]}">
+      <span class="posbar__lab">${posLabel(pos)}</span>
+      <span class="posbar__z">0</span>
+      <span class="posbar__track">
+        <span class="posbar__fill" style="width:${x}%"></span>
+        <span class="posbar__knob" style="left:${x}%">${c}</span>
+      </span>
+      <span class="posbar__max">${leagueMaxPos[pos]}</span>
+    </div>`;};
+
+  document.getElementById('mid').innerHTML=`
+    <div class="team-head">
+      ${avEl(t,'team-head__av')}
+      <span class="team-head__id">
+        <div class="team-head__name">${t.name}</div>
+        <div class="team-head__owner">@${t.owner}</div>
+      </span>
+    </div>
+
+    <div class="overview">
+      <div class="metrics">
+        <div class="metric"><span class="metric__lab">LEAGUE RANK</span>
+          <span class="metric__val tnum">#${rankOf[sel]} <small>of ${TEAMS.length}</small></span></div>
+        <div class="metric"><span class="metric__lab">PROJ STARTER PTS</span>
+          <span class="metric__row">
+            <span class="metric__val" style="color:${GC[gradeOf[sel]]}">${projHTML(starterPts[sel])}</span>
+            <span class="metric__delta ${delta>=0?'pos':'neg'}">${delta>=0?'+':'−'}${Math.abs(delta).toFixed(1)}<small>vs avg</small></span>
+          </span></div>
+        <div class="metric"><span class="metric__lab">APP GRADE</span>
+          <span class="metric__val">${gbEl(gradeOf[sel],30,14)}</span></div>
+        <div class="metric"><span class="metric__lab">CROWN VOTES</span>
+          <span class="metric__val tnum">${mi('trophy',18,'var(--gold)')}${t.crowns}</span></div>
+      </div>
+      <div class="posbars">${POS.map(posbar).join('')}</div>
+    </div>
+
+    <div class="sec">
+      <h4 class="sec__title"><span>Starting lineup</span><span class="sec__cnt">${ro.starters.length}</span></h4>
+      ${ro.starters.map((p,i)=>slotRow(p, sel===0&&i===1)).join('')}
+    </div>
+    <div class="sec">
+      <h4 class="sec__title is-bench"><span>Bench</span><span class="sec__cnt">${ro.bench.length}</span></h4>
+      ${ro.bench.map(p=>slotRow(p,false)).join('')}
+    </div>
+    <div class="sec">
+      <h4 class="sec__title"><span>Bye week breakdown</span><span class="sec__cnt">${byes.length}</span></h4>
+      ${byes.map(wk=>{const g=byeMap[wk];return `<div class="bye ${g.length>1?'is-stacked':''}">
+        <span class="bye__wk">Wk ${wk}</span><span class="bye__n tnum">${g.length}</span>
+        <span class="bye__players">${g.map(p=>`<span class="bye__p"><span class="bye__d" style="--pc:${PC[p.pos]}"></span>${p.name}</span>`).join('')}</span>
+      </div>`;}).join('')}
+    </div>`;
+}
+
+/* ── RIGHT: feed (top) + composer dock (bottom) ── */
+let composerGrade='B', composerCrown=false;
+function renderRight(){
+  const t=TEAMS[sel],feed=feeds[sel];
+  document.getElementById('feed').innerHTML=feed.map((f,i)=>{
+    const net=f.up-f.down;
+    return `<div class="grade-card ${f.you?'is-you':''}">
+      ${gbEl(f.grade,34,15)}
+      <div>
+        <div class="gc__meta">
+          <span class="gc__author">@${f.author}</span>
+          ${f.you?'<span class="gc__you">YOU</span>':''}
+          <span class="gc__time">${f.time}</span>
+        </div>
+        <div class="gc__comment">${f.comment}</div>
+        <div class="gc__actions">
+          <button class="react up ${f.vote===1?'is-on':''}" data-i="${i}" data-v="1">${mi('up',14)} ${f.up}</button>
+          <button class="react down ${f.vote===-1?'is-on':''}" data-i="${i}" data-v="-1">${mi('down',14)} ${f.down}</button>
+          <span class="gc__net">${net>0?'+':''}${net} net</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  const mine=t.mine;
+  document.getElementById('dock').innerHTML = mine
+    ? `<div class="note">This is your team — the league grades you, not the other way around.</div>`
+    : `<div class="composer">
+        <div class="composer__title">Grade this roster <span class="who">as @kfig21</span></div>
+        <button class="crown-btn ${composerCrown?'is-on':''}" id="crown">${mi('trophy',16)} ${composerCrown?'Crowned this roster':'Crown this roster'}</button>
+        <div class="pills">${GRADES.map(g=>`<button class="pill ${g===composerGrade?'is-on':''}"
+          style="${g===composerGrade?`background:${GC[g]}`:''}" data-g="${g}">${g}</button>`).join('')}</div>
+        <div class="composer__input">
+          <textarea id="ctext" maxlength="140" placeholder="Say something about this roster…"></textarea>
+          <button class="post-btn" id="post">Post</button>
+        </div>
+      </div>`;
+
+  if(!mine){
+    document.getElementById('crown').onclick=()=>{composerCrown=!composerCrown;renderRight();};
+    document.querySelectorAll('.pill').forEach(p=>p.onclick=()=>{composerGrade=p.dataset.g;renderRight();});
+    document.getElementById('post').onclick=()=>{
+      const txt=document.getElementById('ctext').value.trim();
+      feed.unshift({author:'kfig21',grade:composerGrade,comment:txt||'No notes',up:0,down:0,time:'now',vote:0,you:true});
+      renderRight();document.querySelector('.feed').scrollTop=0;
+    };
+  }
+  document.querySelectorAll('.react').forEach(b=>b.onclick=()=>{
+    const f=feed[+b.dataset.i],v=+b.dataset.v;
+    if(f.vote===v){ if(v===1)f.up--; else f.down--; f.vote=0; }
+    else { if(f.vote===1)f.up--; if(f.vote===-1)f.down--;
+           if(v===1)f.up++; else f.down++; f.vote=v; }
+    renderRight();
+  });
+}
+
+function renderAll(){renderLeft();renderMid();renderRight();}
+renderAll();
+</script>
