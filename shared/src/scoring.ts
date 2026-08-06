@@ -150,14 +150,35 @@ export type ScoringPreset = keyof typeof SCORING_PRESETS;
 
 export const DEFAULT_SCORING_RULES: ScoringRules = SCORING_PRESETS.PPR.rules;
 
-/** Which preset (if any) a rule set exactly matches — for labeling. */
+const rulePointsEqual = (a: number, b: number): boolean => Math.abs(a - b) < 1e-9;
+
+/** Deep-equal a single rule value, tolerant of tiny float drift. */
+function ruleValuesEqual(a: ScoringRuleValue | undefined, b: ScoringRuleValue | undefined): boolean {
+  if (a === undefined || b === undefined) return a === b;
+  if (typeof a === 'number' && typeof b === 'number') return rulePointsEqual(a, b);
+  if (typeof a === 'object' && typeof b === 'object') {
+    return rulePointsEqual(a.points, b.points) && a.per === b.per;
+  }
+  return false;
+}
+
+/** Order-independent rule-set equality. */
+function scoringRulesEqual(a: ScoringRules, b: ScoringRules): boolean {
+  const aKeys = Object.keys(a);
+  if (aKeys.length !== Object.keys(b).length) return false;
+  return aKeys.every((k) => ruleValuesEqual(a[k], b[k]));
+}
+
+/** Which preset (if any) a rule set matches — for labeling. Compared key-by-key
+ * rather than by JSON.stringify: a lobby's scoring round-trips through Postgres
+ * JSONB, which doesn't preserve object key order, so a string compare would
+ * spuriously miss the preset and mislabel it "Custom". */
 export function matchPreset(rules: ScoringRules): ScoringPreset | null {
-  const json = JSON.stringify(rules);
   for (const [key, preset] of Object.entries(SCORING_PRESETS) as [
     ScoringPreset,
     { rules: ScoringRules },
   ][]) {
-    if (JSON.stringify(preset.rules) === json) return key;
+    if (scoringRulesEqual(rules, preset.rules)) return key;
   }
   return null;
 }
