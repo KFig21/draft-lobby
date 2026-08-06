@@ -159,16 +159,51 @@ function titleBlock(ctx: CanvasRenderingContext2D, eyebrow: string, name: string
   return 124;
 }
 
-function footer(ctx: CanvasRenderingContext2D, H: number, left: string, right: string, leftIcon?: string): void {
+function footer(
+  ctx: CanvasRenderingContext2D,
+  H: number,
+  left: string,
+  right: string,
+  leftIcon?: string,
+  centerPill?: { label: string; color: string },
+): void {
   const y = H - 16;
   hline(ctx, PAD, H - 34, CARD_W - PAD);
+
+  let leftMaxW = CARD_W * 0.6;
+  let rightMaxW: number | undefined;
+  if (centerPill) {
+    // Centered rank pill, color-coded with the draft grade: translucent center
+    // + colored border + colored text (mirrors the "long-press to save" hint).
+    ctx.font = `800 11px ${FONT}`;
+    const pw = ctx.measureText(centerPill.label).width + 26;
+    const ph = 22;
+    const px = (CARD_W - pw) / 2;
+    const py = y - ph / 2;
+    ctx.save();
+    roundRect(ctx, px, py, pw, ph, 999);
+    ctx.globalAlpha = 0.16;
+    ctx.fillStyle = centerPill.color;
+    ctx.fill();
+    ctx.restore();
+    roundRect(ctx, px + 0.5, py + 0.5, pw - 1, ph - 1, 999);
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = centerPill.color;
+    ctx.stroke();
+    text(ctx, centerPill.label, CARD_W / 2, y, '800 11', centerPill.color, 'center', 'middle');
+    // Keep the meta lines from sliding under the pill.
+    leftMaxW = px - PAD - 8;
+    rightMaxW = px - PAD - 8;
+  }
+
   let lx = PAD;
   if (leftIcon) {
     drawIcon(ctx, leftIcon, PAD, y - 8, 14, GOLD);
     lx = PAD + 18;
+    leftMaxW -= 18;
   }
-  text(ctx, left, lx, y, '500 10.5', MUTED, 'left', 'middle', CARD_W * 0.6);
-  text(ctx, right, CARD_W - PAD, y, '500 10.5', MUTED, 'right', 'middle');
+  text(ctx, left, lx, y, '500 10.5', MUTED, 'left', 'middle', leftMaxW);
+  text(ctx, right, CARD_W - PAD, y, '500 10.5', MUTED, 'right', 'middle', rightMaxW);
 }
 
 // ── Card 1: all teams on one page ──────────────────────────────────────
@@ -322,7 +357,7 @@ function renderLeague(model: LeagueGrade, scale: number): HTMLCanvasElement {
 function renderTeam(model: LeagueGrade, card: TeamGradeCard, scale: number): HTMLCanvasElement {
   const tint = DRAFT_GRADE_COLORS[card.grade];
   const hy = 50;
-  const hh = 140;
+  const hh = 112; // tightened — the old top rank pill is gone (now in the footer)
   const hw = CARD_W - PAD * 2;
 
   // Lineup geometry.
@@ -357,10 +392,7 @@ function renderTeam(model: LeagueGrade, card: TeamGradeCard, scale: number): HTM
     vContent += 18; // single fallback line
   }
   const verdictH = Math.max(52, 14 + vContent);
-  // Centered, grade-colored rank badge sits between the verdict and the footer.
-  const rankBadgeH = 26;
-  const rankBadgeY = vY + verdictH + 8;
-  const H = Math.round(rankBadgeY + rankBadgeH + FOOTER_H);
+  const H = Math.round(vY + verdictH + FOOTER_H);
 
   const { canvas, ctx } = beginCard(scale, H);
   brandRow(ctx, `${model.lobbyName} · ${model.season}`);
@@ -386,13 +418,13 @@ function renderTeam(model: LeagueGrade, card: TeamGradeCard, scale: number): HTM
   ctx.lineWidth = 1;
   ctx.stroke();
 
-  drawAvatar(ctx, card.avatar, hx + 14, hy + 46, 40);
-  text(ctx, card.team.name, hx + 64, hy + 62, '750 18', TEXT, 'left', 'alphabetic', hw - 64 - 66);
-  text(ctx, card.ownerLabel, hx + 64, hy + 80, '500 11.5', MUTED, 'left', 'alphabetic', hw - 64 - 66);
-  text(ctx, card.grade, hx + hw - 14, hy + 82, '800 42', tint, 'right', 'alphabetic');
+  drawAvatar(ctx, card.avatar, hx + 14, hy + 18, 40);
+  text(ctx, card.team.name, hx + 64, hy + 34, '750 18', TEXT, 'left', 'alphabetic', hw - 64 - 66);
+  text(ctx, card.ownerLabel, hx + 64, hy + 52, '500 11.5', MUTED, 'left', 'alphabetic', hw - 64 - 66);
+  text(ctx, card.grade, hx + hw - 14, hy + 54, '800 42', tint, 'right', 'alphabetic');
 
   // metrics — extra gap below the name/avatar so the row doesn't crowd it
-  const my = hy + 116;
+  const my = hy + 88;
   const metric = (x: number, value: string, lab: string) => {
     text(ctx, value, x, my, '750 19', TEXT, 'left', 'alphabetic');
     text(ctx, lab, x, my + 13, '600 9', MUTED, 'left', 'alphabetic');
@@ -477,16 +509,10 @@ function renderTeam(model: LeagueGrade, card: TeamGradeCard, scale: number): HTM
     text(ctx, 'No peer grades in yet.', blurbX, vY + 28, 'italic 500 12', FAINT);
   }
 
-  // Rank badge — centered, filled with the team's draft-grade color.
-  const rankLabel = `#${card.rank} of ${model.teamCount}`;
-  ctx.font = `800 11px ${FONT}`;
-  const rbW = ctx.measureText(rankLabel).width + 28;
-  roundRect(ctx, (CARD_W - rbW) / 2, rankBadgeY, rbW, rankBadgeH, 999);
-  ctx.fillStyle = tint;
-  ctx.fill();
-  text(ctx, rankLabel, CARD_W / 2, rankBadgeY + rankBadgeH / 2 + 0.5, '800 11', ON_GRADE, 'center', 'middle');
-
-  footer(ctx, H, model.lobbyName, model.dateLabel);
+  footer(ctx, H, model.lobbyName, model.dateLabel, undefined, {
+    label: `#${card.rank} of ${model.teamCount}`,
+    color: tint,
+  });
   return canvas;
 }
 
