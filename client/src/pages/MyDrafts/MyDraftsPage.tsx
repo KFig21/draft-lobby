@@ -213,6 +213,33 @@ export function MyDraftsPage() {
       onClick={() => setCopySource(row.lobby)}
     >
       <ContentCopyIcon fontSize="small" />
+      <span className="lobby-list__action-label">Copy</span>
+    </button>
+  );
+
+  /** Archive / Unarchive — shared so every section renders them identically. */
+  const archiveButton = (row: MyLobby) => (
+    <button
+      type="button"
+      className="lobby-list__action"
+      aria-label={`Archive ${row.lobby.name}`}
+      title="Archive"
+      onClick={() => setLobbyArchived(row, true)}
+    >
+      <ArchiveOutlinedIcon fontSize="small" />
+      <span className="lobby-list__action-label">Archive</span>
+    </button>
+  );
+  const unarchiveButton = (row: MyLobby) => (
+    <button
+      type="button"
+      className="lobby-list__action"
+      aria-label={`Unarchive ${row.lobby.name}`}
+      title="Unarchive"
+      onClick={() => setLobbyArchived(row, false)}
+    >
+      <UnarchiveOutlinedIcon fontSize="small" />
+      <span className="lobby-list__action-label">Unarchive</span>
     </button>
   );
 
@@ -229,6 +256,7 @@ export function MyDraftsPage() {
         onClick={() => setDeleteTarget(row)}
       >
         <DeleteOutlineIcon fontSize="small" />
+        <span className="lobby-list__action-label">Delete</span>
       </button>
     ) : null;
 
@@ -312,15 +340,7 @@ export function MyDraftsPage() {
                 renderAction={(row) => (
                   <>
                     {copyButton(row)}
-                    <button
-                      type="button"
-                      className="lobby-list__action"
-                      aria-label={`Archive ${row.lobby.name}`}
-                      title="Archive"
-                      onClick={() => setLobbyArchived(row, true)}
-                    >
-                      <ArchiveOutlinedIcon fontSize="small" />
-                    </button>
+                    {archiveButton(row)}
                     {deleteButton(row)}
                   </>
                 )}
@@ -343,15 +363,7 @@ export function MyDraftsPage() {
                   renderAction={(row) => (
                     <>
                       {copyButton(row)}
-                      <button
-                        type="button"
-                        className="lobby-list__action"
-                        aria-label={`Archive ${row.lobby.name}`}
-                        title="Archive"
-                        onClick={() => setLobbyArchived(row, true)}
-                      >
-                        <ArchiveOutlinedIcon fontSize="small" />
-                      </button>
+                      {archiveButton(row)}
                     </>
                   )}
                 />
@@ -399,15 +411,7 @@ export function MyDraftsPage() {
                   renderAction={(row) => (
                     <>
                       {copyButton(row)}
-                      <button
-                        type="button"
-                        className="lobby-list__action"
-                        aria-label={`Unarchive ${row.lobby.name}`}
-                        title="Unarchive"
-                        onClick={() => setLobbyArchived(row, false)}
-                      >
-                        <UnarchiveOutlinedIcon fontSize="small" />
-                      </button>
+                      {unarchiveButton(row)}
                       {deleteButton(row)}
                     </>
                   )}

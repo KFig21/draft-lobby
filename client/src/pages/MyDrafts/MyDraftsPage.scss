@@ -120,23 +120,17 @@
   flex-direction: column;
   gap: $space;
 
+  // Each draft is one card: the clickable content + a divided actions column,
+  // so the buttons read as part of that draft (their own column) rather than
+  // loose icons scattered beside it. overflow clips the actions column's square
+  // corners to the card radius.
   &__item {
     display: flex;
     align-items: stretch;
-    gap: $space;
-  }
-
-  &__row {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: $space * 1.5;
     background: $bg-raised;
     border: 1px solid $border;
     border-radius: $radius-sm;
-    padding: $space * 1.5;
+    overflow: hidden;
     transition: border-color 120ms ease;
 
     &:hover {
@@ -144,24 +138,39 @@
     }
   }
 
-  // Fixed-width action tray. Reserving the max (3-button) width keeps every row
-  // card uniform even when a draft has fewer actions (delete only shows
-  // pre-draft), and right-aligns them so they line up down the page.
-  &__actions {
-    flex-shrink: 0;
+  // The clickable content (name / meta / status) — a <Link>, borderless now
+  // that the item carries the card chrome.
+  &__row {
+    flex: 1;
+    min-width: 0;
     display: flex;
     align-items: center;
-    justify-content: flex-end;
-    gap: $space * 0.5;
-    width: 40px * 3 + $space;
+    justify-content: space-between;
+    gap: $space * 1.5;
+    padding: $space * 1.5;
+    color: inherit;
+  }
+
+  // Actions get their own column, divided from the content. Three fixed slots
+  // (copy / archive / delete) so a missing delete leaves its column empty
+  // rather than shifting the others — the buttons line up down the page.
+  &__actions {
+    flex-shrink: 0;
+    display: grid;
+    grid-template-columns: repeat(3, 40px);
+    align-items: center;
+    justify-items: center;
+    padding: $space * 0.5;
+    border-left: 1px solid $border;
   }
 
   &__action {
-    flex-shrink: 0;
-    display: grid;
-    place-items: center;
-    width: 40px;
-    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: $space * 0.5;
+    width: 36px;
+    height: 36px;
     border: none;
     border-radius: $radius-sm;
     background: none;
@@ -178,6 +187,11 @@
       background: color-mix(in srgb, $danger 12%, transparent);
       color: $danger;
     }
+  }
+
+  // Icon-only on desktop; the text label shows in the mobile footer instead.
+  &__action-label {
+    display: none;
   }
 
   &__main {
@@ -216,32 +230,45 @@
   }
 }
 
-// ── Mobile: one card per draft ──────────────────────────────────────
-// On a phone the row + its action buttons don't fit side by side. Wrap the row
-// AND its actions in a single card (the item), with the row full-width on top
-// and the actions on their own line beneath it — so it's unambiguous which
-// buttons belong to which draft.
+// ── Mobile: content card + a divided actions footer ─────────────────
+// The card goes vertical — the draft's content on top, then a full-width footer
+// bar of equally-sized, labelled buttons split by dividers. The top divider
+// makes the actions read as "coming out of the bottom" of the same draft card.
 @media (max-width: #{$bp-md - 1px}) {
   .lobby-list__item {
-    flex-wrap: wrap;
-    background: $bg-raised;
-    border: 1px solid $border;
-    border-radius: $radius-sm;
-    padding: $space;
-    gap: $space * 0.5;
+    flex-direction: column;
+    align-items: stretch;
   }
 
-  // The row is content inside the item card now — drop its own card chrome.
-  .lobby-list__row {
-    flex-basis: 100%;
-    background: none;
-    border: none;
-    padding: 0;
-  }
-
-  // Actions drop to their own full-width line, right-aligned within the card.
   .lobby-list__actions {
-    flex-basis: 100%;
+    display: flex;
+    grid-template-columns: none;
+    padding: 0;
+    border-left: none;
+    border-top: 1px solid $border;
+  }
+
+  .lobby-list__action {
+    flex: 1;
     width: auto;
+    height: 44px;
+    gap: $space * 0.6;
+    color: $text;
+
+    // Divider between adjacent buttons.
+    &:not(:last-child) {
+      border-right: 1px solid $border;
+    }
+
+    // Delete reads destructive statically here — there's no hover on touch.
+    &--danger {
+      color: $danger;
+    }
+  }
+
+  .lobby-list__action-label {
+    display: inline;
+    font-size: 0.8rem;
+    font-weight: 600;
   }
 }
