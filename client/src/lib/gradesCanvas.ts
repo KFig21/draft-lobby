@@ -27,6 +27,28 @@ const PANEL = '#161d21';
 const MINT = '#3fd6a5';
 const REACH = '#f2793a';
 const ON_GRADE = '#05231a'; // dark ink on a grade/position fill
+const GOLD = '#f0b73e';
+
+// Futura (italic) as a stylistic accent for per-player projected points; falls
+// back to other geometric sans where Futura isn't installed.
+const FUTURA = "Futura, 'Futura PT', 'Century Gothic', 'Trebuchet MS', sans-serif";
+
+// MUI icon path data (24×24 viewBox), drawn as vectors so they're crisp and
+// machine-independent — unlike emoji, which vary by OS font. Bolt = best pick /
+// steal, TrendingUp = biggest reach, EmojiEvents (trophy) = crown votes.
+const IC_BOLT = 'M11 21h-1l1-7H7.5c-.58 0-.57-.32-.38-.66.19-.34.05-.08.07-.12C8.48 10.94 10.42 7.54 13 3h1l-1 7h3.5c.49 0 .56.33.47.51l-.07.15C12.96 17.55 11 21 11 21z';
+const IC_TREND = 'M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z';
+const IC_TROPHY = 'M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94.63 1.5 1.98 2.63 3.61 2.96V19H7v2h10v-2h-4v-3.1c1.63-.33 2.98-1.46 3.61-2.96C19.08 12.63 21 10.55 21 8V7c0-1.1-.9-2-2-2zM5 8V7h2v3.82C5.84 10.4 5 9.3 5 8zm14 0c0 1.3-.84 2.4-2 2.82V7h2v1z';
+
+/** Draw an MUI 24×24 icon path scaled to `size`, filled with `color`. */
+function drawIcon(ctx: CanvasRenderingContext2D, path: string, x: number, y: number, size: number, color: string): void {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(size / 24, size / 24);
+  ctx.fillStyle = color;
+  ctx.fill(new Path2D(path));
+  ctx.restore();
+}
 
 export interface GradeCard {
   key: string;
@@ -195,6 +217,7 @@ function statBox(
   valueFont: string,
   valueColor: string,
   sub?: string,
+  icon?: string,
 ): void {
   roundRect(ctx, x, y, w, h, 12);
   ctx.fillStyle = PANEL;
@@ -203,7 +226,12 @@ function statBox(
   ctx.strokeStyle = LINE;
   ctx.lineWidth = 1;
   ctx.stroke();
-  text(ctx, label, x + 12, y + 16, '700 9.5', labelColor);
+  let labelX = x + 12;
+  if (icon) {
+    drawIcon(ctx, icon, x + 12, y + 6, 12, labelColor);
+    labelX = x + 12 + 16;
+  }
+  text(ctx, label, labelX, y + 16, '700 9.5', labelColor);
   text(ctx, value, x + 12, y + (sub ? 36 : 40), valueFont, valueColor, 'left', 'alphabetic', w - 24);
   if (sub) text(ctx, sub, x + 12, y + 50, '500 10', MUTED, 'left', 'alphabetic', w - 24);
 }
@@ -256,12 +284,12 @@ function renderLeague(model: LeagueGrade, scale: number): HTMLCanvasElement {
   const stealY = statTop + boxH + 8;
   if (model.leagueSteal) {
     const s = model.leagueSteal;
-    statBox(ctx, PAD, stealY, fullW, calloutH, '🥷 STEAL OF THE DRAFT', MINT, `${s.player.name} · ${s.player.position}`, '700 14', TEXT, `R${s.round} to ${s.team.name} — +${Math.max(0, s.valueRounds)} rds of value`);
+    statBox(ctx, PAD, stealY, fullW, calloutH, 'STEAL OF THE DRAFT', MINT, `${s.player.name} · ${s.player.position}`, '700 14', TEXT, `R${s.round} to ${s.team.name} — +${Math.max(0, s.valueRounds)} rds of value`, IC_BOLT);
   }
   const reachY = stealY + calloutH + 8;
   if (model.leagueReach) {
     const r = model.leagueReach;
-    statBox(ctx, PAD, reachY, fullW, calloutH, '📈 BIGGEST REACH', REACH, `${r.player.name} · ${r.player.position}`, '700 14', TEXT, `R${r.round} by ${r.team.name} — ${Math.abs(Math.min(0, r.valueRounds))} rds early`);
+    statBox(ctx, PAD, reachY, fullW, calloutH, 'BIGGEST REACH', REACH, `${r.player.name} · ${r.player.position}`, '700 14', TEXT, `R${r.round} by ${r.team.name} — ${Math.abs(Math.min(0, r.valueRounds))} rds early`, IC_TREND);
   }
 
   // Grade distribution
@@ -288,7 +316,7 @@ function renderLeague(model: LeagueGrade, scale: number): HTMLCanvasElement {
 function renderTeam(model: LeagueGrade, card: TeamGradeCard, scale: number): HTMLCanvasElement {
   const tint = DRAFT_GRADE_COLORS[card.grade];
   const hy = 50;
-  const hh = 120;
+  const hh = 140;
   const hw = CARD_W - PAD * 2;
 
   // Lineup geometry.
@@ -361,20 +389,24 @@ function renderTeam(model: LeagueGrade, card: TeamGradeCard, scale: number): HTM
   ctx.stroke();
   text(ctx, rankLabel, hx + 14 + lw / 2, hy + 22, '700 10', MUTED, 'center', 'middle');
 
-  drawAvatar(ctx, card.avatar, hx + 14, hy + 44, 40);
-  text(ctx, card.team.name, hx + 64, hy + 60, '750 18', TEXT, 'left', 'alphabetic', hw - 64 - 66);
-  text(ctx, card.ownerLabel, hx + 64, hy + 78, '500 11.5', MUTED, 'left', 'alphabetic', hw - 64 - 66);
-  text(ctx, card.grade, hx + hw - 14, hy + 78, '800 42', tint, 'right', 'alphabetic');
+  drawAvatar(ctx, card.avatar, hx + 14, hy + 46, 40);
+  text(ctx, card.team.name, hx + 64, hy + 62, '750 18', TEXT, 'left', 'alphabetic', hw - 64 - 66);
+  text(ctx, card.ownerLabel, hx + 64, hy + 80, '500 11.5', MUTED, 'left', 'alphabetic', hw - 64 - 66);
+  text(ctx, card.grade, hx + hw - 14, hy + 82, '800 42', tint, 'right', 'alphabetic');
 
-  // metrics
-  const my = hy + 100;
+  // metrics — extra gap below the name/avatar so the row doesn't crowd it
+  const my = hy + 116;
   const metric = (x: number, value: string, lab: string) => {
     text(ctx, value, x, my, '750 19', TEXT, 'left', 'alphabetic');
     text(ctx, lab, x, my + 13, '600 9', MUTED, 'left', 'alphabetic');
   };
   metric(hx + 14, num(card.starterPoints), 'PROJ STARTER PTS');
   metric(hx + 150, `#${card.rank}`, 'LEAGUE RANK');
-  metric(hx + 250, `👑 ${card.crownVotes}`, 'CROWN VOTES');
+  // Crown votes — trophy icon + count (replaces the 👑 emoji).
+  const cvX = hx + 250;
+  drawIcon(ctx, IC_TROPHY, cvX, my - 16, 16, GOLD);
+  text(ctx, String(card.crownVotes), cvX + 21, my, '750 19', TEXT, 'left', 'alphabetic');
+  text(ctx, 'CROWN VOTES', cvX, my + 13, '600 9', MUTED, 'left', 'alphabetic');
 
   // Lineup
   text(ctx, 'OPTIMAL STARTING LINEUP', PAD, luLabelY, '700 9.5', MUTED);
@@ -390,7 +422,12 @@ function renderTeam(model: LeagueGrade, card: TeamGradeCard, scale: number): HTM
       const nameX = PAD + 76;
       text(ctx, row.player.name, nameX, cy - 4, '600 12.5', TEXT, 'left', 'middle', CARD_W - PAD - nameX - 44);
       text(ctx, row.player.nfl_team, nameX, cy + 8, '500 10', MUTED, 'left', 'middle');
-      text(ctx, num(row.player.proj_points ?? 0), CARD_W - PAD, cy, '600 12.5', TEXT, 'right', 'middle');
+      // Projected points in Futura italic as a stylistic accent.
+      ctx.font = `italic 500 13.5px ${FUTURA}`;
+      ctx.fillStyle = TEXT;
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(num(row.player.proj_points ?? 0), CARD_W - PAD, cy);
     } else {
       posPill(ctx, slotLabel.slice(0, 3), PAD + 34, cy - 8, 34, 16);
       text(ctx, 'Empty', PAD + 76, cy, '500 12', MUTED, 'left', 'middle');
@@ -400,7 +437,7 @@ function renderTeam(model: LeagueGrade, card: TeamGradeCard, scale: number): HTM
 
   // Highlights
   const colW = (CARD_W - PAD * 2 - 8) / 2;
-  const hlBox = (x: number, labelColor: string, label: string, v: PickValue | null, sign: '+' | '-') => {
+  const hlBox = (x: number, labelColor: string, label: string, v: PickValue | null, sign: '+' | '-', icon: string) => {
     roundRect(ctx, x, hlY, colW, hlH, 11);
     ctx.fillStyle = 'rgba(255,255,255,0.015)';
     ctx.fill();
@@ -408,7 +445,8 @@ function renderTeam(model: LeagueGrade, card: TeamGradeCard, scale: number): HTM
     ctx.strokeStyle = LINE;
     ctx.lineWidth = 1;
     ctx.stroke();
-    text(ctx, label, x + 11, hlY + 15, '700 9', labelColor);
+    drawIcon(ctx, icon, x + 11, hlY + 6, 12, labelColor);
+    text(ctx, label, x + 11 + 16, hlY + 15, '700 9', labelColor);
     if (v) {
       text(ctx, v.player.name, x + 11, hlY + 30, '600 12.5', TEXT, 'left', 'alphabetic', colW - 22);
       const rds = sign === '+' ? `+${Math.max(0, v.valueRounds)}` : `${Math.min(0, v.valueRounds)}`;
@@ -417,8 +455,8 @@ function renderTeam(model: LeagueGrade, card: TeamGradeCard, scale: number): HTM
       text(ctx, '—', x + 11, hlY + 32, '600 13', MUTED);
     }
   };
-  hlBox(PAD, MINT, '🥷 BEST PICK', card.bestPick, '+');
-  hlBox(PAD + colW + 8, REACH, '📈 BIGGEST REACH', card.biggestReach, '-');
+  hlBox(PAD, MINT, 'BEST PICK', card.bestPick, '+', IC_BOLT);
+  hlBox(PAD + colW + 8, REACH, 'BIGGEST REACH', card.biggestReach, '-', IC_TREND);
 
   // Verdict — consensus badge on the left, peer comments (with attribution) stacked.
   hline(ctx, PAD, vY, CARD_W - PAD);
