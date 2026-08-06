@@ -61,6 +61,9 @@ export interface TeamRow {
   is_prev_champion: boolean;
   is_bot: boolean;
   auto_draft: boolean;
+  /** Ownerless seat the commissioner drafts for in-person (no account). Unlike
+   * a bot it's human-like on the clock (skippable, not AI-auto-drafted). */
+  is_standin: boolean;
   /** How many keepers this team may select (owner-choice flow). Default 1. */
   keeper_count: number;
   /** Times this team's pick clock has expired (been skipped). Skip-on-timeout. */

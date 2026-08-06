@@ -38,6 +38,7 @@ import {
   computeDeadline,
   computeFullClockMs,
   fillOpenSeatsWithBots,
+  fillOpenSeatsWithStandins,
   nextOpenOverall,
   onClockTeam,
   resyncKeepers,
@@ -2208,6 +2209,61 @@ draftRouter.post('/:id/add-bot', async (req: AuthedRequest, res: Response) => {
   res.json({ ok: true, draftPosition: pos });
 });
 
+/** POST /api/lobbies/:id/add-standin — commissioner adds a stand-in seat (an
+ * in-person drafter with no account) to the lowest open seat. Ownerless like a
+ * bot, but is_bot=false so it's human-like on the clock: the commissioner picks
+ * for it, and it's skipped/auto-picked exactly as a human seat would be. */
+draftRouter.post('/:id/add-standin', async (req: AuthedRequest, res: Response) => {
+  const lobbyId = req.params.id;
+  const role = await getRole(lobbyId, req.user!.id);
+  if (!isCommish(role)) {
+    res.status(403).json({ error: 'Only the commissioner can add stand-in seats' });
+    return;
+  }
+
+  const { data: lobby } = await supabaseAdmin
+    .from('lobbies')
+    .select('status, settings')
+    .eq('id', lobbyId)
+    .single();
+  if (!lobby) {
+    res.status(404).json({ error: 'Lobby not found' });
+    return;
+  }
+  if (lobby.status !== 'SETUP' && lobby.status !== 'SCHEDULED' && lobby.status !== 'STAGING') {
+    res.status(409).json({ error: 'Stand-in seats can only be added before the draft starts' });
+    return;
+  }
+
+  const teamCount = (lobby.settings as LobbySettings).teamCount;
+  const { data: teams } = await supabaseAdmin
+    .from('teams')
+    .select('draft_position')
+    .eq('lobby_id', lobbyId);
+  const taken = new Set((teams ?? []).map((t) => t.draft_position as number));
+  let pos = 1;
+  while (taken.has(pos)) pos++;
+  if (pos > teamCount) {
+    res.status(409).json({ error: 'Lobby is already full' });
+    return;
+  }
+
+  const { error } = await supabaseAdmin.from('teams').insert({
+    lobby_id: lobbyId,
+    owner_id: null,
+    name: `Seat ${pos}`,
+    draft_position: pos,
+    is_bot: false,
+    auto_draft: false,
+    is_standin: true,
+  });
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
+  res.json({ ok: true, draftPosition: pos });
+});
+
 /** POST /api/lobbies/:id/team-name — rename your own team (or any team, if
  * commissioner). Locked for everyone but the commissioner once the draft
  * is COMPLETE. */
@@ -2422,12 +2478,84 @@ draftRouter.post('/:id/fill-bots', async (req: AuthedRequest, res: Response) => 
   res.json({ ok: true, added });
 });
 
-/** POST /api/lobbies/:id/remove-bot — commissioner removes a bot seat (pre-draft). */
+/** POST /api/lobbies/:id/fill-standins — commissioner fills every open seat
+ * with a stand-in seat they'll draft for (pre-draft). */
+draftRouter.post('/:id/fill-standins', async (req: AuthedRequest, res: Response) => {
+  const lobbyId = req.params.id;
+  const role = await getRole(lobbyId, req.user!.id);
+  if (!isCommish(role)) {
+    res.status(403).json({ error: 'Only the commissioner can add stand-in seats' });
+    return;
+  }
+
+  const { data: lobby } = await supabaseAdmin
+    .from('lobbies')
+    .select('status, settings')
+    .eq('id', lobbyId)
+    .single();
+  if (!lobby) {
+    res.status(404).json({ error: 'Lobby not found' });
+    return;
+  }
+  if (lobby.status !== 'SETUP' && lobby.status !== 'SCHEDULED' && lobby.status !== 'STAGING') {
+    res.status(409).json({ error: 'Stand-in seats can only be added before the draft starts' });
+    return;
+  }
+
+  const added = await fillOpenSeatsWithStandins(lobbyId, lobby.settings as LobbySettings);
+  res.json({ ok: true, added });
+});
+
+/** POST /api/lobbies/:id/clear-seats — commissioner removes every ownerless
+ * seat of a kind (body { kind: 'bot' | 'standin' }) pre-draft. */
+draftRouter.post('/:id/clear-seats', async (req: AuthedRequest, res: Response) => {
+  const lobbyId = req.params.id;
+  const role = await getRole(lobbyId, req.user!.id);
+  if (!isCommish(role)) {
+    res.status(403).json({ error: 'Only the commissioner can remove seats' });
+    return;
+  }
+  const kind = req.body?.kind === 'standin' ? 'standin' : req.body?.kind === 'bot' ? 'bot' : null;
+  if (!kind) {
+    res.status(400).json({ error: "kind must be 'bot' or 'standin'" });
+    return;
+  }
+
+  const { data: lobby } = await supabaseAdmin
+    .from('lobbies')
+    .select('status')
+    .eq('id', lobbyId)
+    .single();
+  if (!lobby) {
+    res.status(404).json({ error: 'Lobby not found' });
+    return;
+  }
+  if (lobby.status !== 'SETUP' && lobby.status !== 'SCHEDULED' && lobby.status !== 'STAGING') {
+    res.status(409).json({ error: 'Seats can only be removed before the draft starts' });
+    return;
+  }
+
+  const column = kind === 'bot' ? 'is_bot' : 'is_standin';
+  const { data: removed, error } = await supabaseAdmin
+    .from('teams')
+    .delete()
+    .eq('lobby_id', lobbyId)
+    .eq(column, true)
+    .select('id');
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
+  res.json({ ok: true, removed: removed?.length ?? 0 });
+});
+
+/** POST /api/lobbies/:id/remove-bot — commissioner removes an ownerless seat
+ * (a bot or a stand-in) pre-draft. */
 draftRouter.post('/:id/remove-bot', async (req: AuthedRequest, res: Response) => {
   const lobbyId = req.params.id;
   const role = await getRole(lobbyId, req.user!.id);
   if (!isCommish(role)) {
-    res.status(403).json({ error: 'Only the commissioner can remove bots' });
+    res.status(403).json({ error: 'Only the commissioner can remove seats' });
     return;
   }
   const teamId = typeof req.body?.teamId === 'string' ? req.body.teamId : null;
@@ -2452,12 +2580,14 @@ draftRouter.post('/:id/remove-bot', async (req: AuthedRequest, res: Response) =>
 
   const { data: team } = await supabaseAdmin
     .from('teams')
-    .select('id, is_bot')
+    .select('id, is_bot, is_standin')
     .eq('lobby_id', lobbyId)
     .eq('id', teamId)
     .maybeSingle();
-  if (!team || !team.is_bot) {
-    res.status(404).json({ error: 'Bot not found' });
+  // Only ownerless seats (bots + stand-ins) are removable this way — a real
+  // member's seat is removed via the kick flow instead.
+  if (!team || !(team.is_bot || team.is_standin)) {
+    res.status(404).json({ error: 'Seat not found' });
     return;
   }
   await supabaseAdmin.from('teams').delete().eq('id', team.id);

@@ -519,6 +519,20 @@
       }
     }
   }
+
+  // Bulk removal (all bots / all stand-ins) — reads danger so it's clearly the
+  // destructive action next to the additive fill buttons.
+  &--danger {
+    color: $danger;
+
+    @include hover-only {
+      &:hover:not(:disabled) {
+        border-color: $danger;
+        color: $danger;
+        background: color-mix(in srgb, $danger 12%, transparent);
+      }
+    }
+  }
 }
 
 .room__order-actions {
@@ -612,6 +626,13 @@
     &--owner {
       background: rgba($primary, 0.14);
       color: $primary-hover;
+    }
+
+    // An ownerless seat the commissioner drafts for in person — a distinct
+    // (info-blue) look so it's obvious at a glance which seats aren't bots.
+    &--standin {
+      background: color-mix(in srgb, $info 16%, transparent);
+      color: $info;
     }
   }
 

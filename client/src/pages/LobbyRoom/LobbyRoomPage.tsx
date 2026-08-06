@@ -12,6 +12,8 @@ import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlined';
 import CasinoIcon from '@mui/icons-material/Casino';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlineOutlined';
+import GroupAddOutlinedIcon from '@mui/icons-material/GroupAddOutlined';
 import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
@@ -338,6 +340,46 @@ export function LobbyRoomPage() {
       refetch();
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'Failed to add bots');
+    } finally {
+      setBotBusy(false);
+    }
+  }
+  async function addStandin() {
+    setBotBusy(true);
+    setActionError(null);
+    try {
+      await api(`/lobbies/${id}/add-standin`, { method: 'POST' });
+      refetch();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Failed to add a stand-in seat');
+    } finally {
+      setBotBusy(false);
+    }
+  }
+  async function fillStandins() {
+    setBotBusy(true);
+    setActionError(null);
+    try {
+      await api(`/lobbies/${id}/fill-standins`, { method: 'POST' });
+      refetch();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Failed to add stand-in seats');
+    } finally {
+      setBotBusy(false);
+    }
+  }
+  async function clearSeats(kind: 'bot' | 'standin') {
+    setBotBusy(true);
+    setActionError(null);
+    try {
+      await api(`/lobbies/${id}/clear-seats`, { method: 'POST', body: { kind } });
+      refetch();
+    } catch (err) {
+      setActionError(
+        err instanceof Error
+          ? err.message
+          : `Failed to remove ${kind === 'bot' ? 'bots' : 'stand-ins'}`,
+      );
     } finally {
       setBotBusy(false);
     }
@@ -743,6 +785,26 @@ export function LobbyRoomPage() {
                           <SmartToyOutlinedIcon fontSize="small" />
                           {botBusy ? 'Working…' : `Fill ${emptySlots} with bots`}
                         </button>
+                        <button
+                          type="button"
+                          className="room__order-btn"
+                          onClick={addStandin}
+                          disabled={botBusy}
+                          title="A seat for someone drafting in person without an account — you make their picks; skippable, never auto-drafted unless it times out"
+                        >
+                          <PersonAddAlt1Icon fontSize="small" />
+                          Add stand-in
+                        </button>
+                        <button
+                          type="button"
+                          className="room__order-btn"
+                          onClick={fillStandins}
+                          disabled={botBusy}
+                          title="Fill every open seat with a stand-in you'll draft for"
+                        >
+                          <GroupAddOutlinedIcon fontSize="small" />
+                          {botBusy ? 'Working…' : `Fill ${emptySlots} with stand-ins`}
+                        </button>
                       </>
                     )}
                     {teams.some((t) => t.is_bot) && (
@@ -755,6 +817,30 @@ export function LobbyRoomPage() {
                       >
                         <CasinoIcon fontSize="small" />
                         Randomize bot names
+                      </button>
+                    )}
+                    {teams.some((t) => t.is_bot) && (
+                      <button
+                        type="button"
+                        className="room__order-btn room__order-btn--danger"
+                        onClick={() => clearSeats('bot')}
+                        disabled={botBusy}
+                        title="Remove every bot seat (leaves their slots open)"
+                      >
+                        <DeleteOutlineIcon fontSize="small" />
+                        Remove all bots
+                      </button>
+                    )}
+                    {teams.some((t) => t.is_standin) && (
+                      <button
+                        type="button"
+                        className="room__order-btn room__order-btn--danger"
+                        onClick={() => clearSeats('standin')}
+                        disabled={botBusy}
+                        title="Remove every stand-in seat (leaves their slots open)"
+                      >
+                        <DeleteOutlineIcon fontSize="small" />
+                        Remove all stand-ins
                       </button>
                     )}
                     <button type="button" className="room__order-btn" onClick={startOrderEdit}>
@@ -818,6 +904,11 @@ export function LobbyRoomPage() {
                           )}
                           {team.is_bot && (
                             <span className="team-list__chip muted">Bot</span>
+                          )}
+                          {team.is_standin && (
+                            <span className="team-list__chip team-list__chip--standin">
+                              Stand-in
+                            </span>
                           )}
                           {team.owner_id === userId && (
                             <span className="team-list__you">you</span>
@@ -917,6 +1008,9 @@ export function LobbyRoomPage() {
                             <span className="team-list__you">you</span>
                           )}
                           {team.is_bot && <span className="team-list__chip muted">Bot</span>}
+                          {team.is_standin && (
+                            <span className="team-list__chip team-list__chip--standin">Stand-in</span>
+                          )}
                           {isCommish && (
                             <button
                               type="button"
@@ -985,6 +1079,9 @@ export function LobbyRoomPage() {
                           <span className="team-list__chip muted">Requested</span>
                         )}
                         {team.is_bot && <span className="team-list__chip muted">Bot</span>}
+                        {team.is_standin && (
+                          <span className="team-list__chip team-list__chip--standin">Stand-in</span>
+                        )}
                         {(ownerRole === 'COMMISSIONER' || ownerRole === 'SUB_COMMISSIONER') && (
                           <CommissionerBadge role={ownerRole} size={15} />
                         )}
@@ -1002,18 +1099,19 @@ export function LobbyRoomPage() {
                             <EditOutlinedIcon fontSize="small" />
                           </button>
                         )}
-                        {team.is_bot && isCommish && !draftLive && (
+                        {(team.is_bot || team.is_standin) && isCommish && !draftLive && (
                           <button
                             type="button"
                             className="team-list__icon"
                             aria-label={`Remove ${team.name}`}
-                            title="Remove bot"
+                            title={team.is_standin ? 'Remove stand-in seat' : 'Remove bot'}
                             onClick={() => removeBot(team.id)}
                           >
                             <CloseIcon fontSize="small" />
                           </button>
                         )}
                         {!team.is_bot &&
+                          !team.is_standin &&
                           isCommish &&
                           !draftLive &&
                           team.owner_id &&

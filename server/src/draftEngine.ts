@@ -169,10 +169,14 @@ export async function computeFullClockMs(
   return clockSeconds(team, settings, overall) * 1000;
 }
 
-/** Create bot teams for any draft slot 1..teamCount that has no team yet. Returns how many were added. */
-export async function fillOpenSeatsWithBots(
+/** Create seats for any draft slot 1..teamCount that has no team yet, of the
+ * given kind. Returns how many were added. A 'bot' auto-drafts on the bot
+ * clock; a 'standin' is an ownerless seat the commissioner drafts for (see
+ * migration 0037) — human-like on the clock. */
+async function fillOpenSeats(
   lobbyId: string,
   settings: LobbySettings,
+  kind: 'bot' | 'standin',
 ): Promise<number> {
   const { data: teams } = await supabaseAdmin
     .from('teams')
@@ -182,17 +186,39 @@ export async function fillOpenSeatsWithBots(
   const rows: Record<string, unknown>[] = [];
   for (let pos = 1; pos <= settings.teamCount; pos++) {
     if (taken.has(pos)) continue;
-    rows.push({
-      lobby_id: lobbyId,
-      owner_id: null,
-      name: `Bot ${pos}`,
-      draft_position: pos,
-      is_bot: true,
-      auto_draft: true,
-    });
+    rows.push(
+      kind === 'bot'
+        ? {
+            lobby_id: lobbyId,
+            owner_id: null,
+            name: `Bot ${pos}`,
+            draft_position: pos,
+            is_bot: true,
+            auto_draft: true,
+          }
+        : {
+            lobby_id: lobbyId,
+            owner_id: null,
+            name: `Seat ${pos}`,
+            draft_position: pos,
+            is_bot: false,
+            auto_draft: false,
+            is_standin: true,
+          },
+    );
   }
   if (rows.length) await supabaseAdmin.from('teams').insert(rows);
   return rows.length;
+}
+
+/** Fill every empty draft slot with a bot (used at draft start + the commissioner's manual fill). */
+export function fillOpenSeatsWithBots(lobbyId: string, settings: LobbySettings): Promise<number> {
+  return fillOpenSeats(lobbyId, settings, 'bot');
+}
+
+/** Fill every empty draft slot with a stand-in seat (commissioner drafts for them). */
+export function fillOpenSeatsWithStandins(lobbyId: string, settings: LobbySettings): Promise<number> {
+  return fillOpenSeats(lobbyId, settings, 'standin');
 }
 
 /**
