@@ -6,7 +6,10 @@
   background: rgba(0, 0, 0, 0.6);
   display: grid;
   place-items: center;
-  z-index: 100;
+  // Above the generic Modal (z-index 200) so the pick-confirm dialog stacks on
+  // top of the fullscreen Menu modal instead of being hidden behind it — the
+  // Menu stays open underneath and cancelling returns straight to it.
+  z-index: 300;
   padding: $space * 2;
 }
 

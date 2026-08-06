@@ -1606,6 +1606,7 @@ export function DraftBoardPage() {
         body: { playerId: selected.id, ...(overall != null ? { overall } : {}) },
       });
       setSelected(null);
+      setShowFsMenu(false); // pick made — close the fullscreen Menu too (no-op if closed)
     } catch (err) {
       setPickError(err instanceof Error ? err.message : 'Pick failed');
     } finally {
@@ -1976,12 +1977,12 @@ export function DraftBoardPage() {
   // focus out of the search input on every keystroke.
   function renderPlayersPool() {
     if (!lobby) return null; // already guaranteed by the guard above — narrows for TS
-    // Also closes the fullscreen Players modal (no-op elsewhere) — it's
-    // rendered later in the DOM than LockInModal, so left open it would
-    // paint on top and hide the pick-confirm dialog behind it.
+    // Opens the pick-confirm dialog. The fullscreen Menu modal (if open) stays
+    // open behind it — LockInModal now stacks above it (see its z-index) — so
+    // cancelling drops the user right back on the Players tab. confirmPick
+    // closes the menu once a pick actually goes through.
     function pick(p: PlayerRow) {
       setSelected(p);
-      setShowFsMenu(false);
     }
     // Don't offer a filter chip for a position/slot this league's roster
     // doesn't actually use (e.g. a no-kicker league shouldn't show a K chip).
@@ -2867,7 +2868,6 @@ export function DraftBoardPage() {
               ? () => {
                   setDetailPlayer(null);
                   setSelected(detailPlayer);
-                  setShowFsMenu(false);
                 }
               : undefined
           }
