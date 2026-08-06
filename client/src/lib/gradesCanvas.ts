@@ -353,9 +353,9 @@ function renderLeague(model: LeagueGrade, scale: number): HTMLCanvasElement {
   const gap3 = 8;
   const colW3 = (CARD_W - PAD * 2 - gap3 * 2) / 3;
   const projBase = 22;
-  projBox(ctx, PAD, statTop, colW3, projBoxH, 'TOP PROJECTION', num(model.topProjection), '#3fd6a5', projBase * 1.1, model.topProjName);
-  projBox(ctx, PAD + colW3 + gap3, statTop, colW3, projBoxH, 'AVG PROJECTION', num(model.avgProjection), '#f6a642', projBase);
-  projBox(ctx, PAD + (colW3 + gap3) * 2, statTop, colW3, projBoxH, 'LOW PROJECTION', num(model.lowProjection), '#f8577d', projBase * 0.9, model.lowProjName);
+  projBox(ctx, PAD, statTop, colW3, projBoxH, 'TOP PROJECTION', num(model.topProjection), '#3fd6a5', projBase * 1, model.topProjName);
+  projBox(ctx, PAD + colW3 + gap3, statTop, colW3, projBoxH, 'AVG PROJECTION', num(model.avgProjection), '#f6a642', projBase * .88);
+  projBox(ctx, PAD + (colW3 + gap3) * 2, statTop, colW3, projBoxH, 'LOW PROJECTION', num(model.lowProjection), '#f8577d', projBase * 0.78, model.lowProjName);
 
   const fullW = CARD_W - PAD * 2;
   const stealY = statTop + projBoxH + gapY;
