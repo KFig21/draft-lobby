@@ -113,7 +113,7 @@ function posPill(ctx: CanvasRenderingContext2D, pos: string, x: number, y: numbe
 
 // Fractional part of a projection is drawn at this fraction of the whole-number
 // size, so the big value reads first and the ".x" is a quiet suffix.
-const PROJ_DECIMAL_SCALE = 0.82;
+const PROJ_DECIMAL_SCALE = 0.77;
 
 /**
  * Draw a projection like "308.5" with the fractional part smaller than the
@@ -286,7 +286,7 @@ function renderAllTeams(model: LeagueGrade, scale: number): HTMLCanvasElement {
     text(ctx, t.ownerLabel, nameX, cy + 9, '500 11', MUTED, 'left', 'middle', CARD_W - nameX - 96);
     const badgeX = CARD_W - PAD - 28;
     gradeBadge(ctx, t.grade, badgeX, cy - 14, 28, 13);
-    drawProj(ctx, t.starterPoints, badgeX - 12, cy - 3, 12, TEXT, { align: 'right', baseline: 'middle' });
+    drawProj(ctx, t.starterPoints, badgeX - 12, cy - 3, 12, TEXT, { align: 'right', baseline: 'middle', family: FUTURA, italic: true });
     text(ctx, 'PROJ', badgeX - 12, cy + 9, '600 8', MUTED, 'right', 'middle');
   });
 
@@ -367,7 +367,8 @@ function renderLeague(model: LeagueGrade, scale: number): HTMLCanvasElement {
   const gapY = 10; // vertical breathing room between stacked boxes
   const distLabelY = statTop + projBoxH + gapY + calloutH + gapY + calloutH + 24;
   const barsTop = distLabelY + 12;
-  const barMax = 46;
+  const barMax = 56; // full bar band, top slice of which is reserved for the count label
+  const barLabelGap = 16; // headroom so a full-height bar's count label clears the heading
   const distBottom = barsTop + barMax + 18;
   const H = Math.round(distBottom + FOOTER_H);
 
@@ -425,7 +426,7 @@ function renderLeague(model: LeagueGrade, scale: number): HTMLCanvasElement {
   const baseY = barsTop + barMax;
   model.distribution.forEach((d, i) => {
     const x = PAD + i * (bw + 8);
-    const h = d.count === 0 ? 4 : Math.round((d.count / maxCount) * barMax);
+    const h = d.count === 0 ? 4 : Math.round((d.count / maxCount) * (barMax - barLabelGap));
     roundRect(ctx, x, baseY - h, bw, h, 4);
     ctx.fillStyle = colors[d.letter];
     ctx.fill();
@@ -513,7 +514,7 @@ function renderTeam(model: LeagueGrade, card: TeamGradeCard, scale: number): HTM
     text(ctx, value, x, my, '750 19', TEXT, 'left', 'alphabetic');
     text(ctx, lab, x, my + 13, '600 9', MUTED, 'left', 'alphabetic');
   };
-  drawProj(ctx, card.starterPoints, hx + 14, my, 19, TEXT, { weight: '750' });
+  drawProj(ctx, card.starterPoints, hx + 14, my, 19, TEXT, { weight: '600', family: FUTURA, italic: true });
   text(ctx, 'PROJ STARTER PTS', hx + 14, my + 13, '600 9', MUTED, 'left', 'alphabetic');
   metric(hx + 150, `#${card.rank}`, 'LEAGUE RANK');
   // Crown votes — trophy icon + count (replaces the 👑 emoji).
