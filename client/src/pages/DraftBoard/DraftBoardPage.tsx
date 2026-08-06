@@ -71,6 +71,7 @@ import { ConfirmModal } from '../../components/ConfirmModal/ConfirmModal';
 import { DraftChat } from '../../components/DraftChat/DraftChat';
 import { DraftGrid, type ReactionEntry } from '../../components/DraftGrid/DraftGrid';
 import { DraftOutroModal } from '../../components/DraftOutroModal/DraftOutroModal';
+import { PowerRankingsBoard } from '../../components/PowerRankings/PowerRankingsBoard';
 import { PowerRankingsPanel } from '../../components/PowerRankings/PowerRankingsPanel';
 import { GradeExportModal } from '../../components/GradeExportModal/GradeExportModal';
 import { DraftUserSettingsModal } from '../../components/DraftUserSettingsModal/DraftUserSettingsModal';
@@ -141,6 +142,7 @@ import type {
   ChatMessageRow,
   ChatReactionRow,
   DraftCrownVoteRow,
+  DraftGradeReactionRow,
   DraftGradeRow,
   PickRow,
   PlayerRow,
@@ -725,6 +727,7 @@ export function DraftBoardPage() {
   // ── Post-draft crown vote + peer grades — plain fetch + realtime refresh. ──
   const [crownVotes, setCrownVotes] = useState<DraftCrownVoteRow[]>([]);
   const [grades, setGrades] = useState<DraftGradeRow[]>([]);
+  const [gradeReactions, setGradeReactions] = useState<DraftGradeReactionRow[]>([]);
   useEffect(() => {
     const loadVotes = () =>
       supabase
@@ -738,14 +741,26 @@ export function DraftBoardPage() {
         .select('*')
         .eq('lobby_id', id)
         .then(({ data }) => setGrades((data ?? []) as DraftGradeRow[]));
+    const loadReactions = () =>
+      supabase
+        .from('draft_grade_reactions')
+        .select('*')
+        .eq('lobby_id', id)
+        .then(({ data }) => setGradeReactions((data ?? []) as DraftGradeReactionRow[]));
     void loadVotes();
     void loadGrades();
+    void loadReactions();
     const ch = supabase
       .channel(`draft-results:${id}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'draft_crown_votes', filter: `lobby_id=eq.${id}` },
         () => void loadVotes(),
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'draft_grade_reactions', filter: `lobby_id=eq.${id}` },
+        () => void loadReactions(),
       )
       .on(
         'postgres_changes',
@@ -995,6 +1010,24 @@ export function DraftBoardPage() {
     } catch (err) {
       showToast({
         title: 'Grade failed',
+        titleIcon: <ErrorOutlineIcon fontSize="inherit" />,
+        body: err instanceof Error ? err.message : undefined,
+        tone: 'warning',
+      });
+    }
+  }
+
+  /** Like (+1) / dislike (-1) a peer's grade on a roster, or clear it (0). */
+  async function reactGrade(teamId: string, raterId: string, value: 1 | -1 | 0) {
+    if (resultsLocked) return;
+    try {
+      await api(`/lobbies/${id}/grade-reaction`, {
+        method: 'POST',
+        body: { teamId, raterId, value },
+      });
+    } catch (err) {
+      showToast({
+        title: 'Reaction failed',
         titleIcon: <ErrorOutlineIcon fontSize="inherit" />,
         body: err instanceof Error ? err.message : undefined,
         tone: 'warning',
@@ -2670,24 +2703,47 @@ export function DraftBoardPage() {
           className={`draft__board ${mobileTab === 'board' ? 'is-mobile-active' : ''}`}
         >
           {isComplete && centerView === 'rankings' ? (
-            <PowerRankingsPanel
-              teams={teams}
-              members={members}
-              picks={picks}
-              playersById={playersById}
-              settings={lobby.settings}
-              myTeamId={myTeam?.id ?? null}
-              myUserId={userId}
-              crownVotes={crownVotes}
-              grades={grades}
-              locked={resultsLocked}
-              canVote={canVote}
-              canGrade={canGrade}
-              onVote={castCrownVote}
-              onGrade={gradeTeam}
-              onPickClick={setPickModal}
-              onExportGrades={() => setShowGradeExport(true)}
-            />
+            isFullscreen ? (
+              <PowerRankingsBoard
+                teams={teams}
+                members={members}
+                picks={picks}
+                playersById={playersById}
+                settings={lobby.settings}
+                myTeamId={myTeam?.id ?? null}
+                myUserId={userId}
+                crownVotes={crownVotes}
+                grades={grades}
+                gradeReactions={gradeReactions}
+                locked={resultsLocked}
+                canVote={canVote}
+                canGrade={canGrade}
+                onVote={castCrownVote}
+                onGrade={gradeTeam}
+                onReact={reactGrade}
+                onPickClick={setPickModal}
+                onExportGrades={() => setShowGradeExport(true)}
+              />
+            ) : (
+              <PowerRankingsPanel
+                teams={teams}
+                members={members}
+                picks={picks}
+                playersById={playersById}
+                settings={lobby.settings}
+                myTeamId={myTeam?.id ?? null}
+                myUserId={userId}
+                crownVotes={crownVotes}
+                grades={grades}
+                locked={resultsLocked}
+                canVote={canVote}
+                canGrade={canGrade}
+                onVote={castCrownVote}
+                onGrade={gradeTeam}
+                onPickClick={setPickModal}
+                onExportGrades={() => setShowGradeExport(true)}
+              />
+            )
           ) : (
             <DraftGrid
               teams={teams}

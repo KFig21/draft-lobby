@@ -161,6 +161,15 @@ export const gradeTeamSchema = z.object({
 });
 export type GradeTeamInput = z.infer<typeof gradeTeamSchema>;
 
+/** Like (+1) or dislike (-1) a specific peer grade on a roster; 0 clears it.
+ * A grade is identified by the team it's on plus the leaguemate who wrote it. */
+export const gradeReactionSchema = z.object({
+  teamId: z.string().uuid(),
+  raterId: z.string().uuid(),
+  value: z.union([z.literal(1), z.literal(-1), z.literal(0)]),
+});
+export type GradeReactionInput = z.infer<typeof gradeReactionSchema>;
+
 /** How long after a draft ends the crown vote / peer grading stays open. */
 export const DRAFT_RESULTS_LOCK_MS = 24 * 60 * 60 * 1000;
 

@@ -124,6 +124,17 @@ export interface DraftGradeRow {
   updated_at: string;
 }
 
+/** A like (+1) or dislike (-1) on one peer grade, identified by the graded
+ * team + the leaguemate who authored that grade. One row per reactor. */
+export interface DraftGradeReactionRow {
+  lobby_id: string;
+  team_id: string;
+  grade_rater_id: string;
+  reactor_id: string;
+  value: number;
+  created_at: string;
+}
+
 /** Minimal profile shape as embedded in social queries. */
 export interface ProfileMini {
   id: string;

@@ -11,6 +11,7 @@ import {
   crownVoteSchema,
   draftPositionForOverall,
   extractMentionedUsernames,
+  gradeReactionSchema,
   gradeTeamSchema,
   inviteToLobbySchema,
   makePickSchema,
@@ -3097,6 +3098,76 @@ draftRouter.post('/:id/grade-team', rateLimit('grade-team', { max: 30, windowMs:
       snippet: parsed.data.comment,
       grade: parsed.data.grade,
     });
+  }
+  res.json({ ok: true });
+});
+
+/** POST /api/lobbies/:id/grade-reaction — like (+1) / dislike (-1) a peer's
+ * grade on a roster, or clear it (0). Members only, within the post-draft
+ * window; you can't react to your own grade (the composite FK also guarantees
+ * the grade actually exists). */
+draftRouter.post('/:id/grade-reaction', rateLimit('grade-reaction', { max: 60, windowMs: 60_000 }), async (req: AuthedRequest, res: Response) => {
+  const lobbyId = req.params.id;
+  const userId = req.user!.id;
+
+  const role = await getRole(lobbyId, userId);
+  if (!role) {
+    res.status(403).json({ error: 'Only members can react to grades in this lobby' });
+    return;
+  }
+  const parsed = gradeReactionSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.flatten() });
+    return;
+  }
+  if (parsed.data.raterId === userId) {
+    res.status(400).json({ error: 'You can’t react to your own grade' });
+    return;
+  }
+
+  const { data: lobby } = await supabaseAdmin
+    .from('lobbies')
+    .select('status')
+    .eq('id', lobbyId)
+    .maybeSingle();
+  if (!lobby || lobby.status !== 'COMPLETE') {
+    res.status(409).json({ error: 'Grading opens once the draft is complete' });
+    return;
+  }
+  if (await isResultsLocked(lobbyId)) {
+    res.status(409).json({ error: 'Grading closed 24h after the draft ended' });
+    return;
+  }
+
+  if (parsed.data.value === 0) {
+    const { error } = await supabaseAdmin
+      .from('draft_grade_reactions')
+      .delete()
+      .eq('lobby_id', lobbyId)
+      .eq('team_id', parsed.data.teamId)
+      .eq('grade_rater_id', parsed.data.raterId)
+      .eq('reactor_id', userId);
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    res.json({ ok: true });
+    return;
+  }
+
+  const { error } = await supabaseAdmin.from('draft_grade_reactions').upsert(
+    {
+      lobby_id: lobbyId,
+      team_id: parsed.data.teamId,
+      grade_rater_id: parsed.data.raterId,
+      reactor_id: userId,
+      value: parsed.data.value,
+    },
+    { onConflict: 'lobby_id,team_id,grade_rater_id,reactor_id' },
+  );
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
   }
   res.json({ ok: true });
 });
