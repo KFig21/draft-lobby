@@ -108,6 +108,29 @@
     }
   }
 
+  // Round icon button next to a section heading (e.g. "Scoring format" details).
+  &__info-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    border: 1px solid $border;
+    border-radius: 50%;
+    background: $bg;
+    color: $text-muted;
+    cursor: pointer;
+    transition:
+      color 120ms ease,
+      border-color 120ms ease;
+
+    &:hover {
+      color: $accent;
+      border-color: $accent;
+    }
+  }
+
   &__toggle-row {
     display: flex;
     align-items: center;

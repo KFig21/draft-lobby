@@ -19,11 +19,13 @@ import {
   type SettingsGroup,
 } from '@draft-lobby/shared';
 import AddIcon from '@mui/icons-material/Add';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import RemoveIcon from '@mui/icons-material/Remove';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { formatPickClock, formatSeconds } from '../../lib/format';
 import { supabase } from '../../supabase';
+import { ScoringRulesModal } from '../LeagueRulesModal/ScoringRulesModal';
 import { Modal } from '../Modal/Modal';
 import { ToggleSwitch } from '../ToggleSwitch/ToggleSwitch';
 import {
@@ -97,6 +99,7 @@ function SettingsGroupFieldset({
 export function LeagueSettingsFields({ settings, onChange, nameField, editableGroups }: Props) {
   const [scoringFormats, setScoringFormats] = useState<ScoringFormatRow[]>([]);
   const [showScoringModal, setShowScoringModal] = useState(false);
+  const [showScoringInfo, setShowScoringInfo] = useState(false);
 
   // No `editableGroups` (the wizards) = everything editable.
   const canEdit = (group: SettingsGroup) => !editableGroups || editableGroups.has(group);
@@ -169,6 +172,13 @@ export function LeagueSettingsFields({ settings, onChange, nameField, editableGr
     const fmt = scoringFormats.find((f) => JSON.stringify(f.rules) === json);
     return fmt ? `format:${fmt.id}` : 'custom';
   }, [settings.scoring, scoringFormats]);
+  // Name shown in the scoring-details modal badge for a saved (non-preset)
+  // format; presets label themselves via matchPreset inside the modal.
+  const scoringName = useMemo(() => {
+    if (!currentScoringChoice.startsWith('format:')) return undefined;
+    const id = currentScoringChoice.slice('format:'.length);
+    return scoringFormats.find((f) => f.id === id)?.name;
+  }, [currentScoringChoice, scoringFormats]);
   function onScoringSaved(fmt: SavedScoringFormat) {
     setScoringFormats((prev) => [
       ...prev.filter((f) => f.id !== fmt.id),
@@ -223,7 +233,18 @@ export function LeagueSettingsFields({ settings, onChange, nameField, editableGr
 
       {/* Scoring */}
       <section className="wizard__section">
-        <h2>Scoring format</h2>
+        <div className="wizard__section-head">
+          <h2>Scoring format</h2>
+          <button
+            type="button"
+            className="wizard__info-btn"
+            onClick={() => setShowScoringInfo(true)}
+            aria-label="View scoring details"
+            title="View scoring details"
+          >
+            <InfoOutlinedIcon fontSize="small" />
+          </button>
+        </div>
         <SettingsGroupFieldset editable={canEdit('scoring')}>
           <select
             className="wizard__scoring-select"
@@ -426,6 +447,14 @@ export function LeagueSettingsFields({ settings, onChange, nameField, editableGr
         <Modal title="New scoring format" wide onClose={() => setShowScoringModal(false)}>
           <ScoringFormatCreatorPage embedded onSaved={onScoringSaved} />
         </Modal>
+      )}
+
+      {showScoringInfo && (
+        <ScoringRulesModal
+          rules={settings.scoring}
+          name={scoringName}
+          onClose={() => setShowScoringInfo(false)}
+        />
       )}
     </>
   );
