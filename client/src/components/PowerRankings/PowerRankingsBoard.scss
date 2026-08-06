@@ -146,6 +146,10 @@
 
     &.is-mine .prb-rank__name {
       color: $accent;
+
+      :root[data-theme='light'] & {
+        color: $primary;
+      }
     }
 
     &__medal {

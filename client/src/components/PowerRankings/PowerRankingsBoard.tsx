@@ -5,6 +5,7 @@ import {
   POSITION_COLORS,
   SLOT_LABELS,
   containsSlur,
+  draftablePositions,
   type DraftGrade,
   type LobbySettings,
   type Position,
@@ -146,6 +147,12 @@ export function PowerRankingsBoard({
       for (const pos of POSITIONS) rec[pos] = Math.max(rec[pos], counts[pos]);
     return rec;
   }, [posByTeam]);
+  // Only the positions this league actually rosters — a no-kicker / no-defense
+  // league shouldn't show an all-zero K or D/ST bar.
+  const draftablePos = useMemo(
+    () => POSITIONS.filter((p) => draftablePositions(settings.rosterComposition).has(p)),
+    [settings.rosterComposition],
+  );
 
   // Up/down tallies + my own reaction, keyed by "teamId:graderId".
   const reactionIndex = useMemo(() => {
@@ -418,7 +425,7 @@ export function PowerRankingsBoard({
                 </span>
               </div>
             </div>
-            <div className="prb-posbars">{POSITIONS.map(posBar)}</div>
+            <div className="prb-posbars">{draftablePos.map(posBar)}</div>
           </div>
 
           <section className="prb-sec">
