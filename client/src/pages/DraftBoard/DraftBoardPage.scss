@@ -1588,6 +1588,9 @@
     svg {
       display: block;
       font-size: 0.9rem;
+      // The adjacent "· N" digit sits on its baseline, so box-centering alone
+      // leaves the icon a hair low — lift it 1px to optically center the glyph.
+      transform: translateY(-1px);
     }
   }
 
