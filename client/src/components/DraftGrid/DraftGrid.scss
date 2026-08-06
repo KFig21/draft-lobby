@@ -493,6 +493,13 @@
   &.draft-grid--fill {
     width: 100%;
     table-layout: fixed;
+    // Fill the width on a big screen, but stop shrinking columns once they'd
+    // get too narrow to read (12 teams on an iPad-portrait fullscreen crushed
+    // names to 3-letter wraps) — below this width the board scrolls instead.
+    // --fs-cols is the team count, set from JS (see DraftGrid.tsx). 96px keeps
+    // an abbreviated name legible; ~1150px+ boards (iPad landscape and up)
+    // still fill without scrolling.
+    min-width: calc(30px + var(--fs-cols, 12) * 96px);
     // 52px is the normal (non-fill) row height that the base font sizes
     // above were tuned for — scale everything relative to that, clamped so
     // a huge TV doesn't blow text up past legibility.

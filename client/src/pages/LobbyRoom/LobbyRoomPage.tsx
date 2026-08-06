@@ -30,7 +30,7 @@ import PersonRemoveOutlinedIcon from '@mui/icons-material/PersonRemoveOutlined';
 import RemoveModeratorOutlinedIcon from '@mui/icons-material/RemoveModeratorOutlined';
 import ShuffleIcon from '@mui/icons-material/Shuffle';
 import SmartToyOutlinedIcon from '@mui/icons-material/SmartToyOutlined';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Avatar } from '../../components/Avatar/Avatar';
 import { ChampionBadge } from '../../components/ChampionBadge/ChampionBadge';
@@ -91,7 +91,7 @@ export function LobbyRoomPage() {
 
   // Chat is a bottom drawer until there's room for a third column (nav +
   // content + chat) — that doesn't fit at 1024 (iPad Pro 12.9 portrait), so the
-  // chat sidebar waits for 1100. 1100px mirrors $bp-xl (variables.scss).
+  // chat sidebar waits for 1100. 1100px mirrors $bp-lg (variables.scss).
   const [isDesktop, setIsDesktop] = useState(
     () => typeof window !== 'undefined' && window.matchMedia('(min-width: 1100px)').matches,
   );
@@ -105,6 +105,33 @@ export function LobbyRoomPage() {
     mq.addEventListener('change', onChange);
     return () => mq.removeEventListener('change', onChange);
   }, []);
+
+  // The compose input lives in a bottom-anchored fixed drawer, which the iOS
+  // software keyboard would otherwise cover. Track the keyboard's overlap via
+  // the VisualViewport API and lift the drawer above it (applied as --kb-inset
+  // in the SCSS). Only while the drawer is open, so a keyboard opened for some
+  // other input (rename, invite) doesn't shove the collapsed handle upward.
+  const [kbInset, setKbInset] = useState(0);
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv || !chatActive) {
+      setKbInset(0);
+      return;
+    }
+    const update = () => {
+      const overlap = window.innerHeight - vv.height - vv.offsetTop;
+      // Only a real keyboard produces a large overlap — ignore the small
+      // deltas from Safari's collapsing URL bar so the drawer doesn't jump.
+      setKbInset(overlap > 80 ? Math.round(overlap) : 0);
+    };
+    update();
+    vv.addEventListener('resize', update);
+    vv.addEventListener('scroll', update);
+    return () => {
+      vv.removeEventListener('resize', update);
+      vv.removeEventListener('scroll', update);
+    };
+  }, [chatActive]);
 
   const userId = session?.user.id;
 
@@ -1175,6 +1202,7 @@ export function LobbyRoomPage() {
           className={`room-chatdrawer${chatView === 'open' ? ' is-open' : ''}${
             chatView === 'full' ? ' is-full' : ''
           }`}
+          style={kbInset ? ({ ['--kb-inset']: `${kbInset}px` } as CSSProperties) : undefined}
         >
           <div className="room-chatdrawer__handle">
             <button

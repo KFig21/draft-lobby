@@ -50,16 +50,19 @@ $space: 8px;
 
 // Breakpoints (mobile-first)
 // md: tablet-portrait and up gets the sidebar nav + roomier content.
-// lg: the "desktop / tablet-landscape" tier where two-pane layouts (draft
-// board + sidebar, lobby-room chat) turn on. Set at 1024 so landscape iPads
-// (base iPad 1024, iPad 9th 1080) and iPad Pro 12.9 portrait (1024) get the
-// full layout instead of falling back to the mobile single-panel view.
-// NOTE: the LobbyRoom JS matchMedia hook mirrors this — keep them in sync.
+// lg: the "landscape-tablet / desktop" tier where two-pane layouts turn on —
+// the draft board's board+sidebar, the lobby room's chat column, the results
+// side-drawer. Set at 1100 so PORTRAIT tablets (iPad Air 820, iPad Pro 12.9
+// 1024) stay on the roomier mobile single-panel layout (a second pane is too
+// cramped there and reads awkwardly), and only LANDSCAPE iPads (Air 1180, Pro
+// 1366) and desktops get the split. NOTE: the LobbyRoom JS matchMedia hook
+// mirrors this (1100) — keep them in sync.
 $bp-md: 768px;
-$bp-lg: 1024px;
-// xl: a *third* column's worth of room. Used where a surface already has the
-// app nav sidebar + main content and wants to add ANOTHER pane (the lobby
-// room's chat sidebar) — that third column doesn't fit at 1024 (iPad Pro 12.9
-// portrait), so it waits for 1100. NOTE: the LobbyRoom JS matchMedia mirrors
-// this — keep them in sync.
-$bp-xl: 1100px;
+$bp-lg: 1100px;
+
+// Width of the desktop/tablet nav rail (see Sidebar.scss). Referenced by
+// fixed overlays that must clear it at the tablet tier (where the nav is a
+// left rail rather than a bottom bar) — e.g. the lobby chat drawer. Keep in
+// sync with Sidebar.scss.
+$sidebar-w: 240px;
+$sidebar-w-lg: 260px;

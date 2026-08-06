@@ -13,7 +13,7 @@
     align-self: flex-start;
     height: 100vh;
     height: 100dvh;
-    width: 240px;
+    width: $sidebar-w;
     flex-shrink: 0;
     padding: $space * 2 $space * 1.5;
     background: $bg-raised;
@@ -21,7 +21,7 @@
   }
 
   @media (min-width: $bp-lg) {
-    width: 260px;
+    width: $sidebar-w-lg;
   }
 
   &__brand {
