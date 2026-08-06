@@ -2292,6 +2292,7 @@ export function DraftBoardPage() {
               onVote={castCrownVote}
               onGrade={gradeTeam}
               onPickClick={setPickModal}
+              onExportGrades={() => setShowGradeExport(true)}
             />
           </div>
         )}
@@ -2603,6 +2604,7 @@ export function DraftBoardPage() {
               onVote={castCrownVote}
               onGrade={gradeTeam}
               onPickClick={setPickModal}
+              onExportGrades={() => setShowGradeExport(true)}
             />
           ) : (
             <DraftGrid

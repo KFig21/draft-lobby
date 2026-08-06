@@ -9,6 +9,7 @@ import {
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import EmojiEventsOutlinedIcon from '@mui/icons-material/EmojiEventsOutlined';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
 import InfoOutlineIcon from '@mui/icons-material/InfoOutlined';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import { useMemo, useState } from 'react';
@@ -47,6 +48,8 @@ interface Props {
   onVote: (teamId: string) => void;
   onGrade: (teamId: string, grade: DraftGrade, comment: string) => void;
   onPickClick?: (pick: PickRow) => void;
+  /** When set, shows a "Share draft grades" button that opens the PNG export. */
+  onExportGrades?: () => void;
 }
 
 /**
@@ -71,6 +74,7 @@ export function PowerRankingsPanel({
   onVote,
   onGrade,
   onPickClick,
+  onExportGrades,
 }: Props) {
   const [showHelp, setShowHelp] = useState(false);
 
@@ -140,6 +144,11 @@ export function PowerRankingsPanel({
               <LockOutlinedIcon fontSize="inherit" /> Voting and grading closed 24h after the draft
               ended — showing final results.
             </p>
+          )}
+          {onExportGrades && (
+            <button type="button" className="power-rankings__export" onClick={onExportGrades}>
+              <FileDownloadOutlinedIcon fontSize="inherit" /> Share draft grades
+            </button>
           )}
         </header>
 

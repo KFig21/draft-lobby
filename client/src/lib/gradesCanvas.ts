@@ -161,10 +161,15 @@ function titleBlock(ctx: CanvasRenderingContext2D, eyebrow: string, name: string
   return 124;
 }
 
-function footer(ctx: CanvasRenderingContext2D, H: number, left: string, right: string): void {
+function footer(ctx: CanvasRenderingContext2D, H: number, left: string, right: string, leftIcon?: string): void {
   const y = H - 16;
   hline(ctx, PAD, H - 34, CARD_W - PAD);
-  text(ctx, left, PAD, y, '500 10.5', MUTED, 'left', 'middle', CARD_W * 0.6);
+  let lx = PAD;
+  if (leftIcon) {
+    drawIcon(ctx, leftIcon, PAD, y - 8, 14, GOLD);
+    lx = PAD + 18;
+  }
+  text(ctx, left, lx, y, '500 10.5', MUTED, 'left', 'middle', CARD_W * 0.6);
   text(ctx, right, CARD_W - PAD, y, '500 10.5', MUTED, 'right', 'middle');
 }
 
@@ -200,7 +205,7 @@ function renderAllTeams(model: LeagueGrade, scale: number): HTMLCanvasElement {
     text(ctx, 'PROJ', badgeX - 12, cy + 9, '600 8', MUTED, 'right', 'middle');
   });
 
-  footer(ctx, H, `🏆 Best draft: ${model.championName}`, model.dateLabel);
+  footer(ctx, H, `Best draft: ${model.championName}`, model.dateLabel, IC_TROPHY);
   return canvas;
 }
 
@@ -266,7 +271,7 @@ function renderLeague(model: LeagueGrade, scale: number): HTMLCanvasElement {
   for (const col of cols) {
     if (!col.card) continue;
     const avY = podiumTop + (bigSize - col.size);
-    if (col.crown) drawCenteredEmoji(ctx, '👑', col.x, avY - 12, 18);
+    if (col.crown) drawIcon(ctx, IC_TROPHY, col.x - 10, avY - 26, 20, GOLD);
     drawAvatar(ctx, col.card.avatar, col.x - col.size / 2, avY, col.size);
     const ny = podiumTop + bigSize + 16;
     text(ctx, col.card.team.name, col.x, ny, '600 11.5', TEXT, 'center', 'middle', 104);
@@ -323,7 +328,7 @@ function renderTeam(model: LeagueGrade, card: TeamGradeCard, scale: number): HTM
   const starters = card.starters;
   const luLabelY = hy + hh + 26;
   const luTop = luLabelY + 12;
-  const rowH = 27;
+  const rowH = 30;
   const luBottom = luTop + starters.length * rowH;
 
   // Highlights.
@@ -420,14 +425,15 @@ function renderTeam(model: LeagueGrade, card: TeamGradeCard, scale: number): HTM
     if (row.player) {
       posPill(ctx, row.player.position, PAD + 34, cy - 8, 34, 16);
       const nameX = PAD + 76;
-      text(ctx, row.player.name, nameX, cy - 4, '600 12.5', TEXT, 'left', 'middle', CARD_W - PAD - nameX - 44);
-      text(ctx, row.player.nfl_team, nameX, cy + 8, '500 10', MUTED, 'left', 'middle');
-      // Projected points in Futura italic as a stylistic accent.
+      text(ctx, row.player.name, nameX, cy - 5, '600 12.5', TEXT, 'left', 'middle', CARD_W - PAD - nameX - 44);
+      text(ctx, row.player.nfl_team, nameX, cy + 9, '500 10', MUTED, 'left', 'middle');
+      // Projected points in Futura italic. Futura's 'middle' baseline sits high,
+      // so place the baseline explicitly to center the digits on the row.
       ctx.font = `italic 500 13.5px ${FUTURA}`;
       ctx.fillStyle = TEXT;
       ctx.textAlign = 'right';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(num(row.player.proj_points ?? 0), CARD_W - PAD, cy);
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillText(num(row.player.proj_points ?? 0), CARD_W - PAD, cy + 4.5);
     } else {
       posPill(ctx, slotLabel.slice(0, 3), PAD + 34, cy - 8, 34, 16);
       text(ctx, 'Empty', PAD + 76, cy, '500 12', MUTED, 'left', 'middle');

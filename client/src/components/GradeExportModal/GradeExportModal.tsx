@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { LobbySettings } from '@draft-lobby/shared';
 import { Modal } from '../Modal/Modal';
 import { buildLeagueGrade } from '../../lib/draftGradeExport';
@@ -49,6 +50,9 @@ export function GradeExportModal(props: Props) {
     props;
   const [mode, setMode] = useState<'single' | 'full'>('single');
   const [busy, setBusy] = useState(false);
+  // The card shown full-size in the lightbox (as an <img> so it can be
+  // long-pressed → Save Image on mobile, or screenshotted).
+  const [enlarged, setEnlarged] = useState<GradeCard | null>(null);
 
   const model = useMemo(
     () => buildLeagueGrade({ lobbyName, season, teams, members, picks, playersById, settings, crownVotes, grades }),
@@ -107,14 +111,21 @@ export function GradeExportModal(props: Props) {
         </div>
         <p className="grade-export__hint muted">
           {mode === 'single'
-            ? 'Every team on one image — the quick share for the group chat.'
-            : 'A league cover page, then one page per team. Save them all or just the one you want.'}
+            ? 'Every team on one image — the quick share for the group chat. Tap a card to enlarge it.'
+            : 'A league cover page, then one page per team. Tap a card to enlarge, then save or screenshot it.'}
         </p>
 
         <div className={`grade-export__grid${mode === 'single' ? ' grade-export__grid--single' : ''}`}>
           {cards.map((card) => (
             <div className="grade-export__item" key={card.key}>
-              <CanvasPreview canvas={card.canvas} />
+              <button
+                type="button"
+                className="grade-export__preview"
+                onClick={() => setEnlarged(card)}
+                title="Tap to enlarge"
+              >
+                <CanvasPreview canvas={card.canvas} />
+              </button>
               <button type="button" className="grade-export__dl" onClick={() => downloadOne(card)}>
                 {card.label}
               </button>
@@ -122,6 +133,22 @@ export function GradeExportModal(props: Props) {
           ))}
         </div>
       </div>
+
+      {enlarged &&
+        createPortal(
+          <div className="grade-lightbox" onClick={() => setEnlarged(null)}>
+            <img
+              className="grade-lightbox__img"
+              src={enlarged.canvas.toDataURL('image/png')}
+              alt={enlarged.label}
+              onClick={(e) => e.stopPropagation()}
+            />
+            <p className="grade-lightbox__hint">
+              Long-press to save the image, or screenshot it · tap outside to close
+            </p>
+          </div>,
+          document.body,
+        )}
     </Modal>
   );
 }
