@@ -236,10 +236,9 @@ in the gap. Recommended sequence:
 
 - **`external_id` now or later?** Recommended eventually; not required for correctness since
   `(name, position)` works today. Can land in its own migration whenever.
-- **Actuals refresh cadence.** `act_*` for the in-progress season are unknown until it ends.
-  Do we re-run the importer mid/post-season to fill 2026 actuals, or only at next year's import
-  (which already pulls `SEASON-1` stats)? The latter is zero extra work and is what the current
-  flow does — recommend that unless in-season actuals are wanted.
+- ~~**Actuals refresh cadence.**~~ **DECIDED (2026-08-06):** no mid-season stats — this app
+  is only for pre-season drafting. The importer runs once per year before the season, writing
+  that year's projections + last year's actuals (`SEASON-1`). No mid/post-season re-import.
 - **Rankings season picker.** Out of scope here, but trivial once data is season-scoped — worth
   a follow-up.
 
