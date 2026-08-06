@@ -117,9 +117,13 @@
 
   &__hint {
     margin: 0;
-    color: rgba(255, 255, 255, 0.8);
+    padding: $space * 0.6 $space * 1.1;
+    border: 1px solid $accent;
+    border-radius: 999px;
+    background: color-mix(in srgb, $accent 14%, rgba(0, 0, 0, 0.5));
+    color: $accent;
     font-size: 0.82rem;
-    font-weight: 600;
+    font-weight: 700;
     text-align: center;
   }
 }

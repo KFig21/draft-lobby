@@ -1,5 +1,5 @@
 import { DRAFT_GRADE_COLORS, POSITION_COLORS, type DraftGrade, type Position } from '@draft-lobby/shared';
-import { FONT, drawAvatar, drawCenteredEmoji, fitText, roundRect, wrapLines } from './canvasKit';
+import { FONT, drawAvatar, fitText, roundRect, wrapLines } from './canvasKit';
 import type { LeagueGrade, PickValue, TeamGradeCard } from './draftGradeExport';
 
 /**
@@ -142,13 +142,11 @@ function beginCard(scale: number, H: number): { canvas: HTMLCanvasElement; ctx: 
 
 function brandRow(ctx: CanvasRenderingContext2D, right: string): void {
   const y = 28;
-  roundRect(ctx, PAD, y - 11, 22, 22, 7);
-  const gg = ctx.createLinearGradient(PAD, y - 11, PAD + 22, y + 11);
-  gg.addColorStop(0, '#137a83');
-  gg.addColorStop(1, '#3fd6a5');
-  ctx.fillStyle = gg;
+  // Match the app favicon: mint rounded square + dark-teal trophy (EmojiEvents).
+  roundRect(ctx, PAD, y - 11, 22, 22, 6);
+  ctx.fillStyle = '#3fd6a5';
   ctx.fill();
-  drawCenteredEmoji(ctx, '🏈', PAD + 11, y, 13);
+  drawIcon(ctx, IC_TROPHY, PAD, y - 11, 22, '#106482');
   text(ctx, 'draft-lobby', PAD + 30, y + 1, '700 13', TEXT, 'left', 'middle');
   text(ctx, right, CARD_W - PAD, y + 1, '600 10.5', MUTED, 'right', 'middle', CARD_W * 0.52);
 }
@@ -248,7 +246,9 @@ function renderLeague(model: LeagueGrade, scale: number): HTMLCanvasElement {
   const podiumBottom = podiumTop + bigSize + 16 + 13 + 22 + 18;
   const statTop = podiumBottom + 14;
   const boxH = 58;
-  const calloutH = 46;
+  // Callouts carry label + value + sub (statBox puts the sub at y+50), so they
+  // need the same height as the stat boxes or the sub line spills out the bottom.
+  const calloutH = 58;
   const distLabelY = statTop + boxH + 8 + calloutH + 8 + calloutH + 22;
   const barsTop = distLabelY + 12;
   const barMax = 46;
