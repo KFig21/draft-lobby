@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
 import type { LobbySettings } from '@draft-lobby/shared';
 import { Modal } from '../Modal/Modal';
 import { buildLeagueGrade } from '../../lib/draftGradeExport';
@@ -85,6 +86,7 @@ export function GradeExportModal(props: Props) {
         {mode === 'single' ? '1 image' : `${cards.length} images`}
       </span>
       <button type="button" className="button button--primary" onClick={downloadAll} disabled={busy}>
+        <FileDownloadOutlinedIcon fontSize="inherit" />
         {busy ? 'Downloading…' : mode === 'single' ? 'Download image' : 'Download all'}
       </button>
     </div>

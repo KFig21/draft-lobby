@@ -91,9 +91,16 @@
     // Keep the download action to a single line with snug padding — on a
     // phone-width modal the default button padding was forcing a 2-line wrap.
     .button {
+      display: inline-flex;
+      align-items: center;
+      gap: $space * 0.4;
       flex-shrink: 0;
-      padding: $space * 0.6 $space * 1.1;
+      padding: $space * 0.6 $space * 1.6;
       white-space: nowrap;
+
+      svg {
+        font-size: 1.15em;
+      }
     }
   }
 }
@@ -140,6 +147,7 @@
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
