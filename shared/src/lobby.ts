@@ -68,6 +68,19 @@ export function isUnlimitedPick(seconds: number): boolean {
   return seconds === UNLIMITED_PICK_SECONDS;
 }
 
+/**
+ * Sentinel `botPickSeconds` value meaning "bots get the same clock a human
+ * would that round" (secondsForRound), instead of a fixed short bot clock.
+ * Handy when the bot seats are really stand-ins for absent people the
+ * commissioner is drafting for — they deserve the full round clock. Negative
+ * so it can't collide with a real duration or the unlimited (0) sentinel;
+ * guard with isMatchRoundBot.
+ */
+export const MATCH_ROUND_PICK_SECONDS = -1;
+export function isMatchRoundBot(seconds: number): boolean {
+  return seconds === MATCH_ROUND_PICK_SECONDS;
+}
+
 /** Default bot pick clock (seconds) when a lobby hasn't set one. */
 export const DEFAULT_BOT_PICK_SECONDS = 5;
 
@@ -130,10 +143,14 @@ export const lobbySettingsSchema = z.object({
   /** Seconds a bot / auto-draft team gets on the clock. Capped at runtime by
    * the round's own clock (a bot never gets longer than a human would), unless
    * set to UNLIMITED_PICK_SECONDS — then bots never auto-pick either, so one
-   * person can mock the whole draft by picking for every team by hand. */
+   * person can mock the whole draft by picking for every team by hand — or
+   * MATCH_ROUND_PICK_SECONDS, which gives bots the round's full human clock. */
   botPickSeconds: z.number().int().refine(
-    (s) => s === UNLIMITED_PICK_SECONDS || (s >= 1 && s <= MAX_PICK_SECONDS),
-    { message: `Bot pick speed must be 1–${MAX_PICK_SECONDS}s, or no limit` },
+    (s) =>
+      s === UNLIMITED_PICK_SECONDS ||
+      s === MATCH_ROUND_PICK_SECONDS ||
+      (s >= 1 && s <= MAX_PICK_SECONDS),
+    { message: `Bot pick speed must be 1–${MAX_PICK_SECONDS}s, no limit, or match the round clock` },
   ).default(DEFAULT_BOT_PICK_SECONDS),
   /** When on, a team that lets its clock expire is SKIPPED (the next team comes
    * on the clock) instead of auto-picked — the skipped team can still pick any

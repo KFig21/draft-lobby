@@ -7,6 +7,7 @@ import {
   SLOT_LABELS,
   SLOT_MAX,
   DEFAULT_BOT_PICK_SECONDS,
+  MATCH_ROUND_PICK_SECONDS,
   UNLIMITED_PICK_SECONDS,
   matchPreset,
   rosterSize,
@@ -42,7 +43,13 @@ interface ScoringFormatRow {
 }
 
 const SECONDS_OPTIONS = [15, 30, 45, 60, 90, 120, 180, 240, 300, UNLIMITED_PICK_SECONDS];
-const BOT_SPEED_OPTIONS = [3, 5, 10, 15, 30, UNLIMITED_PICK_SECONDS];
+const BOT_SPEED_OPTIONS = [3, 5, 10, 15, 30, MATCH_ROUND_PICK_SECONDS, UNLIMITED_PICK_SECONDS];
+
+/** Bot-speed option label — the two sentinels read as words, not clocks. */
+function botSpeedLabel(seconds: number): string {
+  if (seconds === MATCH_ROUND_PICK_SECONDS) return 'Match round clock';
+  return formatPickClock(seconds);
+}
 
 interface Props {
   settings: LobbySettings;
@@ -395,8 +402,10 @@ export function LeagueSettingsFields({ settings, onChange, nameField, editableGr
           <span>
             Bot pick speed{' '}
             <em className="muted">
-              (how fast bots draft; capped by the round clock. No limit = bots
-              never auto-pick, so you draft for every team yourself)
+              (how fast bots draft; capped by the round clock. Match round clock
+              = bots get the same time as humans — handy for stand-in seats you
+              draft for. No limit = bots never auto-pick, so you draft for every
+              team yourself)
             </em>
           </span>
           <select
@@ -405,7 +414,7 @@ export function LeagueSettingsFields({ settings, onChange, nameField, editableGr
           >
             {BOT_SPEED_OPTIONS.map((s) => (
               <option key={s} value={s}>
-                {formatPickClock(s)}
+                {botSpeedLabel(s)}
               </option>
             ))}
           </select>

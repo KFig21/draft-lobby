@@ -3,6 +3,7 @@ import {
   computeFantasyPoints,
   UNLIMITED_PICK_SECONDS,
   draftPositionForOverall,
+  isMatchRoundBot,
   isUnlimitedPick,
   openSlots,
   overallForDraftPosition,
@@ -134,6 +135,9 @@ export function clockSeconds(team: OnClockTeam | null, settings: LobbySettings, 
     // An explicitly unlimited bot clock means bots never auto-pick either (a
     // solo mock where one person drafts for everyone) — it beats the round cap.
     if (isUnlimitedPick(bot)) return UNLIMITED_PICK_SECONDS;
+    // "Match round clock": the seat gets exactly what a human would this round
+    // (may itself be unlimited) — for stand-in seats a commissioner drafts for.
+    if (isMatchRoundBot(bot)) return roundSeconds;
     return isUnlimitedPick(roundSeconds) ? bot : Math.min(bot, roundSeconds);
   }
   return roundSeconds; // may be UNLIMITED (0) — see computeDeadline
