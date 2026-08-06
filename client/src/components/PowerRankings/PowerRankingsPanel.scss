@@ -137,16 +137,22 @@
   }
 
   &__locked {
-    display: flex;
-    align-items: center;
-    gap: $space * 0.5;
+    // Inline (not flex) so the lock glyph prepends the text and rides the first
+    // line — when the copy wraps, the icon stays put instead of centering
+    // vertically against the whole block.
     margin: $space * 1.5 0 0;
     padding: $space $space * 1.25;
     font-size: 0.78rem;
+    line-height: 1.4;
     color: $warning;
     background: color-mix(in srgb, $warning 12%, transparent);
     border: 1px solid color-mix(in srgb, $warning 35%, transparent);
     border-radius: $radius-sm;
+
+    svg {
+      vertical-align: -0.15em;
+      margin-right: $space * 0.5;
+    }
   }
 
   &__export {
