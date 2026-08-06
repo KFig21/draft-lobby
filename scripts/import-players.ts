@@ -58,6 +58,25 @@ const normalize = (s: string) =>
     .replace(/\s+/g, ' ')
     .trim();
 
+// Notable veterans who are routinely drafted but may be between teams / off a
+// depth chart at import time — the Sleeper depth filter (depth_chart_order) would
+// otherwise drop them. Force them in from Sleeper regardless; their team/injury
+// still come from Sleeper (so a fresh signing like Stefon Diggs → WAS shows up
+// automatically), falling back to "FA" when Sleeper has no team. Add names here.
+const NOTABLE_INCLUDE = new Set(
+  ['Keenan Allen', 'Nick Chubb', 'Darren Waller', 'Stefon Diggs', 'Taysom Hill', 'Deebo Samuel'].map(
+    normalize,
+  ),
+);
+
+// Clearly-retired players to drop from the *draftable* pool. Matched on
+// name+position. We only remove their CURRENT-season player_seasons row (the app
+// defines the pool by that row), never the players row itself — so any historical
+// pick/keeper that references them stays intact. Extend this list as needed.
+const RETIRED_EXCLUDE: { name: string; position: Pos }[] = [
+  { name: 'Ben Roethlisberger', position: 'QB' },
+];
+
 // ── Fantasy Football Calculator ADP ─────────────────────────────────
 interface FfcPlayer {
   name: string;
@@ -333,14 +352,18 @@ async function main() {
       // only ones actually slotted on a depth chart. Sleeper's `active` flag
       // alone isn't enough: it stays true indefinitely for players who
       // retired years ago (e.g. Ben Roethlisberger), while a real bench
-      // player always carries a depth_chart_order.
-      if (sp.active && sp.team && sp.depth_chart_order != null && !seen.has(keyStr)) {
+      // player always carries a depth_chart_order. Notable veterans on the
+      // curated list are force-included even without a depth slot (they may be
+      // free agents), using their Sleeper team where known, else "FA".
+      const notable = NOTABLE_INCLUDE.has(normalize(full));
+      const rosterDepth = sp.team != null && sp.depth_chart_order != null;
+      if (sp.active && (rosterDepth || notable) && !seen.has(keyStr)) {
         seen.add(keyStr);
         pool.push({
           name: full,
           position: pos as Pos,
-          nfl_team: sp.team,
-          bye_week: teamByeMap.get(sp.team) ?? null,
+          nfl_team: sp.team ?? 'FA',
+          bye_week: sp.team ? (teamByeMap.get(sp.team) ?? null) : null,
           injury_status: mapInjury(sp.injury_status),
           proj_points: null,
           proj_rank: null,
@@ -489,6 +512,30 @@ async function main() {
       .upsert(chunk, { onConflict: 'player_id,season' });
     if (error) throw new Error(error.message);
   }
+
+  // 5) Drop clearly-retired players from the draftable pool by removing their
+  // CURRENT-season row. The players row (and any pick/keeper/favorite pointing at
+  // it) is left untouched — the app just stops listing them because the pool is
+  // defined by current-season player_seasons rows (client/src/hooks/usePlayers).
+  let retiredRemoved = 0;
+  for (const r of RETIRED_EXCLUDE) {
+    const { data: rows, error } = await supabase
+      .from('players')
+      .select('id')
+      .eq('name', r.name)
+      .eq('position', r.position);
+    if (error) throw new Error(error.message);
+    for (const row of rows ?? []) {
+      const { error: delErr } = await supabase
+        .from('player_seasons')
+        .delete()
+        .eq('player_id', row.id)
+        .eq('season', SEASON);
+      if (delErr) throw new Error(delErr.message);
+      retiredRemoved++;
+    }
+  }
+  if (retiredRemoved) console.log(`Removed ${retiredRemoved} retired player(s) from the ${SEASON} pool`);
 
   console.log(`✅ Imported ${pool.length} real players`);
 }
