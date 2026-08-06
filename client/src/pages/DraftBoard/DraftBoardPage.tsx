@@ -323,6 +323,8 @@ export function DraftBoardPage() {
   const [pickError, setPickError] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [commishBusy, setCommishBusy] = useState(false);
+  // Guards Start when reserved seats are still unclaimed (they'll become bots).
+  const [confirmStart, setConfirmStart] = useState(false);
   // Pause/resume get their own busy flag, separate from commishBusy (which
   // fast-forward also sets) — otherwise, while "Skip bots" is auto-advancing
   // through a streak of bot picks, commishBusy stays true almost
@@ -1552,16 +1554,25 @@ export function DraftBoardPage() {
 
   // Commissioner starts the draft from staging (STAGING → DRAFTING). Realtime
   // flips everyone's board out of the staging layout — no navigation needed.
-  async function startDraft() {
+  // Reserved seats whose user never joined — they'll fall back to bots on start.
+  const unclaimedReserved = teams.filter((t) => t.reserved_for_user_id && !t.owner_id).length;
+
+  async function doStart() {
     setCommishError(null);
     setCommishBusy(true);
     try {
       await api(`/lobbies/${id}/start`, { method: 'POST' });
+      setConfirmStart(false);
     } catch (err) {
       setCommishError(err instanceof Error ? err.message : 'Failed to start the draft');
     } finally {
       setCommishBusy(false);
     }
+  }
+  // Heads-up first if reserved seats are still unclaimed; otherwise start now.
+  function startDraft() {
+    if (unclaimedReserved > 0) setConfirmStart(true);
+    else void doStart();
   }
 
   // Freezes everyone but the commissioner out of keep/unkeep — a deliberate
@@ -3021,6 +3032,25 @@ export function DraftBoardPage() {
             </ConfirmModal>
           );
         })()}
+
+      {confirmStart && (
+        <ConfirmModal
+          title="Start the draft?"
+          confirmLabel="Start draft"
+          busyLabel="Starting…"
+          busy={commishBusy}
+          onConfirm={() => void doStart()}
+          onClose={() => setConfirmStart(false)}
+        >
+          <p>
+            {unclaimedReserved === 1
+              ? '1 reserved seat hasn’t been claimed yet.'
+              : `${unclaimedReserved} reserved seats haven’t been claimed yet.`}{' '}
+            Starting now turns {unclaimedReserved === 1 ? 'it' : 'them'} into
+            {unclaimedReserved === 1 ? ' a bot' : ' bots'} for the draft.
+          </p>
+        </ConfirmModal>
+      )}
 
       {showExport && (
         <Modal

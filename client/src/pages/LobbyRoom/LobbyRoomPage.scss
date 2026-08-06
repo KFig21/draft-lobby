@@ -446,6 +446,19 @@
   }
 }
 
+// Reserve-seat button — accent-tinted so it reads distinctly from the neutral
+// Invite button beside it. Compound (both classes) to beat the base .button
+// background at otherwise-equal single-class specificity.
+.room__friend-btn.room__friend-btn--reserve {
+  background: color-mix(in srgb, $accent 14%, transparent);
+  border-color: color-mix(in srgb, $accent 45%, transparent);
+  color: $accent;
+
+  &:hover:not(:disabled) {
+    background: color-mix(in srgb, $accent 22%, transparent);
+  }
+}
+
 .room__teams-head {
   display: flex;
   align-items: baseline;
@@ -633,6 +646,12 @@
     &--standin {
       background: color-mix(in srgb, $info 16%, transparent);
       color: $info;
+    }
+
+    // A seat held for a specific friend until they join — accent (friend hue).
+    &--reserved {
+      background: rgba($accent, 0.15);
+      color: $accent;
     }
   }
 

@@ -64,6 +64,9 @@ export interface TeamRow {
   /** Ownerless seat the commissioner drafts for in-person (no account). Unlike
    * a bot it's human-like on the clock (skippable, not AI-auto-drafted). */
   is_standin: boolean;
+  /** Set when this seat is reserved for a specific (not-yet-joined) user — they
+   * claim it on join. Null once owned or if never reserved. */
+  reserved_for_user_id: string | null;
   /** How many keepers this team may select (owner-choice flow). Default 1. */
   keeper_count: number;
   /** Times this team's pick clock has expired (been skipped). Skip-on-timeout. */

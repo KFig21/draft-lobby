@@ -84,6 +84,7 @@ export function LobbyRoomPage() {
   const [friendships, setFriendships] = useState<FriendshipRow[]>([]);
   const [invitedIds, setInvitedIds] = useState<Set<string>>(new Set());
   const [inviteBusy, setInviteBusy] = useState<string | null>(null);
+  const [reserveBusy, setReserveBusy] = useState<string | null>(null);
   const [friendBusy, setFriendBusy] = useState<string | null>(null);
   const [orderMode, setOrderMode] = useState(false);
   // Positional draft order: index 0 = pick 1; each entry is a team id or null (open slot).
@@ -518,6 +519,10 @@ export function LobbyRoomPage() {
   const s = lobby.settings;
   const filledSlots = teams.length;
   const emptySlots = Math.max(0, s.teamCount - filledSlots);
+  // Friends who already hold a reserved seat in this lobby.
+  const reservedUserIds = new Set(
+    teams.map((t) => t.reserved_for_user_id).filter((v): v is string => !!v),
+  );
 
   // Opens the draft room (staging) rather than starting the draft — people
   // enter the board and lock keepers there, and the commissioner hits the red
@@ -577,6 +582,19 @@ export function LobbyRoomPage() {
       setActionError(err instanceof Error ? err.message : 'Failed to invite');
     } finally {
       setInviteBusy(null);
+    }
+  }
+  async function reserveSeat(friendId: string) {
+    setReserveBusy(friendId);
+    setActionError(null);
+    try {
+      await api(`/lobbies/${id}/reserve-seat`, { method: 'POST', body: { userId: friendId } });
+      setInvitedIds((prev) => new Set(prev).add(friendId));
+      refetch(); // the new reserved seat shows in the team list / draft order
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Failed to reserve a seat');
+    } finally {
+      setReserveBusy(null);
     }
   }
 
@@ -910,6 +928,11 @@ export function LobbyRoomPage() {
                               Stand-in
                             </span>
                           )}
+                          {team.reserved_for_user_id && (
+                            <span className="team-list__chip team-list__chip--reserved">
+                              Reserved
+                            </span>
+                          )}
                           {team.owner_id === userId && (
                             <span className="team-list__you">you</span>
                           )}
@@ -1011,6 +1034,9 @@ export function LobbyRoomPage() {
                           {team.is_standin && (
                             <span className="team-list__chip team-list__chip--standin">Stand-in</span>
                           )}
+                          {team.reserved_for_user_id && (
+                            <span className="team-list__chip team-list__chip--reserved">Reserved</span>
+                          )}
                           {isCommish && (
                             <button
                               type="button"
@@ -1082,6 +1108,9 @@ export function LobbyRoomPage() {
                         {team.is_standin && (
                           <span className="team-list__chip team-list__chip--standin">Stand-in</span>
                         )}
+                        {team.reserved_for_user_id && (
+                          <span className="team-list__chip team-list__chip--reserved">Reserved</span>
+                        )}
                         {(ownerRole === 'COMMISSIONER' || ownerRole === 'SUB_COMMISSIONER') && (
                           <CommissionerBadge role={ownerRole} size={15} />
                         )}
@@ -1099,19 +1128,28 @@ export function LobbyRoomPage() {
                             <EditOutlinedIcon fontSize="small" />
                           </button>
                         )}
-                        {(team.is_bot || team.is_standin) && isCommish && !draftLive && (
-                          <button
-                            type="button"
-                            className="team-list__icon"
-                            aria-label={`Remove ${team.name}`}
-                            title={team.is_standin ? 'Remove stand-in seat' : 'Remove bot'}
-                            onClick={() => removeBot(team.id)}
-                          >
-                            <CloseIcon fontSize="small" />
-                          </button>
-                        )}
+                        {(team.is_bot || team.is_standin || team.reserved_for_user_id) &&
+                          isCommish &&
+                          !draftLive && (
+                            <button
+                              type="button"
+                              className="team-list__icon"
+                              aria-label={`Remove ${team.name}`}
+                              title={
+                                team.reserved_for_user_id
+                                  ? 'Remove reserved seat'
+                                  : team.is_standin
+                                    ? 'Remove stand-in seat'
+                                    : 'Remove bot'
+                              }
+                              onClick={() => removeBot(team.id)}
+                            >
+                              <CloseIcon fontSize="small" />
+                            </button>
+                          )}
                         {!team.is_bot &&
                           !team.is_standin &&
+                          !team.reserved_for_user_id &&
                           isCommish &&
                           !draftLive &&
                           team.owner_id &&
@@ -1234,16 +1272,36 @@ export function LobbyRoomPage() {
                       <span className="room__friend-name">{f.username}</span>
                       {isMember ? (
                         <span className="muted">In lobby</span>
-                      ) : invited ? (
-                        <span className="muted">Invited</span>
+                      ) : reservedUserIds.has(f.id) ? (
+                        <span className="room__friend-tag">Seat reserved</span>
                       ) : (
-                        <button
-                          className="button room__friend-btn"
-                          disabled={inviteBusy === f.id}
-                          onClick={() => invite(f.id)}
-                        >
-                          {inviteBusy === f.id ? 'Inviting…' : 'Invite'}
-                        </button>
+                        <>
+                          {invited ? (
+                            <span className="muted">Invited</span>
+                          ) : (
+                            <button
+                              className="button room__friend-btn"
+                              disabled={inviteBusy === f.id}
+                              onClick={() => invite(f.id)}
+                            >
+                              {inviteBusy === f.id ? 'Inviting…' : 'Invite'}
+                            </button>
+                          )}
+                          {isCommish && (
+                            <button
+                              className="button room__friend-btn room__friend-btn--reserve"
+                              disabled={reserveBusy === f.id || emptySlots === 0}
+                              onClick={() => reserveSeat(f.id)}
+                              title={
+                                emptySlots === 0
+                                  ? 'No open seats — remove a bot or stand-in first'
+                                  : 'Hold a specific seat for this friend (invites them too)'
+                              }
+                            >
+                              {reserveBusy === f.id ? 'Reserving…' : 'Reserve seat'}
+                            </button>
+                          )}
+                        </>
                       )}
                     </li>
                   );

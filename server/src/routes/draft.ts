@@ -363,6 +363,17 @@ draftRouter.post('/:id/start', async (req: AuthedRequest, res: Response) => {
 
   const settings = lobby.settings as LobbySettings;
 
+  // A reserved seat whose user never joined is a no-show: fall it back to a bot
+  // (keeps the seat + its draft position, but now it auto-drafts). Must run
+  // before fillOpenSeatsWithBots so the count is right — though these seats
+  // already hold a position, so the fill only touches genuinely empty slots.
+  await supabaseAdmin
+    .from('teams')
+    .update({ is_bot: true, auto_draft: true, reserved_for_user_id: null })
+    .eq('lobby_id', lobbyId)
+    .is('owner_id', null)
+    .not('reserved_for_user_id', 'is', null);
+
   // Fill any empty seats with bots so every draft slot has a drafter.
   await fillOpenSeatsWithBots(lobbyId, settings);
 
@@ -2264,6 +2275,114 @@ draftRouter.post('/:id/add-standin', async (req: AuthedRequest, res: Response) =
   res.json({ ok: true, draftPosition: pos });
 });
 
+/** POST /api/lobbies/:id/reserve-seat — commissioner holds a seat for a friend
+ * (body { userId }) and auto-invites them. The friend claims this exact seat on
+ * join; an unclaimed reserved seat falls back to a bot at draft start. */
+draftRouter.post('/:id/reserve-seat', async (req: AuthedRequest, res: Response) => {
+  const lobbyId = req.params.id;
+  const me = req.user!.id;
+  const role = await getRole(lobbyId, me);
+  if (!isCommish(role)) {
+    res.status(403).json({ error: 'Only the commissioner can reserve seats' });
+    return;
+  }
+  const invitee = typeof req.body?.userId === 'string' ? req.body.userId : null;
+  if (!invitee) {
+    res.status(400).json({ error: 'userId is required' });
+    return;
+  }
+
+  const { data: lobby } = await supabaseAdmin
+    .from('lobbies')
+    .select('id, name, status, settings')
+    .eq('id', lobbyId)
+    .single();
+  if (!lobby) {
+    res.status(404).json({ error: 'Lobby not found' });
+    return;
+  }
+  if (lobby.status !== 'SETUP' && lobby.status !== 'SCHEDULED' && lobby.status !== 'STAGING') {
+    res.status(409).json({ error: 'Seats can only be reserved before the draft starts' });
+    return;
+  }
+
+  // Friends only. Fetch my accepted friendships (interpolating only my own
+  // trusted id into the filter) and check the invitee is among them.
+  const { data: fr } = await supabaseAdmin
+    .from('friendships')
+    .select('requester_id, addressee_id')
+    .eq('status', 'ACCEPTED')
+    .or(`requester_id.eq.${me},addressee_id.eq.${me}`);
+  const isFriend = (fr ?? []).some(
+    (f) =>
+      (f.requester_id === me && f.addressee_id === invitee) ||
+      (f.addressee_id === me && f.requester_id === invitee),
+  );
+  if (!isFriend) {
+    res.status(403).json({ error: 'You can only reserve a seat for a friend' });
+    return;
+  }
+
+  if (await getRole(lobbyId, invitee)) {
+    res.status(409).json({ error: 'That user is already in the lobby' });
+    return;
+  }
+
+  const { data: teamRows } = await supabaseAdmin
+    .from('teams')
+    .select('draft_position, reserved_for_user_id')
+    .eq('lobby_id', lobbyId);
+  const teams = teamRows ?? [];
+  if (teams.some((t) => t.reserved_for_user_id === invitee)) {
+    res.status(409).json({ error: 'That user already has a reserved seat' });
+    return;
+  }
+  const teamCount = (lobby.settings as LobbySettings).teamCount;
+  const taken = new Set(teams.map((t) => t.draft_position as number));
+  let pos = 1;
+  while (taken.has(pos)) pos++;
+  if (pos > teamCount) {
+    res.status(409).json({ error: 'Lobby is already full' });
+    return;
+  }
+
+  const { data: prof } = await supabaseAdmin
+    .from('profiles')
+    .select('username')
+    .eq('id', invitee)
+    .maybeSingle();
+
+  const { error: insertErr } = await supabaseAdmin.from('teams').insert({
+    lobby_id: lobbyId,
+    owner_id: null,
+    reserved_for_user_id: invitee,
+    name: prof?.username ?? `Seat ${pos}`,
+    draft_position: pos,
+    is_bot: false,
+    auto_draft: false,
+  });
+  if (insertErr) {
+    res.status(500).json({ error: insertErr.message });
+    return;
+  }
+
+  // Auto-invite (same as /invite): upsert the lobby invite + notify.
+  await supabaseAdmin
+    .from('lobby_invites')
+    .upsert(
+      { lobby_id: lobbyId, inviter_id: me, invitee_id: invitee, status: 'PENDING' },
+      { onConflict: 'lobby_id,invitee_id' },
+    );
+  await supabaseAdmin.from('notifications').insert({
+    user_id: invitee,
+    actor_id: me,
+    type: 'LOBBY_INVITE',
+    lobby_id: lobbyId,
+    lobby_name: lobby.name,
+  });
+  res.json({ ok: true, draftPosition: pos });
+});
+
 /** POST /api/lobbies/:id/team-name — rename your own team (or any team, if
  * commissioner). Locked for everyone but the commissioner once the draft
  * is COMPLETE. */
@@ -2580,13 +2699,13 @@ draftRouter.post('/:id/remove-bot', async (req: AuthedRequest, res: Response) =>
 
   const { data: team } = await supabaseAdmin
     .from('teams')
-    .select('id, is_bot, is_standin')
+    .select('id, is_bot, is_standin, reserved_for_user_id')
     .eq('lobby_id', lobbyId)
     .eq('id', teamId)
     .maybeSingle();
-  // Only ownerless seats (bots + stand-ins) are removable this way — a real
-  // member's seat is removed via the kick flow instead.
-  if (!team || !(team.is_bot || team.is_standin)) {
+  // Only ownerless placeholder seats (bots, stand-ins, reserved) are removable
+  // this way — a real member's seat is removed via the kick flow instead.
+  if (!team || !(team.is_bot || team.is_standin || team.reserved_for_user_id)) {
     res.status(404).json({ error: 'Seat not found' });
     return;
   }

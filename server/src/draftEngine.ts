@@ -222,8 +222,9 @@ export function fillOpenSeatsWithStandins(lobbyId: string, settings: LobbySettin
 }
 
 /**
- * Assign a joining user a draft seat: take over an open bot seat if one exists,
- * otherwise claim the lowest free draft position. Returns the seat or a full error.
+ * Assign a joining user a draft seat, in priority order: a seat reserved for
+ * them → an open bot seat → a stand-in seat → the lowest free draft position.
+ * Returns the seat or a full error.
  */
 export async function claimSeat(
   lobbyId: string,
@@ -234,6 +235,29 @@ export async function claimSeat(
   // Default an unnamed team to the joining user's username (falling back to
   // "Team N" only if they somehow have none).
   const defaultName = teamName ?? (await usernameOf(userId)) ?? undefined;
+
+  // First, a seat the commissioner reserved for THIS user — hand it to them as
+  // is (it already carries their name + the draft position it was placed in),
+  // just clearing the reservation. Beats every other placeholder.
+  const { data: reservedSeat } = await supabaseAdmin
+    .from('teams')
+    .select('id, draft_position')
+    .eq('lobby_id', lobbyId)
+    .eq('reserved_for_user_id', userId)
+    .is('owner_id', null)
+    .limit(1)
+    .maybeSingle();
+  if (reservedSeat) {
+    await supabaseAdmin
+      .from('teams')
+      .update({ owner_id: userId, reserved_for_user_id: null })
+      .eq('id', reservedSeat.id);
+    return {
+      ok: true,
+      teamId: reservedSeat.id as string,
+      draftPosition: reservedSeat.draft_position as number,
+    };
+  }
 
   // Prefer taking over a bot's seat (a human replaces a bot).
   const { data: botSeat } = await supabaseAdmin
