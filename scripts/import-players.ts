@@ -467,13 +467,14 @@ async function main() {
   // (player_id, season), so re-runs update the same rows and never touch other
   // years. Skips any player whose id we couldn't resolve above (shouldn't
   // happen — every pool row was just upserted).
-  const seasonRows: Record<string, unknown>[] = [];
+  const curRows: Record<string, unknown>[] = [];
+  const prevRows: Record<string, unknown>[] = [];
   for (const p of pool) {
     const playerId = idByKey.get(`${normalize(p.name)}|${p.position}`);
     if (!playerId) continue;
 
     // Current season: projection + draft-prep bio.
-    seasonRows.push({
+    curRows.push({
       player_id: playerId,
       season: SEASON,
       nfl_team: p.nfl_team,
@@ -493,7 +494,7 @@ async function main() {
       p.prev_stat_line != null ||
       p.prev_stats != null;
     if (hasPrev) {
-      seasonRows.push({
+      prevRows.push({
         player_id: playerId,
         season: SEASON - 1,
         act_points: p.prev_points,
@@ -504,13 +505,23 @@ async function main() {
     }
   }
 
-  console.log(`Upserting ${seasonRows.length} player-season rows…`);
-  for (let i = 0; i < seasonRows.length; i += 500) {
-    const chunk = seasonRows.slice(i, i + 500);
-    const { error } = await supabase
-      .from('player_seasons')
-      .upsert(chunk, { onConflict: 'player_id,season' });
-    if (error) throw new Error(error.message);
+  // Upsert the two shapes in SEPARATE batches. supabase-js unions the keys
+  // across a batch and sends NULL for any column a given row omits — so mixing
+  // current rows (which set injury_status) with prior rows (which don't) made
+  // the prior rows send injury_status = NULL and trip its NOT NULL. Homogeneous
+  // batches let the prior rows omit it entirely and fall back to the column
+  // default ('ACTIVE'); the bio columns they omit are nullable.
+  console.log(
+    `Upserting ${curRows.length} current-season + ${prevRows.length} prior-season rows…`,
+  );
+  for (const rows of [curRows, prevRows]) {
+    for (let i = 0; i < rows.length; i += 500) {
+      const chunk = rows.slice(i, i + 500);
+      const { error } = await supabase
+        .from('player_seasons')
+        .upsert(chunk, { onConflict: 'player_id,season' });
+      if (error) throw new Error(error.message);
+    }
   }
 
   // 5) Drop clearly-retired players from the draftable pool by removing their
