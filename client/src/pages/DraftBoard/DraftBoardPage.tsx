@@ -71,6 +71,7 @@ import { DraftChat } from '../../components/DraftChat/DraftChat';
 import { DraftGrid, type ReactionEntry } from '../../components/DraftGrid/DraftGrid';
 import { DraftOutroModal } from '../../components/DraftOutroModal/DraftOutroModal';
 import { PowerRankingsPanel } from '../../components/PowerRankings/PowerRankingsPanel';
+import { GradeExportModal } from '../../components/GradeExportModal/GradeExportModal';
 import { DraftUserSettingsModal } from '../../components/DraftUserSettingsModal/DraftUserSettingsModal';
 import { ErrorScreen } from '../../components/ErrorScreen/ErrorScreen';
 import { GradeBadge } from '../../components/GradeBadge/GradeBadge';
@@ -339,6 +340,7 @@ export function DraftBoardPage() {
   const [rollbackTarget, setRollbackTarget] = useState<RollbackTarget | null>(null);
   const [rollbackConfirmText, setRollbackConfirmText] = useState('');
   const [showExport, setShowExport] = useState(false);
+  const [showGradeExport, setShowGradeExport] = useState(false);
   // Commissioner mid-draft settings editor (clocks + skips at this phase).
   const [showLobbySettings, setShowLobbySettings] = useState(false);
   // Board screenshot (see captureBoardScreenshot): 'menu' shows the CSV/Excel/
@@ -3100,6 +3102,19 @@ export function DraftBoardPage() {
                       <span className="muted">Typed data, for scripts and other tools</span>
                     </span>
                   </button>
+                  <button
+                    className="button draft-export-options__opt"
+                    onClick={() => {
+                      setShowExport(false);
+                      setShowGradeExport(true);
+                    }}
+                  >
+                    <EmojiEventsOutlinedIcon fontSize="small" />
+                    <span>
+                      <strong>Draft grades</strong>
+                      <span className="muted">Shareable grade cards (PNG) — one or per team</span>
+                    </span>
+                  </button>
                 </>
               )}
               <button
@@ -3164,6 +3179,21 @@ export function DraftBoardPage() {
             </div>
           )}
         </Modal>
+      )}
+
+      {showGradeExport && (
+        <GradeExportModal
+          lobbyName={lobby.name}
+          season={lobby.season}
+          teams={teams}
+          members={members}
+          picks={picks}
+          playersById={playersById}
+          settings={lobby.settings}
+          crownVotes={crownVotes}
+          grades={grades}
+          onClose={() => setShowGradeExport(false)}
+        />
       )}
 
       {isFullscreen && showFsMenu && (

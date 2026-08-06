@@ -120,23 +120,32 @@ export function exportDraftJson(opts: ExportOptions): void {
   );
 }
 
-/** Save a captured board screenshot canvas (see html2canvas usage in
- * DraftBoardPage) as a PNG download. */
+/** Download a canvas as a PNG under `filename` (no extension needed). */
+export function downloadCanvasPng(canvas: HTMLCanvasElement, filename: string): Promise<void> {
+  return new Promise((resolve) => {
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        resolve();
+        return;
+      }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename.endsWith('.png') ? filename : `${filename}.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      resolve();
+    }, 'image/png');
+  });
+}
+
+/** Save a captured board screenshot canvas as a PNG download. */
 export function downloadBoardScreenshot(
   canvas: HTMLCanvasElement,
   lobbyName: string,
   anonymized: boolean,
 ): void {
-  const filename = `${slugify(lobbyName)}-board${anonymized ? '-anonymized' : ''}.png`;
-  canvas.toBlob((blob) => {
-    if (!blob) return;
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  }, 'image/png');
+  void downloadCanvasPng(canvas, `${slugify(lobbyName)}-board${anonymized ? '-anonymized' : ''}`);
 }
