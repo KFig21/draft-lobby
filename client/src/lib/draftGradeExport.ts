@@ -60,6 +60,8 @@ export interface LeagueGrade {
   championName: string;
   avgGrade: DraftGrade | null;
   topProjection: number;
+  avgProjection: number;
+  lowProjection: number;
   /** A–F bucket counts for the distribution bar. */
   distribution: { letter: string; count: number }[];
   leagueSteal: (PickValue & { team: TeamRow }) | null;
@@ -182,7 +184,11 @@ export function buildLeagueGrade(opts: {
     teams: teamCards,
     championName: teamCards[0]?.team.name ?? '',
     avgGrade: mostCommonGrade(teamCards.map((t) => ({ grade: t.grade }))),
-    topProjection: teamCards[0]?.starterPoints ?? 0,
+    topProjection: teamCards.length ? Math.max(...teamCards.map((t) => t.starterPoints)) : 0,
+    avgProjection: teamCards.length
+      ? teamCards.reduce((s, t) => s + t.starterPoints, 0) / teamCards.length
+      : 0,
+    lowProjection: teamCards.length ? Math.min(...teamCards.map((t) => t.starterPoints)) : 0,
     distribution,
     leagueSteal: withTeam(leagueBest),
     leagueReach: withTeam(leagueReach),

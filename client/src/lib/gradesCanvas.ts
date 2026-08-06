@@ -274,18 +274,45 @@ function statBox(
   if (sub) text(ctx, sub, x + 14, y + 57, '500 10', MUTED, 'left', 'alphabetic', w - 28);
 }
 
+// Compact projection stat: a small label above a big Futura-italic number,
+// color-coded (top = green, avg = orange, low = red).
+function projBox(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  label: string,
+  value: string,
+  color: string,
+): void {
+  roundRect(ctx, x, y, w, h, 12);
+  ctx.fillStyle = PANEL;
+  ctx.fill();
+  roundRect(ctx, x + 0.5, y + 0.5, w - 1, h - 1, 12);
+  ctx.strokeStyle = LINE;
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  text(ctx, label, x + 12, y + 18, '700 9', MUTED, 'left', 'alphabetic', w - 20);
+  ctx.font = `italic 600 22px ${FUTURA}`;
+  ctx.fillStyle = color;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillText(fitText(ctx, value, w - 24), x + 12, y + 44);
+}
+
 // ── Card 2: league cover ───────────────────────────────────────────────
 function renderLeague(model: LeagueGrade, scale: number): HTMLCanvasElement {
   const podiumTop = 140;
   const bigSize = 56;
   const podiumBottom = podiumTop + bigSize + 16 + 13 + 22 + 21;
   const statTop = podiumBottom + 16;
-  const boxH = 66;
+  const projBoxH = 56; // top/avg/low projection row — label + number, no sub
   // Callouts carry label + value + sub (statBox puts the sub at y+57), so they
-  // need the same height as the stat boxes or the sub line spills out the bottom.
+  // need this height or the sub line spills out the bottom.
   const calloutH = 66;
   const gapY = 10; // vertical breathing room between stacked boxes
-  const distLabelY = statTop + boxH + gapY + calloutH + gapY + calloutH + 24;
+  const distLabelY = statTop + projBoxH + gapY + calloutH + gapY + calloutH + 24;
   const barsTop = distLabelY + 12;
   const barMax = 46;
   const distBottom = barsTop + barMax + 18;
@@ -316,13 +343,15 @@ function renderLeague(model: LeagueGrade, scale: number): HTMLCanvasElement {
     text(ctx, `#${col.card.rank}`, col.x, ny + 57, '700 10', MUTED, 'center', 'middle');
   }
 
-  // Stat boxes
-  const colW = (CARD_W - PAD * 2 - gapY) / 2;
-  statBox(ctx, PAD, statTop, colW, boxH, 'LEAGUE AVG', MUTED, model.avgGrade ?? '—', '750 22', model.avgGrade ? DRAFT_GRADE_COLORS[model.avgGrade] : MUTED, 'across all rosters');
-  statBox(ctx, PAD + colW + gapY, statTop, colW, boxH, 'TOP PROJECTION', MUTED, num(model.topProjection), '750 22', TEXT, model.championName);
+  // Projection row: top (green) · avg (orange) · low (red), Futura-italic nums.
+  const gap3 = 8;
+  const colW3 = (CARD_W - PAD * 2 - gap3 * 2) / 3;
+  projBox(ctx, PAD, statTop, colW3, projBoxH, 'TOP PROJECTION', num(model.topProjection), '#3fd6a5');
+  projBox(ctx, PAD + colW3 + gap3, statTop, colW3, projBoxH, 'AVG PROJECTION', num(model.avgProjection), '#f6a642');
+  projBox(ctx, PAD + (colW3 + gap3) * 2, statTop, colW3, projBoxH, 'LOW PROJECTION', num(model.lowProjection), '#f8577d');
 
   const fullW = CARD_W - PAD * 2;
-  const stealY = statTop + boxH + gapY;
+  const stealY = statTop + projBoxH + gapY;
   if (model.leagueSteal) {
     const s = model.leagueSteal;
     statBox(ctx, PAD, stealY, fullW, calloutH, 'STEAL OF THE DRAFT', MINT, `${s.player.name} · ${s.player.position}`, '700 14', TEXT, `R${s.round} to ${s.team.name} — +${Math.max(0, s.valueRounds)} rds of value`, IC_BOLT);
