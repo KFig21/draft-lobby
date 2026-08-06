@@ -231,8 +231,7 @@
 
     // Season year — accent-tinted so the year tag reads as the primary marker.
     &--season {
-      background: rgba($accent, 0.15);
-      color: $accent;
+      color: $text-muted;
     }
   }
 }
