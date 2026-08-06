@@ -118,10 +118,32 @@ const BASE_RULES: ScoringRules = {
   fumbleLost: -2,
 };
 
+// "Decimal" framing of BASE_RULES: rate stats expressed per single unit
+// (e.g. 0.1 pt per yard) instead of the "whole" per-N framing (1 pt per 10
+// yards). The two score identically — only the displayed rule differs — which
+// is exactly the whole/decimal distinction the custom-format creator uses.
+const toDecimal = (rules: ScoringRules): ScoringRules => {
+  const out: ScoringRules = {};
+  for (const [key, value] of Object.entries(rules)) {
+    out[key] =
+      typeof value === 'object' && value.per
+        ? { points: Math.round((value.points / value.per) * 1000) / 1000, per: 1 }
+        : value;
+  }
+  return out;
+};
+const BASE_RULES_DECIMAL: ScoringRules = toDecimal(BASE_RULES);
+
+// Each base format ships in both framings (whole per-N vs decimal per-unit), so
+// six presets total. The three "whole" keys keep their original names so scoring
+// stored under the old presets still resolves to them.
 export const SCORING_PRESETS = {
-  STANDARD: { label: 'Standard', rules: { ...BASE_RULES } },
-  HALF_PPR: { label: 'Half-PPR', rules: { ...BASE_RULES, reception: 0.5 } },
-  PPR: { label: 'PPR', rules: { ...BASE_RULES, reception: 1 } },
+  STANDARD: { label: 'Standard (whole)', rules: { ...BASE_RULES } },
+  STANDARD_DECIMAL: { label: 'Standard (decimal)', rules: { ...BASE_RULES_DECIMAL } },
+  HALF_PPR: { label: 'Half-PPR (whole)', rules: { ...BASE_RULES, reception: 0.5 } },
+  HALF_PPR_DECIMAL: { label: 'Half-PPR (decimal)', rules: { ...BASE_RULES_DECIMAL, reception: 0.5 } },
+  PPR: { label: 'PPR (whole)', rules: { ...BASE_RULES, reception: 1 } },
+  PPR_DECIMAL: { label: 'PPR (decimal)', rules: { ...BASE_RULES_DECIMAL, reception: 1 } },
 } satisfies Record<string, { label: string; rules: ScoringRules }>;
 
 export type ScoringPreset = keyof typeof SCORING_PRESETS;
