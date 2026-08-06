@@ -36,8 +36,10 @@ export interface TeamGradeCard {
   grade: DraftGrade;
   /** Most common peer grade for this team (post-draft grading), if any. */
   peerGrade: DraftGrade | null;
-  /** A representative peer comment to headline the team's verdict, if any. */
-  peerComment: string | null;
+  /** How many peers graded this team. */
+  peerCount: number;
+  /** Every peer grade left on this team (grade + optional comment + author). */
+  peerGrades: { grade: DraftGrade; comment: string | null; author: string | null }[];
   crownVotes: number;
   /** Optimal starter slots in fixed order (empty slots have no player). */
   starters: LineupRow[];
@@ -129,7 +131,14 @@ export function buildLeagueGrade(opts: {
   const teamCards: TeamGradeCard[] = rankings.map((r) => {
     const teamGrades = grades.filter((g) => g.team_id === r.team.id);
     const { best, reach } = pickValues(picks, playersById, teamCount, r.team.id);
-    const comment = teamGrades.find((g) => g.comment && g.comment.trim().length > 0)?.comment ?? null;
+    // Comment-bearing grades first, so the export headlines the ones with something to say.
+    const peerGrades = [...teamGrades]
+      .sort((a, b) => (b.comment?.trim() ? 1 : 0) - (a.comment?.trim() ? 1 : 0))
+      .map((g) => ({
+        grade: g.grade,
+        comment: g.comment && g.comment.trim() ? g.comment.trim() : null,
+        author: members.find((m) => m.user_id === g.rater_id)?.profiles?.username ?? null,
+      }));
     return {
       team: r.team,
       avatar: avatarForTeam(r.team, members),
@@ -138,7 +147,8 @@ export function buildLeagueGrade(opts: {
       starterPoints: r.starterPoints,
       grade: r.grade,
       peerGrade: mostCommonGrade(teamGrades),
-      peerComment: comment,
+      peerCount: teamGrades.length,
+      peerGrades,
       crownVotes: crownVotes.filter((v) => v.team_id === r.team.id).length,
       starters: buildLineup(r.team.id, picks, playersById, settings).starters,
       bestPick: best,
