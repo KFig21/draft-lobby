@@ -102,12 +102,17 @@ export function useLobby(lobbyId: string): LobbyState {
         { event: '*', schema: 'public', table: 'teams', filter: `lobby_id=eq.${lobbyId}` },
         () => {
           void fetchTeams();
-          // A join writes both a teams row (the claimed/created seat) and a
-          // lobby_members row, but only `teams` is published for realtime — so
-          // refetch members here too, otherwise the roster and the invite
-          // list's "in lobby" state stay stale until a manual reload.
+          // A join writes a teams row too — refetch members here so joins live-
+          // update even where lobby_members realtime (migration 0039) isn't
+          // available yet. The lobby_members subscription below covers the rest
+          // (role changes, kicks); the overlap on joins is a cheap extra query.
           void fetchMembers();
         },
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'lobby_members', filter: `lobby_id=eq.${lobbyId}` },
+        () => void fetchMembers(),
       )
       .on(
         'postgres_changes',
