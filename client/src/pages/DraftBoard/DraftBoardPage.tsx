@@ -2605,10 +2605,11 @@ export function DraftBoardPage() {
             )}
           </div>
           <ThemeToggle className="draft__icon-btn draft__theme-btn" />
-          {/* Mobile-only: the desktop top bar has the full Export menu, but on a
-              phone there's no export button — this opens the same board-screenshot
-              options (anonymize / highlight) so it can be saved to the gallery. */}
-          {!isStaging && (
+          {/* Mobile-only, and only once the draft is complete — a quick "save
+              the final board as a PNG" shortcut. While the draft is live it would
+              crowd the paused/clock header, so during the draft it lives in the
+              nav drawer instead (see the NavDrawer "Export board" item below). */}
+          {isComplete && (
             <button
               type="button"
               className="draft__icon-btn draft__boardpng-btn"
@@ -2857,6 +2858,24 @@ export function DraftBoardPage() {
               <MenuBookOutlinedIcon fontSize="small" />
               League rules
             </button>
+            {/* Board PNG export during the live draft — the top-bar shortcut
+                only appears once the draft is complete, so mid-draft it lives
+                here instead. (Nothing to export while staging.) */}
+            {!isComplete && !isStaging && (
+              <button
+                type="button"
+                className="navbar-drawer__link"
+                onClick={() => {
+                  resetExport();
+                  setExportStep('screenshot');
+                  setShowExport(true);
+                  setDrawerOpen(false);
+                }}
+              >
+                <FileDownloadOutlinedIcon fontSize="small" />
+                Export board
+              </button>
+            )}
             {myTeam && !myTeam.is_bot && !isComplete ? (
               <button
                 type="button"
