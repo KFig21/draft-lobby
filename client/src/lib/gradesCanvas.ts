@@ -229,27 +229,28 @@ function statBox(
   ctx.strokeStyle = LINE;
   ctx.lineWidth = 1;
   ctx.stroke();
-  let labelX = x + 12;
+  let labelX = x + 14;
   if (icon) {
-    drawIcon(ctx, icon, x + 12, y + 6, 12, labelColor);
-    labelX = x + 12 + 16;
+    drawIcon(ctx, icon, x + 14, y + 8, 12, labelColor);
+    labelX = x + 14 + 16;
   }
-  text(ctx, label, labelX, y + 16, '700 9.5', labelColor);
-  text(ctx, value, x + 12, y + (sub ? 36 : 40), valueFont, valueColor, 'left', 'alphabetic', w - 24);
-  if (sub) text(ctx, sub, x + 12, y + 50, '500 10', MUTED, 'left', 'alphabetic', w - 24);
+  text(ctx, label, labelX, y + 18, '700 9.5', labelColor);
+  text(ctx, value, x + 14, y + (sub ? 41 : 45), valueFont, valueColor, 'left', 'alphabetic', w - 28);
+  if (sub) text(ctx, sub, x + 14, y + 57, '500 10', MUTED, 'left', 'alphabetic', w - 28);
 }
 
 // ── Card 2: league cover ───────────────────────────────────────────────
 function renderLeague(model: LeagueGrade, scale: number): HTMLCanvasElement {
   const podiumTop = 140;
   const bigSize = 56;
-  const podiumBottom = podiumTop + bigSize + 16 + 13 + 22 + 18;
-  const statTop = podiumBottom + 14;
-  const boxH = 58;
-  // Callouts carry label + value + sub (statBox puts the sub at y+50), so they
+  const podiumBottom = podiumTop + bigSize + 16 + 13 + 22 + 21;
+  const statTop = podiumBottom + 16;
+  const boxH = 66;
+  // Callouts carry label + value + sub (statBox puts the sub at y+57), so they
   // need the same height as the stat boxes or the sub line spills out the bottom.
-  const calloutH = 58;
-  const distLabelY = statTop + boxH + 8 + calloutH + 8 + calloutH + 22;
+  const calloutH = 66;
+  const gapY = 10; // vertical breathing room between stacked boxes
+  const distLabelY = statTop + boxH + gapY + calloutH + gapY + calloutH + 24;
   const barsTop = distLabelY + 12;
   const barMax = 46;
   const distBottom = barsTop + barMax + 18;
@@ -277,21 +278,21 @@ function renderLeague(model: LeagueGrade, scale: number): HTMLCanvasElement {
     text(ctx, col.card.team.name, col.x, ny, '600 11.5', TEXT, 'center', 'middle', 104);
     text(ctx, col.card.ownerLabel, col.x, ny + 13, '500 10', MUTED, 'center', 'middle', 104);
     gradeBadge(ctx, col.card.grade, col.x - 13, ny + 22, 26, 12);
-    text(ctx, `#${col.card.rank}`, col.x, ny + 54, '700 10', MUTED, 'center', 'middle');
+    text(ctx, `#${col.card.rank}`, col.x, ny + 57, '700 10', MUTED, 'center', 'middle');
   }
 
   // Stat boxes
-  const colW = (CARD_W - PAD * 2 - 8) / 2;
+  const colW = (CARD_W - PAD * 2 - gapY) / 2;
   statBox(ctx, PAD, statTop, colW, boxH, 'LEAGUE AVG', MUTED, model.avgGrade ?? '—', '750 22', model.avgGrade ? DRAFT_GRADE_COLORS[model.avgGrade] : MUTED, 'across all rosters');
-  statBox(ctx, PAD + colW + 8, statTop, colW, boxH, 'TOP PROJECTION', MUTED, num(model.topProjection), '750 22', TEXT, model.championName);
+  statBox(ctx, PAD + colW + gapY, statTop, colW, boxH, 'TOP PROJECTION', MUTED, num(model.topProjection), '750 22', TEXT, model.championName);
 
   const fullW = CARD_W - PAD * 2;
-  const stealY = statTop + boxH + 8;
+  const stealY = statTop + boxH + gapY;
   if (model.leagueSteal) {
     const s = model.leagueSteal;
     statBox(ctx, PAD, stealY, fullW, calloutH, 'STEAL OF THE DRAFT', MINT, `${s.player.name} · ${s.player.position}`, '700 14', TEXT, `R${s.round} to ${s.team.name} — +${Math.max(0, s.valueRounds)} rds of value`, IC_BOLT);
   }
-  const reachY = stealY + calloutH + 8;
+  const reachY = stealY + calloutH + gapY;
   if (model.leagueReach) {
     const r = model.leagueReach;
     statBox(ctx, PAD, reachY, fullW, calloutH, 'BIGGEST REACH', REACH, `${r.player.name} · ${r.player.position}`, '700 14', TEXT, `R${r.round} by ${r.team.name} — ${Math.abs(Math.min(0, r.valueRounds))} rds early`, IC_TREND);
