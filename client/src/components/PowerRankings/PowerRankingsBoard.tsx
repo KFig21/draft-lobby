@@ -382,7 +382,7 @@ export function PowerRankingsBoard({
 
           <div className="prb-overview">
             <div className="prb-metrics">
-              <div className="prb-metric">
+              <div className="prb-metric prb-metric--c">
                 <span className="prb-metric__lab">LEAGUE RANK</span>
                 <span className="prb-metric__val">
                   #{selected.rank} <small>of {rankings.length}</small>
@@ -404,13 +404,13 @@ export function PowerRankingsBoard({
                   </span>
                 </span>
               </div>
-              <div className="prb-metric">
+              <div className="prb-metric prb-metric--c">
                 <span className="prb-metric__lab">APP GRADE</span>
                 <span className="prb-metric__val">
                   <GradeBadge grade={selected.grade} size={30} />
                 </span>
               </div>
-              <div className="prb-metric">
+              <div className="prb-metric prb-metric--c">
                 <span className="prb-metric__lab">CROWN VOTES</span>
                 <span className="prb-metric__val prb-metric__val--crown">
                   <EmojiEventsIcon fontSize="inherit" />

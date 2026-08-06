@@ -302,6 +302,16 @@
           opacity: 1;
         }
       }
+
+      // …except the center-view toggle (Board / Power Rankings) and the
+      // fullscreen Menu button always keep their text — you need to see which
+      // view you're switching to, and Menu is the gateway to every panel.
+      .draft__viewtoggle-btn .draft__btn-label,
+      .draft__fs-menu-btn .draft__btn-label {
+        max-width: 16rem;
+        margin-left: 5px;
+        opacity: 1;
+      }
     }
 
     // Fullscreen (TV mode): the bar itself doesn't get any bigger on its own

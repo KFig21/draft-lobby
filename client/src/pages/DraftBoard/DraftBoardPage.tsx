@@ -121,7 +121,7 @@ import {
   type DraftCellStyle,
 } from '../../lib/draftCellStyle';
 import { renderBoardCanvas } from '../../lib/boardCanvas';
-import { mostCommonGrade } from '../../lib/draftGrade';
+import { computePowerRankings } from '../../lib/powerRankings';
 import {
   downloadBoardScreenshot,
   exportDraftCsv,
@@ -316,6 +316,18 @@ export function DraftBoardPage() {
   // the draft board and the Power Rankings. Mobile reaches rankings via its own
   // "Rankings" tab, so this stays 'board' there.
   const [centerView, setCenterView] = useState<'board' | 'rankings'>('board');
+  // Desktop = the two-pane tier ($bp-lg / 1100, mirrors LobbyRoom + variables).
+  // Below it the layout is the mobile single-panel/tab UI; the fullscreen
+  // Power Rankings board + sidebar-hiding only apply on desktop.
+  const [isDesktop, setIsDesktop] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(min-width: 1100px)').matches,
+  );
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1100px)');
+    const onChange = () => setIsDesktop(mq.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
   const [rosterTeamSel, setRosterTeamSel] = useState<string | null>(null);
   const [resultsDrawerView, setResultsDrawerView] = useState<ResultsDrawerView>('closed');
   const [queue, setQueue] = useState<string[]>([]);
@@ -988,6 +1000,17 @@ export function DraftBoardPage() {
       /* realtime reconciles */
     }
   }
+
+  // App (power-ranking) grade per team — used by the mobile roster-tab report
+  // card. Empty until the draft is complete.
+  const powerRankGradeByTeam = useMemo(() => {
+    const m = new Map<string, DraftGrade>();
+    if (!lobby || lobby.status !== 'COMPLETE') return m;
+    for (const r of computePowerRankings(teams, picks, playersById, lobby.settings)) {
+      m.set(r.team.id, r.grade);
+    }
+    return m;
+  }, [lobby, teams, picks, playersById]);
 
   async function castCrownVote(teamId: string) {
     if (resultsLocked) return;
@@ -2249,11 +2272,11 @@ export function DraftBoardPage() {
               onToggleAuto={isComplete ? undefined : toggleAuto}
               onPickClick={setPickModal}
               belowSelect={
-                isComplete
+                isComplete && !isDesktop
                   ? (() => {
                       const voteCount = crownVotes.filter((v) => v.team_id === rosterTeamId).length;
                       const teamGrades = grades.filter((g) => g.team_id === rosterTeamId);
-                      const avgGrade = mostCommonGrade(teamGrades);
+                      const appGrade = powerRankGradeByTeam.get(rosterTeamId) ?? null;
                       return (
                         <>
                           <span className="lineup-view__label">Report Card</span>
@@ -2271,7 +2294,7 @@ export function DraftBoardPage() {
                               } else setResultsDrawerView((v) => (v === 'closed' ? 'open' : 'closed'));
                             }}
                           >
-                            <GradeBadge grade={avgGrade} size={44} />
+                            <GradeBadge grade={appGrade} size={44} />
                             <div className="draft__results-summary-main">
                               <span className="draft__results-summary-item">
                                 <EmojiEventsOutlinedIcon fontSize="small" /> {voteCount} vote
@@ -2702,48 +2725,27 @@ export function DraftBoardPage() {
           ref={boardSectionRef}
           className={`draft__board ${mobileTab === 'board' ? 'is-mobile-active' : ''}`}
         >
-          {isComplete && centerView === 'rankings' ? (
-            isFullscreen ? (
-              <PowerRankingsBoard
-                teams={teams}
-                members={members}
-                picks={picks}
-                playersById={playersById}
-                settings={lobby.settings}
-                myTeamId={myTeam?.id ?? null}
-                myUserId={userId}
-                crownVotes={crownVotes}
-                grades={grades}
-                gradeReactions={gradeReactions}
-                locked={resultsLocked}
-                canVote={canVote}
-                canGrade={canGrade}
-                onVote={castCrownVote}
-                onGrade={gradeTeam}
-                onReact={reactGrade}
-                onPickClick={setPickModal}
-                onExportGrades={() => setShowGradeExport(true)}
-              />
-            ) : (
-              <PowerRankingsPanel
-                teams={teams}
-                members={members}
-                picks={picks}
-                playersById={playersById}
-                settings={lobby.settings}
-                myTeamId={myTeam?.id ?? null}
-                myUserId={userId}
-                crownVotes={crownVotes}
-                grades={grades}
-                locked={resultsLocked}
-                canVote={canVote}
-                canGrade={canGrade}
-                onVote={castCrownVote}
-                onGrade={gradeTeam}
-                onPickClick={setPickModal}
-                onExportGrades={() => setShowGradeExport(true)}
-              />
-            )
+          {isComplete && centerView === 'rankings' && (isDesktop || isFullscreen) ? (
+            <PowerRankingsBoard
+              teams={teams}
+              members={members}
+              picks={picks}
+              playersById={playersById}
+              settings={lobby.settings}
+              myTeamId={myTeam?.id ?? null}
+              myUserId={userId}
+              crownVotes={crownVotes}
+              grades={grades}
+              gradeReactions={gradeReactions}
+              locked={resultsLocked}
+              canVote={canVote}
+              canGrade={canGrade}
+              onVote={castCrownVote}
+              onGrade={gradeTeam}
+              onReact={reactGrade}
+              onPickClick={setPickModal}
+              onExportGrades={() => setShowGradeExport(true)}
+            />
           ) : (
             <DraftGrid
               teams={teams}
@@ -2774,7 +2776,11 @@ export function DraftBoardPage() {
           )}
         </section>
 
-        {!isFullscreen && (
+        {/* Desktop rankings view goes full-width — the right sidebar is
+            board-specific, so it (and the results drawer) only render for the
+            board view. On mobile the sidebar is the tab content, so it always
+            renders there regardless of centerView. */}
+        {!isFullscreen && (centerView === 'board' || !isDesktop) && (
           <>
             <div className="draft__resizer" onMouseDown={startResize} aria-hidden />
 
@@ -2784,7 +2790,9 @@ export function DraftBoardPage() {
           {renderSidebarPanels()}
         </aside>
 
-        {isComplete && (
+        {/* Results drawer is a mobile-only slide-out now — on desktop the
+            Power Rankings view replaces it. */}
+        {isComplete && !isDesktop && (
           <TeamResultsDrawer
             team={teams.find((t) => t.id === rosterTeamId)}
             members={members}
