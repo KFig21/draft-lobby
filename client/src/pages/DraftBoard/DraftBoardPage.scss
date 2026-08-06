@@ -673,6 +673,14 @@
     }
   }
 
+  // Mobile-only quick "save the board as a PNG" button — the desktop top bar
+  // reaches the same thing (with options) via the Export menu, so hide it there.
+  &__boardpng-btn {
+    @include lg {
+      display: none;
+    }
+  }
+
   // Full screen only — the sidebar isn't mounted there, so this is the only
   // way to reach Players/Roster/Chat/Results while in TV mode.
   &__fs-menu-btn {
@@ -821,7 +829,32 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    color: $primary-hover;
+    font-weight: 800;
+    // "Draft complete" as a primary→accent gradient, clipped to the glyphs.
+    // Theme-aware ends keep it legible on both the dark and light top bars.
+    background: linear-gradient(90deg, $primary, $accent);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+
+    :root[data-theme='light'] & {
+      background: linear-gradient(90deg, $primary, $primary-hover);
+      -webkit-background-clip: text;
+      background-clip: text;
+    }
+
+    // The gold-sheen paint-server lives here but must not take up space.
+    .draft__gold-def {
+      position: absolute;
+      width: 0;
+      height: 0;
+    }
+
+    // Shiny gold trophy via the SVG gradient; falls back to the theme keeper
+    // gold if the paint server can't be resolved.
+    .draft__complete-trophy {
+      fill: url(#draftGoldSheen) #{$keeper};
+    }
   }
 
   &__paused-pill {

@@ -2373,7 +2373,19 @@ export function DraftBoardPage() {
           <div className="draft__status">
             {isComplete ? (
               <strong className="draft__complete">
-                <EmojiEventsIcon fontSize="small" /> Draft complete
+                {/* Gold sheen paint-server for the trophy. Kept 0×0/absolute
+                    (not display:none, which drops the gradient in Safari). */}
+                <svg className="draft__gold-def" width="0" height="0" aria-hidden focusable="false">
+                  <defs>
+                    <linearGradient id="draftGoldSheen" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#fff3c4" />
+                      <stop offset="42%" stopColor="#f7cf4b" />
+                      <stop offset="62%" stopColor="#e0a92b" />
+                      <stop offset="100%" stopColor="#b3801d" />
+                    </linearGradient>
+                  </defs>
+                </svg>
+                <EmojiEventsIcon className="draft__complete-trophy" fontSize="small" /> Draft complete
               </strong>
             ) : isStaging ? (
               <span className="draft__staging-status">
@@ -2542,6 +2554,21 @@ export function DraftBoardPage() {
             <SettingsIcon fontSize="small" />
           </button>
           <ThemeToggle className="draft__icon-btn draft__theme-btn" />
+          {/* Mobile-only: the desktop top bar has the full Export menu, but on a
+              phone there's no export button — this is the quick "save the board
+              as a PNG to share" action, using the same deterministic renderer. */}
+          {!isStaging && (
+            <button
+              type="button"
+              className="draft__icon-btn draft__boardpng-btn"
+              onClick={() => captureBoardScreenshot(screenshotAnonymize, screenshotHighlightMine)}
+              disabled={screenshotBusy}
+              aria-label="Save board as image"
+              title="Save the board as a PNG to share"
+            >
+              <FileDownloadOutlinedIcon fontSize="small" />
+            </button>
+          )}
         </div>
       </header>
 
