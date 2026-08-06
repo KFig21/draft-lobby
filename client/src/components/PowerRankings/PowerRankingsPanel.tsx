@@ -123,6 +123,11 @@ export function PowerRankingsPanel({
               <InfoOutlineIcon fontSize="inherit" />
             </button>
             </div>
+            {onExportGrades && (
+              <button type="button" className="power-rankings__export" onClick={onExportGrades}>
+                <FileDownloadOutlinedIcon fontSize="inherit" /> Share draft grades
+              </button>
+            )}
           </div>
           <p className="power-rankings__sub">
             Graded on projected points from each team’s optimal <b>starting lineup</b> — the
@@ -144,11 +149,6 @@ export function PowerRankingsPanel({
               <LockOutlinedIcon fontSize="inherit" /> Voting and grading closed 24h after the draft
               ended — showing final results.
             </p>
-          )}
-          {onExportGrades && (
-            <button type="button" className="power-rankings__export" onClick={onExportGrades}>
-              <FileDownloadOutlinedIcon fontSize="inherit" /> Share draft grades
-            </button>
           )}
         </header>
 

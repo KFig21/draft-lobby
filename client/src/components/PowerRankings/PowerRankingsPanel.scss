@@ -24,6 +24,7 @@
   &__title {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: $space * 1.5;
     flex-wrap: wrap;
   }
@@ -149,18 +150,16 @@
   }
 
   &__export {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: $space * 0.6;
-    width: fit-content;
-    margin: $space * 1.5 auto 0;
-    padding: $space * 0.75 $space * 1.25;
+    gap: $space * 0.5;
+    padding: $space * 0.6 $space * 1.1;
+    font-size: 0.8rem;
     border: none;
     border-radius: $radius-sm;
     background: $primary;
     color: #fff;
-    font-size: 0.85rem;
     font-weight: 700;
     cursor: pointer;
     transition: background 120ms ease;
