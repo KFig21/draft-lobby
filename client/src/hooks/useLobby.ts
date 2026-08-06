@@ -100,7 +100,14 @@ export function useLobby(lobbyId: string): LobbyState {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'teams', filter: `lobby_id=eq.${lobbyId}` },
-        () => void fetchTeams(),
+        () => {
+          void fetchTeams();
+          // A join writes both a teams row (the claimed/created seat) and a
+          // lobby_members row, but only `teams` is published for realtime — so
+          // refetch members here too, otherwise the roster and the invite
+          // list's "in lobby" state stay stale until a manual reload.
+          void fetchMembers();
+        },
       )
       .on(
         'postgres_changes',
