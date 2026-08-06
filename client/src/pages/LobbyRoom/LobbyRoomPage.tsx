@@ -62,7 +62,7 @@ export function LobbyRoomPage() {
   const navigate = useNavigate();
   const { showToast } = useToast();
   const { lobby, teams, members, picks, loading, error, refetch } = useLobby(id);
-  const { players } = usePlayers();
+  const { players } = usePlayers(lobby?.season);
   const [starting, setStarting] = useState(false);
   const [showRules, setShowRules] = useState(false);
   const [showSettings, setShowSettings] = useState(false);

@@ -212,7 +212,7 @@ export function DraftBoardPage() {
   const { session } = useAuth();
   const { showToast } = useToast();
   const { lobby, teams, members, picks, keeperOptions, loading, refetch } = useLobby(id);
-  const { players: rawPlayers, loading: playersLoading } = usePlayers();
+  const { players: rawPlayers, loading: playersLoading } = usePlayers(lobby?.season);
   // Recomputed from each player's raw stat line under this lobby's own
   // scoring rules — so bot picks, lineup order, and every player card here
   // agree with each other and with the lobby's actual scoring format,

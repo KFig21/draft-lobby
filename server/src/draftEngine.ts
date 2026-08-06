@@ -361,6 +361,39 @@ interface PoolPlayer {
 }
 
 /**
+ * The bot's player pool for a given season: projection + ADP from that season's
+ * player_seasons rows. Falls back to the flat players.* columns if the query
+ * errors (e.g. before migration 0041 lands) so bot autodraft never breaks on
+ * deploy/migration ordering. See docs/phase2-player-seasons.md.
+ */
+async function loadPlayerPool(season: number): Promise<PoolPlayer[]> {
+  const { data, error } = await supabaseAdmin
+    .from('player_seasons')
+    .select('player_id, proj_points, proj_stats, adp, players!inner ( position )')
+    .eq('season', season);
+  if (!error && data) {
+    return (data as Record<string, unknown>[])
+      .map((r) => {
+        const ident = (Array.isArray(r.players) ? r.players[0] : r.players) as
+          | { position: Position }
+          | undefined;
+        return {
+          id: r.player_id as string,
+          position: ident?.position as Position,
+          proj_points: r.proj_points as number | null,
+          proj_stats: r.proj_stats as StatLine | null,
+          adp: r.adp as number | null,
+        };
+      })
+      .filter((p) => !!p.position);
+  }
+  const { data: flat } = await supabaseAdmin
+    .from('players')
+    .select('id, position, proj_points, proj_stats, adp');
+  return (flat ?? []) as PoolPlayer[];
+}
+
+/**
  * Pick the best available player that fits the team's roster needs:
  * unmet starter needs first (skill/QB before K/DEF), then flex, then best
  * bench value — while never over-drafting kickers or defenses.
@@ -370,13 +403,14 @@ export async function choosePlayer(
   settings: LobbySettings,
   teamId: string,
 ): Promise<string | null> {
-  const [{ data: allPicks }, { data: allPlayers }] = await Promise.all([
+  const [{ data: allPicks }, { data: lobbyRow }] = await Promise.all([
     supabaseAdmin.from('picks').select('player_id, team_id').eq('lobby_id', lobbyId),
-    supabaseAdmin.from('players').select('id, position, proj_points, proj_stats, adp'),
+    supabaseAdmin.from('lobbies').select('season').eq('id', lobbyId).single(),
   ]);
+  const season = (lobbyRow?.season as number | undefined) ?? new Date().getUTCFullYear();
+  const players = await loadPlayerPool(season);
 
   const drafted = new Set((allPicks ?? []).map((p) => p.player_id as string));
-  const players = (allPlayers ?? []) as PoolPlayer[];
   const byId = new Map(players.map((p) => [p.id, p]));
 
   // This team's current roster, counted by position.

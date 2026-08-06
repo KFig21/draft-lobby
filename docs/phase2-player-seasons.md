@@ -1,9 +1,14 @@
 # Phase 2 — Season-scoped player data (`player_seasons`)
 
-> Status: **design / not started.** Phase 1 (lobby `season` column + My Drafts year
-> badge & filter) shipped in migration `0040`. This document specs the data-architecture
-> half: making projections/stats season-scoped so re-importing next year never clobbers
-> a past draft's numbers or a player's identity.
+> Status: **code built, pending migration + re-import.** Phase 1 (lobby `season` column +
+> My Drafts year badge & filter) shipped in migration `0040`. Phase 2's code — migration
+> `0041`, importer rework, and the season-aware read path — is committed. The read path
+> **falls back to the flat `players.*` columns whenever the season-scoped query errors**
+> (e.g. before `0041` is applied), so the whole change is deploy-order-safe: it can ship
+> before or after the migration. Outstanding: (1) run `0041` (backfills the current 2026
+> snapshot — do this before any 2027 import), (2) run the updated importer to populate
+> season rows going forward, (3) a later cleanup migration to drop the now-redundant flat
+> columns once nothing reads them.
 
 ## 1. Goal & constraints
 
@@ -197,17 +202,24 @@ cross-draft with **zero** schema or code change. Same for `picks.player_id`.
 
 ## 8. Rollout / deploy order
 
-Each step is independently deployable and reversible:
+The read path (`usePlayers(season)` + `choosePlayer`) falls back to the flat columns on any
+season-scoped query error, so **code and migration can deploy in any order** — nothing breaks
+in the gap. Recommended sequence:
 
-1. **Migrate** `0041` (create + backfill). Additive — old columns still power the live read
-   path, so the app keeps working before any code deploy.
-2. **Deploy importer** change. First season-scoped import populates `player_seasons` going
-   forward (backfill already covers the current snapshot).
-3. **Deploy read-path** change (`usePlayers(season)` + draftEngine). Now boards read season
-   rows. Verify era-correct numbers on an existing 2026 draft.
+1. **Deploy the code** (already committed). Until `0041` runs, both read paths fall back to
+   the flat columns — identical to today's behavior.
+2. **Migrate** `0041` (create + backfill) **while the flat columns still hold the 2026
+   snapshot** — i.e. before any 2027 import — so the backfill's hardcoded 2026/2025 is
+   correct. After this, boards automatically read season rows; for 2026 drafts the numbers
+   are unchanged (backfill copied flat → season).
+3. **Run the updated importer** before the 2027 draft season to populate `season = 2027`
+   rows (and refresh 2026 actuals). The importer still writes the flat columns too during the
+   transition, keeping the fallback valid.
 4. **Later — cleanup migration** `00xx`: drop `players.{proj,prev}_*`, `adp`, and the
-   per-season bio columns once nothing reads them. Separate PR, after step 3 is confirmed in
-   prod.
+   per-season bio columns, remove the fallback branches, and simplify the importer to
+   season-only. Separate PR, once step 2/3 are confirmed in prod. (Note: `users.ts` reads
+   `players.nfl_team` for profile display — give `players` a `latest_team` column or join
+   `player_seasons` at that point.)
 
 ## 9. Verification
 

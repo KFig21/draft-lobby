@@ -420,12 +420,73 @@ async function main() {
   // generating a new id for a player who's already been drafted somewhere
   // would silently orphan that pick's history. Matching on (name, position)
   // keeps existing ids stable across re-runs and just refreshes their stats.
+  //
+  // The flat columns are still written (they back the read path until Phase 2's
+  // read-path deploy switches over and a later cleanup migration drops them),
+  // and .select() hands back each player's stable id so we can also write the
+  // season-scoped rows below. See docs/phase2-player-seasons.md.
   console.log(`Upserting ${pool.length} players…`);
+  const idByKey = new Map<string, string>();
   for (let i = 0; i < pool.length; i += 500) {
     const chunk = pool.slice(i, i + 500);
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('players')
-      .upsert(chunk, { onConflict: 'name,position' });
+      .upsert(chunk, { onConflict: 'name,position' })
+      .select('id, name, position');
+    if (error) throw new Error(error.message);
+    for (const row of data ?? []) {
+      idByKey.set(`${normalize(row.name)}|${row.position}`, row.id);
+    }
+  }
+
+  // 4b) Season-scoped rows (player_seasons): the projection made FOR this SEASON
+  // and last season's ACTUALS, each in the season it belongs to. Idempotent on
+  // (player_id, season), so re-runs update the same rows and never touch other
+  // years. Skips any player whose id we couldn't resolve above (shouldn't
+  // happen — every pool row was just upserted).
+  const seasonRows: Record<string, unknown>[] = [];
+  for (const p of pool) {
+    const playerId = idByKey.get(`${normalize(p.name)}|${p.position}`);
+    if (!playerId) continue;
+
+    // Current season: projection + draft-prep bio.
+    seasonRows.push({
+      player_id: playerId,
+      season: SEASON,
+      nfl_team: p.nfl_team,
+      bye_week: p.bye_week,
+      injury_status: p.injury_status,
+      adp: p.adp,
+      proj_points: p.proj_points,
+      proj_rank: p.proj_rank,
+      proj_stat_line: p.proj_stat_line,
+      proj_stats: p.proj_stats,
+    });
+
+    // Prior season: actuals only (bio isn't re-derivable for a past year).
+    const hasPrev =
+      p.prev_points != null ||
+      p.prev_rank != null ||
+      p.prev_stat_line != null ||
+      p.prev_stats != null;
+    if (hasPrev) {
+      seasonRows.push({
+        player_id: playerId,
+        season: SEASON - 1,
+        act_points: p.prev_points,
+        act_rank: p.prev_rank,
+        act_stat_line: p.prev_stat_line,
+        act_stats: p.prev_stats,
+      });
+    }
+  }
+
+  console.log(`Upserting ${seasonRows.length} player-season rows…`);
+  for (let i = 0; i < seasonRows.length; i += 500) {
+    const chunk = seasonRows.slice(i, i + 500);
+    const { error } = await supabase
+      .from('player_seasons')
+      .upsert(chunk, { onConflict: 'player_id,season' });
     if (error) throw new Error(error.message);
   }
 
