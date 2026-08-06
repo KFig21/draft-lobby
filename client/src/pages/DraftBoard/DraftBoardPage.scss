@@ -690,6 +690,94 @@
     }
   }
 
+  // ── Overflow "Tools" menu (desktop) ──────────────────────────────────
+  // Anchors the popover and reserves an inline slot in the toolbar. Desktop
+  // only — mobile/tablet reach these actions via the nav drawer instead.
+  &__tools {
+    position: relative;
+    display: none;
+
+    @include lg {
+      display: inline-flex;
+    }
+  }
+
+  &__tools-btn.is-open {
+    background: $primary;
+    border: solid 1px $primary;
+    color: #fff;
+  }
+
+  // Opens below the trigger, right-aligned so it never runs off the edge, and
+  // above the board grid.
+  &__tools-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 60;
+    min-width: 214px;
+    display: flex;
+    flex-direction: column;
+    padding: $space * 0.5;
+    background: $bg-raised;
+    border: 1px solid $border;
+    border-radius: $radius;
+    box-shadow: 0 12px 30px -8px rgba(0, 0, 0, 0.55);
+    animation: draft-tools-in 120ms ease;
+  }
+
+  &__tools-item {
+    display: flex;
+    align-items: center;
+    gap: $space;
+    width: 100%;
+    padding: $space $space * 1.25;
+    border: none;
+    border-radius: $radius-sm;
+    background: none;
+    color: $text;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+
+    svg {
+      font-size: 1.2rem;
+      color: $text-muted;
+      flex-shrink: 0;
+    }
+
+    &:hover {
+      background: color-mix(in srgb, $primary 16%, transparent);
+
+      svg {
+        color: $text;
+      }
+    }
+  }
+
+  &__tools-item-label {
+    flex: 1;
+  }
+
+  // On/off pill for the auto-draft toggle item.
+  &__tools-state {
+    flex-shrink: 0;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: color-mix(in srgb, $text-muted 22%, transparent);
+    color: $text-muted;
+
+    &.is-on {
+      background: color-mix(in srgb, $accent 20%, transparent);
+      color: $accent;
+    }
+  }
+
   // Full screen only — the sidebar isn't mounted there, so this is the only
   // way to reach Players/Roster/Chat/Results while in TV mode.
   &__fs-menu-btn {
@@ -1905,5 +1993,17 @@
     border-radius: 999px;
     align-self: center;
     background: color-mix(in srgb, $accent 12%, transparent);
+  }
+}
+
+@keyframes draft-tools-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

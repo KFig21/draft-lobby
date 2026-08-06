@@ -48,6 +48,7 @@ import PhotoCameraOutlinedIcon from '@mui/icons-material/PhotoCameraOutlined';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import SettingsIcon from '@mui/icons-material/Settings';
 import SkipNextIcon from '@mui/icons-material/SkipNext';
+import SpaceDashboardOutlinedIcon from '@mui/icons-material/SpaceDashboardOutlined';
 import TuneOutlinedIcon from '@mui/icons-material/TuneOutlined';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
 import SmartToyOutlinedIcon from '@mui/icons-material/SmartToyOutlined';
@@ -127,6 +128,7 @@ import {
   exportDraftJson,
 } from '../../lib/exportDraft';
 import { avatarForTeam } from '../../lib/teamAvatar';
+import { useClickOutside } from '../../lib/useClickOutside';
 import { supabase } from '../../supabase';
 import { useToast } from '../../toast/ToastContext';
 import {
@@ -358,6 +360,12 @@ export function DraftBoardPage() {
   // kept alongside for the explicit Download action.
   const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
   const screenshotCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  // Overflow "Tools" popover in the top bar (Export / Auto-draft / Draft
+  // settings / League rules / Your settings) — keeps the toolbar uncluttered
+  // so the fullscreen-critical Menu button isn't crowded.
+  const [showTools, setShowTools] = useState(false);
+  const toolsRef = useRef<HTMLDivElement>(null);
+  useClickOutside(toolsRef, () => setShowTools(false), showTools);
   const [showKeepers, setShowKeepers] = useState(false);
   const [showMyKeepers, setShowMyKeepers] = useState(false);
   const [showAllKeepers, setShowAllKeepers] = useState(false);
@@ -2479,17 +2487,6 @@ export function DraftBoardPage() {
           )}
         </div>
         <div className="draft__right">
-          <button
-            className="draft__export-btn"
-            onClick={() => {
-              setExportStep('menu');
-              setScreenshotError(null);
-              setShowExport(true);
-            }}
-          >
-            <FileDownloadOutlinedIcon fontSize="small" />
-            <span className="draft__btn-label">Export</span>
-          </button>
           {!isComplete && RequestPauseButton({ compact: true })}
           {isFullscreen && (
             <button
@@ -2498,22 +2495,8 @@ export function DraftBoardPage() {
               aria-label="Menu"
               title="Players, roster, chat & results"
             >
-              <MenuIcon fontSize="small" />
+              <SpaceDashboardOutlinedIcon fontSize="small" />
               <span className="draft__btn-label">Menu</span>
-            </button>
-          )}
-          {myTeam && !myTeam.is_bot && !isComplete && (
-            <button
-              className={`draft__icon-btn draft__auto-btn${myTeam.auto_draft ? ' is-on' : ''}`}
-              onClick={() => toggleAuto(myTeam.id, !myTeam.auto_draft)}
-              aria-label={myTeam.auto_draft ? 'Turn auto-draft off' : 'Turn auto-draft on'}
-              title={`Auto-draft ${myTeam.auto_draft ? 'on' : 'off'}`}
-            >
-              {myTeam.auto_draft ? (
-                <SmartToyIcon fontSize="small" />
-              ) : (
-                <SmartToyOutlinedIcon fontSize="small" />
-              )}
             </button>
           )}
           <button
@@ -2528,40 +2511,99 @@ export function DraftBoardPage() {
               <FullscreenIcon fontSize="small" />
             )}
           </button>
-          {/* Commissioner only: edit the live-safe settings (pick clock, bot
-              clock, skip rules) mid-draft. Same modal as the lobby room, but it
-              gates itself to what's editable at the current status. */}
-          {isCommish && !isComplete && (
+          {/* Overflow "Tools" popover (desktop): Export, Auto-draft, Draft
+              settings, League rules, Your settings — folded into one menu so the
+              toolbar stays Fullscreen · Tools · Theme (+ Menu in fullscreen) and
+              the important Menu button isn't crowded. Mobile reaches all of these
+              via the nav drawer, so this is desktop-only (see &__tools). */}
+          <div className="draft__tools" ref={toolsRef}>
             <button
-              className="draft__icon-btn draft__draftsettings-btn"
-              onClick={() => setShowLobbySettings(true)}
-              aria-label="Draft settings"
-              title="Draft settings (clocks & skips)"
+              type="button"
+              className={`draft__icon-btn draft__tools-btn${showTools ? ' is-open' : ''}`}
+              onClick={() => setShowTools((o) => !o)}
+              aria-haspopup="menu"
+              aria-expanded={showTools}
+              aria-label="Draft tools"
+              title="Draft tools"
             >
-              <TuneOutlinedIcon fontSize="small" />
+              <MenuIcon fontSize="small" />
             </button>
-          )}
-          {/* Desktop/fullscreen only (see &__rules-btn) — full league rules.
-              Mobile reaches it via the nav drawer instead. */}
-          <button
-            className="draft__icon-btn draft__rules-btn"
-            onClick={() => setShowRules(true)}
-            aria-label="League rules"
-            title="League rules"
-          >
-            <MenuBookOutlinedIcon fontSize="small" />
-          </button>
-          {/* Desktop/fullscreen only (see &__settings-btn) — personal
-              draft-board + notification prefs without leaving the room.
-              Mobile already reaches these via the nav drawer -> Settings. */}
-          <button
-            className="draft__icon-btn draft__settings-btn"
-            onClick={() => setShowUserSettings(true)}
-            aria-label="Your settings"
-            title="Your settings"
-          >
-            <SettingsIcon fontSize="small" />
-          </button>
+            {showTools && (
+              <div className="draft__tools-menu" role="menu">
+                {myTeam && !myTeam.is_bot && !isComplete && (
+                  <button
+                    type="button"
+                    role="menuitemcheckbox"
+                    aria-checked={myTeam.auto_draft}
+                    className="draft__tools-item"
+                    onClick={() => toggleAuto(myTeam.id, !myTeam.auto_draft)}
+                  >
+                    {myTeam.auto_draft ? (
+                      <SmartToyIcon fontSize="small" />
+                    ) : (
+                      <SmartToyOutlinedIcon fontSize="small" />
+                    )}
+                    <span className="draft__tools-item-label">Auto-draft</span>
+                    <span className={`draft__tools-state${myTeam.auto_draft ? ' is-on' : ''}`}>
+                      {myTeam.auto_draft ? 'On' : 'Off'}
+                    </span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="draft__tools-item"
+                  onClick={() => {
+                    setShowTools(false);
+                    setExportStep('menu');
+                    setScreenshotError(null);
+                    setShowExport(true);
+                  }}
+                >
+                  <FileDownloadOutlinedIcon fontSize="small" />
+                  <span className="draft__tools-item-label">Export</span>
+                </button>
+                {isCommish && !isComplete && (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="draft__tools-item"
+                    onClick={() => {
+                      setShowTools(false);
+                      setShowLobbySettings(true);
+                    }}
+                  >
+                    <TuneOutlinedIcon fontSize="small" />
+                    <span className="draft__tools-item-label">Draft settings</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="draft__tools-item"
+                  onClick={() => {
+                    setShowTools(false);
+                    setShowRules(true);
+                  }}
+                >
+                  <MenuBookOutlinedIcon fontSize="small" />
+                  <span className="draft__tools-item-label">League rules</span>
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="draft__tools-item"
+                  onClick={() => {
+                    setShowTools(false);
+                    setShowUserSettings(true);
+                  }}
+                >
+                  <SettingsIcon fontSize="small" />
+                  <span className="draft__tools-item-label">Your settings</span>
+                </button>
+              </div>
+            )}
+          </div>
           <ThemeToggle className="draft__icon-btn draft__theme-btn" />
           {/* Mobile-only: the desktop top bar has the full Export menu, but on a
               phone there's no export button — this opens the same board-screenshot
