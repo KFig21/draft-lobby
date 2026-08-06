@@ -257,6 +257,34 @@ export async function claimSeat(
     return { ok: true, teamId: botSeat.id as string, draftPosition: botSeat.draft_position as number };
   }
 
+  // Next, take over a stand-in seat (a real person filling a placeholder the
+  // commissioner set up) — after bots, so generic bot filler is consumed first
+  // and the reserved-looking stand-in seats are the last placeholder claimed.
+  // Taking it over clears is_standin: it's now a normal owned team.
+  const { data: standinSeat } = await supabaseAdmin
+    .from('teams')
+    .select('id, draft_position')
+    .eq('lobby_id', lobbyId)
+    .eq('is_standin', true)
+    .order('draft_position')
+    .limit(1)
+    .maybeSingle();
+  if (standinSeat) {
+    await supabaseAdmin
+      .from('teams')
+      .update({
+        owner_id: userId,
+        is_standin: false,
+        name: defaultName ?? `Team ${standinSeat.draft_position}`,
+      })
+      .eq('id', standinSeat.id);
+    return {
+      ok: true,
+      teamId: standinSeat.id as string,
+      draftPosition: standinSeat.draft_position as number,
+    };
+  }
+
   // Otherwise claim the lowest open draft position.
   const { data: teams } = await supabaseAdmin
     .from('teams')
