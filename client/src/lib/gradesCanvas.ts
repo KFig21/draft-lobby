@@ -274,8 +274,10 @@ function statBox(
   if (sub) text(ctx, sub, x + 14, y + 57, '500 10', MUTED, 'left', 'alphabetic', w - 28);
 }
 
-// Compact projection stat: a small label above a big Futura-italic number,
-// color-coded (top = green, avg = orange, low = red).
+// Compact projection stat: a small label, a big Futura-italic number
+// (color-coded, size passed in so the row can emphasize top/avg/low), and an
+// optional team-name sub-line. Boxes are a uniform size; only the number scales
+// and its baseline is fixed so the three sit on one line.
 function projBox(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -285,6 +287,8 @@ function projBox(
   label: string,
   value: string,
   color: string,
+  numSize: number,
+  sub?: string,
 ): void {
   roundRect(ctx, x, y, w, h, 12);
   ctx.fillStyle = PANEL;
@@ -293,12 +297,13 @@ function projBox(
   ctx.strokeStyle = LINE;
   ctx.lineWidth = 1;
   ctx.stroke();
-  text(ctx, label, x + 12, y + 18, '700 9', MUTED, 'left', 'alphabetic', w - 20);
-  ctx.font = `italic 600 22px ${FUTURA}`;
+  text(ctx, label, x + 12, y + 17, '700 9', MUTED, 'left', 'alphabetic', w - 20);
+  ctx.font = `italic 600 ${numSize}px ${FUTURA}`;
   ctx.fillStyle = color;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
-  ctx.fillText(fitText(ctx, value, w - 24), x + 12, y + 44);
+  ctx.fillText(fitText(ctx, value, w - 24), x + 12, y + 42);
+  if (sub) text(ctx, sub, x + 12, y + 56, '500 9.5', MUTED, 'left', 'alphabetic', w - 20);
 }
 
 // ── Card 2: league cover ───────────────────────────────────────────────
@@ -307,7 +312,7 @@ function renderLeague(model: LeagueGrade, scale: number): HTMLCanvasElement {
   const bigSize = 56;
   const podiumBottom = podiumTop + bigSize + 16 + 13 + 22 + 21;
   const statTop = podiumBottom + 16;
-  const projBoxH = 56; // top/avg/low projection row — label + number, no sub
+  const projBoxH = 64; // top/avg/low projection row — label + number + team sub
   // Callouts carry label + value + sub (statBox puts the sub at y+57), so they
   // need this height or the sub line spills out the bottom.
   const calloutH = 66;
@@ -344,11 +349,13 @@ function renderLeague(model: LeagueGrade, scale: number): HTMLCanvasElement {
   }
 
   // Projection row: top (green) · avg (orange) · low (red), Futura-italic nums.
+  // Top is 10% larger than avg, low 10% smaller — the boxes stay uniform.
   const gap3 = 8;
   const colW3 = (CARD_W - PAD * 2 - gap3 * 2) / 3;
-  projBox(ctx, PAD, statTop, colW3, projBoxH, 'TOP PROJECTION', num(model.topProjection), '#3fd6a5');
-  projBox(ctx, PAD + colW3 + gap3, statTop, colW3, projBoxH, 'AVG PROJECTION', num(model.avgProjection), '#f6a642');
-  projBox(ctx, PAD + (colW3 + gap3) * 2, statTop, colW3, projBoxH, 'LOW PROJECTION', num(model.lowProjection), '#f8577d');
+  const projBase = 22;
+  projBox(ctx, PAD, statTop, colW3, projBoxH, 'TOP PROJECTION', num(model.topProjection), '#3fd6a5', projBase * 1.1, model.topProjName);
+  projBox(ctx, PAD + colW3 + gap3, statTop, colW3, projBoxH, 'AVG PROJECTION', num(model.avgProjection), '#f6a642', projBase);
+  projBox(ctx, PAD + (colW3 + gap3) * 2, statTop, colW3, projBoxH, 'LOW PROJECTION', num(model.lowProjection), '#f8577d', projBase * 0.9, model.lowProjName);
 
   const fullW = CARD_W - PAD * 2;
   const stealY = statTop + projBoxH + gapY;

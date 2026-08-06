@@ -62,6 +62,8 @@ export interface LeagueGrade {
   topProjection: number;
   avgProjection: number;
   lowProjection: number;
+  topProjName: string;
+  lowProjName: string;
   /** A–F bucket counts for the distribution bar. */
   distribution: { letter: string; count: number }[];
   leagueSteal: (PickValue & { team: TeamRow }) | null;
@@ -189,6 +191,10 @@ export function buildLeagueGrade(opts: {
       ? teamCards.reduce((s, t) => s + t.starterPoints, 0) / teamCards.length
       : 0,
     lowProjection: teamCards.length ? Math.min(...teamCards.map((t) => t.starterPoints)) : 0,
+    // teamCards are in rank order (= projection order), so first/last are the
+    // highest/lowest projected rosters.
+    topProjName: teamCards[0]?.team.name ?? '',
+    lowProjName: teamCards[teamCards.length - 1]?.team.name ?? '',
     distribution,
     leagueSteal: withTeam(leagueBest),
     leagueReach: withTeam(leagueReach),
