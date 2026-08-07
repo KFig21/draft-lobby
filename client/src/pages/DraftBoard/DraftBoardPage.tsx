@@ -1476,6 +1476,9 @@ export function DraftBoardPage() {
   const { round, onClockTeam, skipped, myOpen } = derived!;
   const totalRounds = roundsForSettings(lobby.settings);
   const isComplete = lobby.status === 'COMPLETE';
+  // The 3-column Power Rankings board replaces the grid on desktop/fullscreen; it
+  // manages its own panel padding, so the board section drops its padding for it.
+  const showPowerRankings = isComplete && centerView === 'rankings' && (isDesktop || isFullscreen);
   const isPaused = lobby.status === 'PAUSED';
   // STAGING: the room is open but the draft hasn't started — no clock, no
   // picking, no on-clock highlight. People take seats and (once keepers ship)
@@ -2724,9 +2727,11 @@ export function DraftBoardPage() {
       <div className="draft__body" style={{ ['--sidebar-w' as string]: `${sidebarWidth}px` }}>
         <section
           ref={boardSectionRef}
-          className={`draft__board ${mobileTab === 'board' ? 'is-mobile-active' : ''}`}
+          className={`draft__board ${mobileTab === 'board' ? 'is-mobile-active' : ''}${
+            showPowerRankings ? ' draft__board--rankings' : ''
+          }`}
         >
-          {isComplete && centerView === 'rankings' && (isDesktop || isFullscreen) ? (
+          {showPowerRankings ? (
             <PowerRankingsBoard
               lobbyName={lobby.name}
               season={lobby.season}

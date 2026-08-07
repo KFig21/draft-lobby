@@ -1263,6 +1263,14 @@
   &__board {
     overflow: auto;
     padding: $space * 1.5;
+
+    // The Power Rankings board owns its own panel padding and draws full-height
+    // dividers between its columns, so drop the board padding that would inset
+    // it and keep those borders from reaching the edges.
+    &--rankings {
+      padding: 0;
+      overflow: hidden;
+    }
   }
 
   &__sidebar {

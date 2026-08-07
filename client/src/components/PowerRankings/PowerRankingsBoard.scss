@@ -265,14 +265,16 @@
     background: $bg-raised;
     border: 1px solid $border;
     border-radius: $radius;
-    padding: 9px 8px;
-    min-height: 66px;
+    padding: 10px 8px;
+    min-height: 80px;
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
 
-    // Value block auto-margins into the vertical centre of the leftover space.
+    // Value block auto-margins into the vertical centre of the leftover space —
+    // gives the two-line PROJ tile the same breathing room as the single-value
+    // ones instead of packing edge to edge.
     > .prb-metric__val,
     > .prb-metric__stack {
       margin: auto 0;
@@ -317,7 +319,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 4px;
+      gap: 3px;
     }
 
     &__delta {
