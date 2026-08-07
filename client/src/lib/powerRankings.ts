@@ -25,6 +25,10 @@ export interface LineupRow {
   slot: RosterSlot;
   player?: PlayerRow;
   pick?: PickRow;
+  /** True when `player` is a best-available placeholder filling a slot the team
+   * never drafted for (power-rankings only) — a projected replacement, not a
+   * real pick. Placeholders carry no `pick`. */
+  placeholder?: boolean;
 }
 
 interface PoolEntry {
@@ -51,6 +55,12 @@ export function buildLineup(
   picks: PickRow[],
   playersById: Map<string, PlayerRow>,
   settings: LobbySettings,
+  options?: {
+    /** Fill any empty starter slot with the best available (undrafted) player
+     * eligible for it, flagged `placeholder`. Power-rankings use this so a team
+     * that skipped a position is projected at replacement level, not zero. */
+    fillPlaceholders?: boolean;
+  },
 ): TeamLineup {
   const pool: PoolEntry[] = picks
     .filter((p) => p.team_id === teamId)
@@ -91,6 +101,29 @@ export function buildLineup(
     bench.push({ slot: 'BENCH', player: entry?.player, pick: entry?.pick });
   }
 
+  // Best-available placeholders for any starter slot the team never filled. The
+  // undrafted pool is global (keyed off every team's picks), so two teams both
+  // missing the same position get the SAME placeholder; within one team we take
+  // distinct players so two empty slots can't clone one guy.
+  if (options?.fillPlaceholders && starters.some((s) => !s.player)) {
+    const draftedIds = new Set(picks.map((p) => p.player_id));
+    const available = [...playersById.values()]
+      .filter((p) => !draftedIds.has(p.id))
+      .sort((a, b) => (b.proj_points ?? 0) - (a.proj_points ?? 0));
+    const used = new Set<string>();
+    for (const row of starters) {
+      if (row.player) continue;
+      const best = available.find(
+        (p) => !used.has(p.id) && slotEligible(row.slot, p.position as Position),
+      );
+      if (!best) continue;
+      used.add(best.id);
+      row.player = best;
+      row.placeholder = true;
+      starterPoints += best.proj_points ?? 0;
+    }
+  }
+
   return { starters, bench, starterPoints };
 }
 
@@ -126,7 +159,8 @@ export function computePowerRankings(
   if (teams.length === 0) return [];
   const withPts = teams.map((team) => ({
     team,
-    starterPoints: buildLineup(team.id, picks, playersById, settings).starterPoints,
+    starterPoints: buildLineup(team.id, picks, playersById, settings, { fillPlaceholders: true })
+      .starterPoints,
   }));
   const totals = withPts.map((w) => w.starterPoints);
   const max = Math.max(...totals);

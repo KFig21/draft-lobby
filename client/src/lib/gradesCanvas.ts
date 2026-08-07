@@ -533,14 +533,17 @@ function renderTeam(model: LeagueGrade, card: TeamGradeCard, scale: number): HTM
     const slotLabel = row.slot === 'SUPERFLEX' ? 'SFLX' : row.slot;
     text(ctx, slotLabel, PAD + 15, cy, '700 9.5', MUTED, 'center', 'middle');
     if (row.player) {
+      // Best-available placeholder (a slot the team never drafted for): render
+      // muted with a "Best available" subline so it reads as a projected fill.
+      const ph = row.placeholder;
       posPill(ctx, row.player.position, PAD + 34, cy - 8, 34, 16);
       const nameX = PAD + 76;
-      text(ctx, row.player.name, nameX, cy - 5, '600 12.5', TEXT, 'left', 'middle', CARD_W - PAD - nameX - 44);
-      text(ctx, row.player.nfl_team, nameX, cy + 6, '500 9', MUTED, 'left', 'middle');
+      text(ctx, row.player.name, nameX, cy - 5, '600 12.5', ph ? MUTED : TEXT, 'left', 'middle', CARD_W - PAD - nameX - 44);
+      text(ctx, ph ? 'Best available' : row.player.nfl_team, nameX, cy + 6, '500 9', MUTED, 'left', 'middle');
       // Projected points in Futura italic, fractional part smaller. Futura's
       // 'middle' baseline sits high, so place the baseline explicitly (cy + 4.5)
       // to center the digits on the row.
-      drawProj(ctx, row.player.proj_points ?? 0, CARD_W - PAD, cy + 4.5, 13.5, TEXT, {
+      drawProj(ctx, row.player.proj_points ?? 0, CARD_W - PAD, cy + 4.5, 13.5, ph ? MUTED : TEXT, {
         align: 'right',
         weight: '500',
         family: FUTURA,

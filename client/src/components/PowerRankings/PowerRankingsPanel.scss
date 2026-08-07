@@ -492,6 +492,11 @@
         }
       }
     }
+
+    // Best-available placeholder — dimmed; the "FA" tag marks it as projected.
+    &--ph {
+      opacity: 0.6;
+    }
   }
 
   &__slot {
@@ -519,6 +524,18 @@
   &__pp {
     color: $text-muted;
     font-variant-numeric: tabular-nums;
+  }
+
+  &__ph {
+    font-size: 0.6rem;
+    font-weight: 800;
+    color: $text-muted;
+    border: 1px dashed $text-muted;
+    border-radius: 4px;
+    padding: 0 4px;
+    margin-left: 6px;
+    letter-spacing: 0.03em;
+    vertical-align: 1px;
   }
 
   &__comments {

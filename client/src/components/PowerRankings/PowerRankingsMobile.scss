@@ -855,6 +855,28 @@
     }
   }
 
+  // Best-available placeholder starter — dimmed, dashed slot chip + "FA" tag.
+  &-slot--ph {
+    opacity: 0.6;
+
+    .prm-slot__lab {
+      background: transparent;
+      border: 1px dashed $border;
+    }
+  }
+
+  &-slot__ph {
+    font-size: 9px;
+    font-weight: 800;
+    color: $text-muted;
+    border: 1px dashed $text-muted;
+    border-radius: 4px;
+    padding: 1px 4px;
+    margin-left: 6px;
+    letter-spacing: 0.03em;
+    vertical-align: 1px;
+  }
+
   // ── Peer feed ───────────────────────────────────────────────────
   &-feed__empty {
     color: $text-muted;

@@ -491,15 +491,16 @@ function TeamScreen({
   onStep: (dir: 1 | -1) => void;
 }) {
   const teamId = selected.team.id;
-  const lineup = buildLineup(teamId, picks, playersById, settings);
+  const lineup = buildLineup(teamId, picks, playersById, settings, { fillPlaceholders: true });
   const delta = selected.starterPoints - avgPts;
   const isSelf = teamId === myTeamId;
 
   // Bye-week exposure across the whole roster.
   const rosterRows = [...lineup.starters, ...lineup.bench];
+  // Actual picks only — placeholders aren't the team's players.
   const byeMap = new Map<number, PlayerRow[]>();
   for (const row of rosterRows) {
-    if (!row.player || row.player.bye_week == null) continue;
+    if (!row.player || row.placeholder || row.player.bye_week == null) continue;
     const list = byeMap.get(row.player.bye_week);
     if (list) list.push(row.player);
     else byeMap.set(row.player.bye_week, [row.player]);
@@ -524,9 +525,18 @@ function TeamScreen({
                 <span className="prm-slot__name">
                   {p.name}
                   {row.pick?.is_keeper && <span className="prm-slot__keeper">K</span>}
+                  {row.placeholder && (
+                    <span className="prm-slot__ph" title="Best available — this slot wasn’t drafted">
+                      FA
+                    </span>
+                  )}
                 </span>
                 <span className="prm-slot__team">
-                  {p.position === 'DEF' ? `${p.nfl_team} D/ST` : p.nfl_team}
+                  {row.placeholder
+                    ? 'Best available'
+                    : p.position === 'DEF'
+                      ? `${p.nfl_team} D/ST`
+                      : p.nfl_team}
                 </span>
               </span>
             </span>
@@ -550,7 +560,7 @@ function TeamScreen({
         </button>
       </li>
     ) : (
-      <li key={i} className="prm-slot">
+      <li key={i} className={`prm-slot${row.placeholder ? ' prm-slot--ph' : ''}`}>
         {inner}
       </li>
     );

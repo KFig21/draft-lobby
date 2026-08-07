@@ -642,6 +642,29 @@
     }
   }
 
+  // Best-available placeholder starter — dimmed, with a dashed slot chip and an
+  // "FA" tag, so it's clearly a projected fill and not one of the team's picks.
+  &-slot--ph {
+    opacity: 0.6;
+
+    .prb-slot__lab {
+      background: transparent;
+      border: 1px dashed $border;
+    }
+  }
+
+  &-slot__ph {
+    font-size: 9px;
+    font-weight: 800;
+    color: $text-muted;
+    border: 1px dashed $text-muted;
+    border-radius: 4px;
+    padding: 1px 4px;
+    margin-left: 6px;
+    letter-spacing: 0.03em;
+    vertical-align: 1px;
+  }
+
   &-byes {
     list-style: none;
     margin: 0;

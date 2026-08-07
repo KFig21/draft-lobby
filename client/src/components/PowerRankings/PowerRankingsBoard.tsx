@@ -196,17 +196,18 @@ export function PowerRankingsBoard({
     return <div className="prb prb--empty">No teams to rank yet.</div>;
   }
 
-  const lineup = buildLineup(selectedId, picks, playersById, settings);
+  const lineup = buildLineup(selectedId, picks, playersById, settings, { fillPlaceholders: true });
   const rosterRows = [...lineup.starters, ...lineup.bench];
   const posCounts = posByTeam.get(selectedId) ?? { QB: 0, RB: 0, WR: 0, TE: 0, K: 0, DEF: 0 };
   const delta = selected.starterPoints - avgPts;
   const isSelf = selectedId === myTeamId;
   const selCrowns = voteCounts.get(selectedId) ?? 0;
 
-  // Bye-week exposure across the whole roster.
+  // Bye-week exposure across the whole roster (actual picks only — placeholders
+  // aren't the team's players).
   const byeMap = new Map<number, PlayerRow[]>();
   for (const row of rosterRows) {
-    if (!row.player || row.player.bye_week == null) continue;
+    if (!row.player || row.placeholder || row.player.bye_week == null) continue;
     const list = byeMap.get(row.player.bye_week);
     if (list) list.push(row.player);
     else byeMap.set(row.player.bye_week, [row.player]);
@@ -246,9 +247,18 @@ export function PowerRankingsBoard({
                 <span className="prb-slot__name">
                   {p.name}
                   {row.pick?.is_keeper && <span className="prb-slot__keeper">K</span>}
+                  {row.placeholder && (
+                    <span className="prb-slot__ph" title="Best available — this slot wasn’t drafted">
+                      FA
+                    </span>
+                  )}
                 </span>
                 <span className="prb-slot__team">
-                  {p.position === 'DEF' ? `${p.nfl_team} D/ST` : p.nfl_team}
+                  {row.placeholder
+                    ? 'Best available'
+                    : p.position === 'DEF'
+                      ? `${p.nfl_team} D/ST`
+                      : p.nfl_team}
                 </span>
               </span>
             </span>
@@ -272,7 +282,7 @@ export function PowerRankingsBoard({
         </button>
       </li>
     ) : (
-      <li key={i} className="prb-slot">
+      <li key={i} className={`prb-slot${row.placeholder ? ' prb-slot--ph' : ''}`}>
         {inner}
       </li>
     );

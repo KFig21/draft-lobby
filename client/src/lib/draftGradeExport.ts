@@ -163,7 +163,10 @@ export function buildLeagueGrade(opts: {
   // Optimal starting lineup per team — the basis for the positional analysis so
   // bench depth (e.g. hoarding QBs) can't inflate a team's positional strength.
   const startersByTeam = new Map(
-    teams.map((t) => [t.id, buildLineup(t.id, picks, playersById, settings).starters]),
+    teams.map((t) => [
+      t.id,
+      buildLineup(t.id, picks, playersById, settings, { fillPlaceholders: true }).starters,
+    ]),
   );
 
   const teamCards: TeamGradeCard[] = rankings.map((r) => {

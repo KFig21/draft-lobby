@@ -285,7 +285,10 @@ function RankRow({
 
   const peerGrade = useMemo(() => mostCommonGrade(teamGrades), [teamGrades]);
   const starters = useMemo(
-    () => buildLineup(team.id, picks, playersById, settings).starters.filter((r) => r.player),
+    () =>
+      buildLineup(team.id, picks, playersById, settings, { fillPlaceholders: true }).starters.filter(
+        (r) => r.player,
+      ),
     [team.id, picks, playersById, settings],
   );
   const ownerName = team.owner_id ? usernameById.get(team.owner_id) : null;
@@ -370,6 +373,11 @@ function RankRow({
                           style={{ background: POSITION_COLORS[p.position as Position] }}
                         />
                         {p.name}
+                        {r.placeholder && (
+                          <span className="pr-row__ph" title="Best available — this slot wasn’t drafted">
+                            FA
+                          </span>
+                        )}
                       </span>
                       <span className="pr-row__pp">{(p.proj_points ?? 0).toFixed(1)}</span>
                     </>
@@ -385,7 +393,7 @@ function RankRow({
                       </button>
                     </li>
                   ) : (
-                    <li key={i} className="pr-row__starter">
+                    <li key={i} className={`pr-row__starter${r.placeholder ? ' pr-row__starter--ph' : ''}`}>
                       {line}
                     </li>
                   );
