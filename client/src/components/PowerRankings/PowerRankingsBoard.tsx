@@ -395,7 +395,7 @@ export function PowerRankingsBoard({
                   #{selected.rank} <small>of {rankings.length}</small>
                 </span>
               </div>
-              <div className="prb-metric prb-metric--vc">
+              <div className="prb-metric">
                 <span className="prb-metric__lab">PROJ STARTER PTS</span>
                 <span className="prb-metric__row">
                   <span

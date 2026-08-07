@@ -268,24 +268,22 @@
     padding: 10px 12px;
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    justify-content: space-between; // label pinned to the top, value to the bottom
 
-    // Short single-value tiles (rank, grade, crowns) read better dead-centered.
-    &--c {
-      justify-content: center;
-      align-items: center;
-      text-align: center;
-      gap: 8px;
+    // Label pinned to the top; the value block auto-margins to the vertical
+    // centre of the space beneath it.
+    > .prb-metric__val,
+    > .prb-metric__row {
+      margin: auto 0;
     }
 
-    // Proj total: vertically centered but kept left-aligned (it's wider, with
-    // the +/- delta beside the value).
-    &--vc {
-      justify-content: center;
+    // Short single-value tiles (rank, grade, crowns) also centre horizontally.
+    &--c {
+      align-items: center;
+      text-align: center;
     }
 
     &__lab {
+      flex: 0 0 auto;
       font-size: 9px;
       font-weight: 700;
       letter-spacing: 0.06em;
