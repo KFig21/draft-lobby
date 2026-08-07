@@ -200,7 +200,9 @@ function rosterRow(ctx: CanvasRenderingContext2D, row: LineupRow, y: number, ben
   const nfl = p.position === 'DEF' ? `${p.nfl_team} D/ST` : p.nfl_team ?? '';
   text(ctx, nfl, nameX, cy + 10, '500 10.5', MUTED, 'left', 'alphabetic', nameMaxW);
 
-  drawProj(ctx, p.proj_points ?? 0, CARD_W - PAD, cy, 15, bench ? FAINT : TEXT);
+  // Sit the projection with the name/NFL block's optical centre (a touch above
+  // the row centre) rather than dead-centre of the row.
+  drawProj(ctx, p.proj_points ?? 0, CARD_W - PAD, cy - 4, 15, bench ? FAINT : TEXT);
 }
 
 export interface RosterRenderOptions {
