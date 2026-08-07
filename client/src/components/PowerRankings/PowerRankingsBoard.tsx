@@ -224,7 +224,6 @@ export function PowerRankingsBoard({
   const lineup = buildLineup(selectedId, picks, playersById, settings);
   const rosterRows = [...lineup.starters, ...lineup.bench];
   const posCounts = posByTeam.get(selectedId) ?? { QB: 0, RB: 0, WR: 0, TE: 0, K: 0, DEF: 0 };
-  const rosterSize = draftablePos.reduce((sum, pos) => sum + posCounts[pos], 0);
   const delta = selected.starterPoints - avgPts;
   const isSelf = selectedId === myTeamId;
   const selCrowns = voteCounts.get(selectedId) ?? 0;
@@ -443,10 +442,7 @@ export function PowerRankingsBoard({
           </div>
 
           <section className="prb-sec">
-            <h4 className="prb-sec__title">
-              <span>Position breakdown</span>
-              <span className="prb-sec__cnt">{rosterSize}</span>
-            </h4>
+            <h4 className="prb-sec__title prb-sec__title--pos">Position breakdown</h4>
             <div className="prb-posbreak">
               {draftablePos.map((pos) => (
                 <span
@@ -462,19 +458,13 @@ export function PowerRankingsBoard({
           </section>
 
           <section className="prb-sec">
-            <h4 className="prb-sec__title">
-              <span>Starting lineup</span>
-              <span className="prb-sec__cnt">{lineup.starters.length}</span>
-            </h4>
+            <h4 className="prb-sec__title">Starting lineup</h4>
             <ul className="prb-slots">{lineup.starters.map((r, i) => lineupRow(r, i))}</ul>
           </section>
 
           {lineup.bench.length > 0 && (
             <section className="prb-sec">
-              <h4 className="prb-sec__title prb-sec__title--bench">
-                <span>Bench</span>
-                <span className="prb-sec__cnt">{lineup.bench.length}</span>
-              </h4>
+              <h4 className="prb-sec__title prb-sec__title--bench">Bench</h4>
               <ul className="prb-slots">
                 {lineup.bench.map((r, i) => lineupRow(r, lineup.starters.length + i))}
               </ul>
@@ -483,10 +473,7 @@ export function PowerRankingsBoard({
 
           {byes.length > 0 && (
             <section className="prb-sec">
-              <h4 className="prb-sec__title">
-                <span>Bye week breakdown</span>
-                <span className="prb-sec__cnt">{byes.length}</span>
-              </h4>
+              <h4 className="prb-sec__title prb-sec__title--bye">Bye week breakdown</h4>
               <ul className="prb-byes">
                 {byes.map(([week, players]) => (
                   <li

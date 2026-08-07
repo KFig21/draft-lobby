@@ -123,7 +123,7 @@ export function TeamLineup({
       {belowSelect}
 
       <section className="lineup-view__section">
-        <h4 className="lineup-view__section-title">
+        <h4 className="lineup-view__section-title lineup-view__section-title--pos">
           <span>Position breakdown</span>
           <span className="lineup-view__section-count">{rosterSize}</span>
         </h4>

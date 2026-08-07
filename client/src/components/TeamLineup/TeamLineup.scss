@@ -88,6 +88,11 @@
       background: $accent;
     }
 
+    // Position breakdown uses the WR blue tick.
+    &--pos::before {
+      background: $pos-wr;
+    }
+
     &--bench::before {
       background: $text-muted;
     }

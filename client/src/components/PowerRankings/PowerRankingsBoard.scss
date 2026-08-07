@@ -265,8 +265,8 @@
     background: $bg-raised;
     border: 1px solid $border;
     border-radius: $radius;
-    padding: 9px 8px 11px;
-    min-height: 84px;
+    padding: 9px 8px;
+    min-height: 66px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -376,27 +376,33 @@
   &-sec {
     margin-bottom: 16px;
 
+    // Matches the roster-tab section headers: a coloured indent tick, an
+    // underline rule, bright uppercase label.
     &__title {
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      margin: 0 0 8px;
+      gap: 8px;
+      margin: 0 0 10px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid $border;
       font-size: 11.5px;
-      font-weight: 750;
-      letter-spacing: 0.04em;
-      color: $text-muted;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      color: $text;
       text-transform: uppercase;
 
-      &--bench { opacity: 0.85; }
-    }
+      &::before {
+        content: '';
+        width: 4px;
+        height: 14px;
+        border-radius: 2px;
+        background: $accent;
+      }
 
-    &__cnt {
-      background: $bg-overlay;
-      color: color-mix(in srgb, #{$text} 80%, #{$text-muted});
-      border-radius: 999px;
-      padding: 1px 8px;
-      font-size: 11px;
-      font-weight: 700;
+      // Position breakdown gets the WR blue tick (mirrored in the roster tab).
+      &--pos::before { background: $pos-wr; }
+      &--bench::before { background: $text-muted; }
+      &--bye::before { background: $warning; }
     }
   }
 
