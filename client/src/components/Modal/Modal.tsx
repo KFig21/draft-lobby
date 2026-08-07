@@ -6,6 +6,8 @@ interface Props {
   title: string;
   onClose: () => void;
   wide?: boolean;
+  /** Optional leading icon shown before the title in the header. */
+  icon?: ReactNode;
   /** Optional fixed bar below the scroll area (e.g. Save/Cancel actions) — a
    * sibling of the body, so the body's scrollbar never runs across it. */
   footer?: ReactNode;
@@ -13,7 +15,7 @@ interface Props {
 }
 
 /** A centered, scrollable dialog. Closes on overlay click or Escape. */
-export function Modal({ title, onClose, wide, footer, children }: Props) {
+export function Modal({ title, onClose, wide, icon, footer, children }: Props) {
   const { closing, requestClose } = useModalClose(onClose);
 
   useEffect(() => {
@@ -37,7 +39,10 @@ export function Modal({ title, onClose, wide, footer, children }: Props) {
         onClick={(e) => e.stopPropagation()}
       >
         <header className="dialog__header">
-          <h2>{title}</h2>
+          <div className="dialog__title">
+            {icon && <span className="dialog__title-icon">{icon}</span>}
+            <h2>{title}</h2>
+          </div>
           <button className="dialog__close" onClick={requestClose} aria-label="Close">
             ✕
           </button>

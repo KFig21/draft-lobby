@@ -37,6 +37,26 @@
     }
   }
 
+  &__title {
+    display: flex;
+    align-items: center;
+    gap: $space;
+    min-width: 0;
+  }
+
+  // Optional leading icon — accent on dark, primary on light (mirrors the panel
+  // header icons). MUI icons size to this font-size via fontSize="inherit".
+  &__title-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    font-size: 1.4rem;
+    color: $accent;
+
+    :root[data-theme='light'] & {
+      color: $primary;
+    }
+  }
+
   &__close {
     background: none;
     border: none;

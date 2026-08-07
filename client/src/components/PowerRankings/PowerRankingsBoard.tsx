@@ -651,7 +651,11 @@ export function PowerRankingsBoard({
       </div>
     </div>
     {showHelp && (
-      <Modal title="How grades are calculated" onClose={() => setShowHelp(false)}>
+      <Modal
+        title="How grades are calculated"
+        icon={<TrendingUpIcon fontSize="inherit" />}
+        onClose={() => setShowHelp(false)}
+      >
         <div className="prb-help">
           <p>
             Every team is ranked by the projected points of its <b>optimal starting lineup</b> —
@@ -670,7 +674,11 @@ export function PowerRankingsBoard({
       </Modal>
     )}
     {showPeerHelp && (
-      <Modal title="Peer grades & crowns" onClose={() => setShowPeerHelp(false)}>
+      <Modal
+        title="Peer grades & crowns"
+        icon={<EditNoteIcon fontSize="inherit" />}
+        onClose={() => setShowPeerHelp(false)}
+      >
         <div className="prb-help">
           <p>
             This is the league’s own take on the selected roster. Anyone in the league can leave a{' '}
