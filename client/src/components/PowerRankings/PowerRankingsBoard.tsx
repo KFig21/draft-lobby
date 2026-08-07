@@ -10,13 +10,16 @@ import {
   type LobbySettings,
   type Position,
 } from '@draft-lobby/shared';
+import BoltIcon from '@mui/icons-material/Bolt';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
 import InfoOutlineIcon from '@mui/icons-material/InfoOutlined';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import ThumbDownAltIcon from '@mui/icons-material/ThumbDownAlt';
 import ThumbUpAltIcon from '@mui/icons-material/ThumbUpAlt';
-import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
+import { buildLeagueGrade, type LeagueGrade } from '../../lib/draftGradeExport';
 import { buildLineup, computePowerRankings } from '../../lib/powerRankings';
 import { avatarForTeam } from '../../lib/teamAvatar';
 import type {
@@ -34,6 +37,8 @@ import { Modal } from '../Modal/Modal';
 import './PowerRankingsBoard.scss';
 
 interface Props {
+  lobbyName: string;
+  season: number;
   teams: TeamRow[];
   members: MemberRow[];
   picks: PickRow[];
@@ -52,6 +57,8 @@ interface Props {
   onReact: (teamId: string, raterId: string, value: 1 | -1 | 0) => void;
   onPickClick?: (pick: PickRow) => void;
   onExportGrades?: () => void;
+  /** The league chat, shown in the right pane while the League summary is up. */
+  chatPanel?: ReactNode;
 }
 
 const posLabel = (p: Position) => (p === 'DEF' ? 'D/ST' : p);
@@ -89,6 +96,8 @@ function timeAgo(iso: string): string {
  * windowed/mobile rankings keep the single-column PowerRankingsPanel.
  */
 export function PowerRankingsBoard({
+  lobbyName,
+  season,
   teams,
   members,
   picks,
@@ -107,7 +116,12 @@ export function PowerRankingsBoard({
   onReact,
   onPickClick,
   onExportGrades,
+  chatPanel,
 }: Props) {
+  // Defaults to the league summary; picking a team drops into that team's
+  // roster breakdown + peer feed.
+  const [view, setView] = useState<'league' | 'team'>('league');
+
   const rankings = useMemo(
     () => computePowerRankings(teams, picks, playersById, settings),
     [teams, picks, playersById, settings],
@@ -115,6 +129,22 @@ export function PowerRankingsBoard({
   const avgPts = rankings.length
     ? rankings.reduce((s, r) => s + r.starterPoints, 0) / rankings.length
     : 0;
+
+  const leagueGrade = useMemo(
+    () =>
+      buildLeagueGrade({
+        lobbyName,
+        season,
+        teams,
+        members,
+        picks,
+        playersById,
+        settings,
+        crownVotes,
+        grades,
+      }),
+    [lobbyName, season, teams, members, picks, playersById, settings, crownVotes, grades],
+  );
 
   const usernameById = useMemo(() => {
     const m = new Map<string, string>();
@@ -324,6 +354,13 @@ export function PowerRankingsBoard({
           )}
         </div>
         <div className="prb__scroll">
+          <button
+            type="button"
+            className={`prb-summary-btn${view === 'league' ? ' is-on' : ''}`}
+            onClick={() => setView('league')}
+          >
+            <EmojiEventsIcon fontSize="inherit" /> League summary
+          </button>
           {rankings.map((r) => {
             const t = r.team;
             const owner = t.owner_id ? usernameById.get(t.owner_id) : null;
@@ -332,10 +369,13 @@ export function PowerRankingsBoard({
               <button
                 key={t.id}
                 type="button"
-                className={`prb-rank${t.id === selectedId ? ' is-active' : ''}${
-                  t.id === myTeamId ? ' is-mine' : ''
-                }`}
-                onClick={() => setPicked(t.id)}
+                className={`prb-rank${
+                  t.id === selectedId && view === 'team' ? ' is-active' : ''
+                }${t.id === myTeamId ? ' is-mine' : ''}`}
+                onClick={() => {
+                  setPicked(t.id);
+                  setView('team');
+                }}
               >
                 <span
                   className={`prb-rank__medal${r.rank <= 3 ? ` m${r.rank}` : ''}`}
@@ -374,9 +414,11 @@ export function PowerRankingsBoard({
         </div>
       </div>
 
-      {/* ── CENTER: roster breakdown ────────────────────── */}
+      {/* ── CENTER: league summary, or the selected team's roster ── */}
       <div className="prb__col prb__col--center">
         <div className="prb__scroll">
+          {view === 'team' ? (
+          <>
           <div className="prb-head">
             <Avatar avatar={avatarForTeam(selected.team, members)} size={50} />
             <div className="prb-head__id">
@@ -478,11 +520,19 @@ export function PowerRankingsBoard({
               </ul>
             </section>
           )}
+          </>
+          ) : (
+            <LeagueSummaryPane model={leagueGrade} />
+          )}
         </div>
       </div>
 
-      {/* ── RIGHT: peer-grade feed + docked composer ────── */}
+      {/* ── RIGHT: peer-grade feed, or the league chat in summary view ── */}
       <div className="prb__col prb__col--right">
+        {view === 'league' && chatPanel ? (
+          <div className="prb__chat">{chatPanel}</div>
+        ) : (
+          <>
         <div className="prb__scroll prb-feed">
           {feed.length === 0 ? (
             <p className="prb-feed__empty">No peer grades on this roster yet.</p>
@@ -600,6 +650,8 @@ export function PowerRankingsBoard({
             </div>
           ) : null}
         </div>
+          </>
+        )}
       </div>
     </div>
     {showHelp && (
@@ -622,5 +674,111 @@ export function PowerRankingsBoard({
       </Modal>
     )}
     </>
+  );
+}
+
+// A–F grade-distribution bar colours (match the export PNG cover card).
+const DIST_COLORS: Record<string, string> = {
+  A: '#3fd6a5',
+  B: '#8bd23f',
+  C: '#f6a642',
+  D: '#f2793a',
+  F: '#f8577d',
+};
+
+/** DOM version of the grade-export "league cover" card — podium (2·1·3),
+ * top/avg/low projections, steal + biggest reach, and the A–F distribution. */
+function LeagueSummaryPane({ model }: { model: LeagueGrade }) {
+  const podium = [model.teams[1], model.teams[0], model.teams[2]]; // 2 · 1 · 3
+  const maxCount = Math.max(1, ...model.distribution.map((d) => d.count));
+  const proj = (label: string, value: number, color: string, name?: string) => (
+    <div className="prb-sum__projbox">
+      <span className="prb-sum__projlab">{label}</span>
+      <span className="prb-sum__projval" style={{ ['--c']: color } as CSSProperties}>
+        <ProjPoints value={value} />
+      </span>
+      {name && <span className="prb-sum__projsub">{name}</span>}
+    </div>
+  );
+  return (
+    <div className="prb-sum">
+      <div className="prb-sum__head">
+        <div className="prb-sum__eyebrow">{model.season} SEASON</div>
+        <h2 className="prb-sum__name">{model.lobbyName}</h2>
+        <div className="prb-sum__meta">
+          {model.teamCount} teams · {model.scoringLabel} · {model.draftTypeLabel} · {model.rounds}{' '}
+          rounds
+        </div>
+      </div>
+
+      <div className="prb-sum__podium">
+        {podium.map((card, i) =>
+          card ? (
+            <div key={card.team.id} className={`prb-sum__pod${i === 1 ? ' is-champ' : ''}`}>
+              {i === 1 && <EmojiEventsIcon className="prb-sum__crown" />}
+              <Avatar avatar={card.avatar} size={i === 1 ? 56 : 44} />
+              <div className="prb-sum__pod-name">{card.team.name}</div>
+              <div className="prb-sum__pod-owner">{card.ownerLabel}</div>
+              <GradeBadge grade={card.grade} size={26} />
+              <div className="prb-sum__pod-rank">#{card.rank}</div>
+            </div>
+          ) : null,
+        )}
+      </div>
+
+      <div className="prb-sum__proj">
+        {proj('TOP PROJECTION', model.topProjection, '#3fd6a5', model.topProjName)}
+        {proj('AVG PROJECTION', model.avgProjection, '#f6a642')}
+        {proj('LOW PROJECTION', model.lowProjection, '#f8577d', model.lowProjName)}
+      </div>
+
+      {model.leagueSteal && (
+        <div className="prb-sum__callout prb-sum__callout--steal">
+          <div className="prb-sum__callout-lab">
+            <BoltIcon fontSize="inherit" /> STEAL OF THE DRAFT
+          </div>
+          <div className="prb-sum__callout-main">
+            {model.leagueSteal.player.name} · {model.leagueSteal.player.position}
+          </div>
+          <div className="prb-sum__callout-sub">
+            R{model.leagueSteal.round} to {model.leagueSteal.team.name} — +
+            {Math.max(0, model.leagueSteal.valueRounds)} rds of value
+          </div>
+        </div>
+      )}
+      {model.leagueReach && (
+        <div className="prb-sum__callout prb-sum__callout--reach">
+          <div className="prb-sum__callout-lab">
+            <TrendingUpIcon fontSize="inherit" /> BIGGEST REACH
+          </div>
+          <div className="prb-sum__callout-main">
+            {model.leagueReach.player.name} · {model.leagueReach.player.position}
+          </div>
+          <div className="prb-sum__callout-sub">
+            R{model.leagueReach.round} by {model.leagueReach.team.name} —{' '}
+            {Math.abs(Math.min(0, model.leagueReach.valueRounds))} rds early
+          </div>
+        </div>
+      )}
+
+      <div className="prb-sum__dist">
+        <div className="prb-sum__dist-lab">GRADE DISTRIBUTION</div>
+        <div className="prb-sum__bars">
+          {model.distribution.map((d) => (
+            <div key={d.letter} className="prb-sum__bar-col">
+              <span className="prb-sum__bar-count">{d.count}</span>
+              <span
+                className="prb-sum__bar"
+                style={{
+                  height: `${d.count === 0 ? 4 : Math.round((d.count / maxCount) * 64)}px`,
+                  background: DIST_COLORS[d.letter],
+                }}
+              />
+              <span className="prb-sum__bar-letter">{d.letter}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }

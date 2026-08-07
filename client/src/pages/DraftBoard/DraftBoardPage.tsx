@@ -2728,6 +2728,8 @@ export function DraftBoardPage() {
         >
           {isComplete && centerView === 'rankings' && (isDesktop || isFullscreen) ? (
             <PowerRankingsBoard
+              lobbyName={lobby.name}
+              season={lobby.season}
               teams={teams}
               members={members}
               picks={picks}
@@ -2746,6 +2748,23 @@ export function DraftBoardPage() {
               onReact={reactGrade}
               onPickClick={setPickModal}
               onExportGrades={() => setShowGradeExport(true)}
+              chatPanel={
+                <DraftChat
+                  lobbyId={id}
+                  status={lobby.status}
+                  completedAt={lobby.completed_at}
+                  chatLockMs={lobby.chat_lock_ms}
+                  picks={picks}
+                  grades={grades}
+                  teamsById={teamsById}
+                  playersById={playersById}
+                  members={members}
+                  onOpenPick={setPickModal}
+                  focusMessageId={focusMessageId}
+                  onFocusHandled={() => setFocusMessageId(null)}
+                  viewOnly={!isMember}
+                />
+              }
             />
           ) : (
             <DraftGrid

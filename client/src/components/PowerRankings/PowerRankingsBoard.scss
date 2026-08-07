@@ -722,6 +722,165 @@
     cursor: pointer;
     &:hover { background: $primary-hover; }
   }
+
+  // "League summary" toggle at the top of the standings list — a hint-style
+  // pill (translucent accent fill + border + text), filled when active.
+  &-summary-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    margin-bottom: 8px;
+    padding: 9px 12px;
+    border: 1px solid color-mix(in srgb, #{$accent} 45%, transparent);
+    background: rgba(63, 214, 165, 0.1);
+    color: $accent;
+    border-radius: $radius;
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 750;
+    cursor: pointer;
+    svg { font-size: 16px; }
+
+    :root[data-theme='light'] & {
+      color: $primary;
+      border-color: color-mix(in srgb, #{$primary} 45%, transparent);
+      background: color-mix(in srgb, #{$primary} 10%, transparent);
+    }
+
+    &:hover { background: rgba(63, 214, 165, 0.16); }
+
+    &.is-on {
+      background: $accent;
+      color: #05231a;
+      border-color: transparent;
+      :root[data-theme='light'] & { background: $primary; color: #eafff8; }
+    }
+  }
+
+  // Chat fills the right pane while the League summary is up.
+  &__chat {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  // ── League summary pane (DOM echo of the export cover card) ────────
+  &-sum {
+    &__head { text-align: center; margin-bottom: 18px; }
+    &__eyebrow {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      color: $accent;
+      :root[data-theme='light'] & { color: $primary; }
+    }
+    &__name { margin: 4px 0 3px; font-size: 26px; font-weight: 800; letter-spacing: -0.01em; }
+    &__meta { font-size: 12px; color: $text-muted; }
+
+    &__podium {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      align-items: end;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    &__pod {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      padding: 12px 6px 14px;
+      border-radius: $radius;
+      background: $bg-raised;
+      border: 1px solid $border;
+
+      &.is-champ {
+        background: linear-gradient(180deg, rgba(63, 214, 165, 0.1), $bg-raised);
+        border-color: color-mix(in srgb, #{$accent} 40%, #{$border});
+        padding-top: 20px;
+      }
+    }
+    &__crown { position: absolute; top: -12px; color: $keeper; font-size: 22px !important; }
+    &__pod-name {
+      font-size: 13px;
+      font-weight: 700;
+      margin-top: 4px;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    &__pod-owner { font-size: 10.5px; color: $text-muted; }
+    &__pod-rank { font-size: 10.5px; font-weight: 700; color: $text-muted; margin-top: 4px; }
+
+    &__proj {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    &__projbox {
+      background: $bg-raised;
+      border: 1px solid $border;
+      border-radius: $radius;
+      padding: 11px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    &__projlab { font-size: 9px; font-weight: 700; letter-spacing: 0.05em; color: $text-muted; }
+    &__projval {
+      font-size: 22px;
+      font-weight: 800;
+      line-height: 1;
+      color: var(--c);
+      :root[data-theme='light'] & { color: color-mix(in srgb, var(--c) 62%, #0b1014); }
+    }
+    &__projsub { font-size: 10px; color: $text-muted; }
+
+    &__callout {
+      background: $bg-raised;
+      border: 1px solid $border;
+      border-radius: $radius;
+      padding: 12px 14px;
+      margin-bottom: 10px;
+    }
+    &__callout-lab {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 9.5px;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      margin-bottom: 6px;
+      svg { font-size: 15px; }
+    }
+    &__callout--steal &__callout-lab {
+      color: $accent;
+      :root[data-theme='light'] & { color: $primary; }
+    }
+    &__callout--reach &__callout-lab { color: #f2793a; }
+    &__callout-main { font-size: 15px; font-weight: 700; }
+    &__callout-sub { font-size: 11.5px; color: $text-muted; margin-top: 2px; }
+
+    &__dist { margin-top: 14px; }
+    &__dist-lab {
+      font-size: 9.5px;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      color: $text-muted;
+      margin-bottom: 12px;
+    }
+    &__bars { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; align-items: end; }
+    &__bar-col { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+    &__bar-count { font-size: 11px; font-weight: 700; }
+    &__bar { width: 100%; border-radius: 4px; min-height: 4px; }
+    &__bar-letter { font-size: 11px; font-weight: 700; color: $text-muted; }
+  }
 }
 
 // Help modal body — rendered in a portal, so it lives outside .prb.
