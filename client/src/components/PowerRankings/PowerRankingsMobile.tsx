@@ -310,7 +310,7 @@ export function PowerRankingsMobile({
         <div className="prm__scroll">
           {view === 'league' ? (
             <div className="prm__pad">
-              <LeagueSummaryPane model={leagueGrade} />
+              <LeagueSummaryPane model={leagueGrade} compact />
             </div>
           ) : (
             standings
@@ -615,7 +615,7 @@ function TeamScreen({
             </span>
           </div>
           <div className="prm-metric">
-            <span className="prm-metric__lab">PROJ STARTER PTS</span>
+            <span className="prm-metric__lab">PROJ POINTS</span>
             <span className="prm-metric__stack">
               <span className="prm-metric__val">
                 <ProjPoints value={selected.starterPoints} />

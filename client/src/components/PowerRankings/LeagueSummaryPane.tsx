@@ -14,7 +14,14 @@ import './LeagueSummaryPane.scss';
  * top/avg/low projections, steal + biggest reach, and a projected-points-by-team
  * bar chart (lowest → highest, each bar topped by the team's avatar). Shared by
  * the fullscreen board (centre view) and the mobile rankings (League tab). */
-export function LeagueSummaryPane({ model }: { model: LeagueGrade }) {
+export function LeagueSummaryPane({
+  model,
+  compact = false,
+}: {
+  model: LeagueGrade;
+  /** Narrow layouts (mobile) shorten the projection labels so they never wrap. */
+  compact?: boolean;
+}) {
   const podium = [model.teams[1], model.teams[0], model.teams[2]]; // 2 · 1 · 3
   // teamCards come in rank order (highest projection first); reverse for the
   // lowest→highest bar chart. Scale bars across the min→max spread (not from 0)
@@ -145,9 +152,9 @@ export function LeagueSummaryPane({ model }: { model: LeagueGrade }) {
       </div>
 
       <div className="prb-sum__proj">
-        {proj('TOP PROJECTION', model.topProjection, '#3fd6a5', 1, model.topProjName)}
-        {proj('AVG PROJECTION', model.avgProjection, '#f6a642', 0.88)}
-        {proj('LOW PROJECTION', model.lowProjection, '#f8577d', 0.78, model.lowProjName)}
+        {proj(compact ? 'TOP PROJ' : 'TOP PROJECTION', model.topProjection, '#3fd6a5', 1, model.topProjName)}
+        {proj(compact ? 'AVG PROJ' : 'AVG PROJECTION', model.avgProjection, '#f6a642', 0.88)}
+        {proj(compact ? 'LOW PROJ' : 'LOW PROJECTION', model.lowProjection, '#f8577d', 0.78, model.lowProjName)}
       </div>
 
       {(model.leagueSteal || model.leagueReach) && (

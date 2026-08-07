@@ -96,6 +96,9 @@ $bstrong: color-mix(in srgb, #{$text} 22%, transparent);
   }
 
   &__projbox {
+    // min-width:0 keeps the three grid tracks strictly equal — without it a
+    // number wider than its 1fr track widens that column and destabilizes the row.
+    min-width: 0;
     background: $bg-raised;
     border: 1px solid $border;
     border-radius: $radius;
@@ -499,12 +502,25 @@ $bstrong: color-mix(in srgb, #{$text} 22%, transparent);
     padding: 0 2px 4px;
     white-space: nowrap;
 
+    // Frozen first column — the team name stays put while the slot columns
+    // scroll horizontally beneath it. The box-shadow paints over the 3px
+    // border-spacing gap so scrolling cells don't peek through.
     &--team {
       text-align: left;
+      position: sticky;
+      left: 0;
+      z-index: 2;
+      background: $bg;
+      box-shadow: 3px 0 0 $bg;
     }
   }
 
   &__heat-team {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: $bg;
+    box-shadow: 3px 0 0 $bg;
     vertical-align: middle;
     min-width: 92px;
     max-width: 130px;

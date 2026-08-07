@@ -457,6 +457,7 @@
       height: 18px;
       display: flex;
       align-items: center;
+      white-space: nowrap;
     }
 
     &__val {
@@ -1125,5 +1126,32 @@
     &:hover {
       background: $primary-hover;
     }
+  }
+
+  // ── Shared League summary pane, tuned for narrow screens ────────
+  // `.prb-sum` is reused verbatim from the desktop board; these descendant
+  // overrides shrink the projection numbers so all three fit at a uniform
+  // width (with short "PROJ" labels from the `compact` prop), and stack the
+  // steal/reach callouts full-width so their detail line stays on one line.
+  .prb-sum__proj {
+    gap: 6px;
+  }
+
+  .prb-sum__projbox {
+    padding: 10px 8px 6px;
+  }
+
+  .prb-sum__projlab {
+    white-space: nowrap;
+    font-size: 8.5px;
+  }
+
+  .prb-sum__projval {
+    font-size: calc(22px * var(--s, 1));
+    height: 23px;
+  }
+
+  .prb-sum__callouts {
+    flex-direction: column;
   }
 }
