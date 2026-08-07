@@ -1,5 +1,8 @@
 import {
   MAX_PICK_SECONDS,
+  MAX_ROSTER_SIZE,
+  MAX_STARTING_SPOTS,
+  MAX_TEAMS,
   MIN_PICK_SECONDS,
   ROSTER_SLOTS,
   SCORING_PRESETS,
@@ -123,6 +126,11 @@ export function LeagueSettingsFields({ settings, onChange, nameField, editableGr
   }, [settings.rosterComposition]);
 
   const rounds = rosterSize(settings.rosterComposition);
+  const starters = startingSpots(settings.rosterComposition);
+  // Aggregate ceilings (mirrors the shared zod caps) so the UI can't build a
+  // roster the schema would reject.
+  const atRosterCap = rounds >= MAX_ROSTER_SIZE;
+  const atStarterCap = starters >= MAX_STARTING_SPOTS;
 
   function setSlotCount(slot: RosterSlot, count: number) {
     onChange({
@@ -202,7 +210,7 @@ export function LeagueSettingsFields({ settings, onChange, nameField, editableGr
                 value={settings.teamCount}
                 onChange={(e) => set('teamCount', Number(e.target.value))}
               >
-                {Array.from({ length: 31 }, (_, i) => i + 2).map((n) => (
+                {Array.from({ length: MAX_TEAMS - 1 }, (_, i) => i + 2).map((n) => (
                   <option key={n} value={n}>
                     {n}
                   </option>
@@ -284,8 +292,7 @@ export function LeagueSettingsFields({ settings, onChange, nameField, editableGr
         <div className="wizard__section-head">
           <h2>Starting lineup</h2>
           <span className="muted">
-            {startingSpots(settings.rosterComposition)} starters · {rounds} roster ·{' '}
-            {rounds} rounds
+            {starters} starters · {rounds} roster · {rounds} rounds
           </span>
         </div>
         <SettingsGroupFieldset editable={canEdit('structural')}>
@@ -315,7 +322,11 @@ export function LeagueSettingsFields({ settings, onChange, nameField, editableGr
                       type="button"
                       className="lineup__step"
                       aria-label={`More ${SLOT_LABELS[slot]}`}
-                      disabled={count >= SLOT_MAX[slot]}
+                      disabled={
+                        count >= SLOT_MAX[slot] ||
+                        atRosterCap ||
+                        (slot !== 'BENCH' && atStarterCap)
+                      }
                       onClick={() => stepSlot(slot, 1)}
                     >
                       <AddIcon fontSize="small" />

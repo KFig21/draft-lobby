@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { SLOT_ELIGIBILITY, rosterSlotSchema, type Position } from './positions.js';
+import { SLOT_ELIGIBILITY, SLOT_MAX, rosterSlotSchema, type Position } from './positions.js';
 import { DEFAULT_SCORING_RULES, scoringRulesSchema } from './scoring.js';
 import { CHAT_LOCK_MS, MAX_CHAT_LOCK_MS } from './social.js';
 
@@ -16,13 +16,54 @@ export const lobbyStatusSchema = z.enum([
 ]);
 export type LobbyStatus = z.infer<typeof lobbyStatusSchema>;
 
-/** Roster composition: how many of each slot type a team must fill. */
-export const rosterCompositionSchema = z.array(
-  z.object({
-    slot: rosterSlotSchema,
-    count: z.number().int().min(0).max(20),
-  }),
-);
+// ── Size caps ───────────────────────────────────────────────────────
+// Kept deliberately generous (deeper than any standard league) while still
+// bounding what the draft board, projections, and power-ranking screens have
+// to render — and stopping a crafted request from configuring something that
+// visibly breaks them. Per-slot caps live in SLOT_MAX (positions.ts).
+export const MIN_TEAMS = 2;
+export const MAX_TEAMS = 16; // 32 broke the board width + every team×slot grid
+export const MAX_ROSTER_SIZE = 30; // total spots = draft rounds
+export const MAX_STARTING_SPOTS = 16; // non-bench spots
+
+/** Roster composition: how many of each slot type a team must fill. Per-slot
+ * counts are capped by SLOT_MAX; the whole roster by the aggregate caps above.
+ * Enforced here (not just in the wizard UI) so a direct API call can't slip an
+ * abusive roster past the client. */
+export const rosterCompositionSchema = z
+  .array(
+    z.object({
+      slot: rosterSlotSchema,
+      count: z.number().int().min(0),
+    }),
+  )
+  .superRefine((comp, ctx) => {
+    for (const { slot, count } of comp) {
+      if (count > SLOT_MAX[slot]) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `At most ${SLOT_MAX[slot]} ${slot} spot(s) allowed`,
+        });
+      }
+    }
+    const total = comp.reduce((n, r) => n + r.count, 0);
+    const starters = comp.reduce((n, r) => (r.slot === 'BENCH' ? n : n + r.count), 0);
+    if (starters < 1) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'A roster needs at least one starting spot' });
+    }
+    if (starters > MAX_STARTING_SPOTS) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `At most ${MAX_STARTING_SPOTS} starting spots allowed`,
+      });
+    }
+    if (total > MAX_ROSTER_SIZE) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `A roster can be at most ${MAX_ROSTER_SIZE} rounds`,
+      });
+    }
+  });
 export type RosterComposition = z.infer<typeof rosterCompositionSchema>;
 
 /** Total roster spots = number of draft rounds (one pick per spot). */
@@ -130,7 +171,7 @@ export type DraftMode = z.infer<typeof draftModeSchema>;
 
 export const lobbySettingsSchema = z.object({
   name: z.string().min(1).max(60),
-  teamCount: z.number().int().min(2).max(32),
+  teamCount: z.number().int().min(MIN_TEAMS).max(MAX_TEAMS),
   draftType: draftTypeSchema.default('SNAKE'),
   /** OPEN lobbies are discoverable and joinable without the password. */
   visibility: lobbyVisibilitySchema.default('PRIVATE'),
