@@ -171,14 +171,8 @@ export function PowerRankingsBoard({
     }
     return m;
   }, [teams, picks, playersById]);
-  const leagueMaxPos = useMemo(() => {
-    const rec: Record<Position, number> = { QB: 0, RB: 0, WR: 0, TE: 0, K: 0, DEF: 0 };
-    for (const counts of posByTeam.values())
-      for (const pos of POSITIONS) rec[pos] = Math.max(rec[pos], counts[pos]);
-    return rec;
-  }, [posByTeam]);
   // Only the positions this league actually rosters — a no-kicker / no-defense
-  // league shouldn't show an all-zero K or D/ST bar.
+  // league shouldn't show an all-zero K or D/ST pill.
   const draftablePos = useMemo(
     () => POSITIONS.filter((p) => draftablePositions(settings.rosterComposition).has(p)),
     [settings.rosterComposition],
@@ -230,6 +224,7 @@ export function PowerRankingsBoard({
   const lineup = buildLineup(selectedId, picks, playersById, settings);
   const rosterRows = [...lineup.starters, ...lineup.bench];
   const posCounts = posByTeam.get(selectedId) ?? { QB: 0, RB: 0, WR: 0, TE: 0, K: 0, DEF: 0 };
+  const rosterSize = draftablePos.reduce((sum, pos) => sum + posCounts[pos], 0);
   const delta = selected.starterPoints - avgPts;
   const isSelf = selectedId === myTeamId;
   const selCrowns = voteCounts.get(selectedId) ?? 0;
@@ -257,26 +252,6 @@ export function PowerRankingsBoard({
     }
     setCommentError(null);
     onGrade(selectedId, pendingGrade, body || 'No notes');
-  };
-
-  const posBar = (pos: Position) => {
-    const c = posCounts[pos];
-    const mx = Math.max(1, leagueMaxPos[pos]);
-    const x = (c / mx) * 100;
-    const color = POSITION_COLORS[pos];
-    return (
-      <div className="prb-posbar" key={pos}>
-        <span className="prb-posbar__lab">{posLabel(pos)}</span>
-        <span className="prb-posbar__z">0</span>
-        <span className="prb-posbar__track">
-          <span className="prb-posbar__fill" style={{ width: `${x}%`, background: color }} />
-          <span className="prb-posbar__knob" style={{ left: `${x}%`, background: color }}>
-            {c}
-          </span>
-        </span>
-        <span className="prb-posbar__max">{leagueMaxPos[pos]}</span>
-      </div>
-    );
   };
 
   const lineupRow = (row: (typeof rosterRows)[number], i: number) => {
@@ -418,7 +393,7 @@ export function PowerRankingsBoard({
       <div className="prb__col prb__col--center">
         <div className="prb__scroll">
           {view === 'team' ? (
-          <>
+          <div className="prb-team">
           <div className="prb-head">
             <Avatar avatar={avatarForTeam(selected.team, members)} size={50} />
             <div className="prb-head__id">
@@ -429,46 +404,62 @@ export function PowerRankingsBoard({
             </div>
           </div>
 
-          <div className="prb-overview">
-            <div className="prb-metrics">
-              <div className="prb-metric prb-metric--c">
-                <span className="prb-metric__lab">LEAGUE RANK</span>
-                <span className="prb-metric__val">
-                  #{selected.rank} <small>of {rankings.length}</small>
-                </span>
-              </div>
-              <div className="prb-metric">
-                <span className="prb-metric__lab">PROJ STARTER PTS</span>
-                <span className="prb-metric__row">
-                  <span
-                    className="prb-metric__val prb-metric__val--proj"
-                    style={{ ['--grade']: DRAFT_GRADE_COLORS[selected.grade] } as CSSProperties}
-                  >
-                    <ProjPoints value={selected.starterPoints} />
-                  </span>
-                  <span className={`prb-metric__delta ${delta >= 0 ? 'pos' : 'neg'}`}>
-                    {delta >= 0 ? '+' : '−'}
-                    {Math.abs(delta).toFixed(1)}
-                    <small>vs avg</small>
-                  </span>
-                </span>
-              </div>
-              <div className="prb-metric prb-metric--c">
-                <span className="prb-metric__lab">APP GRADE</span>
-                <span className="prb-metric__val">
-                  <GradeBadge grade={selected.grade} size={30} />
-                </span>
-              </div>
-              <div className="prb-metric prb-metric--c">
-                <span className="prb-metric__lab">CROWN VOTES</span>
-                <span className="prb-metric__val prb-metric__val--crown">
-                  <EmojiEventsIcon fontSize="inherit" />
-                  {selCrowns}
-                </span>
-              </div>
+          <div className="prb-metrics">
+            <div className="prb-metric">
+              <span className="prb-metric__lab">LEAGUE RANK</span>
+              <span className="prb-metric__val">
+                #{selected.rank} <small>of {rankings.length}</small>
+              </span>
             </div>
-            <div className="prb-posbars">{draftablePos.map(posBar)}</div>
+            <div className="prb-metric">
+              <span className="prb-metric__lab">PROJ STARTER PTS</span>
+              <span className="prb-metric__stack">
+                <span
+                  className="prb-metric__val prb-metric__val--proj"
+                  style={{ ['--grade']: DRAFT_GRADE_COLORS[selected.grade] } as CSSProperties}
+                >
+                  <ProjPoints value={selected.starterPoints} />
+                </span>
+                <span className={`prb-metric__delta ${delta >= 0 ? 'pos' : 'neg'}`}>
+                  {delta >= 0 ? '+' : '−'}
+                  {Math.abs(delta).toFixed(1)}
+                  <small>vs avg</small>
+                </span>
+              </span>
+            </div>
+            <div className="prb-metric">
+              <span className="prb-metric__lab">APP GRADE</span>
+              <span className="prb-metric__val">
+                <GradeBadge grade={selected.grade} size={30} />
+              </span>
+            </div>
+            <div className="prb-metric">
+              <span className="prb-metric__lab">CROWN VOTES</span>
+              <span className="prb-metric__val prb-metric__val--crown">
+                <EmojiEventsIcon fontSize="inherit" />
+                {selCrowns}
+              </span>
+            </div>
           </div>
+
+          <section className="prb-sec">
+            <h4 className="prb-sec__title">
+              <span>Position breakdown</span>
+              <span className="prb-sec__cnt">{rosterSize}</span>
+            </h4>
+            <div className="prb-posbreak">
+              {draftablePos.map((pos) => (
+                <span
+                  key={pos}
+                  className="prb-poschip"
+                  style={{ ['--pos']: POSITION_COLORS[pos] } as CSSProperties}
+                >
+                  <span className="prb-poschip__pos">{posLabel(pos)}</span>
+                  <span className="prb-poschip__n">{posCounts[pos]}</span>
+                </span>
+              ))}
+            </div>
+          </section>
 
           <section className="prb-sec">
             <h4 className="prb-sec__title">
@@ -520,7 +511,7 @@ export function PowerRankingsBoard({
               </ul>
             </section>
           )}
-          </>
+          </div>
           ) : (
             <LeagueSummaryPane model={leagueGrade} />
           )}

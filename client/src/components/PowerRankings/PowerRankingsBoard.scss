@@ -233,6 +233,13 @@
   }
 
   // ── CENTER: roster breakdown ───────────────────────────────────────
+  // The selected team's roster breakdown is capped to a tidy centred column,
+  // matching the league-summary pane width.
+  &-team {
+    max-width: 500px;
+    margin: 0 auto;
+  }
+
   &-head {
     display: flex;
     align-items: center;
@@ -245,48 +252,37 @@
     &__owner { color: $text-muted; font-size: 13px; margin-top: 2px; }
   }
 
-  &-overview {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 18px;
-    margin-bottom: 20px;
-    align-items: stretch;
-  }
-
+  // Four uniform stat tiles in one horizontal row: label pinned to the top of
+  // each tile, the value centred (both axes) in the space beneath it.
   &-metrics {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-auto-rows: 1fr; // all four tiles share one height
+    grid-template-columns: repeat(4, 1fr);
     gap: 9px;
-    height: 100%;
+    margin-bottom: 16px;
   }
 
   &-metric {
     background: $bg-raised;
     border: 1px solid $border;
     border-radius: $radius;
-    padding: 10px 12px;
+    padding: 9px 8px 11px;
+    min-height: 84px;
     display: flex;
     flex-direction: column;
+    align-items: center;
+    text-align: center;
 
-    // Label pinned to the top; the value block auto-margins to the vertical
-    // centre of the space beneath it.
+    // Value block auto-margins into the vertical centre of the leftover space.
     > .prb-metric__val,
-    > .prb-metric__row {
+    > .prb-metric__stack {
       margin: auto 0;
-    }
-
-    // Short single-value tiles (rank, grade, crowns) also centre horizontally.
-    &--c {
-      align-items: center;
-      text-align: center;
     }
 
     &__lab {
       flex: 0 0 auto;
-      font-size: 9px;
+      font-size: 8.5px;
       font-weight: 700;
-      letter-spacing: 0.06em;
+      letter-spacing: 0.05em;
       color: $text-muted;
     }
 
@@ -296,6 +292,7 @@
       line-height: 1;
       display: flex;
       align-items: center;
+      justify-content: center;
       gap: 6px;
       font-variant-numeric: tabular-nums;
       small { font-size: 12px; color: $text-muted; font-weight: 600; }
@@ -315,11 +312,12 @@
       }
     }
 
-    &__row {
+    // PROJ tile: the number plus a small "± vs avg" line, stacked and centred.
+    &__stack {
       display: flex;
-      align-items: baseline;
-      gap: 7px;
-      flex-wrap: wrap;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
     }
 
     &__delta {
@@ -339,56 +337,39 @@
     }
   }
 
-  &-posbars {
+  // Position-breakdown pills (echoes the roster-tab chips): a coloured position
+  // label joined to a translucent count.
+  &-posbreak {
     display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 11px;
-    border-left: 1px solid $border;
-    padding-left: 18px;
+    flex-wrap: wrap;
+    gap: 6px;
   }
 
-  &-posbar {
-    display: grid;
-    grid-template-columns: 30px 10px 1fr 16px;
-    align-items: center;
-    gap: 8px;
+  &-poschip {
+    display: inline-flex;
+    align-items: stretch;
+    border-radius: 999px;
+    overflow: hidden;
     font-size: 11px;
+    font-weight: 800;
 
-    &__lab { font-weight: 800; color: color-mix(in srgb, #{$text} 80%, #{$text-muted}); }
-    &__z { color: $text-muted; font-weight: 600; text-align: right; }
-    &__max { color: $text-muted; font-weight: 600; }
-
-    &__track {
-      position: relative;
-      height: 6px;
-      border-radius: 6px;
-      background: $bg-overlay;
-    }
-
-    &__fill {
-      position: absolute;
-      left: 0;
-      top: 0;
-      height: 100%;
-      border-radius: 6px;
-      opacity: 0.7;
-    }
-
-    &__knob {
-      position: absolute;
-      top: 50%;
-      transform: translate(-50%, -50%);
-      min-width: 18px;
-      height: 18px;
-      padding: 0 4px;
-      border-radius: 9px;
-      color: #0b0f11;
-      font-weight: 800;
-      font-size: 10.5px;
-      display: grid;
+    &__pos {
+      display: inline-grid;
       place-items: center;
-      box-shadow: 0 0 0 2px $bg;
+      min-width: 2.5rem;
+      padding: 3px 9px;
+      background: var(--pos);
+      color: #000000;
+      letter-spacing: 0.02em;
+    }
+
+    &__n {
+      display: inline-grid;
+      place-items: center;
+      min-width: 1.6rem;
+      padding: 3px 9px;
+      background: color-mix(in srgb, var(--pos) 26%, transparent);
+      color: $text;
     }
   }
 
