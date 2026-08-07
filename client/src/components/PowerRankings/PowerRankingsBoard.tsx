@@ -716,7 +716,7 @@ function LeagueSummaryPane({ model }: { model: LeagueGrade }) {
           card ? (
             <div key={card.team.id} className={`prb-sum__pod${i === 1 ? ' is-champ' : ''}`}>
               {i === 1 && <EmojiEventsIcon className="prb-sum__crown" />}
-              <Avatar avatar={card.avatar} size={i === 1 ? 56 : 44} />
+              <Avatar avatar={card.avatar} size={i === 1 ? 76 : 60} />
               <div className="prb-sum__pod-name">{card.team.name}</div>
               <div className="prb-sum__pod-owner">{card.ownerLabel}</div>
               <GradeBadge grade={card.grade} size={26} />
