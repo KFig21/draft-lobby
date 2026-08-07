@@ -9,6 +9,7 @@ import {
   type DraftGrade,
   type LobbySettings,
   type Position,
+  type RosterSlot,
 } from '@draft-lobby/shared';
 import BoltIcon from '@mui/icons-material/Bolt';
 import EditNoteIcon from '@mui/icons-material/EditNote';
@@ -16,6 +17,7 @@ import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
 import InfoOutlineIcon from '@mui/icons-material/InfoOutlined';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import ReplayIcon from '@mui/icons-material/Replay';
 import ThumbDownAltIcon from '@mui/icons-material/ThumbDownAlt';
 import ThumbUpAltIcon from '@mui/icons-material/ThumbUpAlt';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
@@ -64,6 +66,19 @@ interface Props {
 
 const posLabel = (p: Position) => (p === 'DEF' ? 'D/ST' : p);
 
+/** Colour for a starter slot — position colours for dedicated slots, distinct
+ * hues for the flex/OP/IDP slots. */
+const slotColor = (slot: RosterSlot): string => {
+  if (slot === 'FLEX') return '#2bb7a3'; // teal
+  if (slot === 'SUPERFLEX') return '#6c5ce7'; // indigo (OP)
+  if (slot === 'IDP') return '#9aa0a6';
+  return POSITION_COLORS[slot as Position] ?? '#8a94a6';
+};
+
+// Vertical stride per league-comparison row (row height + gap); rows are absolutely
+// positioned by index so re-sorting animates them up/down.
+const CMP_ROW_H = 28;
+
 /** 1 → "1st", 2 → "2nd", 11 → "11th" … */
 const ordinal = (n: number) => {
   const s = ['th', 'st', 'nd', 'rd'];
@@ -71,12 +86,14 @@ const ordinal = (n: number) => {
   return `${n}${s[(v - 20) % 10] ?? s[v] ?? s[0]}`;
 };
 
-/** Rank → tier bucket (top third / bottom third / middle) for colour-coding. */
-const rankTier = (rank: number, count: number): 'good' | 'mid' | 'bad' => {
-  const third = count / 3;
-  if (rank <= third) return 'good';
-  if (rank > count - third) return 'bad';
-  return 'mid';
+/** The draft-grade colour scale (A → F) applied to a league rank: the best ranks
+ * get the A/B greens, the worst the D/F reds. Shared by the positional analysis
+ * bars and the heat map. */
+const GRADE_SCALE = ['A', 'B', 'C', 'D', 'F'] as const;
+const rankGradeColor = (rank: number, count: number) => {
+  const p = count > 1 ? (rank - 1) / (count - 1) : 0; // 0 best → 1 worst
+  const idx = Math.min(GRADE_SCALE.length - 1, Math.floor(p * GRADE_SCALE.length));
+  return DRAFT_GRADE_COLORS[GRADE_SCALE[idx]];
 };
 
 /** Diverging heat-map tint for a rank (1 = best → count = worst): green → grey
@@ -489,21 +506,30 @@ export function PowerRankingsBoard({
           <section className="prb-sec">
             <h4 className="prb-sec__title">Position analysis</h4>
             <div className="prb-posrank">
-              {leagueGrade.positions.map((pos) => {
-                const stat = leagueGrade.positionStats.get(selectedId)?.get(pos);
+              {leagueGrade.slots.map((slot) => {
+                const stat = leagueGrade.slotStats.get(selectedId)?.get(slot);
                 const rank = stat?.rank ?? teams.length;
-                const tier = rankTier(rank, teams.length);
+                const color = rankGradeColor(rank, teams.length);
                 const fill = ((teams.length - rank + 1) / teams.length) * 100;
                 return (
-                  <div key={pos} className="prb-posrank__row" title={`${(stat?.total ?? 0).toFixed(1)} proj pts`}>
-                    <span className="prb-posrank__pos">{posLabel(pos)}</span>
+                  <div
+                    key={slot}
+                    className="prb-posrank__row"
+                    title={`${(stat?.total ?? 0).toFixed(1)} starter proj pts`}
+                  >
+                    <span className="prb-posrank__pos">{SLOT_LABELS[slot]}</span>
                     <span className="prb-posrank__track">
                       <span
-                        className={`prb-posrank__fill is-${tier}`}
-                        style={{ width: `${fill}%` }}
+                        className="prb-posrank__fill"
+                        style={{ width: `${fill}%`, background: color }}
                       />
                     </span>
-                    <span className={`prb-posrank__rank is-${tier}`}>{ordinal(rank)}</span>
+                    <span
+                      className="prb-posrank__rank"
+                      style={{ ['--grade']: color } as CSSProperties}
+                    >
+                      {ordinal(rank)}
+                    </span>
                   </div>
                 );
               })}
@@ -790,11 +816,11 @@ function LeagueSummaryPane({ model }: { model: LeagueGrade }) {
   // bars and the heat-map TOTAL column.
   const teamCount = model.teams.length;
   const compTeams = model.teams.map((t) => {
-    const stats = model.positionStats.get(t.team.id);
-    const cells = model.positions.map((pos) => ({
-      pos,
-      total: stats?.get(pos)?.total ?? 0,
-      rank: stats?.get(pos)?.rank ?? teamCount,
+    const stats = model.slotStats.get(t.team.id);
+    const cells = model.slots.map((slot) => ({
+      slot,
+      total: stats?.get(slot)?.total ?? 0,
+      rank: stats?.get(slot)?.rank ?? teamCount,
     }));
     return {
       team: t.team,
@@ -803,16 +829,49 @@ function LeagueSummaryPane({ model }: { model: LeagueGrade }) {
       rosterTotal: cells.reduce((s, c) => s + c.total, 0),
     };
   });
-  const maxRosterTotal = Math.max(1, ...compTeams.map((t) => t.rosterTotal));
   const overallRank = new Map(
     compTeams.map((t) => [
       t.team.id,
       1 + compTeams.filter((o) => o.rosterTotal > t.rosterTotal).length,
     ]),
   );
-  const bestRank = Math.min(...overallRank.values());
   const worstRank = Math.max(...overallRank.values());
-  const hasPositions = model.positions.length > 0 && teamCount > 0;
+  // Per column, the worst (highest) rank present — the red-bordered cell. Rank 1
+  // is always the green-bordered cell.
+  const worstBySlot = new Map(
+    model.slots.map((slot) => [
+      slot,
+      Math.max(1, ...compTeams.map((t) => t.cells.find((c) => c.slot === slot)?.rank ?? 1)),
+    ]),
+  );
+  const cellFlag = (rank: number, worst: number) =>
+    teamCount < 2 ? '' : rank === 1 ? ' is-best' : rank === worst ? ' is-worst' : '';
+  const hasSlots = model.slots.length > 0 && teamCount > 0;
+
+  // League comparison filter: click slots to keep only those segments and re-sort
+  // the teams by that combined total; the rows animate to their new positions. No
+  // selection = every slot, power-rank order.
+  const [slotFilter, setSlotFilter] = useState<Set<RosterSlot>>(new Set());
+  const toggleSlot = (s: RosterSlot) =>
+    setSlotFilter((prev) => {
+      const next = new Set(prev);
+      if (next.has(s)) next.delete(s);
+      else next.add(s);
+      return next;
+    });
+  const activeSlots = slotFilter.size
+    ? model.slots.filter((s) => slotFilter.has(s))
+    : model.slots;
+  const cmpRows = compTeams.map((t) => ({
+    ...t,
+    activeTotal: t.cells
+      .filter((c) => slotFilter.size === 0 || slotFilter.has(c.slot))
+      .reduce((s, c) => s + c.total, 0),
+  }));
+  const maxActive = Math.max(1, ...cmpRows.map((r) => r.activeTotal));
+  const cmpOrder = new Map(
+    [...cmpRows].sort((a, b) => b.activeTotal - a.activeTotal).map((r, i) => [r.team.id, i]),
+  );
 
   // Number shrinks top → avg → low, mirroring the downloadable recap (1 / .88 / .78).
   const proj = (label: string, value: number, color: string, scale: number, name?: string) => (
@@ -939,38 +998,59 @@ function LeagueSummaryPane({ model }: { model: LeagueGrade }) {
         </div>
       </div>
 
-      {hasPositions && (
+      {hasSlots && (
         <div className="prb-sum__cmp">
           <div className="prb-sum__dist-lab">LEAGUE COMPARISON</div>
           <div className="prb-sum__cmp-legend">
-            {model.positions.map((pos) => (
-              <span key={pos} className="prb-sum__cmp-key">
-                <span className="prb-sum__cmp-dot" style={{ background: POSITION_COLORS[pos] }} />
-                {posLabel(pos)}
-              </span>
+            {model.slots.map((slot) => (
+              <button
+                key={slot}
+                type="button"
+                className={`prb-sum__cmp-key${slotFilter.has(slot) ? ' is-on' : ''}`}
+                style={{ ['--pos']: slotColor(slot) } as CSSProperties}
+                onClick={() => toggleSlot(slot)}
+                aria-pressed={slotFilter.has(slot)}
+              >
+                <span className="prb-sum__cmp-dot" style={{ background: slotColor(slot) }} />
+                {SLOT_LABELS[slot]}
+              </button>
             ))}
+            {slotFilter.size > 0 && (
+              <button
+                type="button"
+                className="prb-sum__cmp-reset"
+                onClick={() => setSlotFilter(new Set())}
+              >
+                <ReplayIcon fontSize="inherit" /> Reset
+              </button>
+            )}
           </div>
-          <div className="prb-sum__cmp-rows">
-            {compTeams.map((t) => (
-              <div key={t.team.id} className="prb-sum__cmp-row">
+          <div className="prb-sum__cmp-rows" style={{ height: `${cmpRows.length * CMP_ROW_H}px` }}>
+            {cmpRows.map((t) => (
+              <div
+                key={t.team.id}
+                className="prb-sum__cmp-row"
+                style={{ transform: `translateY(${(cmpOrder.get(t.team.id) ?? 0) * CMP_ROW_H}px)` }}
+              >
                 <span className="prb-sum__cmp-team" title={t.team.name}>
                   <Avatar avatar={t.avatar} size={18} />
                   <span className="prb-sum__cmp-name">{t.team.name}</span>
                 </span>
                 <span className="prb-sum__cmp-bar">
-                  {t.cells.map((c) =>
-                    c.total > 0 ? (
+                  {activeSlots.map((slot) => {
+                    const total = t.cells.find((c) => c.slot === slot)?.total ?? 0;
+                    return total > 0 ? (
                       <span
-                        key={c.pos}
+                        key={slot}
                         className="prb-sum__cmp-seg"
                         style={{
-                          width: `${(c.total / maxRosterTotal) * 100}%`,
-                          background: POSITION_COLORS[c.pos],
+                          width: `${(total / maxActive) * 100}%`,
+                          background: slotColor(slot),
                         }}
-                        title={`${posLabel(c.pos)} · ${c.total.toFixed(1)}`}
+                        title={`${SLOT_LABELS[slot]} · ${total.toFixed(1)}`}
                       />
-                    ) : null,
-                  )}
+                    ) : null;
+                  })}
                 </span>
               </div>
             ))}
@@ -978,7 +1058,7 @@ function LeagueSummaryPane({ model }: { model: LeagueGrade }) {
         </div>
       )}
 
-      {hasPositions && (
+      {hasSlots && (
         <div className="prb-sum__heat">
           <div className="prb-sum__dist-lab">LEAGUE HEAT MAP</div>
           <div className="prb-sum__heat-scroll">
@@ -986,12 +1066,13 @@ function LeagueSummaryPane({ model }: { model: LeagueGrade }) {
               <thead>
                 <tr>
                   <th className="prb-sum__heat-th prb-sum__heat-th--team">Team</th>
-                  {model.positions.map((pos) => (
-                    <th key={pos} className="prb-sum__heat-th">
-                      {posLabel(pos)}
+                  {model.slots.map((slot) => (
+                    <th key={slot} className="prb-sum__heat-th">
+                      {SLOT_LABELS[slot]}
                     </th>
                   ))}
-                  <th className="prb-sum__heat-th">TOTAL</th>
+                  <th className="prb-sum__heat-gap" aria-hidden="true" />
+                  <th className="prb-sum__heat-th prb-sum__heat-th--total">TOTAL</th>
                 </tr>
               </thead>
               <tbody>
@@ -999,16 +1080,7 @@ function LeagueSummaryPane({ model }: { model: LeagueGrade }) {
                   const totRank = overallRank.get(t.team.id) ?? teamCount;
                   return (
                     <tr key={t.team.id}>
-                      <td
-                        className={`prb-sum__heat-team${
-                          teamCount > 1 && totRank === bestRank
-                            ? ' is-best'
-                            : teamCount > 1 && totRank === worstRank
-                              ? ' is-worst'
-                              : ''
-                        }`}
-                        title={t.team.name}
-                      >
+                      <td className="prb-sum__heat-team" title={t.team.name}>
                         <span className="prb-sum__heat-teamin">
                           <Avatar avatar={t.avatar} size={16} />
                           <span className="prb-sum__heat-name">{t.team.name}</span>
@@ -1016,16 +1088,17 @@ function LeagueSummaryPane({ model }: { model: LeagueGrade }) {
                       </td>
                       {t.cells.map((c) => (
                         <td
-                          key={c.pos}
-                          className="prb-sum__heat-cell"
+                          key={c.slot}
+                          className={`prb-sum__heat-cell${cellFlag(c.rank, worstBySlot.get(c.slot) ?? teamCount)}`}
                           style={{ background: heatColor(c.rank, teamCount) }}
                         >
                           <b>{c.rank}</b>
                           <small>{c.total.toFixed(1)}</small>
                         </td>
                       ))}
+                      <td className="prb-sum__heat-gap" aria-hidden="true" />
                       <td
-                        className="prb-sum__heat-cell prb-sum__heat-cell--total"
+                        className={`prb-sum__heat-cell prb-sum__heat-cell--total${cellFlag(totRank, worstRank)}`}
                         style={{ background: heatColor(totRank, teamCount) }}
                       >
                         <b>{totRank}</b>

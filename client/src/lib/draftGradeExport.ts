@@ -1,12 +1,11 @@
 import {
-  POSITIONS,
+  ROSTER_SLOTS,
   SCORING_PRESETS,
-  draftablePositions,
   matchPreset,
   type Avatar,
   type DraftGrade,
   type LobbySettings,
-  type Position,
+  type RosterSlot,
 } from '@draft-lobby/shared';
 import { buildLineup, computePowerRankings, type LineupRow } from './powerRankings';
 import { mostCommonGrade } from './draftGrade';
@@ -91,10 +90,10 @@ export interface LeagueGrade {
   leagueReach: (PickValue & { team: TeamRow }) | null;
   /** Worst-hit team(s) per bye week, ordered by week. */
   byeClashes: WeekByeClash[];
-  /** Positions this league drafts, canonical order. */
-  positions: Position[];
-  /** Per team id → per position → projected-points total + league rank. */
-  positionStats: Map<string, Map<Position, PositionStat>>;
+  /** Starter slots this league uses (QB/RB/WR/TE/FLEX/OP/K/DEF…), canonical order. */
+  slots: RosterSlot[];
+  /** Per team id → per starter slot → projected-points total + league rank. */
+  slotStats: Map<string, Map<RosterSlot, PositionStat>>;
 }
 
 function ownerLabelFor(team: TeamRow, members: MemberRow[]): string {
@@ -243,30 +242,30 @@ export function buildLeagueGrade(opts: {
       return { week, count, teams: tied };
     });
 
-  // Position analysis: each team's projected-points total at every drafted
-  // position, ranked league-wide (1 = most points). Powers the team-pane bars,
-  // the league comparison, and the heat map.
-  const positions = POSITIONS.filter((p) => draftablePositions(settings.rosterComposition).has(p));
-  const posTotals = new Map<string, Map<Position, number>>();
-  for (const t of teams) posTotals.set(t.id, new Map(positions.map((p) => [p, 0])));
+  // Position analysis: each team's projected-points total at every STARTER SLOT
+  // the league uses (QB/RB/WR/TE/FLEX/OP/K/DEF…), ranked league-wide. Grouping by
+  // slot — not the player's base position — keeps a QB started in an OP/superflex
+  // slot out of the QB column. Powers the team-pane bars, comparison, and heat map.
+  const slots = ROSTER_SLOTS.filter(
+    (s) => s !== 'BENCH' && settings.rosterComposition.some((rc) => rc.slot === s && rc.count > 0),
+  );
+  const slotTotals = new Map<string, Map<RosterSlot, number>>();
+  for (const t of teams) slotTotals.set(t.id, new Map(slots.map((s) => [s, 0])));
   for (const t of teams) {
-    const byPos = posTotals.get(t.id);
-    if (!byPos) continue;
-    // Sum only the optimal starters, attributing flex starters to the player's
-    // real position (a WR in the FLEX counts toward WR).
+    const bySlot = slotTotals.get(t.id);
+    if (!bySlot) continue;
     for (const row of startersByTeam.get(t.id) ?? []) {
-      const pos = row.player?.position as Position | undefined;
-      if (!pos || !byPos.has(pos)) continue;
-      byPos.set(pos, (byPos.get(pos) ?? 0) + (row.player?.proj_points ?? 0));
+      if (!row.player || !bySlot.has(row.slot)) continue;
+      bySlot.set(row.slot, (bySlot.get(row.slot) ?? 0) + (row.player.proj_points ?? 0));
     }
   }
-  const positionStats = new Map<string, Map<Position, PositionStat>>();
-  for (const t of teams) positionStats.set(t.id, new Map());
-  for (const pos of positions) {
-    const totals = teams.map((t) => ({ id: t.id, total: posTotals.get(t.id)?.get(pos) ?? 0 }));
+  const slotStats = new Map<string, Map<RosterSlot, PositionStat>>();
+  for (const t of teams) slotStats.set(t.id, new Map());
+  for (const slot of slots) {
+    const totals = teams.map((t) => ({ id: t.id, total: slotTotals.get(t.id)?.get(slot) ?? 0 }));
     for (const { id, total } of totals) {
       const rank = 1 + totals.filter((o) => o.total > total).length;
-      positionStats.get(id)?.set(pos, { total, rank });
+      slotStats.get(id)?.set(slot, { total, rank });
     }
   }
 
@@ -294,7 +293,7 @@ export function buildLeagueGrade(opts: {
     leagueSteal: withTeam(leagueBest),
     leagueReach: withTeam(leagueReach),
     byeClashes,
-    positions,
-    positionStats,
+    slots,
+    slotStats,
   };
 }

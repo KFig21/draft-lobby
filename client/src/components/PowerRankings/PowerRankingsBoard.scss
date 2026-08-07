@@ -486,16 +486,7 @@
     display: block;
     height: 100%;
     border-radius: 6px;
-
-    &.is-good {
-      background: $accent;
-    }
-    &.is-mid {
-      background: color-mix(in srgb, #{$text-muted} 55%, transparent);
-    }
-    &.is-bad {
-      background: $danger;
-    }
+    // Background is the draft-grade colour for the rank (set inline).
   }
 
   &-posrank__rank {
@@ -503,18 +494,11 @@
     font-weight: 700;
     text-align: right;
     font-variant-numeric: tabular-nums;
+    // Grade colour for the rank; darkened on light so bright greens stay legible.
+    color: var(--grade);
 
-    &.is-good {
-      color: $accent;
-      :root[data-theme='light'] & {
-        color: $primary;
-      }
-    }
-    &.is-mid {
-      color: $text-muted;
-    }
-    &.is-bad {
-      color: $danger;
+    :root[data-theme='light'] & {
+      color: color-mix(in srgb, var(--grade) 62%, #0b1014);
     }
   }
 
@@ -1377,39 +1361,97 @@
       min-width: 0;
     }
 
+    // Clickable position chips filter + re-sort the bars below.
     &__cmp-legend {
       display: flex;
       flex-wrap: wrap;
-      gap: 4px 10px;
-      margin-bottom: 10px;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 12px;
     }
 
     &__cmp-key {
       display: inline-flex;
       align-items: center;
-      gap: 4px;
-      font-size: 9px;
-      font-weight: 700;
+      gap: 5px;
+      padding: 3px 8px;
+      border: 1px solid $border;
+      border-radius: 999px;
+      background: $bg-overlay;
       color: $text-muted;
+      font: inherit;
+      font-size: 9.5px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      transition:
+        border-color 0.12s ease,
+        color 0.12s ease,
+        background 0.12s ease;
+
+      &:hover {
+        color: $text;
+        border-color: $bstrong;
+      }
+
+      &.is-on {
+        color: $text;
+        border-color: var(--pos);
+        background: color-mix(in srgb, var(--pos) 22%, transparent);
+      }
     }
 
     &__cmp-dot {
-      width: 8px;
-      height: 8px;
+      width: 9px;
+      height: 9px;
       border-radius: 2px;
     }
 
+    &__cmp-reset {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      padding: 3px 9px;
+      border: 1px solid $bstrong;
+      border-radius: 999px;
+      background: none;
+      color: $text-muted;
+      font: inherit;
+      font-size: 9.5px;
+      font-weight: 700;
+      cursor: pointer;
+
+      svg {
+        font-size: 12px;
+      }
+
+      &:hover {
+        color: $text;
+        background: $bg-hover;
+      }
+    }
+
+    // Rows are absolutely positioned by sort index so re-sorting slides them.
     &__cmp-rows {
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
+      position: relative;
     }
 
     &__cmp-row {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 22px;
       display: grid;
       grid-template-columns: 92px 1fr;
       align-items: center;
       gap: 8px;
+      transition: transform 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+      will-change: transform;
+
+      @media (prefers-reduced-motion: reduce) {
+        transition: none;
+      }
     }
 
     &__cmp-team {
@@ -1438,6 +1480,11 @@
     &__cmp-seg {
       height: 100%;
       min-width: 1px;
+      transition: width 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+
+      @media (prefers-reduced-motion: reduce) {
+        transition: none;
+      }
     }
 
     // ── League heat map: team × position rank grid, tinted green → red ──
@@ -1454,6 +1501,15 @@
       border-collapse: separate;
       border-spacing: 3px;
       font-variant-numeric: tabular-nums;
+    }
+
+    // A thin empty column that adds a little breathing room before TOTAL.
+    &__heat-gap {
+      width: 5px;
+      min-width: 5px;
+      padding: 0;
+      border: 0;
+      background: none;
     }
 
     &__heat-th {
@@ -1475,17 +1531,7 @@
       vertical-align: middle;
       min-width: 92px;
       max-width: 130px;
-      padding: 3px 6px 3px 3px;
-      border: 1px solid transparent;
-      border-radius: 6px;
-
-      // Best / worst overall roster flagged with a coloured outline.
-      &.is-best {
-        border-color: $accent;
-      }
-      &.is-worst {
-        border-color: $danger;
-      }
+      padding-right: 6px;
     }
 
     &__heat-teamin {
@@ -1506,10 +1552,19 @@
 
     &__heat-cell {
       min-width: 40px;
+      border: 1px solid transparent;
       border-radius: 5px;
       text-align: center;
       padding: 4px;
       line-height: 1.05;
+
+      // The rank-1 cell in each column is outlined green, the worst-ranked red.
+      &.is-best {
+        border-color: $accent;
+      }
+      &.is-worst {
+        border-color: $danger;
+      }
 
       b {
         display: block;
