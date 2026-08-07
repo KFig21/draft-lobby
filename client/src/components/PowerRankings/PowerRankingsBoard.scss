@@ -1185,28 +1185,51 @@
       }
     }
 
-    // Projected-points-by-team bars: bottom-aligned columns so each bar's height
-    // rides its avatar up — the avatar sits atop the bar. Lowest → highest L→R.
-    &__ppbars {
-      display: flex;
-      align-items: flex-end;
-      gap: 6px;
+    // Projected points as a value axis: a low→high gradient rail, each team's
+    // avatar placed at its projection, clustered ones stacked upward. The dashed
+    // marker calls out the league average. Insets keep edge avatars in-bounds.
+    &__scale {
+      position: relative;
+      margin: 8px 13px 0;
     }
 
-    &__ppcol {
-      flex: 1;
-      min-width: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 6px;
+    &__scale-track {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 8px;
+      height: 4px;
+      border-radius: 4px;
+      background: linear-gradient(90deg, #f8577d, #f6a642, #3fd6a5);
     }
 
-    &__ppbar {
-      width: 100%;
-      max-width: 30px;
-      border-radius: 5px 5px 3px 3px;
-      min-height: 4px;
+    &__scale-dot {
+      position: absolute;
+      transform: translateX(-50%);
+      border-radius: 50%;
+      box-shadow: 0 0 0 2px $bg;
+      z-index: 2;
+    }
+
+    &__scale-avg {
+      position: absolute;
+      top: 13px;
+      bottom: 8px;
+      border-left: 2px dashed $text;
+      transform: translateX(-50%);
+      z-index: 1;
+    }
+
+    &__scale-avg-lab {
+      position: absolute;
+      top: -13px;
+      left: 0;
+      transform: translateX(-50%);
+      font-size: 8px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      color: $text;
+      white-space: nowrap;
     }
 
     // Worst bye week: one warning bar per bye week (in week order), sized by the

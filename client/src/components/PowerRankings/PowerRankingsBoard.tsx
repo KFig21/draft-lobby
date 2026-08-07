@@ -711,9 +711,25 @@ function LeagueSummaryPane({ model }: { model: LeagueGrade }) {
   // teamCards come in rank order (highest projection first); reverse for the
   // lowest→highest bar chart. Scale bars across the min→max spread (not from 0)
   // so the tight point range still reads as distinct heights.
-  const projTeams = [...model.teams].reverse();
-  const projMin = Math.min(...projTeams.map((t) => t.starterPoints));
-  const projSpan = Math.max(1, Math.max(...projTeams.map((t) => t.starterPoints)) - projMin);
+  // Projected points as a value axis: each team sits at its projection (lowest
+  // left → highest right), with the league average marked. Avatars whose values
+  // cluster stack upward so they don't fully cover each other.
+  const projLow = model.lowProjection;
+  const projRange = Math.max(1, model.topProjection - projLow);
+  const projPct = (v: number) => ((v - projLow) / projRange) * 100;
+  const avgPct = projPct(model.avgProjection);
+  const OVERLAP_GAP = 5.5; // % apart under which two avatars are treated as colliding
+  const placedPct: number[] = [];
+  const scaleDots = [...model.teams]
+    .sort((a, b) => a.starterPoints - b.starterPoints)
+    .map((t) => {
+      const pct = projPct(t.starterPoints);
+      const row = placedPct.filter((q) => Math.abs(q - pct) < OVERLAP_GAP).length;
+      placedPct.push(pct);
+      return { team: t.team, avatar: t.avatar, value: t.starterPoints, pct, row };
+    });
+  const maxScaleRow = scaleDots.reduce((m, d) => Math.max(m, d.row), 0);
+  const scaleHeight = 46 + maxScaleRow * 16;
   // Worst bye week: one bar per bye week (in week order) sized by how many
   // players the hardest-hit team has out that week. Counts are small integers,
   // so height maps directly (+ a floor that fits the number inside the bar).
@@ -821,17 +837,19 @@ function LeagueSummaryPane({ model }: { model: LeagueGrade }) {
 
       <div className="prb-sum__dist">
         <div className="prb-sum__dist-lab">PROJECTED POINTS BY TEAM</div>
-        <div className="prb-sum__ppbars">
-          {projTeams.map((t) => (
-            <div key={t.team.id} className="prb-sum__ppcol" title={t.team.name}>
-              <Avatar avatar={t.avatar} size={24} />
-              <span
-                className="prb-sum__ppbar"
-                style={{
-                  height: `${14 + Math.round(((t.starterPoints - projMin) / projSpan) * 78)}px`,
-                  background: DRAFT_GRADE_COLORS[t.grade],
-                }}
-              />
+        <div className="prb-sum__scale" style={{ height: `${scaleHeight}px` }}>
+          <div className="prb-sum__scale-track" />
+          <div className="prb-sum__scale-avg" style={{ left: `${avgPct}%` }}>
+            <span className="prb-sum__scale-avg-lab">AVG</span>
+          </div>
+          {scaleDots.map((d) => (
+            <div
+              key={d.team.id}
+              className="prb-sum__scale-dot"
+              style={{ left: `${d.pct}%`, bottom: `${12 + d.row * 16}px` }}
+              title={`${d.team.name} · ${d.value.toFixed(1)}`}
+            >
+              <Avatar avatar={d.avatar} size={22} />
             </div>
           ))}
         </div>
