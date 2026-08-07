@@ -714,6 +714,13 @@ function LeagueSummaryPane({ model }: { model: LeagueGrade }) {
   const projTeams = [...model.teams].reverse();
   const projMin = Math.min(...projTeams.map((t) => t.starterPoints));
   const projSpan = Math.max(1, Math.max(...projTeams.map((t) => t.starterPoints)) - projMin);
+  // Worst bye weeks: bars run in week order (left → right); the bar height still
+  // shows who's hit hardest. Scale from zero since counts are small integers.
+  const maxBye = Math.max(1, ...model.byeClashes.map((b) => b.count));
+  const hasByes = model.byeClashes.some((b) => b.count > 0);
+  const byesByWeek = [...model.byeClashes].sort(
+    (a, b) => (a.worstWeek ?? Infinity) - (b.worstWeek ?? Infinity),
+  );
   const proj = (label: string, value: number, color: string, name?: string) => (
     <div className="prb-sum__projbox">
       <span className="prb-sum__projlab">{label}</span>
@@ -755,31 +762,54 @@ function LeagueSummaryPane({ model }: { model: LeagueGrade }) {
         {proj('LOW PROJECTION', model.lowProjection, '#f8577d', model.lowProjName)}
       </div>
 
-      {model.leagueSteal && (
-        <div className="prb-sum__callout prb-sum__callout--steal">
-          <div className="prb-sum__callout-lab">
-            <BoltIcon fontSize="inherit" /> STEAL OF THE DRAFT
-          </div>
-          <div className="prb-sum__callout-main">
-            {model.leagueSteal.player.name} · {model.leagueSteal.player.position}
-          </div>
-          <div className="prb-sum__callout-sub">
-            R{model.leagueSteal.round} to {model.leagueSteal.team.name} — +
-            {Math.max(0, model.leagueSteal.valueRounds)} rds of value
-          </div>
+      {(model.leagueSteal || model.leagueReach) && (
+        <div className="prb-sum__callouts">
+          {model.leagueSteal && (
+            <div className="prb-sum__callout prb-sum__callout--steal">
+              <div className="prb-sum__callout-lab">
+                <BoltIcon fontSize="inherit" /> STEAL OF THE DRAFT
+              </div>
+              <div className="prb-sum__callout-main">
+                {model.leagueSteal.player.name} · {model.leagueSteal.player.position}
+              </div>
+              <div className="prb-sum__callout-sub">
+                R{model.leagueSteal.round} to {model.leagueSteal.team.name} — +
+                {Math.max(0, model.leagueSteal.valueRounds)} rds of value
+              </div>
+            </div>
+          )}
+          {model.leagueReach && (
+            <div className="prb-sum__callout prb-sum__callout--reach">
+              <div className="prb-sum__callout-lab">
+                <TrendingUpIcon fontSize="inherit" /> BIGGEST REACH
+              </div>
+              <div className="prb-sum__callout-main">
+                {model.leagueReach.player.name} · {model.leagueReach.player.position}
+              </div>
+              <div className="prb-sum__callout-sub">
+                R{model.leagueReach.round} by {model.leagueReach.team.name} —{' '}
+                {Math.abs(Math.min(0, model.leagueReach.valueRounds))} rds early
+              </div>
+            </div>
+          )}
         </div>
       )}
-      {model.leagueReach && (
-        <div className="prb-sum__callout prb-sum__callout--reach">
-          <div className="prb-sum__callout-lab">
-            <TrendingUpIcon fontSize="inherit" /> BIGGEST REACH
-          </div>
-          <div className="prb-sum__callout-main">
-            {model.leagueReach.player.name} · {model.leagueReach.player.position}
-          </div>
-          <div className="prb-sum__callout-sub">
-            R{model.leagueReach.round} by {model.leagueReach.team.name} —{' '}
-            {Math.abs(Math.min(0, model.leagueReach.valueRounds))} rds early
+
+      {hasByes && (
+        <div className="prb-sum__byes">
+          <div className="prb-sum__dist-lab">WORST BYE WEEKS</div>
+          <div className="prb-sum__byebars">
+            {byesByWeek.map((b) => (
+              <div key={b.team.id} className="prb-sum__byecol">
+                <span className="prb-sum__byen">{b.count}</span>
+                <Avatar avatar={b.avatar} size={24} />
+                <span
+                  className="prb-sum__byebar"
+                  style={{ height: `${Math.max(6, Math.round((b.count / maxBye) * 60))}px` }}
+                />
+                <span className="prb-sum__byewk">{b.worstWeek ? `Wk ${b.worstWeek}` : '—'}</span>
+              </div>
+            ))}
           </div>
         </div>
       )}

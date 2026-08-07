@@ -1099,12 +1099,19 @@
       color: $text-muted;
     }
 
+    // Steal + biggest reach sit side by side, equal width and height.
+    &__callouts {
+      display: flex;
+      gap: 8px;
+    }
+
     &__callout {
+      flex: 1;
+      min-width: 0;
       background: $bg-raised;
       border: 1px solid $border;
       border-radius: $radius;
       padding: 12px 14px;
-      margin-bottom: 10px;
     }
 
     &__callout-lab {
@@ -1178,6 +1185,49 @@
       max-width: 30px;
       border-radius: 5px 5px 3px 3px;
       min-height: 4px;
+    }
+
+    // Worst bye weeks: one warning-coloured bar per team (most byes first), the
+    // count above each avatar and the clashing week beneath the bar.
+    &__byes {
+      margin-top: 14px;
+    }
+
+    &__byebars {
+      display: flex;
+      align-items: flex-end;
+      gap: 6px;
+    }
+
+    &__byecol {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+    }
+
+    &__byen {
+      font-size: 12px;
+      font-weight: 800;
+      color: $warning;
+      font-variant-numeric: tabular-nums;
+    }
+
+    &__byebar {
+      width: 100%;
+      max-width: 30px;
+      border-radius: 5px 5px 3px 3px;
+      min-height: 4px;
+      background: $warning;
+    }
+
+    &__byewk {
+      font-size: 9px;
+      font-weight: 700;
+      color: $text-muted;
+      white-space: nowrap;
     }
   }
 }

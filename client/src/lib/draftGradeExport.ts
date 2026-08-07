@@ -48,6 +48,17 @@ export interface TeamGradeCard {
   biggestReach: PickValue | null;
 }
 
+/** A team's single worst bye week — the week that sidelines the most of its
+ * players — used for the league-summary "worst bye weeks" chart. */
+export interface TeamByeClash {
+  team: TeamRow;
+  avatar: Avatar;
+  /** The bye week that catches the most of this team's players (null if none). */
+  worstWeek: number | null;
+  /** How many players share that worst week. */
+  count: number;
+}
+
 export interface LeagueGrade {
   lobbyName: string;
   season: number;
@@ -69,6 +80,8 @@ export interface LeagueGrade {
   distribution: { letter: string; count: number }[];
   leagueSteal: (PickValue & { team: TeamRow }) | null;
   leagueReach: (PickValue & { team: TeamRow }) | null;
+  /** Per-team worst single-week bye clash, most players-on-bye first. */
+  byeClashes: TeamByeClash[];
 }
 
 function ownerLabelFor(team: TeamRow, members: MemberRow[]): string {
@@ -179,6 +192,29 @@ export function buildLeagueGrade(opts: {
     count: teamCards.filter((t) => t.grade[0] === letter).length,
   }));
 
+  // Worst bye weeks: per team, the single week that sidelines the most of its
+  // players (whole roster). Sorted most-byes-first for the summary bar chart.
+  const byeClashes: TeamByeClash[] = teams
+    .map((team) => {
+      const weekCounts = new Map<number, number>();
+      for (const p of picks) {
+        if (p.team_id !== team.id) continue;
+        const bw = playersById.get(p.player_id)?.bye_week;
+        if (bw == null) continue;
+        weekCounts.set(bw, (weekCounts.get(bw) ?? 0) + 1);
+      }
+      let worstWeek: number | null = null;
+      let count = 0;
+      for (const [week, n] of weekCounts) {
+        if (n > count) {
+          count = n;
+          worstWeek = week;
+        }
+      }
+      return { team, avatar: avatarForTeam(team, members), worstWeek, count };
+    })
+    .sort((a, b) => b.count - a.count);
+
   return {
     lobbyName,
     season,
@@ -202,5 +238,6 @@ export function buildLeagueGrade(opts: {
     distribution,
     leagueSteal: withTeam(leagueBest),
     leagueReach: withTeam(leagueReach),
+    byeClashes,
   };
 }
