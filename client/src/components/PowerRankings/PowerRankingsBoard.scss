@@ -1089,6 +1089,11 @@
       font-weight: 800;
       line-height: 1;
       color: var(--c);
+      // Pin every number to a shared baseline (box sized to the largest) so the
+      // smaller ones drop and their tops cascade downward — matching the recap PNG.
+      height: 22px;
+      display: flex;
+      align-items: flex-end;
 
       :root[data-theme='light'] & {
         color: color-mix(in srgb, var(--c) 62%, #0b1014);
