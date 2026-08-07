@@ -785,9 +785,9 @@ function LeagueSummaryPane({ model }: { model: LeagueGrade }) {
   // so height maps directly (+ a floor that fits the number inside the bar).
   const hasByes = model.byeClashes.length > 0;
 
-  // Position strength per team (rank order): per-position projected-points totals
-  // + league rank, plus a whole-roster total for the comparison bars and the
-  // heat-map TOTAL column.
+  // Position strength per team (rank order): per-position starter projected-points
+  // totals + league rank, plus their sum (= starter points) for the comparison
+  // bars and the heat-map TOTAL column.
   const teamCount = model.teams.length;
   const compTeams = model.teams.map((t) => {
     const stats = model.positionStats.get(t.team.id);
@@ -810,6 +810,8 @@ function LeagueSummaryPane({ model }: { model: LeagueGrade }) {
       1 + compTeams.filter((o) => o.rosterTotal > t.rosterTotal).length,
     ]),
   );
+  const bestRank = Math.min(...overallRank.values());
+  const worstRank = Math.max(...overallRank.values());
   const hasPositions = model.positions.length > 0 && teamCount > 0;
 
   // Number shrinks top → avg → low, mirroring the downloadable recap (1 / .88 / .78).
@@ -997,9 +999,20 @@ function LeagueSummaryPane({ model }: { model: LeagueGrade }) {
                   const totRank = overallRank.get(t.team.id) ?? teamCount;
                   return (
                     <tr key={t.team.id}>
-                      <td className="prb-sum__heat-team" title={t.team.name}>
-                        <Avatar avatar={t.avatar} size={16} />
-                        <span className="prb-sum__heat-name">{t.team.name}</span>
+                      <td
+                        className={`prb-sum__heat-team${
+                          teamCount > 1 && totRank === bestRank
+                            ? ' is-best'
+                            : teamCount > 1 && totRank === worstRank
+                              ? ' is-worst'
+                              : ''
+                        }`}
+                        title={t.team.name}
+                      >
+                        <span className="prb-sum__heat-teamin">
+                          <Avatar avatar={t.avatar} size={16} />
+                          <span className="prb-sum__heat-name">{t.team.name}</span>
+                        </span>
                       </td>
                       {t.cells.map((c) => (
                         <td

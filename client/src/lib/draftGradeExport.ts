@@ -161,6 +161,11 @@ export function buildLeagueGrade(opts: {
   const draftTypeLabel = settings.draftType === 'SNAKE' ? 'Snake' : 'Straight';
 
   const rankings = computePowerRankings(teams, picks, playersById, settings);
+  // Optimal starting lineup per team — the basis for the positional analysis so
+  // bench depth (e.g. hoarding QBs) can't inflate a team's positional strength.
+  const startersByTeam = new Map(
+    teams.map((t) => [t.id, buildLineup(t.id, picks, playersById, settings).starters]),
+  );
 
   const teamCards: TeamGradeCard[] = rankings.map((r) => {
     const teamGrades = grades.filter((g) => g.team_id === r.team.id);
@@ -184,7 +189,7 @@ export function buildLeagueGrade(opts: {
       peerCount: teamGrades.length,
       peerGrades,
       crownVotes: crownVotes.filter((v) => v.team_id === r.team.id).length,
-      starters: buildLineup(r.team.id, picks, playersById, settings).starters,
+      starters: startersByTeam.get(r.team.id) ?? [],
       bestPick: best,
       biggestReach: reach,
     };
@@ -244,12 +249,16 @@ export function buildLeagueGrade(opts: {
   const positions = POSITIONS.filter((p) => draftablePositions(settings.rosterComposition).has(p));
   const posTotals = new Map<string, Map<Position, number>>();
   for (const t of teams) posTotals.set(t.id, new Map(positions.map((p) => [p, 0])));
-  for (const p of picks) {
-    const pos = playersById.get(p.player_id)?.position as Position | undefined;
-    const proj = playersById.get(p.player_id)?.proj_points ?? 0;
-    const byPos = pos && posTotals.get(p.team_id);
-    if (!pos || !byPos || !byPos.has(pos)) continue;
-    byPos.set(pos, (byPos.get(pos) ?? 0) + proj);
+  for (const t of teams) {
+    const byPos = posTotals.get(t.id);
+    if (!byPos) continue;
+    // Sum only the optimal starters, attributing flex starters to the player's
+    // real position (a WR in the FLEX counts toward WR).
+    for (const row of startersByTeam.get(t.id) ?? []) {
+      const pos = row.player?.position as Position | undefined;
+      if (!pos || !byPos.has(pos)) continue;
+      byPos.set(pos, (byPos.get(pos) ?? 0) + (row.player?.proj_points ?? 0));
+    }
   }
   const positionStats = new Map<string, Map<Position, PositionStat>>();
   for (const t of teams) positionStats.set(t.id, new Map());
