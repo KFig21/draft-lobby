@@ -1084,7 +1084,8 @@
     }
 
     &__projval {
-      font-size: 22px;
+      // Scale set per box (--s) so the number shrinks top → avg → low.
+      font-size: calc(22px * var(--s, 1));
       font-weight: 800;
       line-height: 1;
       color: var(--c);

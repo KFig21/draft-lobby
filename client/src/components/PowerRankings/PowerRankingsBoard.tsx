@@ -734,10 +734,14 @@ function LeagueSummaryPane({ model }: { model: LeagueGrade }) {
   // players the hardest-hit team has out that week. Counts are small integers,
   // so height maps directly (+ a floor that fits the number inside the bar).
   const hasByes = model.byeClashes.length > 0;
-  const proj = (label: string, value: number, color: string, name?: string) => (
+  // Number shrinks top → avg → low, mirroring the downloadable recap (1 / .88 / .78).
+  const proj = (label: string, value: number, color: string, scale: number, name?: string) => (
     <div className="prb-sum__projbox">
       <span className="prb-sum__projlab">{label}</span>
-      <span className="prb-sum__projval" style={{ ['--c']: color } as CSSProperties}>
+      <span
+        className="prb-sum__projval"
+        style={{ ['--c']: color, ['--s']: scale } as CSSProperties}
+      >
         <ProjPoints value={value} />
       </span>
       {name && <span className="prb-sum__projsub">{name}</span>}
@@ -770,9 +774,9 @@ function LeagueSummaryPane({ model }: { model: LeagueGrade }) {
       </div>
 
       <div className="prb-sum__proj">
-        {proj('TOP PROJECTION', model.topProjection, '#3fd6a5', model.topProjName)}
-        {proj('AVG PROJECTION', model.avgProjection, '#f6a642')}
-        {proj('LOW PROJECTION', model.lowProjection, '#f8577d', model.lowProjName)}
+        {proj('TOP PROJECTION', model.topProjection, '#3fd6a5', 1, model.topProjName)}
+        {proj('AVG PROJECTION', model.avgProjection, '#f6a642', 0.88)}
+        {proj('LOW PROJECTION', model.lowProjection, '#f8577d', 0.78, model.lowProjName)}
       </div>
 
       {(model.leagueSteal || model.leagueReach) && (
