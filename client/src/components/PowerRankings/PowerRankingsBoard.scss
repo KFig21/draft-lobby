@@ -1070,7 +1070,7 @@
       background: $bg-raised;
       border: 1px solid $border;
       border-radius: $radius;
-      padding: 11px 12px;
+      padding: 11px 12px 6px 12px;
       display: flex;
       flex-direction: column;
       gap: 3px;
@@ -1085,13 +1085,13 @@
 
     &__projval {
       // Scale set per box (--s) so the number shrinks top → avg → low.
-      font-size: calc(22px * var(--s, 1));
+      font-size: calc(28px * var(--s, 1));
       font-weight: 800;
       line-height: 1;
       color: var(--c);
       // Pin every number to a shared baseline (box sized to the largest) so the
       // smaller ones drop and their tops cascade downward — matching the recap PNG.
-      height: 22px;
+      height: 29px;
       display: flex;
       align-items: flex-end;
 
@@ -1272,7 +1272,7 @@
       box-shadow: 0 0 0 2px $bg;
 
       // Overlap the stack when multiple teams tie for a week.
-      & + & {
+      &+& {
         margin-top: -8px;
       }
     }

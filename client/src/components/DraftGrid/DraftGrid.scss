@@ -62,7 +62,7 @@
     z-index: 12; // header row rides above the sticky round column
     padding: $space;
     white-space: nowrap;
-    font-size: 0.7rem;
+    font-size: 0.78rem;
     max-width: 120px;
     // Center the avatar + name group in the cell; the name truncates via
     // &__team-name's own ellipsis (constrained to this cell's max-width).
@@ -109,10 +109,10 @@
   }
 
   &__team-btn {
-    display: inline-flex;
+    display: flex;
     align-items: center;
     justify-content: center;
-    max-width: 100%;
+    width: 100%;
     min-width: 0;
     border: none;
     background: none;
@@ -524,7 +524,7 @@
     .draft-grid__team {
       width: auto;
       max-width: none;
-      font-size: calc(0.7rem * var(--fs-scale));
+      font-size: calc(1rem * var(--fs-scale));
     }
 
     .draft-grid__cell {
