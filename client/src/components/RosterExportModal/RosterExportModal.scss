@@ -1,0 +1,142 @@
+@use 'variables' as *;
+
+.roster-export {
+  display: flex;
+  flex-direction: column;
+  gap: $space * 1.5;
+
+  &__pick {
+    display: flex;
+    align-items: center;
+    gap: $space;
+
+    span {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: $text-muted;
+    }
+
+    select {
+      flex: 1;
+      min-width: 0;
+      padding: $space * 0.75 $space;
+      border: 1px solid $border;
+      border-radius: $radius-sm;
+      background: $bg-raised;
+      color: $text;
+      font: inherit;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+  }
+
+  // Clickable preview wrapper — opens the full-size lightbox. Centered, capped
+  // so the portrait card doesn't tower on a wide desktop modal.
+  &__preview {
+    display: block;
+    width: 100%;
+    max-width: 300px;
+    margin: 0 auto;
+    padding: 0;
+    border: none;
+    background: none;
+    cursor: zoom-in;
+    border-radius: $radius;
+  }
+
+  &__canvas {
+    border-radius: $radius;
+    overflow: hidden;
+    box-shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.55), 0 0 0 1px $border;
+    line-height: 0;
+    transition: box-shadow 120ms ease;
+
+    .roster-export__preview:hover & {
+      box-shadow: 0 14px 36px -12px rgba(0, 0, 0, 0.65), 0 0 0 1px $primary;
+    }
+  }
+
+  &__empty {
+    text-align: center;
+    padding: $space * 3 0;
+  }
+
+  &__hint {
+    margin: 0;
+    font-size: 0.85rem;
+    text-align: center;
+  }
+
+  &__foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $space * 1.5;
+    width: 100%;
+
+    .muted {
+      font-size: 0.8rem;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      gap: $space * 0.4;
+      flex-shrink: 0;
+      padding: $space * 0.6 $space * 1.6;
+      white-space: nowrap;
+
+      svg {
+        font-size: 1.15em;
+      }
+    }
+  }
+}
+
+// Full-screen preview (portaled to <body> so it sits above the modal).
+.roster-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $space * 1.5;
+  padding: $space * 2;
+  background: rgba(0, 0, 0, 0.82);
+  cursor: zoom-out;
+  animation: roster-lightbox-in 140ms ease;
+
+  &__img {
+    max-width: min(420px, 92vw);
+    max-height: 82vh;
+    width: auto;
+    height: auto;
+    border-radius: $radius;
+    box-shadow: 0 24px 64px -20px rgba(0, 0, 0, 0.8);
+    cursor: default;
+  }
+
+  &__hint {
+    margin: 0;
+    padding: $space * 0.6 $space * 1.1;
+    border: 1px solid $accent;
+    border-radius: 999px;
+    background: color-mix(in srgb, $accent 14%, rgba(0, 0, 0, 0.5));
+    color: $accent;
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-align: center;
+  }
+}
+
+@keyframes roster-lightbox-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}

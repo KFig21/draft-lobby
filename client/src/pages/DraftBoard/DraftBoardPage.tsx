@@ -21,6 +21,7 @@ import StarIcon from '@mui/icons-material/Star';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlined';
 import CheckIcon from '@mui/icons-material/Check';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import AssignmentIndOutlinedIcon from '@mui/icons-material/AssignmentIndOutlined';
 import CloseIcon from '@mui/icons-material/Close';
 import DataObjectOutlinedIcon from '@mui/icons-material/DataObjectOutlined';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
@@ -74,6 +75,7 @@ import { DraftOutroModal } from '../../components/DraftOutroModal/DraftOutroModa
 import { PowerRankingsBoard } from '../../components/PowerRankings/PowerRankingsBoard';
 import { PowerRankingsMobile } from '../../components/PowerRankings/PowerRankingsMobile';
 import { GradeExportModal } from '../../components/GradeExportModal/GradeExportModal';
+import { RosterExportModal } from '../../components/RosterExportModal/RosterExportModal';
 import { DraftUserSettingsModal } from '../../components/DraftUserSettingsModal/DraftUserSettingsModal';
 import { ErrorScreen } from '../../components/ErrorScreen/ErrorScreen';
 import { GradeBadge } from '../../components/GradeBadge/GradeBadge';
@@ -357,6 +359,7 @@ export function DraftBoardPage() {
   const [rollbackConfirmText, setRollbackConfirmText] = useState('');
   const [showExport, setShowExport] = useState(false);
   const [showGradeExport, setShowGradeExport] = useState(false);
+  const [showRosterExport, setShowRosterExport] = useState(false);
   // Commissioner mid-draft settings editor (clocks + skips at this phase).
   const [showLobbySettings, setShowLobbySettings] = useState(false);
   // Board screenshot (see captureBoardScreenshot): 'menu' shows the CSV/Excel/
@@ -2385,7 +2388,6 @@ export function DraftBoardPage() {
               onGrade={gradeTeam}
               onReact={reactGrade}
               onPickClick={setPickModal}
-              onExportGrades={() => setShowGradeExport(true)}
             />
           </div>
         )}
@@ -2669,21 +2671,22 @@ export function DraftBoardPage() {
             )}
           </div>
           <ThemeToggle className="draft__icon-btn draft__theme-btn" />
-          {/* Mobile-only, and only once the draft is complete — a quick "save
-              the final board as a PNG" shortcut. While the draft is live it would
-              crowd the paused/clock header, so during the draft it lives in the
-              nav drawer instead (see the NavDrawer "Export board" item below). */}
+          {/* Mobile-only, and only once the draft is complete — opens the export
+              options (board / grades / roster PNGs + data files). While the draft
+              is live it would crowd the paused/clock header, so during the draft
+              it lives in the nav drawer instead (see the NavDrawer "Export board"
+              item below). */}
           {isComplete && (
             <button
               type="button"
               className="draft__icon-btn draft__boardpng-btn"
               onClick={() => {
                 resetExport();
-                setExportStep('screenshot');
+                setExportStep('menu');
                 setShowExport(true);
               }}
-              aria-label="Save board as image"
-              title="Save the board as a PNG to share"
+              aria-label="Export options"
+              title="Export the draft — board, grades, or roster"
             >
               <FileDownloadOutlinedIcon fontSize="small" />
             </button>
@@ -3312,6 +3315,19 @@ export function DraftBoardPage() {
                       <span className="muted">Shareable grade cards (PNG) — one or per team</span>
                     </span>
                   </button>
+                  <button
+                    className="button draft-export-options__opt"
+                    onClick={() => {
+                      setShowExport(false);
+                      setShowRosterExport(true);
+                    }}
+                  >
+                    <AssignmentIndOutlinedIcon fontSize="small" />
+                    <span>
+                      <strong>Roster</strong>
+                      <span className="muted">A clean PNG of a team's roster</span>
+                    </span>
+                  </button>
                 </>
               )}
               <button
@@ -3432,6 +3448,22 @@ export function DraftBoardPage() {
           crownVotes={crownVotes}
           grades={grades}
           onClose={() => setShowGradeExport(false)}
+        />
+      )}
+
+      {showRosterExport && (
+        <RosterExportModal
+          lobbyName={lobby.name}
+          season={lobby.season}
+          teams={teams}
+          members={members}
+          picks={picks}
+          playersById={playersById}
+          settings={lobby.settings}
+          crownVotes={crownVotes}
+          grades={grades}
+          myTeamId={myTeam?.id ?? null}
+          onClose={() => setShowRosterExport(false)}
         />
       )}
 

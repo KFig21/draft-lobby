@@ -14,7 +14,6 @@
   background: $bg;
 
   $faint: color-mix(in srgb, #{$text} 80%, #{$text-muted});
-  $bstrong: color-mix(in srgb, #{$text} 22%, transparent);
 
   &--empty {
     display: grid;
@@ -74,27 +73,6 @@
     &:hover {
       color: $text;
       background: $bg-hover;
-    }
-  }
-
-  &__share {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 6px 11px;
-    border: 1px solid $bstrong;
-    background: $bg-overlay;
-    color: $text-muted;
-    border-radius: 8px;
-    font: inherit;
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    flex: 0 0 auto;
-
-    &:hover {
-      background: $bg-hover;
-      color: $text;
     }
   }
 
@@ -454,7 +432,7 @@
       font-weight: 700;
       letter-spacing: 0.03em;
       color: $text-muted;
-      height: 18px;
+      padding-bottom: 3px;
       display: flex;
       align-items: center;
       white-space: nowrap;
@@ -1138,7 +1116,7 @@
   }
 
   .prb-sum__projbox {
-    padding: 10px 8px 6px;
+    padding: 8px;
   }
 
   .prb-sum__projlab {

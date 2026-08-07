@@ -13,7 +13,6 @@ import {
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EditNoteIcon from '@mui/icons-material/EditNote';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
-import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
 import InfoOutlineIcon from '@mui/icons-material/InfoOutlined';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
@@ -62,7 +61,6 @@ interface Props {
   onGrade: (teamId: string, grade: DraftGrade, comment: string) => void;
   onReact: (teamId: string, raterId: string, value: 1 | -1 | 0) => void;
   onPickClick?: (pick: PickRow) => void;
-  onExportGrades?: () => void;
 }
 
 /**
@@ -93,7 +91,6 @@ export function PowerRankingsMobile({
   onGrade,
   onReact,
   onPickClick,
-  onExportGrades,
 }: Props) {
   const [view, setView] = useState<'league' | 'standings'>('standings');
   const [openTeamId, setOpenTeamId] = useState<string | null>(null);
@@ -279,11 +276,6 @@ export function PowerRankingsMobile({
               <InfoOutlineIcon fontSize="inherit" />
             </button>
           </div>
-          {onExportGrades && (
-            <button type="button" className="prm__share" onClick={onExportGrades}>
-              <FileDownloadOutlinedIcon fontSize="inherit" /> Share
-            </button>
-          )}
         </div>
 
         <div className="prm__seg" role="tablist">
