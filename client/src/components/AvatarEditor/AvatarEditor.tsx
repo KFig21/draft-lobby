@@ -2,8 +2,10 @@ import {
   AVATAR_BG_COLORS,
   AVATAR_EMOJI_CHOICES,
   AVATAR_SHAPES,
+  randomAvatar,
   type Avatar as AvatarData,
 } from '@draft-lobby/shared';
+import CasinoIcon from '@mui/icons-material/Casino';
 import type { EmojiClickData, Theme } from 'emoji-picker-react';
 import { Suspense, lazy, useState } from 'react';
 import { Avatar } from '../Avatar/Avatar';
@@ -23,14 +25,39 @@ const SHAPE_LABEL: Record<(typeof AVATAR_SHAPES)[number], string> = {
   square: 'Square',
 };
 
+const sameAvatar = (a: AvatarData, b: AvatarData) =>
+  a.emoji === b.emoji && a.bgColor === b.bgColor && a.shape === b.shape;
+
 export function AvatarEditor({ value, onChange }: Props) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const set = (patch: Partial<AvatarData>) => onChange({ ...value, ...patch });
+
+  // Roll a fresh emoji + background + shape. randomAvatar() covers emoji/color
+  // but always uses a circle, so pick the shape too; re-roll on the rare exact
+  // match so the button always visibly changes something.
+  const randomize = () => {
+    let next: AvatarData;
+    do {
+      next = {
+        ...randomAvatar(),
+        shape: AVATAR_SHAPES[Math.floor(Math.random() * AVATAR_SHAPES.length)],
+      };
+    } while (sameAvatar(next, value));
+    onChange(next);
+  };
 
   return (
     <div className="avatar-editor">
       <div className="avatar-editor__preview">
         <Avatar avatar={value} size={96} />
+        <button
+          type="button"
+          className="avatar-editor__randomize"
+          onClick={randomize}
+        >
+          <CasinoIcon fontSize="small" />
+          Randomize
+        </button>
       </div>
 
       {/* Emoji — quick picks + full picker */}
