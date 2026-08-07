@@ -3312,7 +3312,7 @@ export function DraftBoardPage() {
                     <EmojiEventsOutlinedIcon fontSize="small" />
                     <span>
                       <strong>Draft grades</strong>
-                      <span className="muted">Shareable grade cards (PNG) — one or per team</span>
+                      <span className="muted">Shareable grade cards — one or per team</span>
                     </span>
                   </button>
                   <button
