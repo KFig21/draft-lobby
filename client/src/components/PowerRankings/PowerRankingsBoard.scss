@@ -367,9 +367,9 @@
         }
       }
 
-      // Grade-coloured proj total — the A/B greens are bright for dark mode but
-      // too washed out as text on the light theme, so darken them there.
-      &--proj {
+      // Grade-coloured value (league rank) — the A/B greens are bright for dark
+      // mode but too washed out as text on light, so darken them there.
+      &--grade {
         color: var(--grade);
 
         :root[data-theme='light'] & {

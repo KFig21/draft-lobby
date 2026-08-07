@@ -409,17 +409,17 @@ export function PowerRankingsBoard({
           <div className="prb-metrics">
             <div className="prb-metric">
               <span className="prb-metric__lab">LEAGUE RANK</span>
-              <span className="prb-metric__val">
+              <span
+                className="prb-metric__val prb-metric__val--grade"
+                style={{ ['--grade']: DRAFT_GRADE_COLORS[selected.grade] } as CSSProperties}
+              >
                 #{selected.rank} <small>of {rankings.length}</small>
               </span>
             </div>
             <div className="prb-metric">
               <span className="prb-metric__lab">PROJ STARTER PTS</span>
               <span className="prb-metric__stack">
-                <span
-                  className="prb-metric__val prb-metric__val--proj"
-                  style={{ ['--grade']: DRAFT_GRADE_COLORS[selected.grade] } as CSSProperties}
-                >
+                <span className="prb-metric__val">
                   <ProjPoints value={selected.starterPoints} />
                 </span>
                 <span className={`prb-metric__delta ${delta >= 0 ? 'pos' : 'neg'}`}>
