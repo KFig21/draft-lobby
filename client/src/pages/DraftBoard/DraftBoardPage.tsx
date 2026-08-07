@@ -72,7 +72,7 @@ import { DraftChat } from '../../components/DraftChat/DraftChat';
 import { DraftGrid, type ReactionEntry } from '../../components/DraftGrid/DraftGrid';
 import { DraftOutroModal } from '../../components/DraftOutroModal/DraftOutroModal';
 import { PowerRankingsBoard } from '../../components/PowerRankings/PowerRankingsBoard';
-import { PowerRankingsPanel } from '../../components/PowerRankings/PowerRankingsPanel';
+import { PowerRankingsMobile } from '../../components/PowerRankings/PowerRankingsMobile';
 import { GradeExportModal } from '../../components/GradeExportModal/GradeExportModal';
 import { DraftUserSettingsModal } from '../../components/DraftUserSettingsModal/DraftUserSettingsModal';
 import { ErrorScreen } from '../../components/ErrorScreen/ErrorScreen';
@@ -2365,7 +2365,9 @@ export function DraftBoardPage() {
               mobileTab === 'results' ? 'is-mobile-active' : ''
             }`}
           >
-            <PowerRankingsPanel
+            <PowerRankingsMobile
+              lobbyName={lobby.name}
+              season={lobby.season}
               teams={teams}
               members={members}
               picks={picks}
@@ -2375,11 +2377,13 @@ export function DraftBoardPage() {
               myUserId={userId}
               crownVotes={crownVotes}
               grades={grades}
+              gradeReactions={gradeReactions}
               locked={resultsLocked}
               canVote={canVote}
               canGrade={canGrade}
               onVote={castCrownVote}
               onGrade={gradeTeam}
+              onReact={reactGrade}
               onPickClick={setPickModal}
               onExportGrades={() => setShowGradeExport(true)}
             />

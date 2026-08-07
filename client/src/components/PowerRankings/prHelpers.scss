@@ -1,0 +1,14 @@
+@use 'variables' as *;
+
+// Projected points (Futura italic, smaller decimal) — shared by the Power
+// Rankings board, the League summary pane, and the mobile rankings.
+.prb-proj {
+  font-family: Futura, 'Futura PT', 'Century Gothic', 'Trebuchet MS', sans-serif;
+  font-style: italic;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+
+  &__dec {
+    font-size: 0.77em;
+  }
+}

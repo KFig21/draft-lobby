@@ -1,0 +1,560 @@
+@use 'variables' as *;
+
+// League summary pane (DOM echo of the export cover card) — extracted from the
+// board so the mobile rankings can render the identical pane. All selectors are
+// standalone `.prb-sum*` classes (no `.prb` ancestor required).
+$bstrong: color-mix(in srgb, #{$text} 22%, transparent);
+
+.prb-sum {
+  max-width: 500px;
+  margin: 0 auto;
+  // Consistent breathing room between every section (podium, projections,
+  // callouts, byes, scatter, comparison, heat map).
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+
+  &__head {
+    text-align: center;
+  }
+
+  &__eyebrow {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    color: $accent;
+
+    :root[data-theme='light'] & {
+      color: $primary;
+    }
+  }
+
+  &__name {
+    margin: 4px 0 3px;
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+  }
+
+  &__meta {
+    font-size: 12px;
+    color: $text-muted;
+  }
+
+  &__podium {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    align-items: end;
+    gap: 10px;
+  }
+
+  // Borderless podium (echoes the draft-recap PNG): no card chrome, the crown
+  // and the larger champion avatar carry the hierarchy. align-items:end on the
+  // grid bottom-aligns the columns so the bigger #1 avatar rises into a step.
+  &__pod {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 0 4px;
+  }
+
+  &__crown {
+    position: absolute;
+    top: -16px;
+    color: $keeper;
+    font-size: 24px !important;
+  }
+
+  &__pod-name {
+    font-size: 13px;
+    font-weight: 700;
+    margin-top: 4px;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__pod-owner {
+    font-size: 10.5px;
+    color: $text-muted;
+  }
+
+  &__pod-rank {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: $text-muted;
+    margin-top: 4px;
+  }
+
+  &__proj {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+  }
+
+  &__projbox {
+    background: $bg-raised;
+    border: 1px solid $border;
+    border-radius: $radius;
+    padding: 11px 12px 6px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  &__projlab {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: $text-muted;
+  }
+
+  &__projval {
+    // Scale set per box (--s) so the number shrinks top → avg → low.
+    font-size: calc(28px * var(--s, 1));
+    font-weight: 800;
+    line-height: 1;
+    color: var(--c);
+    // Pin every number to a shared baseline (box sized to the largest) so the
+    // smaller ones drop and their tops cascade downward — matching the recap PNG.
+    height: 29px;
+    display: flex;
+    align-items: flex-end;
+
+    :root[data-theme='light'] & {
+      color: color-mix(in srgb, var(--c) 62%, #0b1014);
+    }
+  }
+
+  &__projsub {
+    font-size: 10px;
+    color: $text-muted;
+  }
+
+  // Steal + biggest reach sit side by side, equal width and height.
+  &__callouts {
+    display: flex;
+    gap: 8px;
+  }
+
+  &__callout {
+    flex: 1;
+    min-width: 0;
+    background: $bg-raised;
+    border: 1px solid $border;
+    border-radius: $radius;
+    padding: 12px 14px;
+  }
+
+  &__callout-lab {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+
+    svg {
+      font-size: 15px;
+    }
+  }
+
+  &__callout--steal &__callout-lab {
+    color: $accent;
+
+    :root[data-theme='light'] & {
+      color: $primary;
+    }
+  }
+
+  &__callout--reach &__callout-lab {
+    color: #f2793a;
+  }
+
+  &__callout-main {
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  &__callout-sub {
+    font-size: 11.5px;
+    color: $text-muted;
+    margin-top: 2px;
+  }
+
+  &__dist {
+    min-width: 0;
+  }
+
+  // Chart headers match the team-pane section titles: a coloured indent chip
+  // and an underline rule.
+  &__dist-lab {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid $border;
+    font-size: 11.5px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    color: $text;
+    text-transform: uppercase;
+
+    &::before {
+      content: '';
+      flex: 0 0 auto;
+      width: 4px;
+      height: 14px;
+      border-radius: 2px;
+      background: $accent;
+    }
+
+    // Worst bye weeks → warning chip, matching its bars.
+    &--bye::before {
+      background: $warning;
+    }
+  }
+
+  // Projected points as a value axis: a low→high gradient rail, each team's
+  // avatar placed at its projection, clustered ones stacked upward. The dashed
+  // marker calls out the league average. Insets keep edge avatars in-bounds.
+  &__scale {
+    position: relative;
+    margin: 8px 13px 0;
+  }
+
+  &__scale-track {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 8px;
+    height: 4px;
+    border-radius: 4px;
+    background: linear-gradient(90deg, #f8577d, #f6a642, #3fd6a5);
+  }
+
+  &__scale-dot {
+    position: absolute;
+    transform: translateX(-50%);
+    border-radius: 50%;
+    box-shadow: 0 0 0 2px $bg;
+    z-index: 2;
+  }
+
+  &__scale-avg {
+    position: absolute;
+    top: 13px;
+    bottom: 8px;
+    border-left: 2px dashed $text;
+    transform: translateX(-50%);
+    z-index: 1;
+  }
+
+  &__scale-avg-lab {
+    position: absolute;
+    top: -13px;
+    left: 0;
+    transform: translateX(-50%);
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    color: $text;
+    white-space: nowrap;
+  }
+
+  // Worst bye week: one warning bar per bye week (in week order), sized by the
+  // hardest-hit team's player count (shown inside the bar), topped by that
+  // team's avatar — overlapping vertically when teams tie.
+  &__byes {
+    min-width: 0;
+  }
+
+  &__byebars {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+  }
+
+  &__byecol {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+  }
+
+  &__byeavs {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  &__byeav {
+    display: inline-flex;
+    border-radius: 50%;
+    box-shadow: 0 0 0 2px $bg;
+
+    // Overlap the stack when multiple teams tie for a week.
+    &+& {
+      margin-top: -8px;
+    }
+  }
+
+  &__byebar {
+    width: 100%;
+    max-width: 30px;
+    border-radius: 5px 5px 3px 3px;
+    min-height: 22px;
+    background: $warning;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 2px;
+  }
+
+  &__byen {
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1;
+    color: #0b0f11;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__byewk {
+    font-size: 9px;
+    font-weight: 700;
+    color: $text-muted;
+    white-space: nowrap;
+  }
+
+  // ── League comparison: a stacked positional-value bar per team ─────
+  &__cmp {
+    min-width: 0;
+  }
+
+  // Clickable position chips filter + re-sort the bars below.
+  &__cmp-legend {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+
+  &__cmp-key {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 8px;
+    border: 1px solid $border;
+    border-radius: 999px;
+    background: $bg-overlay;
+    color: $text-muted;
+    font: inherit;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition:
+      border-color 0.12s ease,
+      color 0.12s ease,
+      background 0.12s ease;
+
+    &:hover {
+      color: $text;
+      border-color: $bstrong;
+    }
+
+    &.is-on {
+      color: $text;
+      border-color: var(--pos);
+      background: color-mix(in srgb, var(--pos) 22%, transparent);
+    }
+  }
+
+  &__cmp-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 2px;
+  }
+
+  &__cmp-reset {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 3px 9px;
+    border: 1px solid $bstrong;
+    border-radius: 999px;
+    background: none;
+    color: $text-muted;
+    font: inherit;
+    font-size: 9.5px;
+    font-weight: 700;
+    cursor: pointer;
+
+    svg {
+      font-size: 12px;
+    }
+
+    &:hover {
+      color: $text;
+      background: $bg-hover;
+    }
+  }
+
+  // Rows are absolutely positioned by sort index so re-sorting slides them.
+  &__cmp-rows {
+    position: relative;
+  }
+
+  &__cmp-row {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 22px;
+    display: grid;
+    grid-template-columns: 92px 1fr;
+    align-items: center;
+    gap: 8px;
+    transition: transform 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: transform;
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+    }
+  }
+
+  &__cmp-team {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  &__cmp-name {
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__cmp-bar {
+    display: flex;
+    height: 12px;
+    border-radius: 4px;
+    overflow: hidden;
+    background: $bg-overlay;
+  }
+
+  &__cmp-seg {
+    height: 100%;
+    min-width: 1px;
+    transition: width 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+    }
+  }
+
+  // ── League heat map: team × position rank grid, tinted green → red ──
+  &__heat {
+    min-width: 0;
+  }
+
+  &__heat-scroll {
+    overflow-x: auto;
+  }
+
+  &__heat-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 3px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  // A thin empty column that adds a little breathing room before TOTAL.
+  &__heat-gap {
+    width: 5px;
+    min-width: 5px;
+    padding: 0;
+    border: 0;
+    background: none;
+  }
+
+  &__heat-th {
+    font-size: 8.5px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    color: $text-muted;
+    text-transform: uppercase;
+    text-align: center;
+    padding: 0 2px 4px;
+    white-space: nowrap;
+
+    &--team {
+      text-align: left;
+    }
+  }
+
+  &__heat-team {
+    vertical-align: middle;
+    min-width: 92px;
+    max-width: 130px;
+    padding-right: 6px;
+  }
+
+  &__heat-teamin {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  &__heat-name {
+    min-width: 0;
+    font-size: 10.5px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__heat-cell {
+    min-width: 40px;
+    border: 1px solid transparent;
+    border-radius: 5px;
+    text-align: center;
+    padding: 4px;
+    line-height: 1.05;
+
+    // The rank-1 cell in each column is outlined green, the worst-ranked red.
+    &.is-best {
+      border-color: $accent;
+    }
+    &.is-worst {
+      border-color: $danger;
+    }
+
+    b {
+      display: block;
+      font-size: 12px;
+      font-weight: 800;
+      color: $text;
+    }
+
+    small {
+      font-size: 8.5px;
+      font-weight: 600;
+      color: $text;
+      opacity: 0.6;
+    }
+  }
+}

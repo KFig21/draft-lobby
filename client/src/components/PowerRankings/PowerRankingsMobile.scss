@@ -1,17 +1,18 @@
 @use 'variables' as *;
-@use 'mixins' as *;
 
-// Fullscreen 3-column Power Rankings board. Uses the app tokens (theme-aware),
-// with the position/grade palettes applied inline from JS.
-.prb {
-  height: 100%;
+// Mobile Power Rankings — the phone counterpart to the fullscreen `.prb` board.
+// Its own namespace + stylesheet (variant isolation) rather than reusing the
+// desktop grid classes: a segmented control, a scroll area, and a sliding
+// per-team screen. The League tab reuses the shared `.prb-sum` pane as-is.
+.prm {
+  position: relative;
+  flex: 1;
   min-height: 0;
-  display: grid;
-  // 30 / 40 / 30 — a wider centre column, flanked by standings and the feed. The
-  // min-widths keep any column from crunching its data on narrower screens (the
-  // board scrolls rather than squishing below them).
-  grid-template-columns: minmax(400px, 7fr) minmax(400px, 10fr) minmax(400px, 7fr);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   background: $bg;
+
   $faint: color-mix(in srgb, #{$text} 80%, #{$text-muted});
   $bstrong: color-mix(in srgb, #{$text} 22%, transparent);
 
@@ -19,40 +20,20 @@
     display: grid;
     place-items: center;
     color: $text-muted;
+    padding: 40px;
   }
 
-  &__col {
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-    border-right: 1px solid $border;
-
-    &--right {
-      border-right: none;
-    }
-  }
-
-  &__scroll {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-    padding: 14px;
-  }
-
-  &__header {
+  // ── Top bar ─────────────────────────────────────────────────────
+  &__top {
     flex: 0 0 auto;
-    // Fixed min-height so the left (Power Rankings) and right (Peer grades)
-    // headers line up uniformly even though only one carries a Share button.
-    min-height: 58px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    padding: 12px 14px;
-    border-bottom: 1px solid $border;
+    padding: 12px 14px 8px;
   }
 
-  &__header-title {
+  &__title {
     display: flex;
     align-items: center;
     gap: 6px;
@@ -60,17 +41,16 @@
 
     h2 {
       margin: 0;
-      font-size: 19px;
+      font-size: 18px;
       font-weight: 800;
       letter-spacing: -0.01em;
       white-space: nowrap;
     }
   }
 
-  // Leading icon in each panel header — accent on dark, primary on light.
-  &__header-icon {
+  &__title-icon {
     flex: 0 0 auto;
-    font-size: 22px;
+    font-size: 21px;
     color: $accent;
 
     :root[data-theme='light'] & {
@@ -118,41 +98,97 @@
     }
   }
 
-  // ── LEFT: standings ────────────────────────────────────────────────
+  // ── Segmented control ───────────────────────────────────────────
+  &__seg {
+    flex: 0 0 auto;
+    display: flex;
+    gap: 5px;
+    padding: 2px 14px 10px;
+    border-bottom: 1px solid $border;
+
+    button {
+      flex: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      height: 36px;
+      border: 1px solid $border;
+      background: $bg-raised;
+      color: $text-muted;
+      border-radius: 9px;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 750;
+      cursor: pointer;
+
+      svg {
+        font-size: 16px;
+      }
+
+      &.is-on {
+        background: $accent;
+        color: #05231a;
+        border-color: transparent;
+
+        :root[data-theme='light'] & {
+          background: $primary;
+          color: #eafff8;
+        }
+      }
+    }
+  }
+
+  &__scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  &__pad {
+    padding: 16px 14px 28px;
+  }
+
+  &__list {
+    padding: 10px 12px 24px;
+  }
+
+  // ── Standings row ───────────────────────────────────────────────
   &-rank {
     display: grid;
-    grid-template-columns: 24px 34px 1fr auto;
+    grid-template-columns: 22px 38px 1fr auto auto;
     align-items: center;
     gap: 10px;
     width: 100%;
     text-align: left;
-    padding: 9px 10px;
+    padding: 9px 8px 9px 10px;
     border: 1px solid transparent;
     border-radius: $radius;
     background: none;
     color: inherit;
     font: inherit;
     cursor: pointer;
-    margin-bottom: 4px;
+    margin-bottom: 5px;
 
-    &:hover {
+    &:active {
       background: $bg-raised;
     }
 
-    &.is-active {
-      background: $bg-raised;
-      border-color: $accent;
+    &.is-mine {
+      border-color: color-mix(in srgb, #{$accent} 32%, #{$border});
+      background: color-mix(in srgb, #{$accent} 6%, transparent);
 
-      :root[data-theme='light'] & {
-        border-color: $primary;
+      .prm-rank__name {
+        color: $accent;
       }
-    }
-
-    &.is-mine .prb-rank__name {
-      color: $accent;
 
       :root[data-theme='light'] & {
-        color: $primary;
+        border-color: color-mix(in srgb, #{$primary} 32%, #{$border});
+
+        .prm-rank__name {
+          color: $primary;
+        }
       }
     }
 
@@ -165,7 +201,6 @@
       &.m1 {
         color: $keeper;
       }
-
       &.m2 {
         color: #c4ccd2;
 
@@ -173,7 +208,6 @@
           color: #8a94a6;
         }
       }
-
       &.m3 {
         color: #d08a52;
       }
@@ -257,16 +291,114 @@
         color: $text;
       }
     }
+
+    &__chev {
+      color: $text-muted;
+      font-size: 20px;
+    }
   }
 
-  // ── CENTER: roster breakdown ───────────────────────────────────────
-  // The selected team's roster breakdown is capped to a tidy centred column,
-  // matching the league-summary pane width.
+  // ── Pushed per-team screen ──────────────────────────────────────
+  &-team-screen {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    background: $bg;
+    transform: translateX(100%);
+    visibility: hidden;
+    transition: transform 0.3s cubic-bezier(0.3, 0.9, 0.4, 1);
+
+    &.is-open {
+      transform: none;
+      visibility: visible;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+    }
+  }
+
   &-team {
-    max-width: 500px;
-    margin: 0 auto;
+    &__top {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      border-bottom: 1px solid $border;
+    }
+
+    &__back {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      height: 32px;
+      padding: 0 12px 0 8px;
+      border: none;
+      border-radius: 8px;
+      background: $bg-overlay;
+      color: $text;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+
+      svg {
+        font-size: 17px;
+      }
+
+      &:hover {
+        background: $bg-hover;
+      }
+    }
+
+    &__pos {
+      margin: 0 auto;
+      font-size: 12px;
+      font-weight: 700;
+      color: $text-muted;
+      font-variant-numeric: tabular-nums;
+    }
+
+    &__switch {
+      display: flex;
+      gap: 6px;
+
+      button {
+        display: grid;
+        place-items: center;
+        width: 32px;
+        height: 32px;
+        border: 1px solid $border;
+        border-radius: 8px;
+        background: $bg-overlay;
+        color: $text;
+        font-size: 20px;
+        cursor: pointer;
+
+        &:disabled {
+          opacity: 0.4;
+          cursor: default;
+        }
+
+        &:not(:disabled):hover {
+          background: $bg-hover;
+        }
+      }
+    }
+
+    &__body {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 14px 14px 24px;
+    }
   }
 
+  // ── Team header + metrics ───────────────────────────────────────
   &-head {
     display: flex;
     align-items: center;
@@ -280,7 +412,7 @@
     }
 
     &__name {
-      font-size: 21px;
+      font-size: 20px;
       font-weight: 800;
       line-height: 1.1;
       letter-spacing: -0.01em;
@@ -293,70 +425,65 @@
     }
   }
 
-  // Four uniform stat tiles in one horizontal row: label pinned to the top of
-  // each tile, the value centred (both axes) in the space beneath it.
   &-metrics {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 9px;
-    margin-bottom: 16px;
+    gap: 8px;
+    margin-bottom: 6px;
   }
 
   &-metric {
     background: $bg-raised;
     border: 1px solid $border;
     border-radius: $radius;
-    padding: 10px 8px;
+    padding: 9px 6px;
     min-height: 66px;
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
 
-    // Value block auto-margins into the vertical centre of the leftover space —
-    // gives the two-line PROJ tile the same breathing room as the single-value
-    // ones instead of packing edge to edge.
-    >.prb-metric__val,
-    >.prb-metric__stack {
+    >.prm-metric__val,
+    >.prm-metric__stack {
       margin: auto 0;
     }
 
     &__lab {
       flex: 0 0 auto;
-      font-size: 8.5px;
+      font-size: 8px;
       font-weight: 700;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.03em;
       color: $text-muted;
-      height: 16px;
+      height: 18px;
+      display: flex;
+      align-items: center;
     }
 
     &__val {
-      font-size: 20px;
+      font-size: 19px;
       font-weight: 800;
       line-height: 1;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 6px;
+      gap: 5px;
       font-variant-numeric: tabular-nums;
 
       small {
-        font-size: 12px;
+        font-size: 11px;
         color: $text-muted;
         font-weight: 600;
       }
 
       &--crown {
-        gap: 5px;
+        gap: 4px;
 
         svg {
           color: $keeper;
-          font-size: 18px;
+          font-size: 17px;
         }
       }
 
-      // Grade-coloured value (league rank) — the A/B greens are bright for dark
-      // mode but too washed out as text on light, so darken them there.
       &--grade {
         color: var(--grade);
 
@@ -366,7 +493,6 @@
       }
     }
 
-    // PROJ tile: the number plus a small "± vs avg" line, stacked and centred.
     &__stack {
       display: flex;
       flex-direction: column;
@@ -375,7 +501,7 @@
     }
 
     &__delta {
-      font-size: 11px;
+      font-size: 10.5px;
       font-weight: 700;
       white-space: nowrap;
       display: flex;
@@ -384,7 +510,7 @@
       font-variant-numeric: tabular-nums;
 
       small {
-        font-size: 9px;
+        font-size: 8.5px;
         font-weight: 600;
         color: $text-muted;
         letter-spacing: 0.03em;
@@ -404,8 +530,101 @@
     }
   }
 
-  // Position-breakdown pills (echoes the roster-tab chips): a coloured position
-  // label joined to a translucent count.
+  // ── Team inner tabs ─────────────────────────────────────────────
+  &-subtabs {
+    display: flex;
+    gap: 5px;
+    margin: 16px 0 4px;
+
+    button {
+      flex: 1;
+      height: 34px;
+      border: 1px solid $border;
+      background: $bg-raised;
+      color: $text-muted;
+      border-radius: 9px;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 750;
+      cursor: pointer;
+
+      &.is-on {
+        background: $bg-overlay;
+        color: $text;
+        border-color: color-mix(in srgb, #{$accent} 40%, #{$border});
+
+        :root[data-theme='light'] & {
+          border-color: color-mix(in srgb, #{$primary} 40%, #{$border});
+        }
+      }
+    }
+  }
+
+  &-pane {
+    padding-top: 8px;
+  }
+
+  // ── Section header (chip + underline) ───────────────────────────
+  &-sec {
+    margin-bottom: 18px;
+
+    &__title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 0 11px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid $border;
+      font-size: 11.5px;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      color: $text;
+      text-transform: uppercase;
+
+      &::before {
+        content: '';
+        flex: 0 0 auto;
+        width: 4px;
+        height: 14px;
+        border-radius: 2px;
+        background: $accent;
+      }
+
+      &--pos::before {
+        background: $pos-wr;
+      }
+      &--bench::before {
+        background: $text-muted;
+      }
+      &--bye::before {
+        background: $warning;
+      }
+      &--peer::before {
+        background: $info;
+      }
+    }
+
+    &__help {
+      display: grid;
+      place-items: center;
+      width: 18px;
+      height: 18px;
+      margin-left: auto;
+      border: none;
+      border-radius: 50%;
+      background: $bg-overlay;
+      color: $text-muted;
+      font-size: 12px;
+      cursor: pointer;
+
+      &:hover {
+        color: $text;
+        background: $bg-hover;
+      }
+    }
+  }
+
+  // ── Position breakdown pills ────────────────────────────────────
   &-posbreak {
     display: flex;
     flex-wrap: wrap;
@@ -440,208 +659,53 @@
     }
   }
 
-  // Position analysis: one ranked bar per position — how the team's projected
-  // points at that position stack up against the league. Green = top third of
-  // the league, red = bottom third, neutral in between.
+  // ── Position analysis ───────────────────────────────────────────
   &-posrank {
     display: flex;
     flex-direction: column;
     gap: 7px;
-  }
 
-  &-posrank__row {
-    display: grid;
-    grid-template-columns: 36px 1fr 36px;
-    align-items: center;
-    gap: 9px;
-  }
-
-  &-posrank__pos {
-    font-size: 10.5px;
-    font-weight: 800;
-    letter-spacing: 0.02em;
-    color: color-mix(in srgb, #{$text} 78%, #{$text-muted});
-  }
-
-  &-posrank__track {
-    height: 8px;
-    border-radius: 6px;
-    background: $bg-overlay;
-    overflow: hidden;
-  }
-
-  &-posrank__fill {
-    display: block;
-    height: 100%;
-    border-radius: 6px;
-    // Background is the draft-grade colour for the rank (set inline).
-  }
-
-  &-posrank__rank {
-    font-size: 10.5px;
-    font-weight: 700;
-    text-align: right;
-    font-variant-numeric: tabular-nums;
-    // Grade colour for the rank; darkened on light so bright greens stay legible.
-    color: var(--grade);
-
-    :root[data-theme='light'] & {
-      color: color-mix(in srgb, var(--grade) 62%, #0b1014);
-    }
-  }
-
-  &-sec {
-    margin-bottom: 16px;
-
-    // Matches the roster-tab section headers: a coloured indent tick, an
-    // underline rule, bright uppercase label.
-    &__title {
-      display: flex;
+    &__row {
+      display: grid;
+      grid-template-columns: 40px 1fr 36px;
       align-items: center;
-      gap: 8px;
-      margin: 0 0 10px;
-      padding-bottom: 6px;
-      border-bottom: 1px solid $border;
-      font-size: 11.5px;
-      font-weight: 800;
-      letter-spacing: 0.05em;
-      color: $text;
-      text-transform: uppercase;
-
-      &::before {
-        content: '';
-        width: 4px;
-        height: 14px;
-        border-radius: 2px;
-        background: $accent;
-      }
-
-      // Position breakdown gets the WR blue tick (mirrored in the roster tab).
-      &--pos::before {
-        background: $pos-wr;
-      }
-
-      &--bench::before {
-        background: $text-muted;
-      }
-
-      &--bye::before {
-        background: $warning;
-      }
-    }
-  }
-
-  &-slots {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-  }
-
-  &-slot {
-    display: grid;
-    grid-template-columns: 46px 1fr auto;
-    align-items: center;
-    gap: 12px;
-    padding: 8px 10px;
-    width: 100%;
-    text-align: left;
-
-    &+.prb-slot,
-    li+li & {
-      border-top: 1px solid $border;
-    }
-
-    &--link {
-      background: none;
-      border: none;
-      color: inherit;
-      font: inherit;
-      cursor: pointer;
-
-      &:hover {
-        background: $bg-raised;
-      }
-    }
-
-    &__lab {
-      font-size: 11px;
-      font-weight: 800;
-      color: $text-muted;
-      text-align: center;
-      background: $bg-overlay;
-      border-radius: 5px;
-      padding: 4px 0;
-    }
-
-    &__player {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      min-width: 0;
-
-      &--empty {
-        color: $text-muted;
-      }
+      gap: 9px;
     }
 
     &__pos {
-      width: 30px;
-      text-align: center;
-      font-size: 10px;
+      font-size: 10.5px;
       font-weight: 800;
-      color: #0b0f11;
-      border-radius: 5px;
-      padding: 3px 0;
-      flex: 0 0 auto;
+      letter-spacing: 0.02em;
+      color: color-mix(in srgb, #{$text} 78%, #{$text-muted});
     }
 
-    &__nm {
-      display: flex;
-      align-items: baseline;
-      gap: 7px;
-      min-width: 0;
-    }
-
-    &__name {
-      font-weight: 650;
-      font-size: 14px;
-      white-space: nowrap;
+    &__track {
+      height: 8px;
+      border-radius: 6px;
+      background: $bg-overlay;
       overflow: hidden;
-      text-overflow: ellipsis;
-      flex: 0 1 auto;
-      min-width: 0;
     }
 
-    &__keeper {
-      font-size: 9px;
-      font-weight: 800;
-      color: $keeper;
-      border: 1px solid $keeper;
-      border-radius: 4px;
-      padding: 1px 4px;
-      margin-left: 6px;
-      vertical-align: 1px;
+    &__fill {
+      display: block;
+      height: 100%;
+      border-radius: 6px;
     }
 
-    &__team {
-      color: $text-muted;
-      font-size: 11px;
-      flex: 0 0 auto;
-    }
-
-    &__pp {
-      font-size: 13.5px;
+    &__rank {
+      font-size: 10.5px;
       font-weight: 700;
-      color: color-mix(in srgb, #{$text} 80%, #{$text-muted});
-      white-space: nowrap;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      color: var(--grade);
 
-      small {
-        color: $text-muted;
-        font-size: 10.5px;
+      :root[data-theme='light'] & {
+        color: color-mix(in srgb, var(--grade) 62%, #0b1014);
       }
     }
   }
 
+  // ── Bye breakdown ───────────────────────────────────────────────
   &-byes {
     list-style: none;
     margin: 0;
@@ -656,7 +720,7 @@
     padding: 7px 10px;
     border-radius: $radius-sm;
 
-    &+.prb-bye {
+    &+.prm-bye {
       border-top: 1px solid $border;
     }
 
@@ -700,25 +764,135 @@
     }
   }
 
-  // ── RIGHT: peer-grade feed + docked composer ───────────────────────
-  &-feed {
-    &__empty {
-      color: $text-muted;
-      font-size: 13px;
-      text-align: center;
-      padding: 30px 10px;
+  // ── Lineup ──────────────────────────────────────────────────────
+  &-slots {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  &-slot {
+    display: grid;
+    grid-template-columns: 44px 1fr auto;
+    align-items: center;
+    gap: 11px;
+    padding: 8px 6px;
+    width: 100%;
+    text-align: left;
+
+    &+.prm-slot,
+    li+li & {
+      border-top: 1px solid $border;
     }
+
+    &--link {
+      background: none;
+      border: none;
+      color: inherit;
+      font: inherit;
+      cursor: pointer;
+
+      &:active {
+        background: $bg-raised;
+      }
+    }
+
+    &__lab {
+      font-size: 11px;
+      font-weight: 800;
+      color: $text-muted;
+      text-align: center;
+      background: $bg-overlay;
+      border-radius: 5px;
+      padding: 4px 0;
+    }
+
+    &__player {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      min-width: 0;
+
+      &--empty {
+        color: $text-muted;
+      }
+    }
+
+    &__pos {
+      width: 30px;
+      text-align: center;
+      font-size: 10px;
+      font-weight: 800;
+      color: #0b0f11;
+      border-radius: 5px;
+      padding: 3px 0;
+      flex: 0 0 auto;
+    }
+
+    &__nm {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    &__name {
+      font-weight: 650;
+      font-size: 13.5px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex: 0 1 auto;
+      min-width: 0;
+    }
+
+    &__keeper {
+      font-size: 9px;
+      font-weight: 800;
+      color: $keeper;
+      border: 1px solid $keeper;
+      border-radius: 4px;
+      padding: 1px 4px;
+      margin-left: 6px;
+      vertical-align: 1px;
+    }
+
+    &__team {
+      color: $text-muted;
+      font-size: 11px;
+      flex: 0 0 auto;
+    }
+
+    &__pp {
+      font-size: 13px;
+      font-weight: 700;
+      color: color-mix(in srgb, #{$text} 80%, #{$text-muted});
+      white-space: nowrap;
+
+      small {
+        color: $text-muted;
+        font-size: 10px;
+      }
+    }
+  }
+
+  // ── Peer feed ───────────────────────────────────────────────────
+  &-feed__empty {
+    color: $text-muted;
+    font-size: 13px;
+    text-align: center;
+    padding: 26px 10px;
   }
 
   &-card {
     display: grid;
-    grid-template-columns: 34px 1fr;
-    gap: 11px;
-    padding: 12px;
+    grid-template-columns: 32px 1fr;
+    gap: 10px;
+    padding: 11px;
     background: $bg-raised;
     border: 1px solid $border;
     border-radius: $radius;
-    margin-bottom: 10px;
+    margin-bottom: 9px;
 
     &.is-you {
       border-color: color-mix(in srgb, #{$accent} 45%, #{$border});
@@ -729,7 +903,7 @@
       display: flex;
       align-items: center;
       gap: 7px;
-      margin-bottom: 5px;
+      margin-bottom: 4px;
     }
 
     &__author {
@@ -778,8 +952,8 @@
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    height: 27px;
-    padding: 0 10px;
+    height: 28px;
+    padding: 0 11px;
     border: 1px solid $border;
     background: $bg-overlay;
     color: $text-muted;
@@ -792,11 +966,6 @@
 
     svg {
       font-size: 14px;
-    }
-
-    &:not(:disabled):hover {
-      background: $bg-hover;
-      color: color-mix(in srgb, #{$text} 80%, #{$text-muted});
     }
 
     &:disabled {
@@ -816,11 +985,13 @@
     }
   }
 
-  &__dock {
-    flex: 0 0 auto;
-    border-top: 1px solid $border;
-    background: $bg;
-    padding: 14px;
+  // ── Composer (sticky bottom of the Grades pane) ─────────────────
+  &-dock {
+    position: sticky;
+    bottom: 0;
+    margin-top: 12px;
+    padding-top: 8px;
+    background: linear-gradient(180deg, transparent, $bg 14px);
   }
 
   &-note {
@@ -829,7 +1000,7 @@
     color: $text-muted;
     line-height: 1.5;
     text-align: center;
-    padding: 10px 12px;
+    padding: 12px 14px;
     background: rgba(127, 127, 127, 0.05);
     border: 1px dashed $border;
     border-radius: 8px;
@@ -841,42 +1012,38 @@
   }
 
   &-composer {
+    padding: 12px;
+    border: 1px solid $border;
+    border-radius: $radius;
+    background: $bg-raised;
+
     &__title {
       font-size: 12px;
       font-weight: 750;
       margin: 0 0 10px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-
-      .who {
-        color: $text-muted;
-        font-weight: 600;
-      }
     }
 
     &__input {
       display: flex;
       gap: 8px;
-    }
 
-    &__input textarea {
-      flex: 1;
-      min-width: 0;
-      resize: none;
-      height: 38px;
-      padding: 9px 10px;
-      border-radius: $radius-sm;
-      border: 1px solid $bstrong;
-      background: $bg;
-      color: $text;
-      font: inherit;
-      font-size: 12.5px;
-      line-height: 1.35;
+      textarea {
+        flex: 1;
+        min-width: 0;
+        resize: none;
+        height: 40px;
+        padding: 9px 10px;
+        border-radius: $radius-sm;
+        border: 1px solid color-mix(in srgb, #{$text} 22%, transparent);
+        background: $bg;
+        color: $text;
+        font: inherit;
+        font-size: 13px;
+        line-height: 1.35;
 
-      &::placeholder {
-        color: $text-muted;
+        &::placeholder {
+          color: $text-muted;
+        }
       }
     }
 
@@ -893,7 +1060,7 @@
     gap: 6px;
     width: 100%;
     justify-content: center;
-    height: 36px;
+    height: 38px;
     border: 1px solid $keeper;
     background: transparent;
     color: $keeper;
@@ -922,9 +1089,10 @@
   }
 
   &-pill {
-    width: 34px;
-    height: 30px;
-    border: 1px solid $bstrong;
+    flex: 1;
+    min-width: 34px;
+    height: 32px;
+    border: 1px solid color-mix(in srgb, #{$text} 22%, transparent);
     background: $bg-overlay;
     color: color-mix(in srgb, #{$text} 80%, #{$text-muted});
     border-radius: 7px;
@@ -935,98 +1103,27 @@
     display: grid;
     place-items: center;
 
-    &:hover {
-      background: $bg-hover;
-    }
-
     &.is-on {
       color: #05231a;
+      border-color: transparent;
     }
   }
 
   &-post-btn {
     flex: 0 0 auto;
     align-self: stretch;
-    padding: 0 15px;
+    padding: 0 16px;
     border: none;
     background: $primary;
     color: #eafff8;
     border-radius: $radius-sm;
     font: inherit;
     font-weight: 700;
-    font-size: 12.5px;
+    font-size: 13px;
     cursor: pointer;
 
     &:hover {
       background: $primary-hover;
-    }
-  }
-
-  // "League summary" toggle at the top of the standings list — a hint-style
-  // pill (translucent accent fill + border + text), filled when active.
-  &-summary-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    width: 100%;
-    margin-bottom: 8px;
-    padding: 9px 12px;
-    border: 1px solid color-mix(in srgb, #{$accent} 45%, transparent);
-    background: rgba(63, 214, 165, 0.1);
-    color: $accent;
-    border-radius: $radius;
-    font: inherit;
-    font-size: 12.5px;
-    font-weight: 750;
-    cursor: pointer;
-
-    svg {
-      font-size: 16px;
-    }
-
-    :root[data-theme='light'] & {
-      color: $primary;
-      border-color: color-mix(in srgb, #{$primary} 45%, transparent);
-      background: color-mix(in srgb, #{$primary} 10%, transparent);
-    }
-
-    &:hover {
-      background: rgba(63, 214, 165, 0.16);
-    }
-
-    &.is-on {
-      background: $accent;
-      color: #05231a;
-      border-color: transparent;
-
-      :root[data-theme='light'] & {
-        background: $primary;
-        color: #eafff8;
-      }
-    }
-  }
-
-  // Chat fills the right pane while the League summary is up.
-  &__chat {
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-  }
-
-}
-
-// Help modal body — rendered in a portal, so it lives outside .prb.
-.prb-help {
-  p {
-    margin: 0 0 12px;
-    font-size: 14px;
-    line-height: 1.55;
-    color: $text;
-
-    &:last-child {
-      margin-bottom: 0;
     }
   }
 }
