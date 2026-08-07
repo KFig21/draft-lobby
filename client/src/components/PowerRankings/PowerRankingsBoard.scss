@@ -1155,12 +1155,34 @@
       margin-top: 14px;
     }
 
+    // Chart headers match the team-pane section titles: a coloured indent chip
+    // and an underline rule.
     &__dist-lab {
-      font-size: 9.5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 0 12px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid $border;
+      font-size: 11.5px;
       font-weight: 800;
       letter-spacing: 0.05em;
-      color: $text-muted;
-      margin-bottom: 12px;
+      color: $text;
+      text-transform: uppercase;
+
+      &::before {
+        content: '';
+        flex: 0 0 auto;
+        width: 4px;
+        height: 14px;
+        border-radius: 2px;
+        background: $accent;
+      }
+
+      // Worst bye weeks → warning chip, matching its bars.
+      &--bye::before {
+        background: $warning;
+      }
     }
 
     // Projected-points-by-team bars: bottom-aligned columns so each bar's height

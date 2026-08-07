@@ -797,10 +797,10 @@ function LeagueSummaryPane({ model }: { model: LeagueGrade }) {
 
       {hasByes && (
         <div className="prb-sum__byes">
-          <div className="prb-sum__dist-lab">WORST BYE WEEKS</div>
+          <div className="prb-sum__dist-lab prb-sum__dist-lab--bye">WORST BYE WEEKS</div>
           <div className="prb-sum__byebars">
             {byesByWeek.map((b) => (
-              <div key={b.team.id} className="prb-sum__byecol">
+              <div key={b.team.id} className="prb-sum__byecol" title={b.team.name}>
                 <span className="prb-sum__byen">{b.count}</span>
                 <Avatar avatar={b.avatar} size={24} />
                 <span
@@ -818,7 +818,7 @@ function LeagueSummaryPane({ model }: { model: LeagueGrade }) {
         <div className="prb-sum__dist-lab">PROJECTED POINTS BY TEAM</div>
         <div className="prb-sum__ppbars">
           {projTeams.map((t) => (
-            <div key={t.team.id} className="prb-sum__ppcol">
+            <div key={t.team.id} className="prb-sum__ppcol" title={t.team.name}>
               <Avatar avatar={t.avatar} size={24} />
               <span
                 className="prb-sum__ppbar"
