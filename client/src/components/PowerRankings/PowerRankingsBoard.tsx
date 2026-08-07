@@ -196,6 +196,7 @@ export function PowerRankingsBoard({
   // stays valid if teams change; clicks update the underlying state.
   const [picked, setPicked] = useState<string | null>(myTeamId ?? null);
   const [showHelp, setShowHelp] = useState(false);
+  const [showPeerHelp, setShowPeerHelp] = useState(false);
   const selectedId =
     picked && rankings.some((r) => r.team.id === picked)
       ? picked
@@ -511,6 +512,20 @@ export function PowerRankingsBoard({
           <div className="prb__chat">{chatPanel}</div>
         ) : (
           <>
+        <div className="prb__header">
+          <div className="prb__header-title">
+            <h2>Peer grades</h2>
+            <button
+              type="button"
+              className="prb__help"
+              onClick={() => setShowPeerHelp(true)}
+              aria-label="How peer grades work"
+              title="How peer grades work"
+            >
+              <InfoOutlineIcon fontSize="inherit" />
+            </button>
+          </div>
+        </div>
         <div className="prb__scroll prb-feed">
           {feed.length === 0 ? (
             <p className="prb-feed__empty">No peer grades on this roster yet.</p>
@@ -647,6 +662,28 @@ export function PowerRankingsBoard({
           <p>
             The <b>peer grades</b> and <b>crown votes</b> are separate — the league’s own opinion,
             shown alongside the projected grade, and they can (and often will) disagree with it.
+          </p>
+        </div>
+      </Modal>
+    )}
+    {showPeerHelp && (
+      <Modal title="Peer grades & crowns" onClose={() => setShowPeerHelp(false)}>
+        <div className="prb-help">
+          <p>
+            This is the league’s own take on the selected roster. Anyone in the league can leave a{' '}
+            <b>letter grade</b> with a short note, and every grade shows up in this feed.
+          </p>
+          <p>
+            React to a grade with a <b>thumbs up or down</b> — the net score floats the takes the
+            league agrees with to the top of mind. You can’t react to your own grade.
+          </p>
+          <p>
+            Each player also gets one <b>crown vote</b> for the roster they think won the draft.
+            These are all separate from the projected <b>App grade</b> in the middle — the human
+            opinion next to the math.
+          </p>
+          <p>
+            Grading, reacting, and crowning <b>lock 24 hours</b> after the draft ends.
           </p>
         </div>
       </Modal>

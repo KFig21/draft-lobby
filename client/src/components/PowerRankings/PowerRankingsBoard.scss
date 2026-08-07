@@ -7,8 +7,10 @@
   height: 100%;
   min-height: 0;
   display: grid;
-  // Left + center capped; the feed column absorbs the slack on wide screens.
-  grid-template-columns: 402px minmax(0, 750px) minmax(400px, 1fr);
+  // 30 / 40 / 30 — a wider centre column, flanked by standings and the feed. The
+  // min-widths keep any column from crunching its data on narrower screens (the
+  // board scrolls rather than squishing below them).
+  grid-template-columns: minmax(400px, 3fr) minmax(400px, 4fr) minmax(400px, 3fr);
   background: $bg;
   $faint: color-mix(in srgb, #{$text} 80%, #{$text-muted});
   $bstrong: color-mix(in srgb, #{$text} 22%, transparent);
@@ -157,15 +159,27 @@
       font-size: 13px;
       text-align: center;
       color: $text-muted;
-      &.m1 { color: $keeper; }
+
+      &.m1 {
+        color: $keeper;
+      }
+
       &.m2 {
         color: #c4ccd2;
-        :root[data-theme='light'] & { color: #8a94a6; }
+
+        :root[data-theme='light'] & {
+          color: #8a94a6;
+        }
       }
-      &.m3 { color: #d08a52; }
+
+      &.m3 {
+        color: #d08a52;
+      }
     }
 
-    &__mid { min-width: 0; }
+    &__mid {
+      min-width: 0;
+    }
 
     &__line {
       display: flex;
@@ -202,7 +216,10 @@
       color: $keeper;
       white-space: nowrap;
       flex: 0 0 auto;
-      svg { font-size: 14px; }
+
+      svg {
+        font-size: 14px;
+      }
     }
 
     &__meta {
@@ -219,7 +236,12 @@
       background: $bg-overlay;
       overflow: hidden;
       min-width: 40px;
-      i { display: block; height: 100%; border-radius: 5px; }
+
+      i {
+        display: block;
+        height: 100%;
+        border-radius: 5px;
+      }
     }
 
     &__pts {
@@ -228,7 +250,10 @@
       font-weight: 600;
       white-space: nowrap;
       font-variant-numeric: tabular-nums;
-      b { color: $text; }
+
+      b {
+        color: $text;
+      }
     }
   }
 
@@ -247,9 +272,23 @@
     gap: 13px;
     padding: 2px 2px 15px;
 
-    &__id { min-width: 0; text-align: center; }
-    &__name { font-size: 21px; font-weight: 800; line-height: 1.1; letter-spacing: -0.01em; }
-    &__owner { color: $text-muted; font-size: 13px; margin-top: 2px; }
+    &__id {
+      min-width: 0;
+      text-align: center;
+    }
+
+    &__name {
+      font-size: 21px;
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -0.01em;
+    }
+
+    &__owner {
+      color: $text-muted;
+      font-size: 13px;
+      margin-top: 2px;
+    }
   }
 
   // Four uniform stat tiles in one horizontal row: label pinned to the top of
@@ -266,7 +305,7 @@
     border: 1px solid $border;
     border-radius: $radius;
     padding: 10px 8px;
-    min-height: 80px;
+    min-height: 66px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -275,8 +314,8 @@
     // Value block auto-margins into the vertical centre of the leftover space —
     // gives the two-line PROJ tile the same breathing room as the single-value
     // ones instead of packing edge to edge.
-    > .prb-metric__val,
-    > .prb-metric__stack {
+    >.prb-metric__val,
+    >.prb-metric__stack {
       margin: auto 0;
     }
 
@@ -286,6 +325,7 @@
       font-weight: 700;
       letter-spacing: 0.05em;
       color: $text-muted;
+      height: 16px;
     }
 
     &__val {
@@ -297,17 +337,27 @@
       justify-content: center;
       gap: 6px;
       font-variant-numeric: tabular-nums;
-      small { font-size: 12px; color: $text-muted; font-weight: 600; }
+
+      small {
+        font-size: 12px;
+        color: $text-muted;
+        font-weight: 600;
+      }
 
       &--crown {
         gap: 5px;
-        svg { color: $keeper; font-size: 18px; }
+
+        svg {
+          color: $keeper;
+          font-size: 18px;
+        }
       }
 
       // Grade-coloured proj total — the A/B greens are bright for dark mode but
       // too washed out as text on the light theme, so darken them there.
       &--proj {
         color: var(--grade);
+
         :root[data-theme='light'] & {
           color: color-mix(in srgb, var(--grade) 62%, #0b1014);
         }
@@ -330,12 +380,25 @@
       align-items: baseline;
       gap: 3px;
       font-variant-numeric: tabular-nums;
-      small { font-size: 9px; font-weight: 600; color: $text-muted; letter-spacing: 0.03em; }
+
+      small {
+        font-size: 9px;
+        font-weight: 600;
+        color: $text-muted;
+        letter-spacing: 0.03em;
+      }
+
       &.pos {
         color: $accent;
-        :root[data-theme='light'] & { color: $primary; }
+
+        :root[data-theme='light'] & {
+          color: $primary;
+        }
       }
-      &.neg { color: $danger; }
+
+      &.neg {
+        color: $danger;
+      }
     }
   }
 
@@ -402,13 +465,25 @@
       }
 
       // Position breakdown gets the WR blue tick (mirrored in the roster tab).
-      &--pos::before { background: $pos-wr; }
-      &--bench::before { background: $text-muted; }
-      &--bye::before { background: $warning; }
+      &--pos::before {
+        background: $pos-wr;
+      }
+
+      &--bench::before {
+        background: $text-muted;
+      }
+
+      &--bye::before {
+        background: $warning;
+      }
     }
   }
 
-  &-slots { list-style: none; margin: 0; padding: 0; }
+  &-slots {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
 
   &-slot {
     display: grid;
@@ -416,12 +491,13 @@
     align-items: center;
     gap: 12px;
     padding: 8px 10px;
-    border-radius: $radius-sm;
     width: 100%;
     text-align: left;
 
-    & + .prb-slot,
-    li + li & { border-top: 1px solid $border; }
+    &+.prb-slot,
+    li+li & {
+      border-top: 1px solid $border;
+    }
 
     &--link {
       background: none;
@@ -429,7 +505,10 @@
       color: inherit;
       font: inherit;
       cursor: pointer;
-      &:hover { background: $bg-raised; }
+
+      &:hover {
+        background: $bg-raised;
+      }
     }
 
     &__lab {
@@ -447,7 +526,10 @@
       align-items: center;
       gap: 10px;
       min-width: 0;
-      &--empty { color: $text-muted; }
+
+      &--empty {
+        color: $text-muted;
+      }
     }
 
     &__pos {
@@ -489,18 +571,30 @@
       vertical-align: 1px;
     }
 
-    &__team { color: $text-muted; font-size: 11px; flex: 0 0 auto; }
+    &__team {
+      color: $text-muted;
+      font-size: 11px;
+      flex: 0 0 auto;
+    }
 
     &__pp {
       font-size: 13.5px;
       font-weight: 700;
       color: color-mix(in srgb, #{$text} 80%, #{$text-muted});
       white-space: nowrap;
-      small { color: $text-muted; font-size: 10.5px; }
+
+      small {
+        color: $text-muted;
+        font-size: 10.5px;
+      }
     }
   }
 
-  &-byes { list-style: none; margin: 0; padding: 0; }
+  &-byes {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
 
   &-bye {
     display: grid;
@@ -510,10 +604,20 @@
     padding: 7px 10px;
     border-radius: $radius-sm;
 
-    & + .prb-bye { border-top: 1px solid $border; }
-    &.is-stacked { background: rgba(248, 87, 125, 0.06); }
+    &+.prb-bye {
+      border-top: 1px solid $border;
+    }
 
-    &__wk { font-size: 11px; font-weight: 700; color: color-mix(in srgb, #{$text} 80%, #{$text-muted}); }
+    &.is-stacked {
+      background: rgba(248, 87, 125, 0.06);
+    }
+
+    &__wk {
+      font-size: 11px;
+      font-weight: 700;
+      color: color-mix(in srgb, #{$text} 80%, #{$text-muted});
+    }
+
     &__n {
       font-size: 11px;
       font-weight: 800;
@@ -522,9 +626,26 @@
       border-radius: 5px;
       padding: 2px 0;
     }
-    &__players { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; }
-    &__p { display: inline-flex; align-items: center; gap: 5px; color: color-mix(in srgb, #{$text} 80%, #{$text-muted}); }
-    &__d { width: 7px; height: 7px; border-radius: 50%; }
+
+    &__players {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px 12px;
+      font-size: 12px;
+    }
+
+    &__p {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      color: color-mix(in srgb, #{$text} 80%, #{$text-muted});
+    }
+
+    &__d {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+    }
   }
 
   // ── RIGHT: peer-grade feed + docked composer ───────────────────────
@@ -552,8 +673,18 @@
       background: linear-gradient(180deg, rgba(63, 214, 165, 0.06), $bg-raised);
     }
 
-    &__meta { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; }
-    &__author { font-weight: 700; font-size: 13px; }
+    &__meta {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin-bottom: 5px;
+    }
+
+    &__author {
+      font-weight: 700;
+      font-size: 13px;
+    }
+
     &__you {
       font-size: 9px;
       font-weight: 800;
@@ -563,10 +694,32 @@
       border-radius: 4px;
       padding: 1px 5px;
     }
-    &__time { color: $text-muted; font-size: 11px; margin-left: auto; }
-    &__comment { font-size: 13px; line-height: 1.45; color: color-mix(in srgb, #{$text} 82%, #{$text-muted}); }
-    &__actions { display: flex; align-items: center; gap: 6px; margin-top: 9px; }
-    &__net { margin-left: auto; font-size: 11px; color: $text-muted; font-weight: 600; }
+
+    &__time {
+      color: $text-muted;
+      font-size: 11px;
+      margin-left: auto;
+    }
+
+    &__comment {
+      font-size: 13px;
+      line-height: 1.45;
+      color: color-mix(in srgb, #{$text} 82%, #{$text-muted});
+    }
+
+    &__actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 9px;
+    }
+
+    &__net {
+      margin-left: auto;
+      font-size: 11px;
+      color: $text-muted;
+      font-weight: 600;
+    }
   }
 
   &-react {
@@ -584,16 +737,26 @@
     font-weight: 600;
     cursor: pointer;
     font-variant-numeric: tabular-nums;
-    svg { font-size: 14px; }
 
-    &:not(:disabled):hover { background: $bg-hover; color: color-mix(in srgb, #{$text} 80%, #{$text-muted}); }
-    &:disabled { cursor: default; }
+    svg {
+      font-size: 14px;
+    }
+
+    &:not(:disabled):hover {
+      background: $bg-hover;
+      color: color-mix(in srgb, #{$text} 80%, #{$text-muted});
+    }
+
+    &:disabled {
+      cursor: default;
+    }
 
     &.up.is-on {
       color: $accent;
       border-color: color-mix(in srgb, #{$accent} 45%, transparent);
       background: rgba(63, 214, 165, 0.12);
     }
+
     &.down.is-on {
       color: $danger;
       border-color: color-mix(in srgb, #{$danger} 45%, transparent);
@@ -618,7 +781,11 @@
     background: rgba(127, 127, 127, 0.05);
     border: 1px dashed $border;
     border-radius: 8px;
-    svg { font-size: 14px; vertical-align: -0.15em; }
+
+    svg {
+      font-size: 14px;
+      vertical-align: -0.15em;
+    }
   }
 
   &-composer {
@@ -630,10 +797,18 @@
       align-items: center;
       justify-content: space-between;
       gap: 8px;
-      .who { color: $text-muted; font-weight: 600; }
+
+      .who {
+        color: $text-muted;
+        font-weight: 600;
+      }
     }
 
-    &__input { display: flex; gap: 8px; }
+    &__input {
+      display: flex;
+      gap: 8px;
+    }
+
     &__input textarea {
       flex: 1;
       min-width: 0;
@@ -647,10 +822,17 @@
       font: inherit;
       font-size: 12.5px;
       line-height: 1.35;
-      &::placeholder { color: $text-muted; }
+
+      &::placeholder {
+        color: $text-muted;
+      }
     }
 
-    &__error { margin: 6px 0 0; color: $danger; font-size: 11.5px; }
+    &__error {
+      margin: 6px 0 0;
+      color: $danger;
+      font-size: 11.5px;
+    }
   }
 
   &-crown-btn {
@@ -669,8 +851,15 @@
     font-weight: 700;
     cursor: pointer;
     margin-bottom: 10px;
-    svg { font-size: 17px; }
-    &.is-on { background: $keeper; color: #241a00; }
+
+    svg {
+      font-size: 17px;
+    }
+
+    &.is-on {
+      background: $keeper;
+      color: #241a00;
+    }
   }
 
   &-pills {
@@ -693,8 +882,14 @@
     cursor: pointer;
     display: grid;
     place-items: center;
-    &:hover { background: $bg-hover; }
-    &.is-on { color: #05231a; }
+
+    &:hover {
+      background: $bg-hover;
+    }
+
+    &.is-on {
+      color: #05231a;
+    }
   }
 
   &-post-btn {
@@ -709,7 +904,10 @@
     font-weight: 700;
     font-size: 12.5px;
     cursor: pointer;
-    &:hover { background: $primary-hover; }
+
+    &:hover {
+      background: $primary-hover;
+    }
   }
 
   // "League summary" toggle at the top of the standings list — a hint-style
@@ -730,7 +928,10 @@
     font-size: 12.5px;
     font-weight: 750;
     cursor: pointer;
-    svg { font-size: 16px; }
+
+    svg {
+      font-size: 16px;
+    }
 
     :root[data-theme='light'] & {
       color: $primary;
@@ -738,13 +939,19 @@
       background: color-mix(in srgb, #{$primary} 10%, transparent);
     }
 
-    &:hover { background: rgba(63, 214, 165, 0.16); }
+    &:hover {
+      background: rgba(63, 214, 165, 0.16);
+    }
 
     &.is-on {
       background: $accent;
       color: #05231a;
       border-color: transparent;
-      :root[data-theme='light'] & { background: $primary; color: #eafff8; }
+
+      :root[data-theme='light'] & {
+        background: $primary;
+        color: #eafff8;
+      }
     }
   }
 
@@ -761,16 +968,33 @@
     max-width: 500px;
     margin: 0 auto;
 
-    &__head { text-align: center; margin-bottom: 18px; }
+    &__head {
+      text-align: center;
+      margin-bottom: 18px;
+    }
+
     &__eyebrow {
       font-size: 11px;
       font-weight: 800;
       letter-spacing: 0.08em;
       color: $accent;
-      :root[data-theme='light'] & { color: $primary; }
+
+      :root[data-theme='light'] & {
+        color: $primary;
+      }
     }
-    &__name { margin: 4px 0 3px; font-size: 26px; font-weight: 800; letter-spacing: -0.01em; }
-    &__meta { font-size: 12px; color: $text-muted; }
+
+    &__name {
+      margin: 4px 0 3px;
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+    }
+
+    &__meta {
+      font-size: 12px;
+      color: $text-muted;
+    }
 
     &__podium {
       display: grid;
@@ -779,6 +1003,7 @@
       gap: 10px;
       margin-bottom: 20px;
     }
+
     // Borderless podium (echoes the draft-recap PNG): no card chrome, the crown
     // and the larger champion avatar carry the hierarchy. align-items:end on the
     // grid bottom-aligns the columns so the bigger #1 avatar rises into a step.
@@ -790,7 +1015,14 @@
       gap: 4px;
       padding: 0 4px;
     }
-    &__crown { position: absolute; top: -16px; color: $keeper; font-size: 24px !important; }
+
+    &__crown {
+      position: absolute;
+      top: -16px;
+      color: $keeper;
+      font-size: 24px !important;
+    }
+
     &__pod-name {
       font-size: 13px;
       font-weight: 700;
@@ -800,8 +1032,18 @@
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-    &__pod-owner { font-size: 10.5px; color: $text-muted; }
-    &__pod-rank { font-size: 10.5px; font-weight: 700; color: $text-muted; margin-top: 4px; }
+
+    &__pod-owner {
+      font-size: 10.5px;
+      color: $text-muted;
+    }
+
+    &__pod-rank {
+      font-size: 10.5px;
+      font-weight: 700;
+      color: $text-muted;
+      margin-top: 4px;
+    }
 
     &__proj {
       display: grid;
@@ -809,6 +1051,7 @@
       gap: 8px;
       margin-bottom: 12px;
     }
+
     &__projbox {
       background: $bg-raised;
       border: 1px solid $border;
@@ -818,15 +1061,29 @@
       flex-direction: column;
       gap: 3px;
     }
-    &__projlab { font-size: 9px; font-weight: 700; letter-spacing: 0.05em; color: $text-muted; }
+
+    &__projlab {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      color: $text-muted;
+    }
+
     &__projval {
       font-size: 22px;
       font-weight: 800;
       line-height: 1;
       color: var(--c);
-      :root[data-theme='light'] & { color: color-mix(in srgb, var(--c) 62%, #0b1014); }
+
+      :root[data-theme='light'] & {
+        color: color-mix(in srgb, var(--c) 62%, #0b1014);
+      }
     }
-    &__projsub { font-size: 10px; color: $text-muted; }
+
+    &__projsub {
+      font-size: 10px;
+      color: $text-muted;
+    }
 
     &__callout {
       background: $bg-raised;
@@ -835,6 +1092,7 @@
       padding: 12px 14px;
       margin-bottom: 10px;
     }
+
     &__callout-lab {
       display: flex;
       align-items: center;
@@ -843,17 +1101,39 @@
       font-weight: 800;
       letter-spacing: 0.05em;
       margin-bottom: 6px;
-      svg { font-size: 15px; }
+
+      svg {
+        font-size: 15px;
+      }
     }
+
     &__callout--steal &__callout-lab {
       color: $accent;
-      :root[data-theme='light'] & { color: $primary; }
-    }
-    &__callout--reach &__callout-lab { color: #f2793a; }
-    &__callout-main { font-size: 15px; font-weight: 700; }
-    &__callout-sub { font-size: 11.5px; color: $text-muted; margin-top: 2px; }
 
-    &__dist { margin-top: 14px; }
+      :root[data-theme='light'] & {
+        color: $primary;
+      }
+    }
+
+    &__callout--reach &__callout-lab {
+      color: #f2793a;
+    }
+
+    &__callout-main {
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    &__callout-sub {
+      font-size: 11.5px;
+      color: $text-muted;
+      margin-top: 2px;
+    }
+
+    &__dist {
+      margin-top: 14px;
+    }
+
     &__dist-lab {
       font-size: 9.5px;
       font-weight: 800;
@@ -861,9 +1141,15 @@
       color: $text-muted;
       margin-bottom: 12px;
     }
+
     // Projected-points-by-team bars: bottom-aligned columns so each bar's height
     // rides its avatar up — the avatar sits atop the bar. Lowest → highest L→R.
-    &__ppbars { display: flex; align-items: flex-end; gap: 6px; }
+    &__ppbars {
+      display: flex;
+      align-items: flex-end;
+      gap: 6px;
+    }
+
     &__ppcol {
       flex: 1;
       min-width: 0;
@@ -872,7 +1158,13 @@
       align-items: center;
       gap: 6px;
     }
-    &__ppbar { width: 100%; max-width: 30px; border-radius: 5px 5px 3px 3px; min-height: 4px; }
+
+    &__ppbar {
+      width: 100%;
+      max-width: 30px;
+      border-radius: 5px 5px 3px 3px;
+      min-height: 4px;
+    }
   }
 }
 
@@ -883,6 +1175,9 @@
     font-size: 14px;
     line-height: 1.55;
     color: $text;
-    &:last-child { margin-bottom: 0; }
+
+    &:last-child {
+      margin-bottom: 0;
+    }
   }
 }
