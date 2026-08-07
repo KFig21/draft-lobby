@@ -10,7 +10,7 @@
   // 30 / 40 / 30 — a wider centre column, flanked by standings and the feed. The
   // min-widths keep any column from crunching its data on narrower screens (the
   // board scrolls rather than squishing below them).
-  grid-template-columns: minmax(400px, 3fr) minmax(400px, 4fr) minmax(400px, 3fr);
+  grid-template-columns: minmax(400px, 7fr) minmax(400px, 10fr) minmax(400px, 7fr);
   background: $bg;
   $faint: color-mix(in srgb, #{$text} 80%, #{$text-muted});
   $bstrong: color-mix(in srgb, #{$text} 22%, transparent);
@@ -41,6 +41,9 @@
 
   &__header {
     flex: 0 0 auto;
+    // Fixed min-height so the left (Power Rankings) and right (Peer grades)
+    // headers line up uniformly even though only one carries a Share button.
+    min-height: 58px;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -61,6 +64,17 @@
       font-weight: 800;
       letter-spacing: -0.01em;
       white-space: nowrap;
+    }
+  }
+
+  // Leading icon in each panel header — accent on dark, primary on light.
+  &__header-icon {
+    flex: 0 0 auto;
+    font-size: 22px;
+    color: $accent;
+
+    :root[data-theme='light'] & {
+      color: $primary;
     }
   }
 

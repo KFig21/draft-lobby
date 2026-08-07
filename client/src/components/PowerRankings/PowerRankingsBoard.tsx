@@ -11,6 +11,7 @@ import {
   type Position,
 } from '@draft-lobby/shared';
 import BoltIcon from '@mui/icons-material/Bolt';
+import EditNoteIcon from '@mui/icons-material/EditNote';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
 import InfoOutlineIcon from '@mui/icons-material/InfoOutlined';
@@ -311,6 +312,7 @@ export function PowerRankingsBoard({
       <div className="prb__col prb__col--left">
         <div className="prb__header">
           <div className="prb__header-title">
+            <TrendingUpIcon className="prb__header-icon" fontSize="inherit" />
             <h2>Power Rankings</h2>
             <button
               type="button"
@@ -514,6 +516,7 @@ export function PowerRankingsBoard({
           <>
         <div className="prb__header">
           <div className="prb__header-title">
+            <EditNoteIcon className="prb__header-icon" fontSize="inherit" />
             <h2>Peer grades</h2>
             <button
               type="button"
