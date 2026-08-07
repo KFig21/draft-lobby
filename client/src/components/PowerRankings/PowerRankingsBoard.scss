@@ -452,6 +452,72 @@
     }
   }
 
+  // Position analysis: one ranked bar per position — how the team's projected
+  // points at that position stack up against the league. Green = top third of
+  // the league, red = bottom third, neutral in between.
+  &-posrank {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  &-posrank__row {
+    display: grid;
+    grid-template-columns: 36px 1fr 36px;
+    align-items: center;
+    gap: 9px;
+  }
+
+  &-posrank__pos {
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    color: color-mix(in srgb, #{$text} 78%, #{$text-muted});
+  }
+
+  &-posrank__track {
+    height: 8px;
+    border-radius: 6px;
+    background: $bg-overlay;
+    overflow: hidden;
+  }
+
+  &-posrank__fill {
+    display: block;
+    height: 100%;
+    border-radius: 6px;
+
+    &.is-good {
+      background: $accent;
+    }
+    &.is-mid {
+      background: color-mix(in srgb, #{$text-muted} 55%, transparent);
+    }
+    &.is-bad {
+      background: $danger;
+    }
+  }
+
+  &-posrank__rank {
+    font-size: 10.5px;
+    font-weight: 700;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+
+    &.is-good {
+      color: $accent;
+      :root[data-theme='light'] & {
+        color: $primary;
+      }
+    }
+    &.is-mid {
+      color: $text-muted;
+    }
+    &.is-bad {
+      color: $danger;
+    }
+  }
+
   &-sec {
     margin-bottom: 16px;
 

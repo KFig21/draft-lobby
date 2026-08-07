@@ -64,6 +64,21 @@ interface Props {
 
 const posLabel = (p: Position) => (p === 'DEF' ? 'D/ST' : p);
 
+/** 1 → "1st", 2 → "2nd", 11 → "11th" … */
+const ordinal = (n: number) => {
+  const s = ['th', 'st', 'nd', 'rd'];
+  const v = n % 100;
+  return `${n}${s[(v - 20) % 10] ?? s[v] ?? s[0]}`;
+};
+
+/** Rank → tier bucket (top third / bottom third / middle) for colour-coding. */
+const rankTier = (rank: number, count: number): 'good' | 'mid' | 'bad' => {
+  const third = count / 3;
+  if (rank <= third) return 'good';
+  if (rank > count - third) return 'bad';
+  return 'mid';
+};
+
 /** Projected points, Futura-italic with a smaller decimal — matches the
  * grade-export PNG cards (see gradesCanvas drawProj). */
 function ProjPoints({ value, className }: { value: number; className?: string }) {
@@ -457,6 +472,30 @@ export function PowerRankingsBoard({
                   <span className="prb-poschip__n">{posCounts[pos]}</span>
                 </span>
               ))}
+            </div>
+          </section>
+
+          <section className="prb-sec">
+            <h4 className="prb-sec__title">Position analysis</h4>
+            <div className="prb-posrank">
+              {leagueGrade.positions.map((pos) => {
+                const stat = leagueGrade.positionStats.get(selectedId)?.get(pos);
+                const rank = stat?.rank ?? teams.length;
+                const tier = rankTier(rank, teams.length);
+                const fill = ((teams.length - rank + 1) / teams.length) * 100;
+                return (
+                  <div key={pos} className="prb-posrank__row" title={`${(stat?.total ?? 0).toFixed(1)} proj pts`}>
+                    <span className="prb-posrank__pos">{posLabel(pos)}</span>
+                    <span className="prb-posrank__track">
+                      <span
+                        className={`prb-posrank__fill is-${tier}`}
+                        style={{ width: `${fill}%` }}
+                      />
+                    </span>
+                    <span className={`prb-posrank__rank is-${tier}`}>{ordinal(rank)}</span>
+                  </div>
+                );
+              })}
             </div>
           </section>
 

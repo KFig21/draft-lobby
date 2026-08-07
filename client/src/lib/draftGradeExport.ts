@@ -1,9 +1,12 @@
 import {
+  POSITIONS,
   SCORING_PRESETS,
+  draftablePositions,
   matchPreset,
   type Avatar,
   type DraftGrade,
   type LobbySettings,
+  type Position,
 } from '@draft-lobby/shared';
 import { buildLineup, computePowerRankings, type LineupRow } from './powerRankings';
 import { mostCommonGrade } from './draftGrade';
@@ -58,6 +61,13 @@ export interface WeekByeClash {
   teams: { team: TeamRow; avatar: Avatar }[];
 }
 
+/** A team's projected-points strength at one position, ranked league-wide. */
+export interface PositionStat {
+  total: number;
+  /** 1 = the most projected points at this position in the league. */
+  rank: number;
+}
+
 export interface LeagueGrade {
   lobbyName: string;
   season: number;
@@ -81,6 +91,10 @@ export interface LeagueGrade {
   leagueReach: (PickValue & { team: TeamRow }) | null;
   /** Worst-hit team(s) per bye week, ordered by week. */
   byeClashes: WeekByeClash[];
+  /** Positions this league drafts, canonical order. */
+  positions: Position[];
+  /** Per team id → per position → projected-points total + league rank. */
+  positionStats: Map<string, Map<Position, PositionStat>>;
 }
 
 function ownerLabelFor(team: TeamRow, members: MemberRow[]): string {
@@ -224,6 +238,29 @@ export function buildLeagueGrade(opts: {
       return { week, count, teams: tied };
     });
 
+  // Position analysis: each team's projected-points total at every drafted
+  // position, ranked league-wide (1 = most points). Powers the team-pane bars,
+  // the league comparison, and the heat map.
+  const positions = POSITIONS.filter((p) => draftablePositions(settings.rosterComposition).has(p));
+  const posTotals = new Map<string, Map<Position, number>>();
+  for (const t of teams) posTotals.set(t.id, new Map(positions.map((p) => [p, 0])));
+  for (const p of picks) {
+    const pos = playersById.get(p.player_id)?.position as Position | undefined;
+    const proj = playersById.get(p.player_id)?.proj_points ?? 0;
+    const byPos = pos && posTotals.get(p.team_id);
+    if (!pos || !byPos || !byPos.has(pos)) continue;
+    byPos.set(pos, (byPos.get(pos) ?? 0) + proj);
+  }
+  const positionStats = new Map<string, Map<Position, PositionStat>>();
+  for (const t of teams) positionStats.set(t.id, new Map());
+  for (const pos of positions) {
+    const totals = teams.map((t) => ({ id: t.id, total: posTotals.get(t.id)?.get(pos) ?? 0 }));
+    for (const { id, total } of totals) {
+      const rank = 1 + totals.filter((o) => o.total > total).length;
+      positionStats.get(id)?.set(pos, { total, rank });
+    }
+  }
+
   return {
     lobbyName,
     season,
@@ -248,5 +285,7 @@ export function buildLeagueGrade(opts: {
     leagueSteal: withTeam(leagueBest),
     leagueReach: withTeam(leagueReach),
     byeClashes,
+    positions,
+    positionStats,
   };
 }
