@@ -79,6 +79,17 @@ const rankTier = (rank: number, count: number): 'good' | 'mid' | 'bad' => {
   return 'mid';
 };
 
+/** Diverging heat-map tint for a rank (1 = best → count = worst): green → grey
+ * → red, translucent so it reads on either theme. */
+const heatColor = (rank: number, count: number) => {
+  const t = count > 1 ? (rank - 1) / (count - 1) : 0;
+  const base =
+    t <= 0.5
+      ? `color-mix(in srgb, #8a94a6 ${(t * 200).toFixed(0)}%, #3fd6a5)`
+      : `color-mix(in srgb, #f8577d ${((t - 0.5) * 200).toFixed(0)}%, #8a94a6)`;
+  return `color-mix(in srgb, ${base} 45%, transparent)`;
+};
+
 /** Projected points, Futura-italic with a smaller decimal — matches the
  * grade-export PNG cards (see gradesCanvas drawProj). */
 function ProjPoints({ value, className }: { value: number; className?: string }) {
@@ -773,6 +784,34 @@ function LeagueSummaryPane({ model }: { model: LeagueGrade }) {
   // players the hardest-hit team has out that week. Counts are small integers,
   // so height maps directly (+ a floor that fits the number inside the bar).
   const hasByes = model.byeClashes.length > 0;
+
+  // Position strength per team (rank order): per-position projected-points totals
+  // + league rank, plus a whole-roster total for the comparison bars and the
+  // heat-map TOTAL column.
+  const teamCount = model.teams.length;
+  const compTeams = model.teams.map((t) => {
+    const stats = model.positionStats.get(t.team.id);
+    const cells = model.positions.map((pos) => ({
+      pos,
+      total: stats?.get(pos)?.total ?? 0,
+      rank: stats?.get(pos)?.rank ?? teamCount,
+    }));
+    return {
+      team: t.team,
+      avatar: t.avatar,
+      cells,
+      rosterTotal: cells.reduce((s, c) => s + c.total, 0),
+    };
+  });
+  const maxRosterTotal = Math.max(1, ...compTeams.map((t) => t.rosterTotal));
+  const overallRank = new Map(
+    compTeams.map((t) => [
+      t.team.id,
+      1 + compTeams.filter((o) => o.rosterTotal > t.rosterTotal).length,
+    ]),
+  );
+  const hasPositions = model.positions.length > 0 && teamCount > 0;
+
   // Number shrinks top → avg → low, mirroring the downloadable recap (1 / .88 / .78).
   const proj = (label: string, value: number, color: string, scale: number, name?: string) => (
     <div className="prb-sum__projbox">
@@ -897,6 +936,96 @@ function LeagueSummaryPane({ model }: { model: LeagueGrade }) {
           ))}
         </div>
       </div>
+
+      {hasPositions && (
+        <div className="prb-sum__cmp">
+          <div className="prb-sum__dist-lab">LEAGUE COMPARISON</div>
+          <div className="prb-sum__cmp-legend">
+            {model.positions.map((pos) => (
+              <span key={pos} className="prb-sum__cmp-key">
+                <span className="prb-sum__cmp-dot" style={{ background: POSITION_COLORS[pos] }} />
+                {posLabel(pos)}
+              </span>
+            ))}
+          </div>
+          <div className="prb-sum__cmp-rows">
+            {compTeams.map((t) => (
+              <div key={t.team.id} className="prb-sum__cmp-row">
+                <span className="prb-sum__cmp-team" title={t.team.name}>
+                  <Avatar avatar={t.avatar} size={18} />
+                  <span className="prb-sum__cmp-name">{t.team.name}</span>
+                </span>
+                <span className="prb-sum__cmp-bar">
+                  {t.cells.map((c) =>
+                    c.total > 0 ? (
+                      <span
+                        key={c.pos}
+                        className="prb-sum__cmp-seg"
+                        style={{
+                          width: `${(c.total / maxRosterTotal) * 100}%`,
+                          background: POSITION_COLORS[c.pos],
+                        }}
+                        title={`${posLabel(c.pos)} · ${c.total.toFixed(1)}`}
+                      />
+                    ) : null,
+                  )}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {hasPositions && (
+        <div className="prb-sum__heat">
+          <div className="prb-sum__dist-lab">LEAGUE HEAT MAP</div>
+          <div className="prb-sum__heat-scroll">
+            <table className="prb-sum__heat-table">
+              <thead>
+                <tr>
+                  <th className="prb-sum__heat-th prb-sum__heat-th--team">Team</th>
+                  {model.positions.map((pos) => (
+                    <th key={pos} className="prb-sum__heat-th">
+                      {posLabel(pos)}
+                    </th>
+                  ))}
+                  <th className="prb-sum__heat-th">TOTAL</th>
+                </tr>
+              </thead>
+              <tbody>
+                {compTeams.map((t) => {
+                  const totRank = overallRank.get(t.team.id) ?? teamCount;
+                  return (
+                    <tr key={t.team.id}>
+                      <td className="prb-sum__heat-team" title={t.team.name}>
+                        <Avatar avatar={t.avatar} size={16} />
+                        <span className="prb-sum__heat-name">{t.team.name}</span>
+                      </td>
+                      {t.cells.map((c) => (
+                        <td
+                          key={c.pos}
+                          className="prb-sum__heat-cell"
+                          style={{ background: heatColor(c.rank, teamCount) }}
+                        >
+                          <b>{c.rank}</b>
+                          <small>{c.total.toFixed(1)}</small>
+                        </td>
+                      ))}
+                      <td
+                        className="prb-sum__heat-cell prb-sum__heat-cell--total"
+                        style={{ background: heatColor(totRank, teamCount) }}
+                      >
+                        <b>{totRank}</b>
+                        <small>{t.rosterTotal.toFixed(0)}</small>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
