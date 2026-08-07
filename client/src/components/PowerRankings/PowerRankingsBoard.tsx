@@ -677,20 +677,17 @@ export function PowerRankingsBoard({
   );
 }
 
-// A–F grade-distribution bar colours (match the export PNG cover card).
-const DIST_COLORS: Record<string, string> = {
-  A: '#3fd6a5',
-  B: '#8bd23f',
-  C: '#f6a642',
-  D: '#f2793a',
-  F: '#f8577d',
-};
-
 /** DOM version of the grade-export "league cover" card — podium (2·1·3),
- * top/avg/low projections, steal + biggest reach, and the A–F distribution. */
+ * top/avg/low projections, steal + biggest reach, and a projected-points-by-team
+ * bar chart (lowest → highest, each bar topped by the team's avatar). */
 function LeagueSummaryPane({ model }: { model: LeagueGrade }) {
   const podium = [model.teams[1], model.teams[0], model.teams[2]]; // 2 · 1 · 3
-  const maxCount = Math.max(1, ...model.distribution.map((d) => d.count));
+  // teamCards come in rank order (highest projection first); reverse for the
+  // lowest→highest bar chart. Scale bars across the min→max spread (not from 0)
+  // so the tight point range still reads as distinct heights.
+  const projTeams = [...model.teams].reverse();
+  const projMin = Math.min(...projTeams.map((t) => t.starterPoints));
+  const projSpan = Math.max(1, Math.max(...projTeams.map((t) => t.starterPoints)) - projMin);
   const proj = (label: string, value: number, color: string, name?: string) => (
     <div className="prb-sum__projbox">
       <span className="prb-sum__projlab">{label}</span>
@@ -762,19 +759,18 @@ function LeagueSummaryPane({ model }: { model: LeagueGrade }) {
       )}
 
       <div className="prb-sum__dist">
-        <div className="prb-sum__dist-lab">GRADE DISTRIBUTION</div>
-        <div className="prb-sum__bars">
-          {model.distribution.map((d) => (
-            <div key={d.letter} className="prb-sum__bar-col">
-              <span className="prb-sum__bar-count">{d.count}</span>
+        <div className="prb-sum__dist-lab">PROJECTED POINTS BY TEAM</div>
+        <div className="prb-sum__ppbars">
+          {projTeams.map((t) => (
+            <div key={t.team.id} className="prb-sum__ppcol">
+              <Avatar avatar={t.avatar} size={24} />
               <span
-                className="prb-sum__bar"
+                className="prb-sum__ppbar"
                 style={{
-                  height: `${d.count === 0 ? 4 : Math.round((d.count / maxCount) * 64)}px`,
-                  background: DIST_COLORS[d.letter],
+                  height: `${14 + Math.round(((t.starterPoints - projMin) / projSpan) * 78)}px`,
+                  background: DRAFT_GRADE_COLORS[t.grade],
                 }}
               />
-              <span className="prb-sum__bar-letter">{d.letter}</span>
             </div>
           ))}
         </div>

@@ -769,6 +769,9 @@
 
   // ── League summary pane (DOM echo of the export cover card) ────────
   &-sum {
+    max-width: 500px;
+    margin: 0 auto;
+
     &__head { text-align: center; margin-bottom: 18px; }
     &__eyebrow {
       font-size: 11px;
@@ -869,11 +872,18 @@
       color: $text-muted;
       margin-bottom: 12px;
     }
-    &__bars { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; align-items: end; }
-    &__bar-col { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-    &__bar-count { font-size: 11px; font-weight: 700; }
-    &__bar { width: 100%; border-radius: 4px; min-height: 4px; }
-    &__bar-letter { font-size: 11px; font-weight: 700; color: $text-muted; }
+    // Projected-points-by-team bars: bottom-aligned columns so each bar's height
+    // rides its avatar up — the avatar sits atop the bar. Lowest → highest L→R.
+    &__ppbars { display: flex; align-items: flex-end; gap: 6px; }
+    &__ppcol {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+    &__ppbar { width: 100%; max-width: 30px; border-radius: 5px 5px 3px 3px; min-height: 4px; }
   }
 }
 
