@@ -1209,8 +1209,9 @@
       min-height: 4px;
     }
 
-    // Worst bye weeks: one warning-coloured bar per team (most byes first), the
-    // count above each avatar and the clashing week beneath the bar.
+    // Worst bye week: one warning bar per bye week (in week order), sized by the
+    // hardest-hit team's player count (shown inside the bar), topped by that
+    // team's avatar — overlapping vertically when teams tie.
     &__byes {
       margin-top: 14px;
     }
@@ -1230,19 +1231,41 @@
       gap: 5px;
     }
 
-    &__byen {
-      font-size: 12px;
-      font-weight: 800;
-      color: $warning;
-      font-variant-numeric: tabular-nums;
+    &__byeavs {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    &__byeav {
+      display: inline-flex;
+      border-radius: 50%;
+      box-shadow: 0 0 0 2px $bg;
+
+      // Overlap the stack when multiple teams tie for a week.
+      & + & {
+        margin-top: -8px;
+      }
     }
 
     &__byebar {
       width: 100%;
       max-width: 30px;
       border-radius: 5px 5px 3px 3px;
-      min-height: 4px;
+      min-height: 22px;
       background: $warning;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding-bottom: 2px;
+    }
+
+    &__byen {
+      font-size: 11px;
+      font-weight: 800;
+      line-height: 1;
+      color: #0b0f11;
+      font-variant-numeric: tabular-nums;
     }
 
     &__byewk {

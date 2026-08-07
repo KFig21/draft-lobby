@@ -48,15 +48,14 @@ export interface TeamGradeCard {
   biggestReach: PickValue | null;
 }
 
-/** A team's single worst bye week — the week that sidelines the most of its
- * players — used for the league-summary "worst bye weeks" chart. */
-export interface TeamByeClash {
-  team: TeamRow;
-  avatar: Avatar;
-  /** The bye week that catches the most of this team's players (null if none). */
-  worstWeek: number | null;
-  /** How many players share that worst week. */
+/** The worst-hit team(s) for a single bye week — used for the league-summary
+ * "worst bye weeks" chart. Ties keep every team sharing the peak. */
+export interface WeekByeClash {
+  week: number;
+  /** Most players any single team has on bye this week. */
   count: number;
+  /** The team(s) tied for that most-on-bye count this week. */
+  teams: { team: TeamRow; avatar: Avatar }[];
 }
 
 export interface LeagueGrade {
@@ -80,8 +79,8 @@ export interface LeagueGrade {
   distribution: { letter: string; count: number }[];
   leagueSteal: (PickValue & { team: TeamRow }) | null;
   leagueReach: (PickValue & { team: TeamRow }) | null;
-  /** Per-team worst single-week bye clash, most players-on-bye first. */
-  byeClashes: TeamByeClash[];
+  /** Worst-hit team(s) per bye week, ordered by week. */
+  byeClashes: WeekByeClash[];
 }
 
 function ownerLabelFor(team: TeamRow, members: MemberRow[]): string {
@@ -192,28 +191,38 @@ export function buildLeagueGrade(opts: {
     count: teamCards.filter((t) => t.grade[0] === letter).length,
   }));
 
-  // Worst bye weeks: per team, the single week that sidelines the most of its
-  // players (whole roster). Sorted most-byes-first for the summary bar chart.
-  const byeClashes: TeamByeClash[] = teams
-    .map((team) => {
-      const weekCounts = new Map<number, number>();
-      for (const p of picks) {
-        if (p.team_id !== team.id) continue;
-        const bw = playersById.get(p.player_id)?.bye_week;
-        if (bw == null) continue;
-        weekCounts.set(bw, (weekCounts.get(bw) ?? 0) + 1);
-      }
-      let worstWeek: number | null = null;
+  // Worst bye week: for each bye week, the team(s) with the most players
+  // sidelined that week (ties keep every tied team). Ordered by week.
+  const teamWeekCounts = new Map<string, Map<number, number>>();
+  const allByeWeeks = new Set<number>();
+  for (const p of picks) {
+    const bw = playersById.get(p.player_id)?.bye_week;
+    if (bw == null) continue;
+    allByeWeeks.add(bw);
+    let byWeek = teamWeekCounts.get(p.team_id);
+    if (!byWeek) {
+      byWeek = new Map();
+      teamWeekCounts.set(p.team_id, byWeek);
+    }
+    byWeek.set(bw, (byWeek.get(bw) ?? 0) + 1);
+  }
+  const byeClashes: WeekByeClash[] = [...allByeWeeks]
+    .sort((a, b) => a - b)
+    .map((week) => {
       let count = 0;
-      for (const [week, n] of weekCounts) {
-        if (n > count) {
-          count = n;
-          worstWeek = week;
+      let tied: { team: TeamRow; avatar: Avatar }[] = [];
+      for (const team of teams) {
+        const c = teamWeekCounts.get(team.id)?.get(week) ?? 0;
+        if (c === 0) continue;
+        if (c > count) {
+          count = c;
+          tied = [{ team, avatar: avatarForTeam(team, members) }];
+        } else if (c === count) {
+          tied.push({ team, avatar: avatarForTeam(team, members) });
         }
       }
-      return { team, avatar: avatarForTeam(team, members), worstWeek, count };
-    })
-    .sort((a, b) => b.count - a.count);
+      return { week, count, teams: tied };
+    });
 
   return {
     lobbyName,

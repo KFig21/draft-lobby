@@ -714,13 +714,10 @@ function LeagueSummaryPane({ model }: { model: LeagueGrade }) {
   const projTeams = [...model.teams].reverse();
   const projMin = Math.min(...projTeams.map((t) => t.starterPoints));
   const projSpan = Math.max(1, Math.max(...projTeams.map((t) => t.starterPoints)) - projMin);
-  // Worst bye weeks: bars run in week order (left → right); the bar height still
-  // shows who's hit hardest. Scale from zero since counts are small integers.
-  const maxBye = Math.max(1, ...model.byeClashes.map((b) => b.count));
-  const hasByes = model.byeClashes.some((b) => b.count > 0);
-  const byesByWeek = [...model.byeClashes].sort(
-    (a, b) => (a.worstWeek ?? Infinity) - (b.worstWeek ?? Infinity),
-  );
+  // Worst bye week: one bar per bye week (in week order) sized by how many
+  // players the hardest-hit team has out that week. Counts are small integers,
+  // so height maps directly (+ a floor that fits the number inside the bar).
+  const hasByes = model.byeClashes.length > 0;
   const proj = (label: string, value: number, color: string, name?: string) => (
     <div className="prb-sum__projbox">
       <span className="prb-sum__projlab">{label}</span>
@@ -799,15 +796,23 @@ function LeagueSummaryPane({ model }: { model: LeagueGrade }) {
         <div className="prb-sum__byes">
           <div className="prb-sum__dist-lab prb-sum__dist-lab--bye">WORST BYE WEEKS</div>
           <div className="prb-sum__byebars">
-            {byesByWeek.map((b) => (
-              <div key={b.team.id} className="prb-sum__byecol" title={b.team.name}>
-                <span className="prb-sum__byen">{b.count}</span>
-                <Avatar avatar={b.avatar} size={24} />
-                <span
-                  className="prb-sum__byebar"
-                  style={{ height: `${Math.max(6, Math.round((b.count / maxBye) * 60))}px` }}
-                />
-                <span className="prb-sum__byewk">{b.worstWeek ? `Wk ${b.worstWeek}` : '—'}</span>
+            {model.byeClashes.map((b) => (
+              <div
+                key={b.week}
+                className="prb-sum__byecol"
+                title={b.teams.map((t) => t.team.name).join(', ')}
+              >
+                <div className="prb-sum__byeavs">
+                  {b.teams.map((t) => (
+                    <span key={t.team.id} className="prb-sum__byeav">
+                      <Avatar avatar={t.avatar} size={22} />
+                    </span>
+                  ))}
+                </div>
+                <span className="prb-sum__byebar" style={{ height: `${10 + b.count * 15}px` }}>
+                  <span className="prb-sum__byen">{b.count}</span>
+                </span>
+                <span className="prb-sum__byewk">Wk {b.week}</span>
               </div>
             ))}
           </div>
