@@ -460,6 +460,13 @@ export function RankingsPage() {
           onClose={() => setDetailPlayer(null)}
           onFavorite={() => toggleFavorite(detailPlayer.id)}
           favorited={favoriteIds?.has(detailPlayer.id) ?? false}
+          weekStats={{
+            // The pool is this-season-scoped (usePlayers defaults to the current
+            // year), so "last year"'s weekly actuals are that minus one.
+            season: new Date().getFullYear() - 1,
+            scoring: rules,
+            allowScoringToggle: true,
+          }}
         />
       )}
 

@@ -27,6 +27,18 @@ function rankColor(rank: number | null, count: number): string {
     : `color-mix(in srgb, #f8577d ${((t - 0.5) * 200).toFixed(0)}%, #f6a642)`;
 }
 
+/** A one-decimal number with its fractional part rendered smaller — the same
+ * treatment as the Power Rankings projected-points figures (.prb-proj). */
+function DecimalNum({ value }: { value: number }) {
+  const [whole, frac] = value.toFixed(1).split('.');
+  return (
+    <>
+      {whole}
+      <span className="pws__dec">.{frac}</span>
+    </>
+  );
+}
+
 /** Points for a week: the raw line scored under `rules`, else Sleeper's PPR
  * total (K rows and any player missing a mapped raw line). */
 function pointsForRow(row: PlayerWeekStatRow, rules: ScoringRules, position: string): number {
@@ -72,6 +84,9 @@ interface Props {
   season: number;
   /** The lobby's scoring rules — the default "League" lens. */
   scoring: ScoringRules;
+  /** Show the PPR/Half/Std scoring toggle. Off in a draft (league scoring only),
+   * on for the Rankings page. */
+  allowScoringToggle?: boolean;
   onClose: () => void;
 }
 
@@ -81,7 +96,13 @@ interface Props {
  * player's positional rank that week (colour-coded on the bar chart), and a
  * draggable week-range that reports their rank + PPG over that stretch.
  */
-export function PlayerWeekStatsModal({ player, season, scoring, onClose }: Props) {
+export function PlayerWeekStatsModal({
+  player,
+  season,
+  scoring,
+  allowScoringToggle = false,
+  onClose,
+}: Props) {
   const { closing, requestClose } = useModalClose(onClose);
   const { rows, loading, error } = usePlayerWeekStats(player.position, season, true);
   const pos = player.position as Position;
@@ -89,7 +110,10 @@ export function PlayerWeekStatsModal({ player, season, scoring, onClose }: Props
 
   const leaguePreset = matchPreset(scoring);
   const [scoreKey, setScoreKey] = useState<ScoreKey>('league');
-  const rules = scoreKey === 'league' ? scoring : SCORING_PRESETS[scoreKey].rules;
+  // In a draft the only meaningful lens is the league's own scoring; the toggle
+  // is Rankings-only, so `rules` collapses to the league rules when it's hidden.
+  const rules =
+    !allowScoringToggle || scoreKey === 'league' ? scoring : SCORING_PRESETS[scoreKey].rules;
 
   const [range, setRange] = useState<[number, number]>([1, WEEKS]);
 
@@ -159,10 +183,24 @@ export function PlayerWeekStatsModal({ player, season, scoring, onClose }: Props
     return { tot, gp, ppg, rank: gp ? better + 1 : null, of: ranked };
   }, [model, subjectPts, range]);
 
-  // ── Drag-to-select the week range across the bar chart ──────────────
-  const chartRef = useRef<HTMLDivElement>(null);
+  // ── Drag-to-select the week range (shared by the chart and the table) ──
   const dragging = useRef(false);
   const anchor = useRef(1);
+  const beginDrag = (w: number) => {
+    dragging.current = true;
+    anchor.current = w;
+    setRange([w, w]);
+  };
+  const extendDrag = (w: number | null) => {
+    if (!dragging.current || w == null) return;
+    setRange([Math.min(anchor.current, w), Math.max(anchor.current, w)]);
+  };
+  const endDrag = () => {
+    dragging.current = false;
+  };
+
+  // Chart: week from the pointer's x within the bar strip.
+  const chartRef = useRef<HTMLDivElement>(null);
   const weekFromX = (clientX: number): number | null => {
     const el = chartRef.current;
     if (!el) return null;
@@ -170,26 +208,19 @@ export function PlayerWeekStatsModal({ player, season, scoring, onClose }: Props
     const rel = (clientX - rect.left) / rect.width;
     return Math.min(WEEKS, Math.max(1, Math.floor(rel * WEEKS) + 1));
   };
-  const onDown = (e: PointerEvent<HTMLDivElement>) => {
+  const onChartDown = (e: PointerEvent<HTMLDivElement>) => {
     const w = weekFromX(e.clientX);
     if (w == null) return;
-    dragging.current = true;
-    anchor.current = w;
-    setRange([w, w]);
+    beginDrag(w);
     try {
       chartRef.current?.setPointerCapture(e.pointerId);
     } catch {
       /* capture is best-effort */
     }
   };
-  const onMove = (e: PointerEvent<HTMLDivElement>) => {
-    if (!dragging.current) return;
-    const w = weekFromX(e.clientX);
-    if (w == null) return;
-    setRange([Math.min(anchor.current, w), Math.max(anchor.current, w)]);
-  };
-  const onUp = (e: PointerEvent<HTMLDivElement>) => {
-    dragging.current = false;
+  const onChartMove = (e: PointerEvent<HTMLDivElement>) => extendDrag(weekFromX(e.clientX));
+  const onChartUp = (e: PointerEvent<HTMLDivElement>) => {
+    endDrag();
     try {
       chartRef.current?.releasePointerCapture(e.pointerId);
     } catch {
@@ -197,9 +228,53 @@ export function PlayerWeekStatsModal({ player, season, scoring, onClose }: Props
     }
   };
 
+  // Table: week from the row under the pointer. Mouse/pen only — on touch we
+  // leave the gesture to the modal's own scroll (the table can overflow the
+  // viewport and needs to be scrollable), and the chart already covers touch
+  // range-selection.
+  const tblRef = useRef<HTMLTableElement>(null);
+  const weekFromPoint = (clientX: number, clientY: number): number | null => {
+    const tr = document
+      .elementFromPoint(clientX, clientY)
+      ?.closest('tr[data-week]') as HTMLElement | null;
+    if (!tr) return null;
+    const w = Number(tr.dataset.week);
+    return Number.isFinite(w) ? w : null;
+  };
+  const onTblDown = (e: PointerEvent<HTMLTableElement>) => {
+    if (e.pointerType === 'touch') return;
+    const w = weekFromPoint(e.clientX, e.clientY);
+    if (w == null) return;
+    beginDrag(w);
+    try {
+      tblRef.current?.setPointerCapture(e.pointerId);
+    } catch {
+      /* capture is best-effort */
+    }
+  };
+  const onTblMove = (e: PointerEvent<HTMLTableElement>) => {
+    if (!dragging.current) return;
+    extendDrag(weekFromPoint(e.clientX, e.clientY));
+  };
+  const onTblUp = (e: PointerEvent<HTMLTableElement>) => {
+    endDrag();
+    try {
+      tblRef.current?.releasePointerCapture(e.pointerId);
+    } catch {
+      /* noop */
+    }
+  };
+
   const [from, to] = range;
   const fullSeason = from === 1 && to === WEEKS;
-  const rangeLabel = fullSeason ? 'Full season' : `Weeks ${from}–${to}`;
+  // Only surface a selection when it's a genuine sub-range — highlighting all 18
+  // weeks (the default) is just noise.
+  const selecting = !fullSeason;
+  const rangeLabel = fullSeason
+    ? 'Full season'
+    : from === to
+      ? `Week ${from}`
+      : `Weeks ${from}–${to}`;
   const cols = STAT_COLS[player.position] ?? [];
   const posLabel = player.position === 'DEF' ? 'D/ST' : player.position;
 
@@ -244,72 +319,84 @@ export function PlayerWeekStatsModal({ player, season, scoring, onClose }: Props
             </p>
           ) : (
             <>
-              <div className="pws__controls">
-                <div className="pws__seg" role="tablist" aria-label="Scoring">
-                  <button
-                    className={scoreKey === 'league' ? 'on' : ''}
-                    onClick={() => setScoreKey('league')}
-                  >
-                    League
-                    {leaguePreset && (
-                      <span className="pws__seg-sub">{SCORING_PRESETS[leaguePreset].label.split(' ')[0]}</span>
-                    )}
-                  </button>
-                  <button className={scoreKey === 'PPR' ? 'on' : ''} onClick={() => setScoreKey('PPR')}>PPR</button>
-                  <button className={scoreKey === 'HALF_PPR' ? 'on' : ''} onClick={() => setScoreKey('HALF_PPR')}>Half</button>
-                  <button className={scoreKey === 'STANDARD' ? 'on' : ''} onClick={() => setScoreKey('STANDARD')}>Std</button>
+              {allowScoringToggle && (
+                <div className="pws__controls">
+                  <div className="pws__seg" role="tablist" aria-label="Scoring">
+                    <button
+                      className={scoreKey === 'league' ? 'on' : ''}
+                      onClick={() => setScoreKey('league')}
+                    >
+                      League
+                      {leaguePreset && (
+                        <span className="pws__seg-sub">{SCORING_PRESETS[leaguePreset].label.split(' ')[0]}</span>
+                      )}
+                    </button>
+                    <button className={scoreKey === 'PPR' ? 'on' : ''} onClick={() => setScoreKey('PPR')}>PPR</button>
+                    <button className={scoreKey === 'HALF_PPR' ? 'on' : ''} onClick={() => setScoreKey('HALF_PPR')}>Half</button>
+                    <button className={scoreKey === 'STANDARD' ? 'on' : ''} onClick={() => setScoreKey('STANDARD')}>Std</button>
+                  </div>
                 </div>
-                {!fullSeason && (
-                  <button className="pws__reset" onClick={() => setRange([1, WEEKS])}>
-                    Full season
-                  </button>
-                )}
-              </div>
+              )}
 
               <div className="pws__summary">
-                <div className="pws__rank">
-                  <div className="pws__rank-v">
-                    {posLabel}
-                    <span>{rangeStats.rank ?? '—'}</span>
-                  </div>
-                  <div className="pws__rank-lab">{rangeLabel}</div>
+                <div className="pws__summary-head">
+                  <b>{player.name}</b> ranked <b>{posLabel}{rangeStats.rank ?? '—'}</b> of{' '}
+                  {rangeStats.of} over {fullSeason ? 'the full season' : rangeLabel.toLowerCase()} (
+                  {rangeStats.gp} game{rangeStats.gp === 1 ? '' : 's'}).
                 </div>
-                <div className="pws__summary-body">
-                  <div className="pws__summary-head">
-                    <b>{player.name}</b> ranked <b>{posLabel}{rangeStats.rank ?? '—'}</b> of{' '}
-                    {rangeStats.of} over {rangeLabel.toLowerCase()}.
+                <div className="pws__metrics">
+                  <div className="pws__metric">
+                    {/* Rank is coloured by performance (same green→red scale as
+                        the chart/table), not the position hue — RB40 shouldn't
+                        read as "good" green. */}
+                    <div
+                      className="v"
+                      style={{ color: rankColor(rangeStats.rank, rangeStats.of) }}
+                    >
+                      {posLabel}
+                      {rangeStats.rank ?? '—'}
+                    </div>
+                    <div className="k">Pos rank</div>
                   </div>
-                  <div className="pws__metrics">
-                    <div className="pws__metric">
-                      <div className="v">{rangeStats.ppg.toFixed(1)}</div>
-                      <div className="k">PPG</div>
+                  <div className="pws__metric">
+                    <div className="v">
+                      <DecimalNum value={rangeStats.ppg} />
                     </div>
-                    <div className="pws__metric">
-                      <div className="v">{rangeStats.tot.toFixed(1)}</div>
-                      <div className="k">Total</div>
+                    <div className="k">PPG</div>
+                  </div>
+                  <div className="pws__metric">
+                    <div className="v">
+                      <DecimalNum value={rangeStats.tot} />
                     </div>
-                    <div className="pws__metric">
-                      <div className="v">{rangeStats.gp}</div>
-                      <div className="k">Games</div>
-                    </div>
+                    <div className="k">Total</div>
                   </div>
                 </div>
               </div>
 
               <div className="pws__chart-lab">
-                <span className="t">Fantasy points by week</span>
+                <span className="pws__chart-lab-l">
+                  <span className="t">Fantasy points by week</span>
+                  {!fullSeason && (
+                    <button
+                      className="pws__reset pws__reset--sm"
+                      onClick={() => setRange([1, WEEKS])}
+                    >
+                      Full season
+                    </button>
+                  )}
+                </span>
                 <span className="hint">drag across the bars to pick a range</span>
               </div>
               <div
                 className="pws__chart"
                 ref={chartRef}
-                onPointerDown={onDown}
-                onPointerMove={onMove}
-                onPointerUp={onUp}
+                onPointerDown={onChartDown}
+                onPointerMove={onChartMove}
+                onPointerUp={onChartUp}
               >
                 {Array.from({ length: WEEKS }, (_, i) => i + 1).map((w) => {
                   const pts = subjectPts?.get(w);
-                  const inRange = w >= from && w <= to;
+                  const inRange = selecting && w >= from && w <= to;
                   const wr = weekRank(w);
                   const isBye = pts == null;
                   const h = isBye ? 6 : Math.max(5, (pts / maxPts) * 100);
@@ -330,11 +417,16 @@ export function PlayerWeekStatsModal({ player, season, scoring, onClose }: Props
               </div>
 
               <div className="pws__tbl-wrap">
-                <table className="pws__tbl">
+                <table
+                  className="pws__tbl"
+                  ref={tblRef}
+                  onPointerDown={onTblDown}
+                  onPointerMove={onTblMove}
+                  onPointerUp={onTblUp}
+                >
                   <thead>
                     <tr>
                       <th>Wk</th>
-                      <th>Opp</th>
                       {cols.map((c) => (
                         <th key={c.h}>{c.h}</th>
                       ))}
@@ -346,14 +438,17 @@ export function PlayerWeekStatsModal({ player, season, scoring, onClose }: Props
                     {Array.from({ length: WEEKS }, (_, i) => i + 1).map((w) => {
                       const row = model.subjectRows.get(w);
                       const pts = subjectPts?.get(w);
-                      const inRange = w >= from && w <= to;
+                      const inRange = selecting && w >= from && w <= to;
                       const isBye = pts == null;
                       const wr = weekRank(w);
                       const s = row?.stats ?? {};
                       return (
-                        <tr key={w} className={`${inRange ? 'inrange' : ''}${isBye ? ' bye' : ''}`}>
+                        <tr
+                          key={w}
+                          data-week={w}
+                          className={`${inRange ? 'inrange' : ''}${isBye ? ' bye' : ''}`}
+                        >
                           <td className="wk">{w}</td>
-                          <td>{row?.opp ?? '—'}</td>
                           {isBye ? (
                             <td colSpan={cols.length} className="byecell">
                               {w === player.bye_week ? 'BYE' : 'DNP'}

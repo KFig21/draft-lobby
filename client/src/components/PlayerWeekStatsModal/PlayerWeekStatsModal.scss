@@ -168,14 +168,22 @@
       color: $text;
       background: $bg-hover;
     }
+
+    // Compact variant — sits inline next to the chart header.
+    &--sm {
+      padding: 3px 9px;
+      font-size: 10.5px;
+      font-weight: 700;
+      border-radius: 6px;
+    }
   }
 
   // ── Range summary ───────────────────────────────────────────────
+  // Sentence on top, then the three stat categories (rank · PPG · total) below.
   &__summary {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    gap: $space * 2;
-    align-items: center;
+    display: flex;
+    flex-direction: column;
+    gap: $space * 1.75;
     background: linear-gradient(180deg, color-mix(in srgb, var(--pos) 9%, transparent), $bg-raised);
     border: 1px solid color-mix(in srgb, var(--pos) 32%, $border);
     border-radius: $radius;
@@ -183,43 +191,10 @@
     margin-bottom: $space * 2;
   }
 
-  &__rank {
-    text-align: center;
-    padding-right: $space * 2;
-    border-right: 1px solid $border;
-  }
-
-  &__rank-v {
-    font-size: 13px;
-    font-weight: 800;
-    color: var(--pos);
-    line-height: 1;
-    display: flex;
-    align-items: baseline;
-    justify-content: center;
-    gap: 2px;
-
-    span {
-      font-size: 34px;
-      font-weight: 850;
-      font-variant-numeric: tabular-nums;
-    }
-  }
-
-  &__rank-lab {
-    font-size: 9.5px;
-    font-weight: 800;
-    letter-spacing: 0.06em;
-    color: $text-muted;
-    text-transform: uppercase;
-    margin-top: 5px;
-  }
-
   &__summary-head {
     font-size: 13px;
     color: $text-muted;
     line-height: 1.5;
-    margin-bottom: $space;
 
     b {
       color: $text;
@@ -228,17 +203,34 @@
   }
 
   &__metrics {
-    display: flex;
-    flex-wrap: wrap;
-    gap: $space * 2.5;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    align-items: center;
   }
 
   &__metric {
+    text-align: center;
+    padding: 0 $space;
+
+    // Evenly-spaced categories divided by a thin accent-tinted rule.
+    &+& {
+      border-left: 1px solid color-mix(in srgb, var(--pos) 25%, $border);
+    }
+
+    // Futura-italic stat numbers — the same treatment as the Power Rankings
+    // projected-points figures (.prb-proj). Applies to rank / PPG / total.
     .v {
-      font-size: 21px;
-      font-weight: 850;
+      font-family: Futura, 'Futura PT', 'Century Gothic', 'Trebuchet MS', sans-serif;
+      font-style: italic;
+      font-size: 26px;
+      font-weight: 600;
       line-height: 1;
       font-variant-numeric: tabular-nums;
+    }
+
+    // Smaller fractional part on the metric values (matches .prb-proj__dec).
+    .pws__dec {
+      font-size: 0.77em;
     }
 
     .k {
@@ -254,9 +246,11 @@
   // ── Chart ───────────────────────────────────────────────────────
   &__chart-lab {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     justify-content: space-between;
+    gap: $space;
     margin-bottom: $space * 1.25;
+    min-height: 20px;
 
     .t {
       font-size: 11.5px;
@@ -279,15 +273,31 @@
     .hint {
       font-size: 11px;
       color: $text-muted;
+
+      // Drag works on touch too, but the instruction is desktop-oriented and
+      // eats scarce header width on a phone.
+      @media (max-width: $bp-md) {
+        display: none;
+      }
     }
+  }
+
+  // Title + inline "Full season" reset, grouped on the left of the chart header.
+  &__chart-lab-l {
+    display: inline-flex;
+    align-items: center;
+    gap: $space * 1.25;
+    min-width: 0;
   }
 
   &__chart {
     display: flex;
     align-items: flex-end;
     gap: 4px;
-    height: 140px;
-    padding: 0 2px 22px;
+    height: 190px;
+    // Top pad reserves room for the point-total label above the tallest bar;
+    // bottom pad holds the week-number row.
+    padding: 18px 2px 24px;
     border-bottom: 1px solid $border;
     margin-bottom: $space * 2.5;
     position: relative;
@@ -304,17 +314,10 @@
     flex-direction: column;
     justify-content: flex-end;
     align-items: center;
-
-    &.inrange::before {
-      content: '';
-      position: absolute;
-      inset: -2px -1px -20px;
-      background: color-mix(in srgb, var(--pos) 12%, transparent);
-      border-radius: 5px;
-    }
   }
 
   &__bar {
+    flex-shrink: 0;
     width: 66%;
     max-width: 20px;
     border-radius: 4px 4px 0 0;
@@ -329,33 +332,40 @@
 
   &__col-w {
     position: absolute;
-    bottom: -18px;
+    bottom: -20px;
     font-size: 8.5px;
     font-weight: 700;
     color: $text-muted;
     font-variant-numeric: tabular-nums;
     z-index: 1;
+    padding: 1px 4px;
+    border-radius: 4px;
   }
 
+  // Selecting a sub-range is signalled solely by the week numbers lighting up —
+  // no bars dimmed, no boxes drawn (the full-season default stays clean).
   &__col.inrange &__col-w {
-    color: $text;
-  }
-
-  &__col-v {
-    position: absolute;
-    top: -14px;
-    font-size: 8.5px;
+    color: var(--pos);
     font-weight: 800;
-    color: $text;
-    opacity: 0;
-    transition: opacity 0.12s ease;
-    font-variant-numeric: tabular-nums;
-    z-index: 2;
+    background: color-mix(in srgb, var(--pos) 20%, transparent);
   }
 
-  &__col:hover &__col-v,
+  // Point total, in-flow just above the bar (rises with it). Muted by default so
+  // it reads as a quiet annotation; lights up in the position accent when its
+  // week is in the selected range.
+  &__col-v {
+    flex-shrink: 0;
+    margin-bottom: 3px;
+    font-size: 10px;
+    font-weight: 500;
+    line-height: 1;
+    color: color-mix(in srgb, var(--text-muted) 50%, transparent);
+    font-variant-numeric: tabular-nums;
+  }
+
   &__col.inrange &__col-v {
-    opacity: 1;
+    color: var(--pos);
+    font-weight: 900;
   }
 
   // ── Table ───────────────────────────────────────────────────────
@@ -369,7 +379,14 @@
     width: 100%;
     border-collapse: collapse;
     font-variant-numeric: tabular-nums;
-    min-width: 420px;
+    min-width: 360px;
+    // Click-drag across rows selects a week range (mouse/pen; touch keeps
+    // scrolling). No text selection getting in the way of the drag.
+    user-select: none;
+
+    tbody tr {
+      cursor: crosshair;
+    }
 
     th {
       font-size: 9px;
@@ -384,8 +401,7 @@
       position: sticky;
       top: 0;
 
-      &:first-child,
-      &:nth-child(2) {
+      &:first-child {
         text-align: left;
       }
     }
@@ -396,8 +412,7 @@
       text-align: right;
       border-bottom: 1px solid $border;
 
-      &:first-child,
-      &:nth-child(2) {
+      &:first-child {
         text-align: left;
       }
     }
@@ -408,6 +423,10 @@
 
     tbody tr.inrange {
       background: color-mix(in srgb, var(--pos) 9%, transparent);
+    }
+
+    tbody tr.inrange td:first-child {
+      box-shadow: inset 3px 0 0 var(--pos);
     }
 
     tbody tr.bye td {

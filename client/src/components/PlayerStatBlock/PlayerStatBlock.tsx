@@ -17,6 +17,10 @@ export interface WeekStatsContext {
   season: number;
   /** The lobby's scoring rules — the default lens for weekly points. */
   scoring: ScoringRules;
+  /** Show the PPR/Half/Std scoring toggle. In a draft the only meaningful lens
+   * is the league's own scoring, so it's omitted; on the Rankings page (where
+   * there's no single league) the viewer can compare formats. */
+  allowScoringToggle?: boolean;
 }
 
 interface Props {
@@ -185,6 +189,7 @@ export function PlayerStatGrid({ player, weekStats }: Props) {
           player={player}
           season={weekStats.season}
           scoring={weekStats.scoring}
+          allowScoringToggle={weekStats.allowScoringToggle}
           onClose={() => setShowWeek(false)}
         />
       )}
