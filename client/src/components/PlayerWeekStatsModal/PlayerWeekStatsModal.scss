@@ -1,0 +1,449 @@
+@use 'variables' as *;
+
+// Deep week-by-week stats modal — opened from within the player/pick modal, so
+// it portals to <body> and sits above them (player modal is z-index 210).
+.pws__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  display: grid;
+  place-items: center;
+  padding: $space * 2;
+  background: rgba(0, 0, 0, 0.62);
+}
+
+.pws {
+  --pos: #{$accent};
+  display: flex;
+  flex-direction: column;
+  width: min(600px, 100%);
+  max-height: 90vh;
+  background: $bg;
+  border: 1px solid $border;
+  border-radius: $radius;
+  overflow: hidden;
+
+  &__head {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: $space * 1.5;
+    padding: $space * 1.75 $space * 2;
+    border-bottom: 1px solid $border;
+  }
+
+  &__pos {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: $radius-sm;
+    font-size: 15px;
+    font-weight: 850;
+    color: #04170f;
+    flex: 0 0 auto;
+  }
+
+  &__id {
+    min-width: 0;
+
+    h3 {
+      margin: 0;
+      font-size: 19px;
+      font-weight: 850;
+      letter-spacing: -0.01em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+
+  &__sub {
+    font-size: 12.5px;
+    color: $text-muted;
+    margin-top: 2px;
+  }
+
+  &__season {
+    margin-left: auto;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    color: $text-muted;
+    border: 1px solid $border;
+    border-radius: 999px;
+    padding: 4px 10px;
+    white-space: nowrap;
+  }
+
+  &__close {
+    flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    border: none;
+    border-radius: 8px;
+    background: $bg-overlay;
+    color: $text-muted;
+    cursor: pointer;
+
+    &:hover {
+      background: $bg-hover;
+      color: $text;
+    }
+  }
+
+  &__body {
+    min-height: 0;
+    overflow-y: auto;
+    padding: $space * 2;
+  }
+
+  &__state {
+    text-align: center;
+    color: $text-muted;
+    font-size: 14px;
+    padding: 40px 10px;
+  }
+
+  // ── Controls ────────────────────────────────────────────────────
+  &__controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $space * 1.5;
+    margin-bottom: $space * 2;
+    flex-wrap: wrap;
+  }
+
+  &__seg {
+    display: inline-flex;
+    background: $bg-overlay;
+    border: 1px solid $border;
+    border-radius: 10px;
+    padding: 3px;
+
+    button {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      line-height: 1.1;
+      border: none;
+      background: none;
+      color: $text-muted;
+      font: inherit;
+      font-size: 12.5px;
+      font-weight: 700;
+      padding: 6px 12px;
+      border-radius: 7px;
+      cursor: pointer;
+
+      &.on {
+        background: var(--pos);
+        color: #04170f;
+      }
+    }
+  }
+
+  &__seg-sub {
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    opacity: 0.85;
+  }
+
+  &__reset {
+    border: 1px solid $border;
+    background: none;
+    color: $text-muted;
+    border-radius: 8px;
+    padding: 7px 12px;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 650;
+    cursor: pointer;
+
+    &:hover {
+      color: $text;
+      background: $bg-hover;
+    }
+  }
+
+  // ── Range summary ───────────────────────────────────────────────
+  &__summary {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: $space * 2;
+    align-items: center;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--pos) 9%, transparent), $bg-raised);
+    border: 1px solid color-mix(in srgb, var(--pos) 32%, $border);
+    border-radius: $radius;
+    padding: $space * 1.75 $space * 2;
+    margin-bottom: $space * 2;
+  }
+
+  &__rank {
+    text-align: center;
+    padding-right: $space * 2;
+    border-right: 1px solid $border;
+  }
+
+  &__rank-v {
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--pos);
+    line-height: 1;
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 2px;
+
+    span {
+      font-size: 34px;
+      font-weight: 850;
+      font-variant-numeric: tabular-nums;
+    }
+  }
+
+  &__rank-lab {
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    color: $text-muted;
+    text-transform: uppercase;
+    margin-top: 5px;
+  }
+
+  &__summary-head {
+    font-size: 13px;
+    color: $text-muted;
+    line-height: 1.5;
+    margin-bottom: $space;
+
+    b {
+      color: $text;
+      font-weight: 800;
+    }
+  }
+
+  &__metrics {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $space * 2.5;
+  }
+
+  &__metric {
+    .v {
+      font-size: 21px;
+      font-weight: 850;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .k {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      color: $text-muted;
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+  }
+
+  // ── Chart ───────────────────────────────────────────────────────
+  &__chart-lab {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: $space * 1.25;
+
+    .t {
+      font-size: 11.5px;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+
+      &::before {
+        content: '';
+        display: inline-block;
+        width: 4px;
+        height: 12px;
+        border-radius: 2px;
+        background: var(--pos);
+        margin-right: 7px;
+        vertical-align: -1px;
+      }
+    }
+
+    .hint {
+      font-size: 11px;
+      color: $text-muted;
+    }
+  }
+
+  &__chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+    height: 140px;
+    padding: 0 2px 22px;
+    border-bottom: 1px solid $border;
+    margin-bottom: $space * 2.5;
+    position: relative;
+    touch-action: none;
+    user-select: none;
+    cursor: crosshair;
+  }
+
+  &__col {
+    position: relative;
+    flex: 1;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+
+    &.inrange::before {
+      content: '';
+      position: absolute;
+      inset: -2px -1px -20px;
+      background: color-mix(in srgb, var(--pos) 12%, transparent);
+      border-radius: 5px;
+    }
+  }
+
+  &__bar {
+    width: 66%;
+    max-width: 20px;
+    border-radius: 4px 4px 0 0;
+    background: $bg-overlay;
+    z-index: 1;
+  }
+
+  &__col.bye &__bar {
+    background: repeating-linear-gradient(45deg, $bg-overlay, $bg-overlay 3px, transparent 3px, transparent 6px);
+    border: 1px dashed $border;
+  }
+
+  &__col-w {
+    position: absolute;
+    bottom: -18px;
+    font-size: 8.5px;
+    font-weight: 700;
+    color: $text-muted;
+    font-variant-numeric: tabular-nums;
+    z-index: 1;
+  }
+
+  &__col.inrange &__col-w {
+    color: $text;
+  }
+
+  &__col-v {
+    position: absolute;
+    top: -14px;
+    font-size: 8.5px;
+    font-weight: 800;
+    color: $text;
+    opacity: 0;
+    transition: opacity 0.12s ease;
+    font-variant-numeric: tabular-nums;
+    z-index: 2;
+  }
+
+  &__col:hover &__col-v,
+  &__col.inrange &__col-v {
+    opacity: 1;
+  }
+
+  // ── Table ───────────────────────────────────────────────────────
+  &__tbl-wrap {
+    overflow-x: auto;
+    border: 1px solid $border;
+    border-radius: $radius;
+  }
+
+  &__tbl {
+    width: 100%;
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+    min-width: 420px;
+
+    th {
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      color: $text-muted;
+      text-transform: uppercase;
+      text-align: right;
+      padding: 9px 10px;
+      border-bottom: 1px solid $border;
+      background: $bg-overlay;
+      position: sticky;
+      top: 0;
+
+      &:first-child,
+      &:nth-child(2) {
+        text-align: left;
+      }
+    }
+
+    td {
+      font-size: 12.5px;
+      padding: 8px 10px;
+      text-align: right;
+      border-bottom: 1px solid $border;
+
+      &:first-child,
+      &:nth-child(2) {
+        text-align: left;
+      }
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tbody tr.inrange {
+      background: color-mix(in srgb, var(--pos) 9%, transparent);
+    }
+
+    tbody tr.bye td {
+      color: $text-muted;
+    }
+
+    .wk {
+      font-weight: 800;
+    }
+
+    .byecell {
+      text-align: center;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      color: $text-muted;
+    }
+
+    .pts {
+      font-weight: 800;
+    }
+
+    .rk span {
+      font-weight: 800;
+    }
+  }
+
+  &__foot {
+    margin: $space * 1.5 0 0;
+    font-size: 11.5px;
+    color: $text-muted;
+    line-height: 1.5;
+
+    b {
+      color: $text;
+      font-weight: 700;
+    }
+  }
+}

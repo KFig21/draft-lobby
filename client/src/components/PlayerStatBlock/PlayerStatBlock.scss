@@ -110,6 +110,35 @@
     font-weight: 700;
   }
 
+  // 🔍 deep week-by-week stats — sits inline right after the "Last year" label.
+  &__deep {
+    display: inline-grid;
+    place-items: center;
+    width: 19px;
+    height: 19px;
+    margin-left: 6px;
+    vertical-align: middle;
+    border: 1px solid color-mix(in srgb, #{$accent} 40%, #{$border});
+    border-radius: 6px;
+    background: color-mix(in srgb, #{$accent} 12%, transparent);
+    color: $accent;
+    cursor: pointer;
+
+    :root[data-theme='light'] & {
+      color: $primary;
+      border-color: color-mix(in srgb, #{$primary} 40%, #{$border});
+      background: color-mix(in srgb, #{$primary} 10%, transparent);
+    }
+
+    &:hover {
+      background: color-mix(in srgb, #{$accent} 22%, transparent);
+
+      :root[data-theme='light'] & {
+        background: color-mix(in srgb, #{$primary} 18%, transparent);
+      }
+    }
+  }
+
   &__stat-value {
     display: flex;
     align-items: center;

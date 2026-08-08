@@ -26,7 +26,11 @@ import { ChampionBadge } from '../ChampionBadge/ChampionBadge';
 import type { ReactionEntry } from '../DraftGrid/DraftGrid';
 import { MentionInput } from '../MentionInput/MentionInput';
 import { ProfileLink } from '../ProfileLink/ProfileLink';
-import { PlayerHeader, PlayerStatGrid } from '../PlayerStatBlock/PlayerStatBlock';
+import {
+  PlayerHeader,
+  PlayerStatGrid,
+  type WeekStatsContext,
+} from '../PlayerStatBlock/PlayerStatBlock';
 import { ReactorsModal, type Reactor } from '../ReactorsModal/ReactorsModal';
 import './PickModal.scss';
 
@@ -89,6 +93,8 @@ interface Props {
    * Omit to hide the star. */
   onFavorite?: () => void;
   favorited?: boolean;
+  /** Enables the 🔍 week-by-week stats button next to Last year. */
+  weekStats?: WeekStatsContext;
 }
 
 function formatTime(iso: string): string {
@@ -117,6 +123,7 @@ export function PickModal({
   byeClashCounts,
   onFavorite,
   favorited,
+  weekStats,
 }: Props) {
   const { closing, requestClose } = useModalClose(onClose);
   const pickInRound = pick.overall - (pick.round - 1) * teamCount;
@@ -227,7 +234,7 @@ export function PickModal({
         {/* Stats + reactions + comments — the only part of the modal that
             scrolls, so a long comment thread can't stretch the modal itself. */}
         <div className="pick-modal__scroll">
-          <PlayerStatGrid player={player} />
+          <PlayerStatGrid player={player} weekStats={weekStats} />
 
           <ByeClashes byeWeek={player.bye_week} counts={byeClashCounts} />
 

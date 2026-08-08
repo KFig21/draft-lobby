@@ -2910,6 +2910,7 @@ export function DraftBoardPage() {
           onFavorite={() => toggleFavorite(detailPlayer.id)}
           favorited={favoriteIds?.has(detailPlayer.id) ?? false}
           byeClashCounts={byeClashCountsForWeek(detailPlayer.bye_week, byeLookup)}
+          weekStats={{ season: lobby.season - 1, scoring: lobby.settings.scoring }}
         />
       )}
 
@@ -3149,6 +3150,7 @@ export function DraftBoardPage() {
               byeClashCounts={byeClashCountsForWeek(player.bye_week, pickTeamByeLookup)}
               onFavorite={() => toggleFavorite(player.id)}
               favorited={favoriteIds?.has(player.id) ?? false}
+              weekStats={{ season: lobby.season - 1, scoring: lobby.settings.scoring }}
             />
           );
         })()}

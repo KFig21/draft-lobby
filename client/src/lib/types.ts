@@ -190,3 +190,18 @@ export interface PlayerRow {
   prev_stat_line: string | null;
   prev_stats: Record<string, number> | null;
 }
+
+/** One player's actuals for a single week of a completed season — the data
+ * behind the deep-stats modal (see the player_week_stats table). `stats` is the
+ * raw FOOTBALL_CATALOG line (null for K), so each week can be scored under any
+ * league's rules; pts_ppr/pos_rank_ppr are the Sleeper fallbacks. */
+export interface PlayerWeekStatRow {
+  player_id: string;
+  position: PlayerRow['position'];
+  season: number;
+  week: number;
+  opp: string | null;
+  stats: Record<string, number> | null;
+  pts_ppr: number | null;
+  pos_rank_ppr: number | null;
+}

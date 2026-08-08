@@ -7,7 +7,11 @@ import StarBorderIcon from '@mui/icons-material/StarBorder';
 import { useModalClose } from '../../lib/useModalClose';
 import type { PlayerRow } from '../../lib/types';
 import { ByeClashes } from '../ByeClashes/ByeClashes';
-import { PlayerHeader, PlayerStatGrid } from '../PlayerStatBlock/PlayerStatBlock';
+import {
+  PlayerHeader,
+  PlayerStatGrid,
+  type WeekStatsContext,
+} from '../PlayerStatBlock/PlayerStatBlock';
 import './PlayerDetailModal.scss';
 
 interface Props {
@@ -27,6 +31,8 @@ interface Props {
    * share this player's bye week — drives the "bye week clashes" list below
    * the stats. Omit (or leave empty) to hide that section entirely. */
   byeClashCounts?: Partial<Record<Position, number>>;
+  /** Enables the 🔍 week-by-week stats button next to Last year. */
+  weekStats?: WeekStatsContext;
 }
 
 /** A closer look at a player before deciding to draft them — opened from the
@@ -43,6 +49,7 @@ export function PlayerDetailModal({
   onFavorite,
   favorited,
   byeClashCounts,
+  weekStats,
 }: Props) {
   const { closing, requestClose } = useModalClose(onClose);
 
@@ -92,7 +99,7 @@ export function PlayerDetailModal({
         </button>
 
         <PlayerHeader player={player} action={headerAction} />
-        <PlayerStatGrid player={player} />
+        <PlayerStatGrid player={player} weekStats={weekStats} />
 
         <ByeClashes byeWeek={player.bye_week} counts={byeClashCounts} />
 

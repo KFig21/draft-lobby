@@ -217,6 +217,22 @@ async function fetchSleeperStatsOrProjections(
   }
 }
 
+// Per-WEEK stats for a completed season — the same endpoint as the season
+// totals above, just with a week suffix. Powers player_week_stats.
+async function fetchWeeklyStats(
+  season: number,
+  week: number,
+): Promise<Record<string, SleeperStatLine> | null> {
+  try {
+    const res = await fetch(`https://api.sleeper.app/v1/stats/nfl/regular/${season}/${week}`);
+    if (!res.ok) throw new Error(`Sleeper weekly stats responded ${res.status}`);
+    return (await res.json()) as Record<string, SleeperStatLine>;
+  } catch (err) {
+    console.warn(`⚠️  Sleeper weekly stats (${season} wk${week}) unavailable:`, String(err));
+    return null;
+  }
+}
+
 // A compact, position-appropriate summary of a stat line (real or projected).
 function formatStatLine(pos: Pos, s: SleeperStatLine): string | null {
   const n = (x: number | undefined) => Math.round(x ?? 0).toLocaleString('en-US');
@@ -522,6 +538,43 @@ async function main() {
         .upsert(chunk, { onConflict: 'player_id,season' });
       if (error) throw new Error(error.message);
     }
+  }
+
+  // 4c) Weekly actuals for the prior season → player_week_stats. Same raw stat
+  // line as the season totals, one row per week a player actually played
+  // (absent week = bye / DNP). Read lazily by the deep-stats modal, which scores
+  // each week under the league's rules and ranks within position. Idempotent on
+  // (player_id, season, week). D/ST is skipped (Sleeper keys DST differently);
+  // K carries only pts_ppr/pos_rank_ppr (no mapped raw line).
+  const weekRows: Record<string, unknown>[] = [];
+  for (let week = 1; week <= 18; week++) {
+    const wk = await fetchWeeklyStats(prevSeason, week);
+    if (!wk) continue;
+    for (const p of pool) {
+      if (p.position === 'DEF') continue;
+      const playerId = idByKey.get(`${normalize(p.name)}|${p.position}`);
+      const sleeperId = sleeperIdByKey.get(`${normalize(p.name)}|${p.position}`);
+      if (!playerId || !sleeperId) continue;
+      const s = wk[sleeperId];
+      if (!s || s.pts_ppr == null) continue; // absent = bye / DNP that week
+      weekRows.push({
+        player_id: playerId,
+        position: p.position,
+        season: prevSeason,
+        week,
+        stats: toStatLine(p.position, s),
+        pts_ppr: Math.round((s.pts_ppr ?? 0) * 10) / 10,
+        pos_rank_ppr: s.pos_rank_ppr ?? null,
+      });
+    }
+  }
+  console.log(`Upserting ${weekRows.length} weekly stat rows (${prevSeason})…`);
+  for (let i = 0; i < weekRows.length; i += 500) {
+    const chunk = weekRows.slice(i, i + 500);
+    const { error } = await supabase
+      .from('player_week_stats')
+      .upsert(chunk, { onConflict: 'player_id,season,week' });
+    if (error) throw new Error(error.message);
   }
 
   // 5) Drop clearly-retired players from the draftable pool by removing their
