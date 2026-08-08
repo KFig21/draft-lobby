@@ -110,33 +110,14 @@
     font-weight: 700;
   }
 
-  // 🔍 deep week-by-week stats — sits inline right after the "Last year" label.
-  &__deep {
-    display: inline-grid;
-    place-items: center;
-    width: 19px;
-    height: 19px;
-    margin-left: 6px;
-    vertical-align: middle;
-    border: 1px solid color-mix(in srgb, #{$accent} 40%, #{$border});
-    border-radius: 6px;
-    background: color-mix(in srgb, #{$accent} 12%, transparent);
-    color: $accent;
-    cursor: pointer;
-
-    :root[data-theme='light'] & {
-      color: $primary;
-      border-color: color-mix(in srgb, #{$primary} 40%, #{$border});
-      background: color-mix(in srgb, #{$primary} 10%, transparent);
-    }
-
-    &:hover {
-      background: color-mix(in srgb, #{$accent} 22%, transparent);
-
-      :root[data-theme='light'] & {
-        background: color-mix(in srgb, #{$primary} 18%, transparent);
-      }
-    }
+  // Expand-to-week-by-week icon, inline after the "Last year" label. Muted by
+  // default; the whole card (--expandable, below) is the click target, so the
+  // icon lights up on card hover rather than being its own button.
+  &__deep-icon {
+    margin-left: 5px;
+    vertical-align: -2px;
+    color: $text-muted;
+    transition: color 0.12s ease;
   }
 
   &__stat-value {
@@ -147,6 +128,18 @@
     font-size: 1.05rem;
     font-weight: 800;
     font-variant-numeric: tabular-nums;
+  }
+
+  // Projected points: Futura-italic with a smaller decimal — the projected-
+  // points treatment used across the app (matches .prb-proj).
+  &__proj {
+    font-family: Futura, 'Futura PT', 'Century Gothic', 'Trebuchet MS', sans-serif;
+    font-style: italic;
+    font-weight: 600;
+  }
+
+  &__proj-dec {
+    font-size: 0.77em;
   }
 
   // Fixed-size wrapper (not just an overridden icon class) — the svg is
@@ -195,6 +188,34 @@
     // draft chat's pick/reaction/reply/grade items.
     &--projected {
       border-left-color: $primary;
+    }
+
+    // "Last year" card when week-by-week data is available — the whole card
+    // opens the expanded stats modal, so it reads as interactive.
+    &--expandable {
+      cursor: pointer;
+      transition: border-color 0.12s ease;
+
+      &:hover {
+        border-color: color-mix(in srgb, #{$accent} 45%, #{$border});
+
+        .player-stat-block__deep-icon {
+          color: $accent;
+        }
+
+        :root[data-theme='light'] & {
+          border-color: color-mix(in srgb, #{$primary} 45%, #{$border});
+
+          .player-stat-block__deep-icon {
+            color: $primary;
+          }
+        }
+      }
+
+      &:focus-visible {
+        outline: 2px solid $accent;
+        outline-offset: 2px;
+      }
     }
   }
 

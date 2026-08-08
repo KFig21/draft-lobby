@@ -7,7 +7,14 @@ import {
   type ScoringRules,
 } from '@draft-lobby/shared';
 import CloseIcon from '@mui/icons-material/Close';
-import { useMemo, useRef, useState, type CSSProperties, type PointerEvent } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type PointerEvent,
+} from 'react';
 import { createPortal } from 'react-dom';
 import { usePlayerWeekStats } from '../../hooks/usePlayerWeekStats';
 import { useModalClose } from '../../lib/useModalClose';
@@ -49,34 +56,61 @@ function pointsForRow(row: PlayerWeekStatRow, rules: ScoringRules, position: str
 }
 
 const n = (v: number | undefined) => (v == null ? 0 : Math.round(v));
+// Count stats read cleaner with 0 shown as an em dash; volume stats show the 0.
+const dash = (v: number | undefined) => n(v) || '—';
 type StatCol = { h: string; get: (s: Record<string, number>) => string | number };
 const STAT_COLS: Record<string, StatCol[]> = {
   QB: [
-    { h: 'Pass', get: (s) => n(s.passingYards) },
-    { h: 'TD', get: (s) => n(s.passingTd) || '—' },
-    { h: 'INT', get: (s) => n(s.interception) || '—' },
-    { h: 'Rush', get: (s) => n(s.rushingYards) },
+    { h: 'Pass Yd', get: (s) => n(s.passingYards) },
+    { h: 'Pass TD', get: (s) => dash(s.passingTd) },
+    { h: 'INT', get: (s) => dash(s.interception) },
+    { h: 'Rush Yd', get: (s) => n(s.rushingYards) },
+    { h: 'Rush TD', get: (s) => dash(s.rushingTd) },
+    { h: 'Fum', get: (s) => dash(s.fumbleLost) },
   ],
   RB: [
-    { h: 'Rush', get: (s) => n(s.rushingYards) },
+    { h: 'Rush Yd', get: (s) => n(s.rushingYards) },
+    { h: 'Rush TD', get: (s) => dash(s.rushingTd) },
     { h: 'Rec', get: (s) => n(s.reception) },
-    { h: 'Yds', get: (s) => n(s.receivingYards) },
-    { h: 'TD', get: (s) => n(s.rushingTd) + n(s.receivingTd) || '—' },
+    { h: 'Rec Yd', get: (s) => n(s.receivingYards) },
+    { h: 'Rec TD', get: (s) => dash(s.receivingTd) },
+    { h: 'Fum', get: (s) => dash(s.fumbleLost) },
   ],
   WR: [
     { h: 'Rec', get: (s) => n(s.reception) },
-    { h: 'Yds', get: (s) => n(s.receivingYards) },
-    { h: 'TD', get: (s) => n(s.receivingTd) || '—' },
-    { h: 'Rush', get: (s) => n(s.rushingYards) || '—' },
+    { h: 'Rec Yd', get: (s) => n(s.receivingYards) },
+    { h: 'Rec TD', get: (s) => dash(s.receivingTd) },
+    { h: 'Rush Yd', get: (s) => dash(s.rushingYards) },
+    { h: 'Fum', get: (s) => dash(s.fumbleLost) },
   ],
   TE: [
     { h: 'Rec', get: (s) => n(s.reception) },
-    { h: 'Yds', get: (s) => n(s.receivingYards) },
-    { h: 'TD', get: (s) => n(s.receivingTd) || '—' },
+    { h: 'Rec Yd', get: (s) => n(s.receivingYards) },
+    { h: 'Rec TD', get: (s) => dash(s.receivingTd) },
+    { h: 'Fum', get: (s) => dash(s.fumbleLost) },
   ],
   K: [],
   DEF: [],
 };
+
+const fmt = (v: number | undefined) => Math.round(v ?? 0).toLocaleString('en-US');
+
+/** A compact, position-appropriate aggregate stat line (fumbles appended only
+ * when there were any). Fed the summed raw stats over the selected range. */
+function rangeStatLineText(pos: string, s: Record<string, number>): string | null {
+  const fum = n(s.fumbleLost) ? ` · ${fmt(s.fumbleLost)} FUM` : '';
+  switch (pos) {
+    case 'QB':
+      return `${fmt(s.passingYards)} PASS YD · ${fmt(s.passingTd)} PASS TD · ${fmt(s.interception)} INT · ${fmt(s.rushingYards)} RUSH YD · ${fmt(s.rushingTd)} RUSH TD${fum}`;
+    case 'RB':
+      return `${fmt(s.rushingYards)} RUSH YD · ${fmt(s.rushingTd)} RUSH TD · ${fmt(s.reception)} REC · ${fmt(s.receivingYards)} REC YD · ${fmt(s.receivingTd)} REC TD${fum}`;
+    case 'WR':
+    case 'TE':
+      return `${fmt(s.reception)} REC · ${fmt(s.receivingYards)} REC YD · ${fmt(s.receivingTd)} REC TD · ${fmt(s.rushingYards)} RUSH YD${fum}`;
+    default:
+      return null;
+  }
+}
 
 interface Props {
   player: PlayerRow;
@@ -151,7 +185,10 @@ export function PlayerWeekStatsModal({
   };
 
   // Aggregate over the selected range: the subject's total/PPG/games, and their
-  // rank by PPG among everyone who played ≥1 game in the range.
+  // rank by TOTAL points among everyone who played ≥1 game in the range. Total
+  // (not PPG) is the ranking basis so a full-season selection reads as the
+  // player's season finish — matching the player modal's "Last yr rank". PPG is
+  // still reported as a headline stat, just not the rank basis.
   const rangeStats = useMemo(() => {
     const [from, to] = range;
     let tot = 0;
@@ -178,10 +215,24 @@ export function PlayerWeekStatsModal({
       }
       if (g === 0) continue;
       ranked++;
-      if (t / g > ppg) better++;
+      if (t > tot) better++;
     }
     return { tot, gp, ppg, rank: gp ? better + 1 : null, of: ranked };
   }, [model, subjectPts, range]);
+
+  // Summed raw stats over the range → the full stat line shown under the trio.
+  const rangeStatLine = useMemo(() => {
+    const [from, to] = range;
+    const agg: Record<string, number> = {};
+    let games = 0;
+    for (let w = from; w <= to; w++) {
+      const r = model.subjectRows.get(w);
+      if (!r?.stats) continue;
+      games++;
+      for (const [k, v] of Object.entries(r.stats)) agg[k] = (agg[k] ?? 0) + (v ?? 0);
+    }
+    return games ? rangeStatLineText(player.position, agg) : null;
+  }, [model, range, player.position]);
 
   // ── Drag-to-select the week range (shared by the chart and the table) ──
   const dragging = useRef(false);
@@ -189,7 +240,11 @@ export function PlayerWeekStatsModal({
   const beginDrag = (w: number) => {
     dragging.current = true;
     anchor.current = w;
-    setRange([w, w]);
+    // Clicking the already-sole-selected week toggles the selection off (back to
+    // full season). A drag still re-anchors here, so dragging from that week
+    // works — extendDrag overrides this on the first move.
+    const [f, t] = range;
+    setRange(f === w && t === w ? [1, WEEKS] : [w, w]);
   };
   const extendDrag = (w: number | null) => {
     if (!dragging.current || w == null) return;
@@ -265,6 +320,27 @@ export function PlayerWeekStatsModal({
     }
   };
 
+  // ── Sticky, collapsing summary ──────────────────────────────────────
+  // As the summary scrolls out of the body it pins flush under the header (full
+  // width) and minimizes to a compact bar, so the rank/PPG/total stay visible
+  // while you drag a range in the table. A zero-height sentinel above the
+  // summary tells us when it's pinned.
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const [stuck, setStuck] = useState(false);
+
+  useEffect(() => {
+    const root = bodyRef.current;
+    const sentinel = sentinelRef.current;
+    if (!root || !sentinel) return;
+    const io = new IntersectionObserver(([e]) => setStuck(!e.isIntersecting), {
+      root,
+      threshold: 0,
+    });
+    io.observe(sentinel);
+    return () => io.disconnect();
+  }, [hasData]);
+
   const [from, to] = range;
   const fullSeason = from === 1 && to === WEEKS;
   // Only surface a selection when it's a genuine sub-range — highlighting all 18
@@ -307,7 +383,7 @@ export function PlayerWeekStatsModal({
           </button>
         </div>
 
-        <div className="pws__body">
+        <div className="pws__body" ref={bodyRef}>
           {loading ? (
             <p className="pws__state">Loading week-by-week stats…</p>
           ) : error ? (
@@ -338,7 +414,8 @@ export function PlayerWeekStatsModal({
                 </div>
               )}
 
-              <div className="pws__summary">
+              <div ref={sentinelRef} className="pws__sentinel" aria-hidden="true" />
+              <div className={`pws__summary${stuck ? ' is-stuck' : ''}`}>
                 <div className="pws__summary-head">
                   <b>{player.name}</b> ranked <b>{posLabel}{rangeStats.rank ?? '—'}</b> of{' '}
                   {rangeStats.of} over {fullSeason ? 'the full season' : rangeLabel.toLowerCase()} (
@@ -371,6 +448,7 @@ export function PlayerWeekStatsModal({
                     <div className="k">Total</div>
                   </div>
                 </div>
+                {rangeStatLine && <div className="pws__statline">{rangeStatLine}</div>}
               </div>
 
               <div className="pws__chart-lab">
@@ -427,6 +505,7 @@ export function PlayerWeekStatsModal({
                   <thead>
                     <tr>
                       <th>Wk</th>
+                      <th>Opp</th>
                       {cols.map((c) => (
                         <th key={c.h}>{c.h}</th>
                       ))}
@@ -449,15 +528,25 @@ export function PlayerWeekStatsModal({
                           className={`${inRange ? 'inrange' : ''}${isBye ? ' bye' : ''}`}
                         >
                           <td className="wk">{w}</td>
+                          <td className="opp">{row?.opp ?? '—'}</td>
                           {isBye ? (
                             <td colSpan={cols.length} className="byecell">
                               {w === player.bye_week ? 'BYE' : 'DNP'}
                             </td>
                           ) : (
-                            cols.map((c) => <td key={c.h}>{c.get(s)}</td>)
+                            cols.map((c) => {
+                              const v = c.get(s);
+                              return (
+                                <td key={c.h} className={v === '—' ? 'is-dash' : undefined}>
+                                  {v}
+                                </td>
+                              );
+                            })
                           )}
-                          <td className="pts">{isBye ? '—' : pts.toFixed(1)}</td>
-                          <td className="rk">
+                          <td className={`pts${isBye ? ' is-dash' : ''}`}>
+                            {isBye ? '—' : pts.toFixed(1)}
+                          </td>
+                          <td className={`rk${wr ? '' : ' is-dash'}`}>
                             {wr ? (
                               <span style={{ color: rankColor(wr.rank, wr.of) }}>
                                 {posLabel}{wr.rank}

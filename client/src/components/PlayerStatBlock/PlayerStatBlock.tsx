@@ -1,7 +1,7 @@
 import { POSITION_COLORS, type Position, type ScoringRules } from '@draft-lobby/shared';
-import { useState, type ReactNode } from 'react';
+import { useState, type KeyboardEvent, type ReactNode } from 'react';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
-import SearchIcon from '@mui/icons-material/Search';
+import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import TrendingFlatIcon from '@mui/icons-material/TrendingFlat';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
@@ -110,6 +110,19 @@ function RankTrend({ proj, prev }: { proj: number | null; prev: number | null })
   );
 }
 
+/** A points total, Futura-italic with a smaller decimal — the app's projected-
+ * points treatment (see .prb-proj / grade cards), used here for both the
+ * Projected and Last-year totals. */
+function ProjNum({ value }: { value: number }) {
+  const [int, dec] = value.toFixed(1).split('.');
+  return (
+    <span className="player-stat-block__proj">
+      {int}
+      <span className="player-stat-block__proj-dec">.{dec}</span>
+    </span>
+  );
+}
+
 /** The ADP/proj-rank/last-year-rank row + projected/last-year totals (each
  * with a compact stat line) — shared between PickModal and PlayerDetailModal. */
 export function PlayerStatGrid({ player, weekStats }: Props) {
@@ -145,31 +158,44 @@ export function PlayerStatGrid({ player, weekStats }: Props) {
           <div className="player-stat-block__total-head">
             <span className="player-stat-block__stat-label">Projected</span>
             <span className="player-stat-block__stat-value">
-              {player.proj_points != null ? player.proj_points.toFixed(1) : '—'}
+              {player.proj_points != null ? <ProjNum value={player.proj_points} /> : '—'}
             </span>
           </div>
           {player.proj_stat_line && (
             <span className="player-stat-block__stat-line">{player.proj_stat_line}</span>
           )}
         </div>
-        <div className="player-stat-block__total player-stat-block__total--prev">
+        {/* When week-by-week data is available the whole "Last year" card is the
+            open-expanded-stats affordance — the expand icon just signals it. */}
+        <div
+          className={`player-stat-block__total player-stat-block__total--prev${
+            weekStats ? ' player-stat-block__total--expandable' : ''
+          }`}
+          {...(weekStats
+            ? {
+                role: 'button',
+                tabIndex: 0,
+                onClick: () => setShowWeek(true),
+                onKeyDown: (e: KeyboardEvent) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setShowWeek(true);
+                  }
+                },
+                'aria-label': 'Open week-by-week stats',
+                title: 'Week-by-week stats',
+              }
+            : {})}
+        >
           <div className="player-stat-block__total-head">
             <span className="player-stat-block__stat-label">
               Last year
               {weekStats && (
-                <button
-                  type="button"
-                  className="player-stat-block__deep"
-                  onClick={() => setShowWeek(true)}
-                  aria-label="Week-by-week stats"
-                  title="Week-by-week stats"
-                >
-                  <SearchIcon sx={{ fontSize: 14 }} />
-                </button>
+                <OpenInFullIcon className="player-stat-block__deep-icon" sx={{ fontSize: 13 }} />
               )}
             </span>
             <span className="player-stat-block__stat-value">
-              {player.prev_points != null ? player.prev_points.toFixed(1) : '—'}
+              {player.prev_points != null ? <ProjNum value={player.prev_points} /> : '—'}
             </span>
           </div>
           {player.prev_stat_line && (

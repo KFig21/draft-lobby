@@ -233,6 +233,81 @@ async function fetchWeeklyStats(
   }
 }
 
+// Minimal CSV line parser — handles double-quoted fields containing commas
+// (nflverse rows carry headshot URLs like ".../f_auto,q_auto/..."). No embedded
+// newlines occur in this dataset, so line-by-line splitting upstream is safe.
+function parseCsvLine(line: string): string[] {
+  const out: string[] = [];
+  let cur = '';
+  let inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (inQ) {
+      if (c === '"') {
+        if (line[i + 1] === '"') {
+          cur += '"';
+          i++;
+        } else inQ = false;
+      } else cur += c;
+    } else if (c === '"') inQ = true;
+    else if (c === ',') {
+      out.push(cur);
+      cur = '';
+    } else cur += c;
+  }
+  out.push(cur);
+  return out;
+}
+
+// Per-week opponent, keyed by `${normalize(name)}|${position}|${week}` — the same
+// name+position join the rest of this importer uses. Sourced from nflverse's
+// weekly player stats, whose `opponent_team` is derived from the actual game a
+// player appeared in, so it's correct even when a player was traded mid-season
+// (Sleeper's stats feed carries no team/opponent at all). Regular season only.
+// (We join by name rather than GSIS id because Sleeper's gsis_id is null for
+// most current skill players.)
+async function fetchWeeklyOpponents(season: number): Promise<Map<string, string> | null> {
+  try {
+    const url = `https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_week_${season}.csv`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`nflverse weekly responded ${res.status}`);
+    const lines = (await res.text()).split('\n');
+    const header = parseCsvLine(lines[0]);
+    const iNm = header.indexOf('player_display_name');
+    const iPos = header.indexOf('position');
+    const iWk = header.indexOf('week');
+    const iType = header.indexOf('season_type');
+    const iOpp = header.indexOf('opponent_team');
+    const iTeam = header.indexOf('team');
+    const iGame = header.indexOf('game_id');
+    if (iNm < 0 || iPos < 0 || iWk < 0 || iOpp < 0)
+      throw new Error('nflverse weekly: missing expected columns');
+    const map = new Map<string, string>();
+    for (let i = 1; i < lines.length; i++) {
+      if (!lines[i]) continue;
+      const c = parseCsvLine(lines[i]);
+      if (iType >= 0 && c[iType] !== 'REG') continue;
+      const name = c[iNm];
+      const pos = c[iPos];
+      const wk = Number(c[iWk]);
+      let opp = c[iOpp]?.trim();
+      if (!name || !pos || !opp || !Number.isFinite(wk)) continue;
+      // Away game? game_id is `{season}_{week}_{AWAY}_{HOME}`; prefix "@" (ESPN
+      // style) when the player's team is the away side.
+      const team = c[iTeam];
+      const parts = (c[iGame] ?? '').split('_');
+      const away = parts.length >= 4 && team && parts[2] === team;
+      // nflverse abbreviates the Rams "LA"; the rest of the app uses "LAR".
+      if (opp === 'LA') opp = 'LAR';
+      map.set(`${normalize(name)}|${pos}|${wk}`, `${away ? '@' : ''}${opp}`);
+    }
+    return map;
+  } catch (err) {
+    console.warn(`⚠️  nflverse weekly opponents (${season}) unavailable:`, String(err));
+    return null;
+  }
+}
+
 // A compact, position-appropriate summary of a stat line (real or projected).
 function formatStatLine(pos: Pos, s: SleeperStatLine): string | null {
   const n = (x: number | undefined) => Math.round(x ?? 0).toLocaleString('en-US');
@@ -546,14 +621,17 @@ async function main() {
   // each week under the league's rules and ranks within position. Idempotent on
   // (player_id, season, week). D/ST is skipped (Sleeper keys DST differently);
   // K carries only pts_ppr/pos_rank_ppr (no mapped raw line).
+  // Trade-correct per-week opponents (nflverse), joined by GSIS id below.
+  const opponents = await fetchWeeklyOpponents(prevSeason);
   const weekRows: Record<string, unknown>[] = [];
   for (let week = 1; week <= 18; week++) {
     const wk = await fetchWeeklyStats(prevSeason, week);
     if (!wk) continue;
     for (const p of pool) {
       if (p.position === 'DEF') continue;
-      const playerId = idByKey.get(`${normalize(p.name)}|${p.position}`);
-      const sleeperId = sleeperIdByKey.get(`${normalize(p.name)}|${p.position}`);
+      const key = `${normalize(p.name)}|${p.position}`;
+      const playerId = idByKey.get(key);
+      const sleeperId = sleeperIdByKey.get(key);
       if (!playerId || !sleeperId) continue;
       const s = wk[sleeperId];
       if (!s || s.pts_ppr == null) continue; // absent = bye / DNP that week
@@ -562,11 +640,16 @@ async function main() {
         position: p.position,
         season: prevSeason,
         week,
+        opp: opponents?.get(`${key}|${week}`) ?? null,
         stats: toStatLine(p.position, s),
         pts_ppr: Math.round((s.pts_ppr ?? 0) * 10) / 10,
         pos_rank_ppr: s.pos_rank_ppr ?? null,
       });
     }
+  }
+  if (opponents) {
+    const withOpp = weekRows.filter((r) => r.opp).length;
+    console.log(`  matched opponents for ${withOpp}/${weekRows.length} weekly rows`);
   }
   console.log(`Upserting ${weekRows.length} weekly stat rows (${prevSeason})…`);
   for (let i = 0; i < weekRows.length; i += 500) {
