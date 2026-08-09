@@ -114,52 +114,7 @@
     padding: 40px 10px;
   }
 
-  // ── Controls ────────────────────────────────────────────────────
-  &__controls {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: $space * 1.5;
-    margin-bottom: $space * 2;
-    flex-wrap: wrap;
-  }
-
-  &__seg {
-    display: inline-flex;
-    background: $bg-overlay;
-    border: 1px solid $border;
-    border-radius: 10px;
-    padding: 3px;
-
-    button {
-      display: inline-flex;
-      flex-direction: column;
-      align-items: center;
-      line-height: 1.1;
-      border: none;
-      background: none;
-      color: $text-muted;
-      font: inherit;
-      font-size: 12.5px;
-      font-weight: 700;
-      padding: 6px 12px;
-      border-radius: 7px;
-      cursor: pointer;
-
-      &.on {
-        background: var(--pos);
-        color: #04170f;
-      }
-    }
-  }
-
-  &__seg-sub {
-    font-size: 8px;
-    font-weight: 800;
-    letter-spacing: 0.04em;
-    opacity: 0.85;
-  }
-
+  // ── Full-season reset ────────────────────────────────────────────
   &__reset {
     border: 1px solid $border;
     background: none;
@@ -176,12 +131,21 @@
       background: $bg-hover;
     }
 
-    // Compact variant — sits inline next to the chart header.
-    &--sm {
-      padding: 3px 9px;
-      font-size: 10.5px;
-      font-weight: 700;
-      border-radius: 6px;
+    // Corner variant — a small icon button pinned to the summary box's
+    // top-right corner, so the reset stays put (and unobtrusive) while the bar
+    // is pinned. Opaque (panel-coloured) so it reads cleanly over the text
+    // behind it (the sentence reserves room for it via padding-right).
+    &--corner {
+      position: absolute;
+      top: $space * 0.85;
+      right: $space;
+      display: grid;
+      place-items: center;
+      width: 26px;
+      height: 26px;
+      padding: 0;
+      border-radius: 7px;
+      background: $bg-raised;
     }
   }
 
@@ -239,6 +203,9 @@
     max-height: 5em;
     opacity: 1;
     margin-bottom: $space * 1.5;
+    // Right gutter keeps the sentence's first line clear of the reset icon in
+    // the top-right corner.
+    padding-right: $space * 3.5;
     font-size: 13px;
     color: $text-muted;
     line-height: 1.5;
@@ -377,14 +344,6 @@
         display: none;
       }
     }
-  }
-
-  // Title + inline "Full season" reset, grouped on the left of the chart header.
-  &__chart-lab-l {
-    display: inline-flex;
-    align-items: center;
-    gap: $space * 1.25;
-    min-width: 0;
   }
 
   &__chart {

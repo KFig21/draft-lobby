@@ -465,7 +465,6 @@ export function RankingsPage() {
             // year), so "last year"'s weekly actuals are that minus one.
             season: new Date().getFullYear() - 1,
             scoring: rules,
-            allowScoringToggle: true,
           }}
         />
       )}

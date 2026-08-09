@@ -7,6 +7,7 @@ import {
   type ScoringRules,
 } from '@draft-lobby/shared';
 import CloseIcon from '@mui/icons-material/Close';
+import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import {
   useEffect,
   useMemo,
@@ -22,8 +23,6 @@ import type { PlayerRow, PlayerWeekStatRow } from '../../lib/types';
 import './PlayerWeekStatsModal.scss';
 
 const WEEKS = 18;
-
-type ScoreKey = 'league' | 'PPR' | 'HALF_PPR' | 'STANDARD';
 
 /** Rank → colour on a green (best) → amber → red (worst) scale. */
 function rankColor(rank: number | null, count: number): string {
@@ -116,11 +115,9 @@ interface Props {
   player: PlayerRow;
   /** The completed season whose weekly actuals to show (i.e. "last year"). */
   season: number;
-  /** The lobby's scoring rules — the default "League" lens. */
+  /** The scoring rules every week is scored under (the lobby's, or the Rankings
+   * page's selected format). */
   scoring: ScoringRules;
-  /** Show the PPR/Half/Std scoring toggle. Off in a draft (league scoring only),
-   * on for the Rankings page. */
-  allowScoringToggle?: boolean;
   onClose: () => void;
 }
 
@@ -130,24 +127,15 @@ interface Props {
  * player's positional rank that week (colour-coded on the bar chart), and a
  * draggable week-range that reports their rank + PPG over that stretch.
  */
-export function PlayerWeekStatsModal({
-  player,
-  season,
-  scoring,
-  allowScoringToggle = false,
-  onClose,
-}: Props) {
+export function PlayerWeekStatsModal({ player, season, scoring, onClose }: Props) {
   const { closing, requestClose } = useModalClose(onClose);
   const { rows, loading, error } = usePlayerWeekStats(player.position, season, true);
   const pos = player.position as Position;
   const posColor = POSITION_COLORS[pos];
 
+  // Everything is scored under the passed rules (the league's, always).
   const leaguePreset = matchPreset(scoring);
-  const [scoreKey, setScoreKey] = useState<ScoreKey>('league');
-  // In a draft the only meaningful lens is the league's own scoring; the toggle
-  // is Rankings-only, so `rules` collapses to the league rules when it's hidden.
-  const rules =
-    !allowScoringToggle || scoreKey === 'league' ? scoring : SCORING_PRESETS[scoreKey].rules;
+  const rules = scoring;
 
   const [range, setRange] = useState<[number, number]>([1, WEEKS]);
 
@@ -395,25 +383,6 @@ export function PlayerWeekStatsModal({
             </p>
           ) : (
             <>
-              {allowScoringToggle && (
-                <div className="pws__controls">
-                  <div className="pws__seg" role="tablist" aria-label="Scoring">
-                    <button
-                      className={scoreKey === 'league' ? 'on' : ''}
-                      onClick={() => setScoreKey('league')}
-                    >
-                      League
-                      {leaguePreset && (
-                        <span className="pws__seg-sub">{SCORING_PRESETS[leaguePreset].label.split(' ')[0]}</span>
-                      )}
-                    </button>
-                    <button className={scoreKey === 'PPR' ? 'on' : ''} onClick={() => setScoreKey('PPR')}>PPR</button>
-                    <button className={scoreKey === 'HALF_PPR' ? 'on' : ''} onClick={() => setScoreKey('HALF_PPR')}>Half</button>
-                    <button className={scoreKey === 'STANDARD' ? 'on' : ''} onClick={() => setScoreKey('STANDARD')}>Std</button>
-                  </div>
-                </div>
-              )}
-
               <div ref={sentinelRef} className="pws__sentinel" aria-hidden="true" />
               <div className={`pws__summary${stuck ? ' is-stuck' : ''}`}>
                 <div className="pws__summary-head">
@@ -449,20 +418,24 @@ export function PlayerWeekStatsModal({
                   </div>
                 </div>
                 {rangeStatLine && <div className="pws__statline">{rangeStatLine}</div>}
+                {/* Reset to the full season — a small icon in the summary's
+                    top-right corner, so it stays reachable while the bar is
+                    pinned. Only shown when a sub-range is active. */}
+                {selecting && (
+                  <button
+                    type="button"
+                    className="pws__reset pws__reset--corner"
+                    onClick={() => setRange([1, WEEKS])}
+                    aria-label="Reset to full season"
+                    title="Reset to full season"
+                  >
+                    <RestartAltIcon sx={{ fontSize: 17 }} />
+                  </button>
+                )}
               </div>
 
               <div className="pws__chart-lab">
-                <span className="pws__chart-lab-l">
-                  <span className="t">Fantasy points by week</span>
-                  {!fullSeason && (
-                    <button
-                      className="pws__reset pws__reset--sm"
-                      onClick={() => setRange([1, WEEKS])}
-                    >
-                      Full season
-                    </button>
-                  )}
-                </span>
+                <span className="t">Fantasy points by week</span>
                 <span className="hint">drag across the bars to pick a range</span>
               </div>
               <div
@@ -564,13 +537,7 @@ export function PlayerWeekStatsModal({
 
               <p className="pws__foot">
                 Points scored under{' '}
-                <b>
-                  {scoreKey === 'league'
-                    ? leaguePreset
-                      ? SCORING_PRESETS[leaguePreset].label
-                      : 'your league’s scoring'
-                    : SCORING_PRESETS[scoreKey].label}
-                </b>
+                <b>{leaguePreset ? SCORING_PRESETS[leaguePreset].label : 'your league’s scoring'}</b>
                 . Rank is against every {posLabel} who played that week.
               </p>
             </>
