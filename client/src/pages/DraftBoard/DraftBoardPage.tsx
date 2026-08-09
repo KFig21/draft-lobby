@@ -1062,7 +1062,13 @@ export function DraftBoardPage() {
   }
 
   function doExport(kind: 'csv' | 'xls' | 'json') {
-    const opts = { lobbyName: lobby?.name ?? 'draft', picks, teamsById, playersById };
+    const opts = {
+      lobbyName: lobby?.name ?? 'draft',
+      picks,
+      teamsById,
+      playersById,
+      keepers: lobby?.settings.keepersEnabled ?? false,
+    };
     if (kind === 'csv') exportDraftCsv(opts);
     else if (kind === 'xls') exportDraftExcel(opts);
     else exportDraftJson(opts);
@@ -3275,7 +3281,7 @@ export function DraftBoardPage() {
                     <InsertDriveFileOutlinedIcon fontSize="small" />
                     <span>
                       <strong>CSV</strong>
-                      <span className="muted">A plain spreadsheet file (.csv)</span>
+                      <span className="muted">Teams stacked top to bottom (.csv)</span>
                     </span>
                   </button>
                   <button
@@ -3288,7 +3294,7 @@ export function DraftBoardPage() {
                     <TableChartOutlinedIcon fontSize="small" />
                     <span>
                       <strong>Excel</strong>
-                      <span className="muted">A formatted workbook (.xlsx)</span>
+                      <span className="muted">Teams side by side, scroll across (.xls)</span>
                     </span>
                   </button>
                   <button
@@ -3301,7 +3307,7 @@ export function DraftBoardPage() {
                     <DataObjectOutlinedIcon fontSize="small" />
                     <span>
                       <strong>JSON</strong>
-                      <span className="muted">Typed data, for scripts and other tools</span>
+                      <span className="muted">One object per team, for scripts and tools</span>
                     </span>
                   </button>
                   <button

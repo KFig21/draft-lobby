@@ -27,95 +27,189 @@ interface ExportOptions {
   picks: PickRow[];
   teamsById: Map<string, TeamRow>;
   playersById: Map<string, PlayerRow>;
+  /** Whether the league runs keepers — drops the Keeper column/field when off. */
+  keepers: boolean;
 }
 
-const HEADERS = [
-  'Overall',
-  'Round',
-  'Team',
-  'Player',
-  'Position',
-  'NFL Team',
-  'Bye',
-  'Keeper',
-];
-
-function rows({ picks, teamsById, playersById }: ExportOptions): (string | number)[][] {
-  return [...picks]
-    .sort((a, b) => a.overall - b.overall)
-    .map((p) => {
-      const team = teamsById.get(p.team_id);
-      const player = playersById.get(p.player_id);
-      return [
-        p.overall,
-        p.round,
-        team?.name ?? '',
-        player?.name ?? '',
-        player?.position ?? '',
-        player?.nfl_team ?? '',
-        player?.bye_week ?? '',
-        p.is_keeper ? 'Yes' : '',
-      ];
-    });
+/** One drafted player, resolved from a pick + the player it landed. */
+interface ExportPlayer {
+  overall: number;
+  round: number;
+  name: string;
+  position: string;
+  nflTeam: string;
+  byeWeek: number | null;
+  isKeeper: boolean;
 }
 
-/** Download the draft results as a CSV (opens directly in Excel and Sheets). */
-export function exportDraftCsv(opts: ExportOptions): void {
-  const lines = [HEADERS, ...rows(opts)].map((r) => r.map(csvCell).join(','));
-  triggerDownload(lines.join('\n'), `${slugify(opts.lobbyName)}-draft.csv`, 'text/csv');
+/** A team and the players it drafted, in round order. */
+interface ExportTeam {
+  team: TeamRow;
+  players: ExportPlayer[];
+}
+
+/** Per-team column headers, shared by the CSV and Excel exports. The Keeper
+ * column is only included when the league runs keepers. */
+function teamHeaders(keepers: boolean): string[] {
+  const h = ['Round', 'Player', 'Pos', 'Team', 'Bye'];
+  if (keepers) h.push('Keeper');
+  return h;
 }
 
 /**
- * Download the draft as an Excel-native file. Uses the SpreadsheetML 2003 (.xls)
- * XML format — no dependency, and Excel/Sheets open it as a real spreadsheet.
+ * Regroup the flat pick list into one bucket per team, ordered by draft slot,
+ * with each team's picks sorted into round order. This is the shared shape the
+ * three "by team" exporters render — a team-first view rather than the old
+ * pick-by-pick log.
+ */
+function groupByTeam({ picks, teamsById, playersById }: ExportOptions): ExportTeam[] {
+  const teams = [...teamsById.values()].sort((a, b) => a.draft_position - b.draft_position);
+  const byTeam = new Map<string, ExportPlayer[]>();
+  for (const t of teams) byTeam.set(t.id, []);
+  for (const p of [...picks].sort((a, b) => a.overall - b.overall)) {
+    const bucket = byTeam.get(p.team_id);
+    if (!bucket) continue;
+    const player = playersById.get(p.player_id);
+    bucket.push({
+      overall: p.overall,
+      round: p.round,
+      name: player?.name ?? '',
+      position: player?.position ?? '',
+      nflTeam: player?.nfl_team ?? '',
+      byeWeek: player?.bye_week ?? null,
+      isKeeper: p.is_keeper,
+    });
+  }
+  return teams.map((t) => ({ team: t, players: byTeam.get(t.id) ?? [] }));
+}
+
+/** A player's tabular (string/number) cells for CSV + Excel. */
+function playerCells(pl: ExportPlayer, keepers: boolean): (string | number)[] {
+  const c: (string | number)[] = [pl.round, pl.name, pl.position, pl.nflTeam, pl.byeWeek ?? ''];
+  if (keepers) c.push(pl.isKeeper ? 'Yes' : '');
+  return c;
+}
+
+/**
+ * Download the draft as a CSV, one team block after another going down the
+ * file (team name, a header row, then that team's picks, then a blank line).
+ * Opens directly in Excel and Sheets.
+ */
+export function exportDraftCsv(opts: ExportOptions): void {
+  const header = teamHeaders(opts.keepers);
+  const lines: string[] = [];
+  groupByTeam(opts).forEach((t, i) => {
+    if (i > 0) lines.push('');
+    lines.push(csvCell(t.team.name));
+    lines.push(header.map(csvCell).join(','));
+    for (const pl of t.players) lines.push(playerCells(pl, opts.keepers).map(csvCell).join(','));
+  });
+  triggerDownload(lines.join('\n'), `${slugify(opts.lobbyName)}-teams.csv`, 'text/csv');
+}
+
+/**
+ * Download the draft as an Excel-native file with each team laid out as its own
+ * block of columns side by side (scroll horizontally across teams). Uses the
+ * SpreadsheetML 2003 (.xls) XML format — no dependency, and Excel/Sheets open it
+ * as a real spreadsheet.
  */
 export function exportDraftExcel(opts: ExportOptions): void {
+  const teams = groupByTeam(opts);
+  const headers = teamHeaders(opts.keepers);
   const esc = (v: string | number) =>
     String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  const cell = (v: string | number) => {
+  const cell = (v: string | number, style?: string) => {
     const isNum = typeof v === 'number';
-    return `<Cell><Data ss:Type="${isNum ? 'Number' : 'String'}">${esc(v)}</Data></Cell>`;
+    const attr = style ? ` ss:StyleID="${style}"` : '';
+    return `<Cell${attr}><Data ss:Type="${isNum ? 'Number' : 'String'}">${esc(v)}</Data></Cell>`;
   };
-  const row = (cells: (string | number)[]) =>
-    `<Row>${cells.map(cell).join('')}</Row>`;
-  const body = [HEADERS, ...rows(opts)].map(row).join('');
+  const empty = '<Cell/>'; // blank cell (also used for the spacer column)
+
+  const BLOCK = headers.length; // columns per team
+  const stride = BLOCK + 1; // team block + one spacer column between teams
+
+  // Column widths, left to right: one block per team, a narrow spacer between.
+  // (Round, Player, Pos, Team, Bye[, Keeper]) — the Keeper width only when on.
+  const blockWidths = [42, 150, 40, 46, 40, ...(opts.keepers ? [52] : [])];
+  const columns: string[] = [];
+  teams.forEach((_, i) => {
+    for (const w of blockWidths) columns.push(`<Column ss:Width="${w}"/>`);
+    if (i < teams.length - 1) columns.push('<Column ss:Width="16"/>');
+  });
+
+  // Row 1 — team names, each merged across its block. MergeAcross doesn't
+  // advance the column cursor past the span, so pin each name with ss:Index.
+  const titleRow = teams
+    .map((t, i) => {
+      const idx = i === 0 ? '' : ` ss:Index="${i * stride + 1}"`;
+      return `<Cell${idx} ss:MergeAcross="${BLOCK - 1}" ss:StyleID="title"><Data ss:Type="String">${esc(
+        t.team.name,
+      )}</Data></Cell>`;
+    })
+    .join('');
+
+  // Row 2 — the per-team column headers, repeated across every block.
+  const headRow = teams.map(() => headers.map((h) => cell(h, 'head')).join('')).join(empty);
+
+  // Data rows — the i-th pick of each team on one row; pad short teams blank.
+  const maxLen = teams.reduce((m, t) => Math.max(m, t.players.length), 0);
+  const dataRows: string[] = [];
+  for (let i = 0; i < maxLen; i++) {
+    const cells = teams
+      .map((t) => {
+        const pl = t.players[i];
+        if (!pl) return empty.repeat(BLOCK);
+        return (
+          cell(pl.round) +
+          cell(pl.name, pl.isKeeper ? 'keep' : undefined) +
+          cell(pl.position) +
+          cell(pl.nflTeam) +
+          cell(pl.byeWeek ?? '') +
+          (opts.keepers ? cell(pl.isKeeper ? 'K' : '') : '')
+        );
+      })
+      .join(empty);
+    dataRows.push(`<Row>${cells}</Row>`);
+  }
+
   const xml = `<?xml version="1.0"?>
 <Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
-<Worksheet ss:Name="Draft"><Table>${body}</Table></Worksheet>
+ <Styles>
+  <Style ss:ID="title"><Font ss:Bold="1" ss:Size="12" ss:Color="#FFFFFF"/><Interior ss:Color="#137A83" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center"/></Style>
+  <Style ss:ID="head"><Font ss:Bold="1"/><Interior ss:Color="#E4E9EC" ss:Pattern="Solid"/></Style>
+  <Style ss:ID="keep"><Font ss:Italic="1" ss:Color="#137A83"/></Style>
+ </Styles>
+ <Worksheet ss:Name="Teams"><Table>${columns.join('')}<Row>${titleRow}</Row><Row>${headRow}</Row>${dataRows.join(
+   '',
+ )}</Table></Worksheet>
 </Workbook>`;
-  triggerDownload(
-    xml,
-    `${slugify(opts.lobbyName)}-draft.xls`,
-    'application/vnd.ms-excel',
-  );
+  triggerDownload(xml, `${slugify(opts.lobbyName)}-teams.xls`, 'application/vnd.ms-excel');
 }
 
 /**
- * Download the draft as JSON — one typed object per pick, in draft order.
- * Meant for feeding into another tool/script, so it uses real types (numbers,
- * a boolean for isKeeper, null for a missing team/player) rather than the
- * display-formatted strings CSV/Excel use.
+ * Download the draft as JSON — one object per team, each holding an array of
+ * its drafted players as objects. Meant for feeding into another tool/script,
+ * so it uses real types (numbers, a boolean for isKeeper, null for a missing
+ * bye) rather than the display-formatted strings CSV/Excel use.
  */
 export function exportDraftJson(opts: ExportOptions): void {
-  const data = [...opts.picks]
-    .sort((a, b) => a.overall - b.overall)
-    .map((p) => {
-      const team = opts.teamsById.get(p.team_id);
-      const player = opts.playersById.get(p.player_id);
-      return {
-        overall: p.overall,
-        round: p.round,
-        team: team?.name ?? null,
-        player: player?.name ?? null,
-        position: player?.position ?? null,
-        nflTeam: player?.nfl_team ?? null,
-        byeWeek: player?.bye_week ?? null,
-        isKeeper: p.is_keeper,
-      };
-    });
+  const data = groupByTeam(opts).map((t) => ({
+    team: t.team.name,
+    draftPosition: t.team.draft_position,
+    players: t.players.map((pl) => ({
+      overall: pl.overall,
+      round: pl.round,
+      name: pl.name,
+      position: pl.position,
+      nflTeam: pl.nflTeam,
+      byeWeek: pl.byeWeek,
+      // Keeper flag only when the league runs keepers (matches CSV/Excel).
+      ...(opts.keepers ? { isKeeper: pl.isKeeper } : {}),
+    })),
+  }));
   triggerDownload(
     JSON.stringify(data, null, 2),
-    `${slugify(opts.lobbyName)}-draft.json`,
+    `${slugify(opts.lobbyName)}-teams.json`,
     'application/json',
   );
 }
