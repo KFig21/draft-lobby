@@ -24,6 +24,8 @@ import {
   setShowCellReactions,
   getShowByeClashes,
   setShowByeClashes,
+  getShowPickProjection,
+  setShowPickProjection,
   type DraftCellStyle,
 } from '../../lib/draftCellStyle';
 import { getDefaultScoringChoice, setDefaultScoringChoice } from '../../lib/defaultScoring';
@@ -69,6 +71,7 @@ export function SettingsPage() {
   const [cellStyle, setCellStyleState] = useState<DraftCellStyle>(() => getDraftCellStyle());
   const [showCellReactions, setShowCellReactionsState] = useState(() => getShowCellReactions());
   const [showByeClashes, setShowByeClashesState] = useState(() => getShowByeClashes());
+  const [showPickProjection, setShowPickProjectionState] = useState(() => getShowPickProjection());
   const [defaultScoring, setDefaultScoringState] = useState(() => getDefaultScoringChoice());
   const [cardStyle, setCardStyleState] = useState<PlayerCardStyle>(() => getPlayerCardStyle());
   const [teamColors, setTeamColorsState] = useState(() => getTeamColorsEnabled());
@@ -94,6 +97,11 @@ export function SettingsPage() {
   function updateShowByeClashes(show: boolean) {
     setShowByeClashes(show);
     setShowByeClashesState(show);
+  }
+
+  function updateShowPickProjection(show: boolean) {
+    setShowPickProjection(show);
+    setShowPickProjectionState(show);
   }
 
   function updateDefaultScoring(choice: string) {
@@ -213,6 +221,19 @@ export function SettingsPage() {
             label="Toggle bye week clashes"
             checked={showByeClashes}
             onChange={updateShowByeClashes}
+          />
+        </div>
+        <div className="settings__row">
+          <div className="settings__row-main">
+            <span className="settings__row-name">Next-pick projection</span>
+            <span className="muted">
+              Mark in the player list where your upcoming picks are likely to land
+            </span>
+          </div>
+          <ToggleSwitch
+            label="Toggle next-pick projection"
+            checked={showPickProjection}
+            onChange={updateShowPickProjection}
           />
         </div>
       </section>

@@ -57,7 +57,7 @@ import SportsFootballIcon from '@mui/icons-material/SportsFootball';
 import TableChartOutlinedIcon from '@mui/icons-material/TableChartOutlined';
 import UndoIcon from '@mui/icons-material/Undo';
 import type { SvgIconComponent } from '@mui/icons-material';
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   Link,
   Navigate,
@@ -117,9 +117,11 @@ import {
   getDraftCellStyle,
   getShowByeClashes,
   getShowCellReactions,
+  getShowPickProjection,
   setDraftCellStyle,
   setShowByeClashes,
   setShowCellReactions,
+  setShowPickProjection,
   type DraftCellStyle,
 } from '../../lib/draftCellStyle';
 import { renderBoardCanvas } from '../../lib/boardCanvas';
@@ -235,6 +237,7 @@ export function DraftBoardPage() {
   const [cellStyle, setCellStyleState] = useState(() => getDraftCellStyle());
   const [showCellReactions, setShowCellReactionsState] = useState(() => getShowCellReactions());
   const [showByeClashes, setShowByeClashesState] = useState(() => getShowByeClashes());
+  const [showPickProjection, setShowPickProjectionState] = useState(() => getShowPickProjection());
   const [cardStyle, setCardStyleState] = useState<PlayerCardStyle>(() => getPlayerCardStyle());
   const [teamColors, setTeamColorsState] = useState(() => getTeamColorsEnabled());
   const [toastPrefs, setToastPrefsState] = useState(() => getToastPrefs());
@@ -256,6 +259,10 @@ export function DraftBoardPage() {
   function updateShowByeClashes(show: boolean) {
     setShowByeClashes(show);
     setShowByeClashesState(show);
+  }
+  function updateShowPickProjection(show: boolean) {
+    setShowPickProjection(show);
+    setShowPickProjectionState(show);
   }
   function updateTeamColors(enabled: boolean) {
     setTeamColorsEnabled(enabled);
@@ -1203,7 +1210,26 @@ export function DraftBoardPage() {
       .filter((sl) => teamByPos.get(sl.position)?.owner_id === userId)
       .map((sl) => sl.overall)
       .sort((a, b) => a - b);
-    return { s, overall, round, onClockTeam, totalPicks, skipped, myOpen };
+    // Projection for each of my upcoming picks across the WHOLE board — not just
+    // the frontier that `open` covers, so the lines show even when I'm nowhere
+    // near the clock. For each of my still-unfilled slots, `before` is how many
+    // players are expected to be drafted first (= all earlier unfilled slots),
+    // which is where the player pool draws its "your pick lands here" line. A
+    // board-order best-available heuristic, like ESPN's.
+    const untakenOveralls: number[] = [];
+    const myFutureOpen: number[] = [];
+    for (let o = 1; o <= totalPicks; o++) {
+      if (taken.has(o)) continue;
+      untakenOveralls.push(o);
+      if (teamByPos.get(draftPositionForOverall(o, s.teamCount, s.draftType))?.owner_id === userId)
+        myFutureOpen.push(o);
+    }
+    const myPickProjections = myFutureOpen.map((o) => ({
+      overall: o,
+      round: Math.floor((o - 1) / s.teamCount) + 1,
+      before: untakenOveralls.indexOf(o),
+    }));
+    return { s, overall, round, onClockTeam, totalPicks, skipped, myOpen, myPickProjections };
   }, [lobby, teams, picks, userId]);
 
   const isCommish = useMemo(() => {
@@ -1487,6 +1513,7 @@ export function DraftBoardPage() {
     statMode,
     sortMode,
   ]);
+
   // Only offer bye weeks that actually appear in the pool right now (not a
   // fixed 1-18 list) — so the filter row shrinks as the board fills up.
   const availableByeWeeks = useMemo(() => {
@@ -1508,7 +1535,7 @@ export function DraftBoardPage() {
   if (lobby.status === 'SETUP' || lobby.status === 'SCHEDULED')
     return <Navigate to={`/lobby/${id}`} replace />;
 
-  const { round, onClockTeam, skipped, myOpen } = derived!;
+  const { round, onClockTeam, skipped, myOpen, myPickProjections } = derived!;
   const totalRounds = roundsForSettings(lobby.settings);
   const isComplete = lobby.status === 'COMPLETE';
   // The 3-column Power Rankings board replaces the grid on desktop/fullscreen; it
@@ -2054,6 +2081,35 @@ export function DraftBoardPage() {
     function pick(p: PlayerRow) {
       setSelected(p);
     }
+
+    // "Your pick lands here" projection lines — a 1px rule in the pool marking
+    // where each of my upcoming picks lands: simply `before` players down the
+    // shown list (if I'm 2 picks away, the line sits under the first 2 rows),
+    // whatever the list is currently filtered/sorted to. Keyed by the shown-list
+    // index the line sits *before*.
+    type ProjLine = { round: number; isNext: boolean };
+    const displayed = available.slice(0, 200);
+    const projectionByIndex = new Map<number, ProjLine>();
+    const showProjection =
+      showPickProjection && !search.trim() && !showDrafted && !isStaging && !isComplete;
+    if (showProjection) {
+      myPickProjections.forEach((proj, i) => {
+        if (proj.before <= displayed.length && !projectionByIndex.has(proj.before)) {
+          projectionByIndex.set(proj.before, { round: proj.round, isNext: i === 0 });
+        }
+      });
+    }
+    const renderProjectionLine = (line: ProjLine) => (
+      <div
+        className={`pool__proj${line.isNext ? ' pool__proj--next' : ''}`}
+        aria-hidden
+      >
+        <span className="pool__proj-label">
+          {line.isNext ? 'Your pick' : `Round ${line.round}`}
+        </span>
+      </div>
+    );
+
     // Don't offer a filter chip for a position/slot this league's roster
     // doesn't actually use (e.g. a no-kicker league shouldn't show a K chip).
     const draftable = draftablePositions(lobby.settings.rosterComposition);
@@ -2251,11 +2307,11 @@ export function DraftBoardPage() {
           </div>
         </div>
         <div className="pool__list">
-          {available.slice(0, 200).map((p) => {
+          {displayed.map((p, i) => {
             const isDrafted = draftedIds.has(p.id);
-            return (
+            const line = projectionByIndex.get(i);
+            const card = (
               <PoolCard
-                key={p.id}
                 player={p}
                 statMode={statMode}
                 posRank={statMode === 'prev' ? p.prev_rank : p.proj_rank}
@@ -2280,7 +2336,21 @@ export function DraftBoardPage() {
                 }
               />
             );
+            return line ? (
+              <Fragment key={p.id}>
+                {renderProjectionLine(line)}
+                {card}
+              </Fragment>
+            ) : (
+              <Fragment key={p.id}>{card}</Fragment>
+            );
           })}
+          {/* A pick projected to land past the last shown player draws its line
+              at the very end of the list. */}
+          {(() => {
+            const tail = projectionByIndex.get(displayed.length);
+            return tail ? renderProjectionLine(tail) : null;
+          })()}
           {available.length === 0 && <p className="muted pool__empty">No players match.</p>}
         </div>
       </>
@@ -3556,6 +3626,8 @@ export function DraftBoardPage() {
           onShowCellReactionsChange={updateShowCellReactions}
           showByeClashes={showByeClashes}
           onShowByeClashesChange={updateShowByeClashes}
+          showPickProjection={showPickProjection}
+          onShowPickProjectionChange={updateShowPickProjection}
           teamColors={teamColors}
           onTeamColorsChange={updateTeamColors}
           toastPrefs={toastPrefs}

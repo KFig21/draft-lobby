@@ -59,3 +59,20 @@ export function getShowByeClashes(): boolean {
 export function setShowByeClashes(show: boolean): void {
   localStorage.setItem(BYE_CLASHES_STORAGE_KEY, show ? '1' : '0');
 }
+
+/** Whether the player pool draws projection lines showing where the viewer's
+ * upcoming picks are expected to land (how many players are likely gone by
+ * then) — per-device preference, same pattern as the toggles above. */
+const PICK_PROJECTION_STORAGE_KEY = 'showPickProjection';
+
+export function getShowPickProjection(): boolean {
+  try {
+    return localStorage.getItem(PICK_PROJECTION_STORAGE_KEY) !== '0';
+  } catch {
+    return true;
+  }
+}
+
+export function setShowPickProjection(show: boolean): void {
+  localStorage.setItem(PICK_PROJECTION_STORAGE_KEY, show ? '1' : '0');
+}

@@ -20,6 +20,8 @@ interface Props {
   onShowCellReactionsChange: (show: boolean) => void;
   showByeClashes: boolean;
   onShowByeClashesChange: (show: boolean) => void;
+  showPickProjection: boolean;
+  onShowPickProjectionChange: (show: boolean) => void;
   teamColors: boolean;
   onTeamColorsChange: (enabled: boolean) => void;
   toastPrefs: ToastPrefs;
@@ -45,6 +47,8 @@ export function DraftUserSettingsModal({
   onShowCellReactionsChange,
   showByeClashes,
   onShowByeClashesChange,
+  showPickProjection,
+  onShowPickProjectionChange,
   teamColors,
   onTeamColorsChange,
   toastPrefs,
@@ -104,6 +108,19 @@ export function DraftUserSettingsModal({
               label="Toggle bye week clashes"
               checked={showByeClashes}
               onChange={onShowByeClashesChange}
+            />
+          </div>
+          <div className="draft-user-settings__row">
+            <div className="draft-user-settings__row-main">
+              <span className="draft-user-settings__row-name">Next-pick projection</span>
+              <span className="muted">
+                Mark in the player list where your upcoming picks are likely to land
+              </span>
+            </div>
+            <ToggleSwitch
+              label="Toggle next-pick projection"
+              checked={showPickProjection}
+              onChange={onShowPickProjectionChange}
             />
           </div>
           <div className="draft-user-settings__row">

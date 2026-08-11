@@ -1878,6 +1878,45 @@
     padding: $space * 2;
     text-align: center;
   }
+
+  // "Your pick lands here" projection line — a labelled 1px rule between the
+  // player rows where an upcoming pick is expected to fall.
+  &__proj {
+    display: flex;
+    align-items: center;
+    gap: $space * 0.75;
+    user-select: none;
+
+    &::before,
+    &::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: color-mix(in srgb, #{$text-muted} 45%, transparent);
+    }
+  }
+
+  &__proj-label {
+    flex: 0 0 auto;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: $text-muted;
+    white-space: nowrap;
+  }
+
+  // The immediate next pick reads in the accent colour; later picks stay muted.
+  &__proj--next {
+    &::before,
+    &::after {
+      background: color-mix(in srgb, #{$accent} 70%, transparent);
+    }
+
+    .pool__proj-label {
+      color: $accent;
+    }
+  }
 }
 
 // Pick summary card inside the rollback/undo confirm modal — a proper card
