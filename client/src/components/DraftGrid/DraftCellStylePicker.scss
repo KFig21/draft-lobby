@@ -51,10 +51,11 @@
     }
   }
 
-  // Illustrative only — real cell components, fake data, not clickable
-  // themselves (the radio row above each one is the actual control).
+  // Real cell components with fake data. Clicking a swatch selects that style
+  // too — a mouse convenience alongside the radio row above it (which stays
+  // the accessible/keyboard control).
   &__swatch {
-    pointer-events: none;
+    cursor: pointer;
     user-select: none;
   }
 

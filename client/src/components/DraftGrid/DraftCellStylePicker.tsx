@@ -76,7 +76,12 @@ export function DraftCellStylePicker({
               {opt.label}
             </span>
           </label>
-          <span className="cell-style-picker__swatch">
+          {/* The swatch is a mouse convenience: clicking it selects that style
+              too. The radio row above stays the accessible/keyboard control. */}
+          <span
+            className="cell-style-picker__swatch"
+            onClick={() => onChange(opt.value)}
+          >
             <table className="cell-style-picker__table">
               <tbody>
                 <tr>
