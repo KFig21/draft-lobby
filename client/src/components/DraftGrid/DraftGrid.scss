@@ -205,6 +205,24 @@
     display: block;
   }
 
+  // Round.pick coordinate faint in an unfilled cell's top-left corner (e.g.
+  // "5.02"). Sits above the on-the-clock countdown fill; never intercepts the
+  // cell's own click/keyboard action.
+  &__slot-label {
+    position: absolute;
+    top: $space * 0.5;
+    left: $space * 0.6;
+    z-index: 2;
+    font-size: 0.62rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.02em;
+    color: $text-muted;
+    opacity: 0.5;
+    font-variant-numeric: tabular-nums;
+    pointer-events: none;
+  }
+
   // Snake-draft direction arrow beneath the round number — matches the round
   // number colour (faded), turns green on the live round.
   &__round-dir {
@@ -541,6 +559,10 @@
 
     .draft-grid__round-dir {
       font-size: calc(0.7rem * var(--fs-scale));
+    }
+
+    .draft-grid__slot-label {
+      font-size: calc(0.62rem * var(--fs-scale));
     }
 
     // Scales like everything else — &__onclock-icon/-title/-sub are all sized

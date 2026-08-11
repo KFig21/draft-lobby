@@ -4,6 +4,7 @@ import TimerOutlinedIcon from '@mui/icons-material/TimerOutlined';
 import TouchAppIcon from '@mui/icons-material/TouchApp';
 import { useState } from 'react';
 import type { DraftCellStyle } from '../../lib/draftCellStyle';
+import { formatRoundPick } from '../../lib/format';
 import { avatarForTeam } from '../../lib/teamAvatar';
 import type { ChatMessageRow, MemberRow, PickRow, PlayerRow, TeamRow } from '../../lib/types';
 import { Avatar } from '../Avatar/Avatar';
@@ -277,6 +278,15 @@ export function DraftGrid({
                       : canRollbackHere
                         ? () => onRollbackSkipped!(round, team.id)
                         : undefined;
+                  // This unfilled slot's own "round.pick" coordinate (e.g.
+                  // "5.02"), shown faint in the top-left corner. Snake rounds
+                  // count picks in the reverse column order, so derive the
+                  // pick-in-round from the team's draft position + direction.
+                  const pickInRound =
+                    draftType === 'SNAKE' && round % 2 === 0
+                      ? teams.length - team.draft_position + 1
+                      : team.draft_position;
+                  const slotLabel = formatRoundPick(round, pickInRound, teams.length);
                   return (
                     <td
                       key={team.id}
@@ -310,6 +320,15 @@ export function DraftGrid({
                           : undefined
                       }
                     >
+                      {/* Slot coordinate (round.pick) in the top-left corner —
+                          gives an open cell its place on the board. Suppressed
+                          on the on-clock / skipped cells, which have their own
+                          prominent centered label. */}
+                      {!isOnClock && !isSkipped && (
+                        <span className="draft-grid__slot-label" aria-hidden>
+                          {slotLabel}
+                        </span>
+                      )}
                       {isOnClock && onClockElapsedPct != null && (
                         <span
                           className="draft-grid__onclock-fill"
