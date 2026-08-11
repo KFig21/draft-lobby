@@ -574,6 +574,14 @@
     font-size: 0.8rem;
   }
 
+  // Per-position stat columns (Pass Yd, Rec, …) — numeric, shown only when the
+  // list is filtered to a single position (hidden on mobile with the other
+  // scroll-away columns below).
+  &__statcol {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
   &__points {
     font-variant-numeric: tabular-nums;
     font-weight: 800;
@@ -604,6 +612,7 @@
     // Columns not shown on phones.
     &__star,
     &__stats,
+    &__statcol,
     &__adp {
       display: none;
     }
@@ -617,10 +626,11 @@
       clip-path: none;
     }
 
-    // Rank: a tight fixed number column, no wasted width.
+    // Rank: a tight fixed number column, no wasted width. A little extra
+    // left gutter keeps the table off the screen edge.
     &__rank {
       width: 1.75rem;
-      padding-left: $space;
+      padding-left: $space * 2;
       padding-right: 0;
       text-align: center;
     }
@@ -663,10 +673,10 @@
     }
 
     // Points (proj total): fixed right-aligned number column, everything else
-    // goes to the player column.
+    // goes to the player column. Matching right gutter to the rank's left.
     &__points {
       width: 3.5rem;
-      padding-right: $space;
+      padding-right: $space * 2;
       text-align: right;
       white-space: nowrap;
     }

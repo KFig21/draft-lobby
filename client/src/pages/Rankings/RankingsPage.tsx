@@ -37,10 +37,56 @@ type Filter = 'ALL' | Position | 'FLEX' | 'SUPERFLEX';
 const FLEX_POS: Position[] = ['RB', 'WR', 'TE'];
 const SUPERFLEX_POS: Position[] = ['QB', 'RB', 'WR', 'TE'];
 type StatYear = 'proj' | 'prev';
-type SortKey = 'points' | 'name' | 'adp';
+// A sort key is one of the fixed columns or a raw scoring-catalog stat key
+// (when the list is filtered to one position and shows that position's stats).
+type SortKey = 'points' | 'name' | 'adp' | (string & {});
 type SortDir = 'asc' | 'desc';
 
+/** Per-position stat columns shown — and made sortable — when the list is
+ * filtered to a single position. Keyed by the raw scoring-catalog stat key, so
+ * values read straight off proj_stats / prev_stats. Positions without an entry
+ * (K, DEF, and the ALL/FLEX/OP multi-position views) keep the generic stat
+ * line instead. */
+interface StatCol {
+  key: string;
+  label: string;
+}
+const POS_STAT_COLS: Partial<Record<Position, StatCol[]>> = {
+  QB: [
+    { key: 'passingYards', label: 'Pass Yd' },
+    { key: 'passingTd', label: 'Pass TD' },
+    { key: 'interception', label: 'INT' },
+    { key: 'rushingYards', label: 'Rush Yd' },
+    { key: 'rushingTd', label: 'Rush TD' },
+  ],
+  RB: [
+    { key: 'rushingYards', label: 'Rush Yd' },
+    { key: 'rushingTd', label: 'Rush TD' },
+    { key: 'reception', label: 'Rec' },
+    { key: 'receivingYards', label: 'Rec Yd' },
+    { key: 'receivingTd', label: 'Rec TD' },
+  ],
+  WR: [
+    { key: 'reception', label: 'Rec' },
+    { key: 'receivingYards', label: 'Rec Yd' },
+    { key: 'receivingTd', label: 'Rec TD' },
+    { key: 'rushingYards', label: 'Rush Yd' },
+    { key: 'rushingTd', label: 'Rush TD' },
+  ],
+  TE: [
+    { key: 'reception', label: 'Rec' },
+    { key: 'receivingYards', label: 'Rec Yd' },
+    { key: 'receivingTd', label: 'Rec TD' },
+  ],
+};
+const BASE_SORT_KEYS = new Set(['points', 'name', 'adp']);
+
 const CURRENT_YEAR = new Date().getUTCFullYear();
+
+/** A stat value for a position column — rounded, thousands-separated, em dash
+ * when the stat is missing. */
+const fmtStat = (v: number | undefined): string =>
+  v == null ? '—' : Math.round(v).toLocaleString('en-US');
 
 /** Interactive draft cheat sheet: the full player pool, ranked under a
  * chosen scoring format (any preset or one of the user's saved formats) and
@@ -122,12 +168,30 @@ export function RankingsPage() {
     setShowScoringModal(false);
   }
 
-  // Tri-state sort. A fresh column starts in its natural direction (best-first
-  // for points, earliest-first for ADP, A→Z for name); clicking the active
-  // column advances natural → reversed → reset, where reset falls back to the
-  // default ranking (points, high-to-low).
+  // The stat columns for the current single-position filter (undefined on the
+  // ALL/FLEX/OP views and for K/DEF, which keep the generic stat line).
+  const statCols = POS_STAT_COLS[filter as Position];
+
+  // A stat sort only makes sense while its column is on screen — if the filter
+  // changes away from that position, fall back to the default ranking.
+  useEffect(() => {
+    if (!BASE_SORT_KEYS.has(sortKey) && !statCols?.some((c) => c.key === sortKey)) {
+      setSortKey('points');
+      setSortDir('desc');
+    }
+  }, [filter, sortKey, statCols]);
+
+  // Natural (first-click) direction: A→Z for name, earliest-first for ADP,
+  // high-to-low for points and every stat column.
+  function naturalDir(key: SortKey): SortDir {
+    return key === 'name' || key === 'adp' ? 'asc' : 'desc';
+  }
+
+  // Tri-state sort. A fresh column starts in its natural direction; clicking the
+  // active column advances natural → reversed → reset (back to points, high-to-
+  // low).
   function toggleSort(key: SortKey) {
-    const natural: SortDir = key === 'points' ? 'desc' : 'asc';
+    const natural = naturalDir(key);
     if (sortKey !== key) {
       setSortKey(key);
       setSortDir(natural);
@@ -145,18 +209,21 @@ export function RankingsPage() {
   const rows = useMemo(() => {
     const q = search.trim().toLowerCase();
     const pointsOf = (p: PlayerRow) => (statYear === 'proj' ? p.proj_points : p.prev_points) ?? -Infinity;
+    const statsOf = (p: PlayerRow) => (statYear === 'proj' ? p.proj_stats : p.prev_stats) ?? {};
 
     // Ascending base comparator, always sorting missing ADP last regardless
     // of direction — flipped below for descending instead of duplicated.
     function compareAsc(a: PlayerRow, b: PlayerRow): number {
       if (sortKey === 'points') return pointsOf(a) - pointsOf(b);
+      if (sortKey === 'name') return a.name.localeCompare(b.name);
       if (sortKey === 'adp') {
         if (a.adp == null && b.adp == null) return 0;
         if (a.adp == null) return 1;
         if (b.adp == null) return -1;
         return a.adp - b.adp;
       }
-      return a.name.localeCompare(b.name);
+      // A stat column — sort by its raw value, missing/absent last.
+      return (statsOf(a)[sortKey] ?? -Infinity) - (statsOf(b)[sortKey] ?? -Infinity);
     }
 
     return players
@@ -373,7 +440,18 @@ export function RankingsPage() {
                 <th className="rankings-table__star" aria-label="Favorite" />
                 <th className="rankings-table__rank">{isMobile ? '' : 'Rank'}</th>
                 <SortHeader label="Player" sortKeyFor="name" className="rankings-table__player" />
-                <th className="rankings-table__stats">Stats</th>
+                {statCols ? (
+                  statCols.map((c) => (
+                    <SortHeader
+                      key={c.key}
+                      label={c.label}
+                      sortKeyFor={c.key}
+                      className="rankings-table__statcol"
+                    />
+                  ))
+                ) : (
+                  <th className="rankings-table__stats">Stats</th>
+                )}
                 <SortHeader label="Points" sortKeyFor="points" className="rankings-table__points" />
                 <SortHeader label="ADP" sortKeyFor="adp" className="rankings-table__adp" />
               </tr>
@@ -384,6 +462,7 @@ export function RankingsPage() {
                 const injury = INJURY_ABBR[p.injury_status];
                 const posRank = statYear === 'proj' ? p.proj_rank : p.prev_rank;
                 const statLine = statYear === 'proj' ? p.proj_stat_line : p.prev_stat_line;
+                const stats = (statYear === 'proj' ? p.proj_stats : p.prev_stats) ?? {};
                 const points = statYear === 'proj' ? p.proj_points : p.prev_points;
                 const isFav = favoriteIds?.has(p.id) ?? false;
                 return (
@@ -431,7 +510,15 @@ export function RankingsPage() {
                         </span>
                       </div>
                     </td>
-                    <td className="rankings-table__stats muted">{statLine ?? '—'}</td>
+                    {statCols ? (
+                      statCols.map((c) => (
+                        <td key={c.key} className="rankings-table__statcol">
+                          {fmtStat(stats[c.key])}
+                        </td>
+                      ))
+                    ) : (
+                      <td className="rankings-table__stats muted">{statLine ?? '—'}</td>
+                    )}
                     <td className="rankings-table__points">
                       {points != null ? points.toFixed(1) : '—'}
                     </td>
@@ -443,7 +530,7 @@ export function RankingsPage() {
               })}
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="muted rankings-table__empty">
+                  <td colSpan={statCols ? 5 + statCols.length : 6} className="muted rankings-table__empty">
                     No players match.
                   </td>
                 </tr>
