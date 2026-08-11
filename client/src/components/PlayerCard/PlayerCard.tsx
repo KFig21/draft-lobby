@@ -6,11 +6,16 @@ import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import { INJURY_ABBR, INJURY_SEVERITY } from '../../lib/injuryStatus';
 import type { PlayerRow } from '../../lib/types';
+import { HoldButton } from '../HoldButton/HoldButton';
 import './PlayerCard.scss';
 
 export interface PlayerCardProps {
   player: PlayerRow;
+  /** Tap the Draft button — opens the lock-in confirm modal. */
   onPick?: () => void;
+  /** Press-and-hold the Draft button (2s) to draft immediately, bypassing the
+   * lock-in modal. Omit to make holding fall back to onPick. */
+  onHoldPick?: () => void;
   disabled?: boolean;
   onQueue?: () => void;
   queued?: boolean;
@@ -49,6 +54,7 @@ export interface PlayerCardProps {
 export function PlayerCard({
   player,
   onPick,
+  onHoldPick,
   disabled,
   onQueue,
   queued,
@@ -169,16 +175,16 @@ export function PlayerCard({
         </div>
       )}
       {!drafted && onPick && (
-        <button
+        <HoldButton
           className="button button--primary player-card__draft"
-          onClick={(e) => {
-            e.stopPropagation();
-            onPick();
-          }}
+          onTap={onPick}
+          onHold={onHoldPick ?? onPick}
           disabled={disabled}
+          title="Hold to draft instantly · tap to confirm"
+          ariaLabel={`Draft ${player.name}`}
         >
           Draft
-        </button>
+        </HoldButton>
       )}
     </div>
   );

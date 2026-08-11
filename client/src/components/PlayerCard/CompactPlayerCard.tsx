@@ -5,6 +5,7 @@ import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import { INJURY_ABBR, INJURY_SEVERITY } from '../../lib/injuryStatus';
+import { HoldButton } from '../HoldButton/HoldButton';
 import type { PlayerCardProps } from './PlayerCard';
 import './CompactPlayerCard.scss';
 
@@ -16,6 +17,7 @@ import './CompactPlayerCard.scss';
 export function CompactPlayerCard({
   player,
   onPick,
+  onHoldPick,
   disabled,
   onQueue,
   queued,
@@ -126,16 +128,16 @@ export function CompactPlayerCard({
       <span className="compact-card__proj">{points != null ? points.toFixed(1) : '—'}</span>
 
       {!drafted && onPick && (
-        <button
+        <HoldButton
           className="button button--primary compact-card__draft"
-          onClick={(e) => {
-            e.stopPropagation();
-            onPick();
-          }}
+          onTap={onPick}
+          onHold={onHoldPick ?? onPick}
           disabled={disabled}
+          title="Hold to draft instantly · tap to confirm"
+          ariaLabel={`Draft ${player.name}`}
         >
           Draft
-        </button>
+        </HoldButton>
       )}
     </div>
   );

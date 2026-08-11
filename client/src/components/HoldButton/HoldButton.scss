@@ -1,0 +1,47 @@
+@use 'variables' as *;
+
+// Press-and-hold button. Wraps whatever button classes are passed in (e.g.
+// .button.button--primary) and adds a progress fill that sweeps the background
+// as the hold advances — mirrors the draft top bar's clock fill.
+.hold-btn {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate; // keep the fill/label stacking self-contained
+  // The press-and-hold gesture owns touch here — don't let a hold scroll the
+  // pool or pop the mobile long-press menu.
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+
+  &__fill {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 0;
+    z-index: 0;
+    pointer-events: none;
+    // No border-radius: a square leading edge (the parent's overflow:hidden
+    // still clips the fill to the button's rounded outline).
+    // Translucent wash over the button's own colour, like the top bar fill.
+    background: rgba(255, 255, 255, 0.34);
+    // No transition off the hold: the fill snaps away instantly the moment the
+    // hold ends — whether released early or the pick is made — instead of
+    // sweeping back to zero.
+    transition: none;
+  }
+
+  // Growing to full over the hold duration (set inline via --hold-ms). The
+  // grow animation lives only here, so it applies while holding and is dropped
+  // the instant is-holding is removed.
+  &.is-holding &__fill {
+    width: 100%;
+    transition: width var(--hold-ms, 1750ms) linear;
+  }
+
+  &__label {
+    position: relative;
+    z-index: 1;
+  }
+  // Note: the fill's width transition is deliberately kept under
+  // prefers-reduced-motion — it's the progress readout (how long left to hold),
+  // essential feedback rather than decorative motion.
+}

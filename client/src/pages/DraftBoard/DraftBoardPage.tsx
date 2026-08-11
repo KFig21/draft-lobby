@@ -550,7 +550,33 @@ export function DraftBoardPage() {
     return m;
   }, [players]);
 
-  const draftedIds = useMemo(() => new Set(picks.map((p) => p.player_id)), [picks]);
+  // Players just hold-to-drafted, marked drafted locally so the pool reacts the
+  // instant a hold completes instead of waiting ~1s for the server round-trip +
+  // realtime echo (that gap read as "did my pick even go through?"). Reconciled
+  // away once the real pick lands, and rolled back if the pick fails.
+  const [optimisticDrafted, setOptimisticDrafted] = useState<Set<string>>(() => new Set());
+  const draftedIds = useMemo(() => {
+    const s = new Set(picks.map((p) => p.player_id));
+    for (const pid of optimisticDrafted) s.add(pid);
+    return s;
+  }, [picks, optimisticDrafted]);
+
+  // Drop optimistic marks once the real pick for that player has arrived (keeps
+  // the set from growing stale). Returns the same ref when nothing changed so
+  // this never loops.
+  useEffect(() => {
+    setOptimisticDrafted((prev) => {
+      if (prev.size === 0) return prev;
+      const real = new Set(picks.map((p) => p.player_id));
+      let changed = false;
+      const next = new Set<string>();
+      for (const pid of prev) {
+        if (real.has(pid)) changed = true;
+        else next.add(pid);
+      }
+      return changed ? next : prev;
+    });
+  }, [picks]);
 
   // The pick that took each drafted player — so a click on a drafted pool row
   // can open that pick's modal (who took them, round/pick) instead of the plain
@@ -1626,6 +1652,38 @@ export function DraftBoardPage() {
     }
   }
 
+  /**
+   * Hold-to-draft: draft `p` immediately, bypassing the lock-in modal (fills the
+   * picker's earliest open slot server-side). Since a completed hold can land
+   * just after the clock times out — the user kept holding through their skip —
+   * this fills their now-skipped-but-open slot; the server accepts behind-the-
+   * frontier picks. No modal here, so surface any failure as a toast.
+   */
+  async function holdDraft(p: PlayerRow) {
+    // Optimistic + instant: mark drafted locally and close the fullscreen menu
+    // right away so a completed hold feels immediate, instead of the board and
+    // menu only reacting a beat later when the server response/echo arrives.
+    setOptimisticDrafted((s) => new Set(s).add(p.id));
+    setSelected(null);
+    setShowFsMenu(false);
+    try {
+      await api(`/lobbies/${id}/pick`, { method: 'POST', body: { playerId: p.id } });
+    } catch (err) {
+      // Roll the optimistic mark back so the player returns to the pool.
+      setOptimisticDrafted((s) => {
+        const n = new Set(s);
+        n.delete(p.id);
+        return n;
+      });
+      showToast({
+        title: 'Pick failed',
+        titleIcon: <ErrorOutlineIcon fontSize="inherit" />,
+        body: err instanceof Error ? err.message : undefined,
+        tone: 'warning',
+      });
+    }
+  }
+
   async function commishAction(path: 'pause' | 'resume') {
     setCommishError(null);
     setPauseBusy(true);
@@ -2064,6 +2122,7 @@ export function DraftBoardPage() {
                 onFavorite={canFavorite ? () => toggleFavorite(p.id) : undefined}
                 favorited={favoriteIds?.has(p.id) ?? false}
                 onPick={canPick ? () => pick(p) : undefined}
+                onHoldPick={canPick ? () => holdDraft(p) : undefined}
                 disabled={!canPick}
                 onOpenDetail={() => setDetailPlayer(p)}
                 byeClashCount={
@@ -2203,6 +2262,7 @@ export function DraftBoardPage() {
                 drafted={isDrafted}
                 draftedLabel={isDrafted ? pickLabelByPlayerId.get(p.id) : undefined}
                 onPick={!isDrafted && canPick ? () => pick(p) : undefined}
+                onHoldPick={!isDrafted && canPick ? () => holdDraft(p) : undefined}
                 disabled={!canPick}
                 onQueue={isDrafted ? undefined : () => toggleQueue(p.id)}
                 queued={queue.includes(p.id)}
