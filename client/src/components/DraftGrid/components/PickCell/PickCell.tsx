@@ -1,6 +1,7 @@
 import { POSITION_COLORS, type Position } from '@draft-lobby/shared';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlined';
 import LockIcon from '@mui/icons-material/Lock';
+import type { CSSProperties } from 'react';
 import type { PickRow, PlayerRow } from '../../../../lib/types';
 import type { Reactor } from '../../../ReactorsModal/ReactorsModal';
 // The base .draft-grid__cell box (size/border/padding) lives in DraftGrid.scss
@@ -46,6 +47,7 @@ export function PickCell({
       className={`draft-grid__cell draft-grid__cell--pick${
         pick.is_keeper ? ' draft-grid__cell--keeper' : ''
       }`}
+      style={{ ['--pos']: POSITION_COLORS[player.position as Position] } as CSSProperties}
       onMouseEnter={onEnter}
       onMouseLeave={onLeave}
       onClick={() => onClick?.(pick)}

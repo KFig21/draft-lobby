@@ -7,32 +7,43 @@
 // documented elsewhere in this codebase; two classes here always outranks one.
 .draft-grid__cell.draft-grid__cell--pick {
   cursor: pointer;
-  // Its own dedicated surface (distinct from an empty cell's $bg) — a made
-  // pick used to blend right into an unfilled slot, both sharing $bg.
-  background: $cell-bg;
+  // Position-coordinated surface: a faded wash of the player's position colour
+  // plus a position-tinted 1px border, so each pick reads as its position at a
+  // glance. --pos is set inline per cell (PickCell.tsx). Mixed into the opaque
+  // cell background (not laid over transparency) so a pick never blends into an
+  // empty slot the way a translucent fill would.
+  background: color-mix(in srgb, var(--pos) 10%, #{$cell-bg});
+  border-color: color-mix(in srgb, var(--pos) 50%, #{$border});
   transition:
     transform 190ms ease,
     box-shadow 190ms ease,
-    border-color 190ms ease;
+    border-color 190ms ease,
+    background-color 190ms ease;
 
   @media (hover: hover) {
     &:hover {
       transform: translateY(-2px);
       z-index: 4;
+      // Same lift + crisp offset shadow as before, now coordinated to the
+      // position colour instead of a flat green (works in both themes since
+      // --pos is theme-agnostic and the wash mixes into the theme's cell bg).
+      border-color: var(--pos);
+      background-color: color-mix(in srgb, var(--pos) 22%, #{$cell-bg});
+      box-shadow: 3px 3px 0 0 var(--pos);
+    }
+  }
 
-      // Light mode: the original plain lift shadow.
-      :root[data-theme='light'] & {
-        border-color: $primary;
-        box-shadow: 3px 3px 0 0 $primary;
-        background-color: rgba($accent, 0.17);
-      }
+  // Keepers keep their gold identity — the position border/shadow must not
+  // paint over it (the gold outline itself is applied in DraftGrid.scss and
+  // sits above everything). Extra class (0,3,0 / 0,4,0 on hover) outranks the
+  // position rules above regardless of stylesheet order.
+  &.draft-grid__cell--keeper {
+    border-color: $border;
 
-      // Dark mode: solid green shadow — no blur/spread, so it reads as
-      // a crisp offset shape rather than a soft glow.
-      :root[data-theme='dark'] & {
-        border-color: $accent;
-        background-color: rgba($accent, 0.12);
-        box-shadow: 3px 3px 0 0 $accent;
+    @media (hover: hover) {
+      &:hover {
+        border-color: $keeper;
+        box-shadow: 3px 3px 0 0 $keeper;
       }
     }
   }
