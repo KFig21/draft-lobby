@@ -6,6 +6,10 @@ interface Props {
   /** Per-position count of the viewer's own drafted players sharing this bye
    * week — omit (or leave every position at 0) to render nothing. */
   counts?: Partial<Record<Position, number>>;
+  /** Drop the top divider so the chips sit flush under the content above.
+   * PickModal groups them with the stat cards and moves the section divider
+   * below (before Reactions); PlayerDetailModal keeps the default divider. */
+  flush?: boolean;
 }
 
 /**
@@ -15,7 +19,7 @@ interface Props {
  * the bye week, not just this player's own position — e.g. drafting a WR on
  * a week you've already loaded up on at RB is just as worth flagging.
  */
-export function ByeClashes({ byeWeek, counts }: Props) {
+export function ByeClashes({ byeWeek, counts, flush }: Props) {
   const entries = POSITIONS.map((pos) => [pos, counts?.[pos] ?? 0] as const).filter(
     ([, count]) => count > 0,
   );
@@ -27,7 +31,7 @@ export function ByeClashes({ byeWeek, counts }: Props) {
   const badgeSeverity = totalClashes >= 3 ? 'danger' : totalClashes === 2 ? 'warning' : 'neutral';
 
   return (
-    <div className="bye-clashes">
+    <div className={`bye-clashes${flush ? ' bye-clashes--flush' : ''}`}>
       <div className="bye-clashes__header">
         <span className="bye-clashes__label">Bye week {byeWeek} clashes</span>
         <span className={`bye-clashes__count bye-clashes__count--${badgeSeverity}`}>

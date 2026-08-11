@@ -166,7 +166,11 @@
     // itself, a flex item's margin still pushes the row's own box (it
     // doesn't collapse into the container the way block margins do),
     // inflating this row well past the label's actual text height.
-    margin-top: $space * 2.5;
+    // Top border divides the player-info block (stats + bye clashes) from the
+    // social block below it — the section's single divider.
+    margin-top: $space * 2;
+    padding-top: $space * 2;
+    border-top: 1px solid $border;
     margin-bottom: $space;
 
     .pick-modal__section-label {

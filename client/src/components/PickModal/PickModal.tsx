@@ -236,7 +236,7 @@ export function PickModal({
         <div className="pick-modal__scroll">
           <PlayerStatGrid player={player} weekStats={weekStats} />
 
-          <ByeClashes byeWeek={player.bye_week} counts={byeClashCounts} />
+          <ByeClashes flush byeWeek={player.bye_week} counts={byeClashCounts} />
 
           <div className="pick-modal__section-header">
             <div className="pick-modal__section-label">Reactions</div>

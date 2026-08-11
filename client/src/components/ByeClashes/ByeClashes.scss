@@ -5,6 +5,15 @@
   padding-top: $space * 2;
   border-top: 1px solid $border;
 
+  // Flush variant: no top divider, so the chips read as part of the stat
+  // block above (the section divider lives below them, before Reactions).
+  // Compound selector (0,2,0) so it wins without depending on source order.
+  &#{&}--flush {
+    margin-top: $space * 1.5;
+    padding-top: 0;
+    border-top: none;
+  }
+
   &__header {
     display: flex;
     align-items: center;
