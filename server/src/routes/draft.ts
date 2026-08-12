@@ -43,6 +43,7 @@ import {
   computeFullClockMs,
   fillOpenSeatsWithBots,
   fillOpenSeatsWithStandins,
+  loadPlayerPool,
   nextOpenOverall,
   onClockTeam,
   resyncKeepers,
@@ -1505,6 +1506,98 @@ draftRouter.post('/:id/fast-forward', async (req: AuthedRequest, res: Response) 
     await new Promise((resolve) => setTimeout(resolve, 200));
   }
   if (aborted) return; // connection's gone — nothing to respond to
+  res.json({ ok: true, picks: made });
+});
+
+/**
+ * POST /api/lobbies/:id/simulate — commissioner auto-drafts every remaining pick
+ * (humans AND bots) to the end of the draft. Fills the earliest open slot each
+ * iteration — including any skipped slots behind the frontier — using the same
+ * bot chooser, then applyPick advances/completes as normal (so the "draft
+ * complete" chat + notifications still fire). The player pool is loaded once and
+ * reused across picks. Guarded by a "SIMULATE" confirmation on the client.
+ */
+draftRouter.post('/:id/simulate', async (req: AuthedRequest, res: Response) => {
+  const lobbyId = req.params.id;
+  const role = await getRole(lobbyId, req.user!.id);
+  if (!isCommish(role)) {
+    res.status(403).json({ error: 'Only the commissioner can simulate the draft' });
+    return;
+  }
+
+  const { data: lobby0 } = await supabaseAdmin
+    .from('lobbies')
+    .select('status, season')
+    .eq('id', lobbyId)
+    .maybeSingle();
+  if (!lobby0) {
+    res.status(404).json({ error: 'Lobby not found' });
+    return;
+  }
+  if (lobby0.status !== 'DRAFTING' && lobby0.status !== 'PAUSED') {
+    res.status(409).json({ error: 'The draft isn’t in progress' });
+    return;
+  }
+  // The pool is constant for the season — load it once and reuse it for every pick.
+  const pool = await loadPlayerPool(
+    (lobby0.season as number | null) ?? new Date().getUTCFullYear(),
+  );
+
+  let aborted = false;
+  req.on('close', () => {
+    aborted = true;
+  });
+
+  let made = 0;
+  // Cap well above any real draft size so a bug can never spin forever.
+  for (let i = 0; i < 5000; i++) {
+    if (aborted) break;
+    const { data: lobby } = await supabaseAdmin
+      .from('lobbies')
+      .select('status, settings, current_overall')
+      .eq('id', lobbyId)
+      .maybeSingle();
+    if (!lobby) break;
+    if (lobby.status !== 'DRAFTING' && lobby.status !== 'PAUSED') break; // COMPLETE or reset
+
+    const settings = lobby.settings as LobbySettings;
+    const totalPicks = settings.teamCount * roundsForSettings(settings);
+    const { data: pickRows } = await supabaseAdmin
+      .from('picks')
+      .select('overall, player_id, team_id')
+      .eq('lobby_id', lobbyId);
+    const rows = (pickRows ?? []) as { overall: number; player_id: string; team_id: string }[];
+    const taken = new Set(rows.map((p) => p.overall));
+    if (taken.size >= totalPicks) break; // board full
+
+    // Fill the earliest open slot (a skipped slot behind the frontier, else the
+    // frontier itself). onClockTeam maps the slot's overall → its team.
+    const frontierClamped = Math.min(lobby.current_overall as number, totalPicks);
+    const open = openSlots(taken, frontierClamped, settings.teamCount, settings.draftType);
+    if (open.length === 0) break;
+    const slot = open[0];
+    const team = await onClockTeam(lobbyId, settings, slot.overall);
+    if (!team) break;
+
+    // Reuse the picks we just loaded + the slot's draft position so choosePlayer
+    // skips its own per-pick queries (pool is already cached above).
+    const playerId = await choosePlayer(lobbyId, settings, team.id, {
+      pool,
+      allPicks: rows.map((r) => ({ player_id: r.player_id, team_id: r.team_id })),
+      draftPosition: draftPositionForOverall(slot.overall, settings.teamCount, settings.draftType),
+    });
+    if (!playerId) break;
+    const result = await applyPick(lobbyId, settings, slot.overall, team, playerId, true);
+    if (!result.ok) {
+      // The background auto-draft tick() can pick a bot out from under us mid-run
+      // (a benign race); just re-loop rather than bailing.
+      if (result.error === 'taken') continue;
+      break;
+    }
+    made++;
+    if (result.complete) break;
+  }
+  if (aborted) return;
   res.json({ ok: true, picks: made });
 });
 

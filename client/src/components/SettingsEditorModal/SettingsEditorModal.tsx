@@ -46,6 +46,27 @@ export function SettingsEditorModal({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Simulate-to-end: only for an in-progress draft, gated by typing SIMULATE.
+  const canSimulate = status === 'DRAFTING' || status === 'PAUSED';
+  const [simConfirm, setSimConfirm] = useState('');
+  const [simBusy, setSimBusy] = useState(false);
+  const [simError, setSimError] = useState<string | null>(null);
+
+  async function simulate() {
+    if (simConfirm !== 'SIMULATE') return;
+    setSimBusy(true);
+    setSimError(null);
+    try {
+      await api(`/lobbies/${lobbyId}/simulate`, { method: 'POST' });
+      // Picks land + the draft completes via realtime; just close the editor.
+      onClose();
+    } catch (err) {
+      setSimError(err instanceof Error ? err.message : 'Could not simulate the draft');
+    } finally {
+      setSimBusy(false);
+    }
+  }
+
   const groups = useMemo(() => settingsEditableGroups(status), [status]);
   // When only clocks/skips are editable (mid-draft), frame it as "Draft settings".
   const behavioralOnly = groups.size > 0 && !groups.has('structural') && !groups.has('scoring');
@@ -127,6 +148,37 @@ export function SettingsEditorModal({
           nameField={nameField}
         />
         {error && <p className="settings-editor__error">{error}</p>}
+
+        {canSimulate && (
+          <section className="settings-editor__simulate">
+            <h3 className="settings-editor__simulate-title">Simulate to end of draft</h3>
+            <p className="muted settings-editor__simulate-note">
+              Auto-drafts every remaining pick — for every team, including yours — straight to
+              the end. This can’t be undone. Type <strong>SIMULATE</strong> to confirm.
+            </p>
+            <div className="settings-editor__simulate-row">
+              <input
+                className="settings-editor__simulate-input"
+                value={simConfirm}
+                onChange={(e) => setSimConfirm(e.target.value)}
+                placeholder="SIMULATE"
+                aria-label="Type SIMULATE to confirm"
+                autoComplete="off"
+                spellCheck={false}
+                disabled={simBusy}
+              />
+              <button
+                type="button"
+                className="button button--danger"
+                onClick={simulate}
+                disabled={simBusy || simConfirm !== 'SIMULATE'}
+              >
+                {simBusy ? 'Simulating…' : 'Simulate to end'}
+              </button>
+            </div>
+            {simError && <p className="settings-editor__error">{simError}</p>}
+          </section>
+        )}
       </div>
     </Modal>
   );

@@ -23,6 +23,45 @@
     font-size: 0.9rem;
   }
 
+  // "Simulate to end" — an irreversible action, so it's set apart in its own
+  // danger-tinted panel at the bottom, gated by typing SIMULATE.
+  &__simulate {
+    display: flex;
+    flex-direction: column;
+    gap: $space;
+    padding: $space * 1.75 $space * 2;
+    border: 1px solid color-mix(in srgb, #{$danger} 45%, #{$border});
+    border-radius: $radius;
+    background: color-mix(in srgb, #{$danger} 8%, transparent);
+  }
+
+  &__simulate-title {
+    margin: 0;
+    font-size: 1rem;
+  }
+
+  &__simulate-note {
+    margin: 0;
+    font-size: 0.85rem;
+    line-height: 1.45;
+  }
+
+  &__simulate-row {
+    display: flex;
+    gap: $space;
+    align-items: stretch;
+  }
+
+  &__simulate-input {
+    flex: 1;
+    min-width: 0;
+    letter-spacing: 0.08em;
+  }
+
+  &__simulate-row .button {
+    white-space: nowrap;
+  }
+
   // Just the button row now — the surrounding bar (border-top, padding,
   // background) is the Modal's own .dialog__footer region. Buttons are sized
   // down so the footer's height lines up with the header's.

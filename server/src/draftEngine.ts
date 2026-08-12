@@ -400,7 +400,7 @@ function computeNeeds(settings: LobbySettings): Needs {
   return { base, flex, superflex };
 }
 
-interface PoolPlayer {
+export interface PoolPlayer {
   id: string;
   position: Position;
   proj_points: number | null;
@@ -414,7 +414,7 @@ interface PoolPlayer {
  * errors (e.g. before migration 0041 lands) so bot autodraft never breaks on
  * deploy/migration ordering. See docs/phase2-player-seasons.md.
  */
-async function loadPlayerPool(season: number): Promise<PoolPlayer[]> {
+export async function loadPlayerPool(season: number): Promise<PoolPlayer[]> {
   const { data, error } = await supabaseAdmin
     .from('player_seasons')
     .select('player_id, proj_points, proj_stats, adp, players!inner ( position )')
@@ -457,17 +457,46 @@ export async function choosePlayer(
   lobbyId: string,
   settings: LobbySettings,
   teamId: string,
+  /** Optional preloaded inputs so a caller making many picks in a row (the
+   * /simulate loop) can skip the per-pick queries: `pool` (constant for the
+   * season), the current `allPicks`, and the team's `draftPosition`. Any omitted
+   * field is queried as usual, so a normal single pick just calls this with no
+   * opts. */
+  opts?: {
+    pool?: PoolPlayer[];
+    allPicks?: { player_id: string; team_id: string }[];
+    draftPosition?: number;
+  },
 ): Promise<string | null> {
-  const [{ data: allPicks }, { data: lobbyRow }, { data: teamRow }] = await Promise.all([
-    supabaseAdmin.from('picks').select('player_id, team_id').eq('lobby_id', lobbyId),
-    supabaseAdmin.from('lobbies').select('season').eq('id', lobbyId).single(),
-    supabaseAdmin.from('teams').select('draft_position').eq('id', teamId).single(),
-  ]);
-  const season = (lobbyRow?.season as number | undefined) ?? new Date().getUTCFullYear();
-  const draftPosition = (teamRow?.draft_position as number | undefined) ?? 1;
-  const players = await loadPlayerPool(season);
+  let allPicks = opts?.allPicks ?? null;
+  if (!allPicks) {
+    const { data } = await supabaseAdmin
+      .from('picks')
+      .select('player_id, team_id')
+      .eq('lobby_id', lobbyId);
+    allPicks = (data as { player_id: string; team_id: string }[] | null) ?? [];
+  }
+  let draftPosition = opts?.draftPosition;
+  if (draftPosition === undefined) {
+    const { data: teamRow } = await supabaseAdmin
+      .from('teams')
+      .select('draft_position')
+      .eq('id', teamId)
+      .single();
+    draftPosition = (teamRow?.draft_position as number | undefined) ?? 1;
+  }
+  let players = opts?.pool;
+  if (!players) {
+    const { data: lobbyRow } = await supabaseAdmin
+      .from('lobbies')
+      .select('season')
+      .eq('id', lobbyId)
+      .single();
+    const season = (lobbyRow?.season as number | undefined) ?? new Date().getUTCFullYear();
+    players = await loadPlayerPool(season);
+  }
 
-  const drafted = new Set((allPicks ?? []).map((p) => p.player_id as string));
+  const drafted = new Set(allPicks.map((p) => p.player_id));
   const byId = new Map(players.map((p) => [p.id, p]));
 
   // This team's current roster — counts by position, and the actual players (for
