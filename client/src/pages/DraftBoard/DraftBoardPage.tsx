@@ -1690,6 +1690,58 @@ export function DraftBoardPage() {
     return Array.from(weeks).sort((a, b) => a - b);
   }, [players, draftedIds]);
 
+  // Commissioner "add time" — a token bucket, not a hard lockout: a burst of up
+  // to ADD_TIME_MAX quick clicks goes straight through, then it refills one
+  // token every ADD_TIME_REFILL_MS so time can still be topped up steadily
+  // without letting the clock be inflated without limit. The bucket lives in a
+  // ref (mutated only on click) and is read against clockNow (which ticks every
+  // second) so the button re-enables on its own as tokens refill.
+  // NOTE: these hooks must stay above the loading/`!lobby` guards below — hooks
+  // can't run conditionally.
+  const ADD_TIME_MAX = 10;
+  const ADD_TIME_REFILL_MS = 4000;
+  const addBucketRef = useRef({ tokens: ADD_TIME_MAX, at: Date.now() });
+  const [addTick, setAddTick] = useState(0);
+  const [addTimeMenuOpen, setAddTimeMenuOpen] = useState(false);
+  const addTokens = Math.min(
+    ADD_TIME_MAX,
+    addBucketRef.current.tokens +
+      Math.floor((clockNow - addBucketRef.current.at) / ADD_TIME_REFILL_MS),
+  );
+  void addTick; // re-derive after a consume/refund, not just on the clock tick
+  async function addTime(seconds: number) {
+    const b = addBucketRef.current;
+    const refill = Math.floor((Date.now() - b.at) / ADD_TIME_REFILL_MS);
+    if (refill > 0) {
+      b.tokens = Math.min(ADD_TIME_MAX, b.tokens + refill);
+      b.at += refill * ADD_TIME_REFILL_MS;
+    }
+    if (b.tokens < 1) return; // out of tokens (the button is disabled anyway)
+    b.tokens -= 1;
+    setAddTick((n) => n + 1);
+    setCommishError(null);
+    try {
+      await api(`/lobbies/${id}/add-time`, { method: 'POST', body: { seconds } });
+    } catch (err) {
+      // Refund on failure so a network blip doesn't cost a click.
+      b.tokens = Math.min(ADD_TIME_MAX, b.tokens + 1);
+      setAddTick((n) => n + 1);
+      setCommishError(err instanceof Error ? err.message : 'Could not add time');
+    }
+  }
+  // Close the add-time preset menu on any outside click. Keyed on the shared
+  // `.draft__addtime` class so it works for whichever CommishTools instance is
+  // visible (the top bar's or the mobile bar's) without a per-instance ref.
+  useEffect(() => {
+    if (!addTimeMenuOpen) return;
+    function onDown(e: MouseEvent) {
+      const t = e.target;
+      if (!(t instanceof Element) || !t.closest('.draft__addtime')) setAddTimeMenuOpen(false);
+    }
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [addTimeMenuOpen]);
+
   if (loading || playersLoading)
     return (
       <div className="loading">
@@ -1920,55 +1972,6 @@ export function DraftBoardPage() {
       setPauseBusy(false);
     }
   }
-
-  // Commissioner "add time" — a token bucket, not a hard lockout: a burst of up
-  // to ADD_TIME_MAX quick clicks goes straight through, then it refills one
-  // token every ADD_TIME_REFILL_MS so time can still be topped up steadily
-  // without letting the clock be inflated without limit. The bucket lives in a
-  // ref (mutated only on click) and is *read* against clockNow (which ticks
-  // every second) so the button re-enables on its own as tokens refill.
-  const ADD_TIME_MAX = 10;
-  const ADD_TIME_REFILL_MS = 4000;
-  const addBucketRef = useRef({ tokens: ADD_TIME_MAX, at: Date.now() });
-  const [addTick, setAddTick] = useState(0);
-  const [addTimeMenuOpen, setAddTimeMenuOpen] = useState(false);
-  const addTokens = (() => {
-    void addTick; // re-derive after a consume/refund, not just on the clock tick
-    const b = addBucketRef.current;
-    return Math.min(ADD_TIME_MAX, b.tokens + Math.floor((clockNow - b.at) / ADD_TIME_REFILL_MS));
-  })();
-  async function addTime(seconds: number) {
-    const b = addBucketRef.current;
-    const refill = Math.floor((Date.now() - b.at) / ADD_TIME_REFILL_MS);
-    if (refill > 0) {
-      b.tokens = Math.min(ADD_TIME_MAX, b.tokens + refill);
-      b.at += refill * ADD_TIME_REFILL_MS;
-    }
-    if (b.tokens < 1) return; // out of tokens (the button is disabled anyway)
-    b.tokens -= 1;
-    setAddTick((n) => n + 1);
-    setCommishError(null);
-    try {
-      await api(`/lobbies/${id}/add-time`, { method: 'POST', body: { seconds } });
-    } catch (err) {
-      // Refund on failure so a network blip doesn't cost a click.
-      b.tokens = Math.min(ADD_TIME_MAX, b.tokens + 1);
-      setAddTick((n) => n + 1);
-      setCommishError(err instanceof Error ? err.message : 'Could not add time');
-    }
-  }
-  // Close the add-time preset menu on any outside click. Keyed on the shared
-  // `.draft__addtime` class so it works for whichever CommishTools instance is
-  // visible (the top bar's or the mobile bar's) without a per-instance ref.
-  useEffect(() => {
-    if (!addTimeMenuOpen) return;
-    function onDown(e: MouseEvent) {
-      const t = e.target;
-      if (!(t instanceof Element) || !t.closest('.draft__addtime')) setAddTimeMenuOpen(false);
-    }
-    document.addEventListener('mousedown', onDown);
-    return () => document.removeEventListener('mousedown', onDown);
-  }, [addTimeMenuOpen]);
 
   // Commissioner backstop: auto-pick every skipped team's outstanding slot at
   // once (an abandoned team on an unlimited allowance, or the end-game).
