@@ -49,13 +49,14 @@ export function PickCell({
 }) {
   const active = entry ? Object.keys(entry.counts) : [];
   const pickInRound = pick.overall - (pick.round - 1) * teamCount;
+  const posColor = POSITION_COLORS[player.position as Position];
 
   return (
     <td
       className={`draft-grid__cell draft-grid__cell--pick${
         pick.is_keeper ? ' draft-grid__cell--keeper' : ''
       }`}
-      style={{ ['--pos']: POSITION_COLORS[player.position as Position] } as CSSProperties}
+      style={{ ['--pos']: posColor } as CSSProperties}
       onMouseEnter={onEnter}
       onMouseLeave={onLeave}
       onClick={() => onClick?.(pick)}
@@ -65,7 +66,10 @@ export function PickCell({
           {abbreviatePlayerName(player.name, player.position)}
         </span>
         <span className="draft-grid__meta">
-          {player.nfl_team}
+          <span className="draft-grid__pos" style={{ color: posColor }}>
+            {player.position}
+          </span>
+          {` ${player.nfl_team}`}
           {player.bye_week != null ? ` · Bye ${player.bye_week}` : ''}
         </span>
         <span className="draft-grid__pickround">
@@ -73,19 +77,31 @@ export function PickCell({
         </span>
       </div>
 
-      {/* Own corner, own element — unlike &__flags below, this never gives way
-          to the hover reactions popover. Keeper is a persistent fact about
-          the pick, not an activity indicator, so it always stays put in the
-          cell's top-right corner. */}
-      {pick.is_keeper && <LockIcon className="draft-grid__keeper-flag" sx={{ fontSize: 11 }} />}
-
-      {/* Subtle, uncluttered indicators for reactions / comments on this pick. */}
-      {(active.length > 0 || hasComment) && (
+      {/* Reaction / comment / keeper chips hanging off the bottom-right corner
+          — the same chip treatment as the default and big-screen cell styles. */}
+      {(pick.is_keeper || active.length > 0 || hasComment) && (
         <span className="draft-grid__flags" aria-hidden>
-          {hasComment && (
-            <ChatBubbleOutlineIcon className="draft-grid__comment-flag" sx={{ fontSize: 11 }} />
+          {pick.is_keeper && (
+            <span className="draft-grid__flag-chip draft-grid__keeper-flag">
+              <LockIcon sx={{ fontSize: 9 }} />
+            </span>
           )}
-          {active.length > 0 && <span className="draft-grid__react-flag">!!</span>}
+          {hasComment && (
+            <span
+              className="draft-grid__flag-chip"
+              style={{ ['--flag-color']: posColor } as CSSProperties}
+            >
+              <ChatBubbleOutlineIcon sx={{ fontSize: 9 }} />
+            </span>
+          )}
+          {active.length > 0 && (
+            <span
+              className="draft-grid__flag-chip draft-grid__react-flag"
+              style={{ ['--flag-color']: posColor } as CSSProperties}
+            >
+              !!
+            </span>
+          )}
         </span>
       )}
 

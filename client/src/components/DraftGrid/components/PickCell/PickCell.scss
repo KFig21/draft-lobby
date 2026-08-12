@@ -7,102 +7,83 @@
 // documented elsewhere in this codebase; two classes here always outranks one.
 .draft-grid__cell.draft-grid__cell--pick {
   cursor: pointer;
-  // Position-coordinated surface: a faded wash of the player's position colour
-  // plus a position-tinted 1px border, so each pick reads as its position at a
-  // glance. --pos is set inline per cell (PickCell.tsx). Mixed into the opaque
-  // cell background (not laid over transparency) so a pick never blends into an
-  // empty slot the way a translucent fill would.
-  background: color-mix(in srgb, var(--pos) 10%, #{$cell-bg});
-  border-color: color-mix(in srgb, var(--pos) 50%, #{$border});
-  transition:
-    transform 190ms ease,
-    box-shadow 190ms ease,
-    border-color 190ms ease,
-    background-color 190ms ease;
+  // Flags hang half outside the box (like the default/big-screen cells) and the
+  // hover reactions tray unfolds below it.
+  overflow: visible;
+  // Position-coordinated surface: a wash of the player's position colour plus a
+  // position-tinted border, so each pick reads as its position at a glance.
+  // --pos is set inline per cell (PickCell.tsx). Mixed into the opaque cell
+  // background (not over transparency) so a pick never blends into an empty
+  // slot the way a translucent fill would.
+  background: color-mix(in srgb, var(--pos) 16%, #{$cell-bg});
+  border-color: color-mix(in srgb, var(--pos) 65%, #{$border});
+  transition: transform 300ms ease;
 
+  // Same lift as the default/big-screen styles: scale up with a crisp
+  // theme-aware offset ring (the reactions tray reveals via its own rule below).
   @media (hover: hover) {
     &:hover {
-      transform: translateY(-2px);
+      transform: scale(1.07);
+      box-shadow: none;
       z-index: 4;
-      // Same lift + crisp offset shadow as before, now coordinated to the
-      // position colour instead of a flat green (works in both themes since
-      // --pos is theme-agnostic and the wash mixes into the theme's cell bg).
-      border-color: var(--pos);
-      background-color: color-mix(in srgb, var(--pos) 22%, #{$cell-bg});
-      box-shadow: 3px 3px 0 0 var(--pos);
-    }
-  }
 
-  // Keepers keep their gold identity — the position border/shadow must not
-  // paint over it (the gold outline itself is applied in DraftGrid.scss and
-  // sits above everything). Extra class (0,3,0 / 0,4,0 on hover) outranks the
-  // position rules above regardless of stylesheet order.
-  &.draft-grid__cell--keeper {
-    border-color: $border;
+      // Transparent border (not none) keeps the box-model width identical so
+      // the text doesn't reflow as you hover it.
+      :root[data-theme='light'] & {
+        border: 1px solid transparent;
+        box-shadow: 0 0 0 6px white, 0 0 0 8px black;
+      }
 
-    @media (hover: hover) {
-      &:hover {
-        border-color: $keeper;
-        box-shadow: 3px 3px 0 0 $keeper;
+      :root[data-theme='dark'] & {
+        border: 1px solid transparent;
+        box-shadow: 0 0 0 6px black, 0 0 0 8px white;
       }
     }
   }
 }
 
-// Uncluttered "has reactions/comments" indicators (grayed), shown when not hovering.
+// Reaction / comment / keeper chips hanging off the bottom-right corner —
+// copied from the default/big-screen cells (DefaultPickCell.scss) so these read
+// identically across styles.
 .draft-grid__flags {
   position: absolute;
-  bottom: 2px;
-  right: 4px;
+  bottom: -4px;
+  right: -4px;
+  z-index: 2;
   display: flex;
+  flex-direction: row-reverse;
   align-items: center;
-  gap: 3px;
-  color: $text-muted;
-  opacity: 0.7;
+  gap: 2px;
   pointer-events: none;
-
-  // On hover the reactions popover takes over, so drop the flags.
-  @media (hover: hover) {
-    .draft-grid__cell--pick:hover & {
-      display: none;
-    }
-  }
-
-  // &__keeper-flag (below) is its own element pinned to this same corner —
-  // when a keeper pick also has comments/reactions, shift this group left so
-  // it doesn't sit underneath the lock icon.
-  .draft-grid__cell--keeper & {
-    right: 18px;
-  }
 }
 
-.draft-grid__comment-flag {
-  color: $text-muted;
+.draft-grid__flag-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: var(--flag-color);
+  color: #1a1a1a;
 }
 
-// Deliberately its own always-visible element (not part of &__flags above,
-// which hides on hover to make room for the reactions popover) — pinned to
-// the cell's bottom-right corner, outermost of the two, so it never
-// disappears just because the pick also has comments/reactions.
-.draft-grid__keeper-flag {
-  position: absolute;
-  bottom: 2px;
-  right: 4px;
-  color: $keeper;
-  opacity: 0.85;
+.draft-grid__flag-chip.draft-grid__keeper-flag {
+  background: $keeper;
 }
 
 .draft-grid__react-flag {
   font-size: 0.6rem;
   font-weight: 900;
-  letter-spacing: 0.5px;
   line-height: 1;
 }
 
-// Full reactions + add affordance — unfolds just below the pick on hover.
+// Full reactions + add affordance — unfolds just below the pick on hover
+// (clear of the chips that now hang off the bottom corner).
 .draft-grid__react-pop {
   position: absolute;
-  top: calc(100% + 2px);
+  top: calc(100% + 10px);
   left: 0;
   z-index: 30;
   display: none;
@@ -166,7 +147,7 @@
   text-overflow: ellipsis;
 }
 
-// Team · Bye (second line).
+// Position · team · bye (second line).
 .draft-grid__meta {
   max-width: 100%;
   overflow: hidden;
@@ -176,6 +157,13 @@
   font-weight: 600;
   letter-spacing: 0.02em;
   color: $text-muted;
+}
+
+// Color-coded position leading the second line — the position isn't obvious
+// from the faded surface the way it is on the solid-fill styles, so it's
+// spelled out here (colour set inline per cell in PickCell.tsx).
+.draft-grid__pos {
+  font-weight: 800;
 }
 
 // "round.pick" (third line), fainter so hierarchy reads name > team/bye > pick.
@@ -193,6 +181,15 @@
 .draft-grid.draft-grid--fill {
   .draft-grid__react-flag {
     font-size: calc(0.6rem * var(--fs-scale));
+  }
+
+  .draft-grid__flag-chip {
+    min-width: calc(14px * var(--fs-scale));
+    height: calc(14px * var(--fs-scale));
+
+    svg {
+      font-size: calc(9px * var(--fs-scale));
+    }
   }
 
   .draft-grid__rchip {
