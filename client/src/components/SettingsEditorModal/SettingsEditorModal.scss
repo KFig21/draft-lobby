@@ -52,10 +52,21 @@
     align-items: stretch;
   }
 
+  // Matches the rollback confirm input (ConfirmModal's __confirm-input).
   &__simulate-input {
     flex: 1;
     min-width: 0;
+    padding: $space * 0.9 $space * 1.1;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: $bg;
+    color: $text;
+    font-size: 0.9rem;
     letter-spacing: 0.08em;
+
+    &:focus {
+      border-color: $primary;
+    }
   }
 
   &__simulate-row .button {
