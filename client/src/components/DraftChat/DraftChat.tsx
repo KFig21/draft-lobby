@@ -442,7 +442,11 @@ export function DraftChat({
                 key={it.id}
                 className={`chat__system${it.body.startsWith('↩️') ? ' chat__system--danger' : ''}`}
               >
-                {Icon && <Icon className="chat__system-icon" fontSize="inherit" />}
+                {Icon && (
+                  <span className="chat__system-badge">
+                    <Icon className="chat__system-icon" fontSize="inherit" />
+                  </span>
+                )}
                 {text}
                 {stamped && <span className="chat__system-time">{formatTime(it.at)}</span>}
               </div>

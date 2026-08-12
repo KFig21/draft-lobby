@@ -69,12 +69,24 @@
     }
   }
 
-  // Leading icon (replaces the message's stored emoji). Inline so the message
-  // text still wraps naturally; nudged to sit on the text baseline.
+  // Leading icon (replaces the message's stored emoji): a solid circle in the
+  // pill's own colour (amber, or red on --danger via currentColor) with a black
+  // glyph. Inline so the message text still wraps naturally.
+  &__system-badge {
+    display: inline-grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    margin-right: 5px;
+    border-radius: 50%;
+    background: currentColor;
+    vertical-align: middle;
+  }
+
   &__system-icon {
-    font-size: 1.05em;
-    vertical-align: -0.2em;
-    margin-right: 3px;
+    font-size: 12px;
+    color: #000000;
   }
 
   // Timestamp trailing a start/complete milestone pill.
