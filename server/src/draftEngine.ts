@@ -54,12 +54,21 @@ const SUPERFLEX_POS: Position[] = ['QB', 'RB', 'WR', 'TE'];
  * two dimensionless factors noted below.
  */
 export const BOT_STRATEGY = {
-  /** Weight on bench depth — a player who wouldn't improve the team's starting
-   * lineup (e.g. a 3rd QB when it already starts two) is worth this fraction of
-   * their VOR: bye/injury insurance and upside, not starter value. Small, so a
-   * player who fills a starting slot always outranks pure depth early; it mainly
-   * decides late-round bench picks and breaks ties. Raising it makes bots chase
-   * best-available depth sooner (and stack a position more). */
+  /** Bonus (fantasy pts) for filling a still-EMPTY dedicated starter slot
+   * (QB/RB/WR/TE/K/DEF). This is what forces a team to actually complete its
+   * starting lineup — draft a QB for its empty QB slot — instead of piling depth
+   * at an inflated-value position. Big enough to beat bench depth, small enough
+   * that a truly elite BPA (huge VOR) can still be taken over a mediocre
+   * slot-filler. Raise it to fill mandatory slots more eagerly. */
+  starterSlotBonus: 60,
+  /** Bonus for filling an empty FLEX/OP slot — lower than a dedicated slot, since
+   * flex/OP can be filled later from an abundant RB/WR/TE pool, whereas a
+   * position-locked slot (esp. QB in superflex) can't. */
+  flexSlotBonus: 22,
+  /** Weight on bench depth — a player who fills no starter slot (e.g. a 3rd QB
+   * when the team already starts two) is worth this fraction of their VOR:
+   * bye/injury insurance and upside, not starter value. Small, so slot-fillers
+   * outrank pure depth; mainly decides late-round bench picks and ties. */
   benchWeight: 0.2,
   /** Weight on snake-gap urgency — the value cliff at a startable position that
    * would fall before the team's next pick (dimensionless multiplier). Higher =
@@ -564,6 +573,36 @@ export async function choosePlayer(
   const baseLineupVOR = lineupVOR(myPlayers);
   const marginalStartVOR = (p: PoolPlayer) => lineupVOR([...myPlayers, p]) - baseLineupVOR;
 
+  // Which starter slots the current roster leaves EMPTY (same greedy fill as
+  // lineupVOR). A pick that fills one gets a completion bonus — dedicated
+  // (position-locked) slots first, then FLEX/OP — so a team drafts a QB for its
+  // open QB slot before stacking a 3rd TE it can't start.
+  const emptyStarterSlots = (() => {
+    const sorted = [...myPlayers].sort((a, b) => pointsFor(b) - pointsFor(a));
+    const filled = new Array<boolean>(starterSlots.length).fill(false);
+    for (const p of sorted) {
+      let bestIdx = -1;
+      let bestBreadth = Infinity;
+      for (let i = 0; i < starterSlots.length; i++) {
+        if (filled[i] || !starterSlots[i].includes(p.position)) continue;
+        if (starterSlots[i].length < bestBreadth) {
+          bestBreadth = starterSlots[i].length;
+          bestIdx = i;
+        }
+      }
+      if (bestIdx >= 0) filled[bestIdx] = true;
+    }
+    return starterSlots.filter((_, i) => !filled[i]);
+  })();
+  const slotBonusFor = (pos: Position): number => {
+    let bonus = 0;
+    for (const slot of emptyStarterSlots) {
+      if (!slot.includes(pos)) continue;
+      bonus = Math.max(bonus, slot.length === 1 ? BOT_STRATEGY.starterSlotBonus : BOT_STRATEGY.flexSlotBonus);
+    }
+    return bonus;
+  };
+
   // ── Snake-slot urgency: the value cliff before this team's next pick ──
   // Picks until this team is up again, from its slot on the snake board. At the
   // turn (gap≈1) there's no reason to reach; mid-round (gap large) a value cliff
@@ -598,10 +637,13 @@ export async function choosePlayer(
     // still under its league minimum counts like a starter need so bots chase it.
     let starterValue = marginalStartVOR(p);
     if (minDeficit(p.position) > 0) starterValue = Math.max(starterValue, Math.max(0, vor));
+    // Completing an empty starter slot (esp. a scarce, position-locked one) beats
+    // adding depth — this is what stops a team ending with 0 QB or a 3rd TE.
+    const slotBonus = slotBonusFor(p.position);
     const bench = BOT_STRATEGY.benchWeight * Math.max(0, vor);
     // Only reach for a positional run at a slot this player would actually start.
-    const urgency = starterValue > 0 ? BOT_STRATEGY.urgencyWeight * urgencyForPos(p.position) : 0;
-    return starterValue + bench + urgency;
+    const urgency = starterValue > 0 || slotBonus > 0 ? BOT_STRATEGY.urgencyWeight * urgencyForPos(p.position) : 0;
+    return starterValue + slotBonus + bench + urgency;
   };
   let best = pool[0];
   let bestScore = -Infinity;

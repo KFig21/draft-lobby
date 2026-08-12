@@ -57,7 +57,7 @@ export const VALUATION_TUNING = {
    * inflates their VOR past what anyone pays). >1 lifts a position, <1 lowers
    * it. Tune against a trusted cheat sheet for the league's format.
    */
-  positionValueWeight: { QB: 1.2, RB: 1, WR: 1, TE: 0.7, K: 1, DEF: 1 } as Record<Position, number>,
+  positionValueWeight: { QB: 1.2, RB: 1, WR: 1, TE: 0.6, K: 1, DEF: 1 } as Record<Position, number>,
 } as const;
 
 const FLEX_ELIGIBLE = SLOT_ELIGIBILITY.FLEX; // RB/WR/TE
