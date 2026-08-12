@@ -7,6 +7,7 @@ import StarBorderIcon from '@mui/icons-material/StarBorder';
 import { useModalClose } from '../../lib/useModalClose';
 import type { PlayerRow } from '../../lib/types';
 import { ByeClashes } from '../ByeClashes/ByeClashes';
+import { HoldButton } from '../HoldButton/HoldButton';
 import {
   PlayerHeader,
   PlayerStatGrid,
@@ -17,8 +18,13 @@ import './PlayerDetailModal.scss';
 interface Props {
   player: PlayerRow;
   onClose: () => void;
-  /** Omit to hide the Draft button entirely (e.g. viewing after the draft ended). */
+  /** Tap/click on the Draft button — the "confirm first" path. Omit to hide the
+   * Draft button entirely (e.g. viewing after the draft ended). */
   onPick?: () => void;
+  /** Press-and-hold on the Draft button — drafts instantly, skipping the confirm
+   * step (same gesture as the pool's draft buttons). When provided, the Draft
+   * button becomes a hold-to-draft control; tapping still runs `onPick`. */
+  onHoldPick?: () => void;
   disabled?: boolean;
   onQueue?: () => void;
   queued?: boolean;
@@ -43,6 +49,7 @@ export function PlayerDetailModal({
   player,
   onClose,
   onPick,
+  onHoldPick,
   disabled,
   onQueue,
   queued,
@@ -105,14 +112,27 @@ export function PlayerDetailModal({
 
         {onPick && (
           <div className="player-detail__actions">
-            <button
-              type="button"
-              className="button button--primary player-detail__draft"
-              onClick={onPick}
-              disabled={disabled}
-            >
-              Draft {player.name}
-            </button>
+            {onHoldPick ? (
+              <HoldButton
+                className="button button--primary player-detail__draft"
+                onTap={onPick}
+                onHold={onHoldPick}
+                disabled={disabled}
+                title="Hold to draft instantly · tap to confirm"
+                ariaLabel={`Draft ${player.name}`}
+              >
+                Draft {player.name}
+              </HoldButton>
+            ) : (
+              <button
+                type="button"
+                className="button button--primary player-detail__draft"
+                onClick={onPick}
+                disabled={disabled}
+              >
+                Draft {player.name}
+              </button>
+            )}
           </div>
         )}
       </div>

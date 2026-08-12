@@ -3534,6 +3534,14 @@ export function DraftBoardPage() {
                 }
               : undefined
           }
+          onHoldPick={
+            canPick && !draftedIds.has(detailPlayer.id)
+              ? () => {
+                  setDetailPlayer(null);
+                  holdDraft(detailPlayer);
+                }
+              : undefined
+          }
           disabled={!canPick}
           onQueue={
             draftedIds.has(detailPlayer.id) ? undefined : () => toggleQueue(detailPlayer.id)
