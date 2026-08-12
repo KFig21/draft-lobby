@@ -119,8 +119,10 @@ function ProjNum({ value }: { value: number }) {
   );
 }
 
-/** The value/proj-rank/last-year-rank row + projected/last-year totals (each
- * with a compact stat line) — shared between PickModal and PlayerDetailModal. */
+/** The ADP/proj-rank/last-year-rank row + projected/last-year totals (each
+ * with a compact stat line) — shared between PickModal and PlayerDetailModal.
+ * "ADP" here is the league-value draft order (points over positional
+ * replacement), not a generic market ADP. */
 export function PlayerStatGrid({ player, weekStats }: Props) {
   const hasPrev = player.prev_points != null || player.prev_rank != null;
   const [showWeek, setShowWeek] = useState(false);
@@ -129,7 +131,7 @@ export function PlayerStatGrid({ player, weekStats }: Props) {
     <>
       <div className="player-stat-block__row">
         <div className="player-stat-block__stat">
-          <span className="player-stat-block__stat-label">Value</span>
+          <span className="player-stat-block__stat-label">ADP</span>
           <span
             className="player-stat-block__stat-value"
             title={
@@ -138,7 +140,7 @@ export function PlayerStatGrid({ player, weekStats }: Props) {
                 : undefined
             }
           >
-            {player.value_rank != null ? `#${player.value_rank}` : '—'}
+            {player.value_rank != null ? player.value_rank.toFixed(1) : '—'}
           </span>
         </div>
         <div className="player-stat-block__stat">

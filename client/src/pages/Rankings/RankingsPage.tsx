@@ -419,7 +419,7 @@ export function RankingsPage() {
                   <th className="rankings-table__stats">Stats</th>
                 )}
                 <SortHeader label="Points" sortKeyFor="points" className="rankings-table__points" />
-                <SortHeader label="Value" sortKeyFor="value" className="rankings-table__adp" />
+                <SortHeader label="ADP" sortKeyFor="value" className="rankings-table__adp" />
               </tr>
             </thead>
             <tbody>
@@ -496,7 +496,7 @@ export function RankingsPage() {
                           : undefined
                       }
                     >
-                      {p.value_rank != null ? `#${p.value_rank}` : '—'}
+                      {p.value_rank != null ? p.value_rank.toFixed(1) : '—'}
                     </td>
                   </tr>
                 );

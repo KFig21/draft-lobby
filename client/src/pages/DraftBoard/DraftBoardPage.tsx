@@ -2474,9 +2474,9 @@ export function DraftBoardPage() {
                   type="button"
                   className={`pool__seg-btn ${sortMode === 'value' ? 'is-active' : ''}`}
                   onClick={() => setPoolSort('value')}
-                  title="Sort by league value (points over positional replacement)"
+                  title="Sort by league ADP (draft order by value over positional replacement)"
                 >
-                  Value
+                  ADP
                 </button>
               </div>
               {SHOW_BYE_FILTER && byeFilter}
@@ -2504,7 +2504,7 @@ export function DraftBoardPage() {
                     <th className="pool-table__statline">Stats</th>
                   )}
                   {sortTh('Pts', 'points', 'pool-table__pts')}
-                  {sortTh('Value', 'value', 'pool-table__adp')}
+                  {sortTh('ADP', 'value', 'pool-table__adp')}
                   <th className="pool-table__act" aria-label="Draft" />
                 </tr>
               </thead>
@@ -2642,7 +2642,7 @@ export function DraftBoardPage() {
                         className={`pool-table__adp${p.value_rank == null ? ' is-dash' : ''}`}
                         title={p.value != null ? `${p.value > 0 ? '+' : ''}${p.value.toFixed(1)} pts over replacement` : undefined}
                       >
-                        {p.value_rank != null ? p.value_rank : '—'}
+                        {p.value_rank != null ? p.value_rank.toFixed(1) : '—'}
                       </td>
                       <td className="pool-table__act">
                         {!isDrafted && canPick && (
