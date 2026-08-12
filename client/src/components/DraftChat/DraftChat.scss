@@ -69,9 +69,11 @@
     }
   }
 
-  // Leading icon (replaces the message's stored emoji): a solid circle in the
-  // pill's own colour (amber, or red on --danger via currentColor) with a black
-  // glyph. Inline so the message text still wraps naturally.
+  // Leading icon (replaces the message's stored emoji): a solid circle with a
+  // black glyph. The fill is a vivid amber in BOTH themes — using the pill's
+  // own $warning would go dark in light mode (it's darkened for text contrast)
+  // and swallow the black glyph. Rollbacks use the vivid $danger (see below),
+  // which is already the same in both themes. Inline so the text still wraps.
   &__system-badge {
     display: inline-grid;
     place-items: center;
@@ -80,8 +82,12 @@
     height: 18px;
     margin-right: 5px;
     border-radius: 50%;
-    background: currentColor;
+    background: #f6a642;
     vertical-align: middle;
+  }
+
+  &__system--danger &__system-badge {
+    background: $danger;
   }
 
   &__system-icon {
