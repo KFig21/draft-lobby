@@ -179,7 +179,9 @@
 }
 
 // "round.pick" (third line), fainter so hierarchy reads name > team/bye > pick.
-.draft-grid__round {
+// Note: NOT `draft-grid__round` — that's the sticky round-number column's own
+// class (DraftGrid.scss), which would drag its background/::before face in here.
+.draft-grid__pickround {
   font-size: 0.55rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
@@ -205,7 +207,7 @@
     font-size: calc(0.58rem * var(--fs-scale));
   }
 
-  .draft-grid__round {
+  .draft-grid__pickround {
     font-size: calc(0.58rem * var(--fs-scale));
   }
 }

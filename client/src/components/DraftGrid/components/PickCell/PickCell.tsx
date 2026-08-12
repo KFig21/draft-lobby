@@ -68,7 +68,7 @@ export function PickCell({
           {player.nfl_team}
           {player.bye_week != null ? ` · Bye ${player.bye_week}` : ''}
         </span>
-        <span className="draft-grid__round">
+        <span className="draft-grid__pickround">
           {formatRoundPick(pick.round, pickInRound, teamCount)}
         </span>
       </div>
