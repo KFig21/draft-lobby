@@ -2,6 +2,7 @@ import { POSITION_COLORS, type Position } from '@draft-lobby/shared';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlined';
 import LockIcon from '@mui/icons-material/Lock';
 import type { CSSProperties } from 'react';
+import { abbreviatePlayerName, formatRoundPick } from '../../../../lib/format';
 import type { PickRow, PlayerRow } from '../../../../lib/types';
 import type { Reactor } from '../../../ReactorsModal/ReactorsModal';
 // The base .draft-grid__cell box (size/border/padding) lives in DraftGrid.scss
@@ -19,11 +20,15 @@ export interface ReactionEntry {
   reactors?: Record<string, Reactor[]>;
 }
 
-/** The default draft cell style: position, player name, team & bye week,
- * plus reaction/comment indicators and the hover reactions popover. */
+/** The "clean" draft cell style: the same data orientation as the default
+ * (Hybrid) cell — abbreviated name, team & bye, then the round.pick line — but
+ * on a faded position-tinted surface (see PickCell.scss) rather than a solid
+ * position fill. Plus reaction/comment indicators and the hover reactions
+ * popover. */
 export function PickCell({
   pick,
   player,
+  teamCount,
   entry,
   hasComment,
   onReact,
@@ -33,6 +38,8 @@ export function PickCell({
 }: {
   pick: PickRow;
   player: PlayerRow;
+  /** Team count — derives the "round.pick" line (e.g. "5.02"). */
+  teamCount: number;
   entry: ReactionEntry | undefined;
   hasComment: boolean;
   onReact?: (pickId: string, emoji: string) => void;
@@ -41,6 +48,7 @@ export function PickCell({
   onLeave: () => void;
 }) {
   const active = entry ? Object.keys(entry.counts) : [];
+  const pickInRound = pick.overall - (pick.round - 1) * teamCount;
 
   return (
     <td
@@ -53,16 +61,15 @@ export function PickCell({
       onClick={() => onClick?.(pick)}
     >
       <div className="draft-grid__pick">
-        <span
-          className="draft-grid__pos"
-          style={{ color: POSITION_COLORS[player.position as Position] }}
-        >
-          {player.position}
+        <span className="draft-grid__player">
+          {abbreviatePlayerName(player.name, player.position)}
         </span>
-        <span className="draft-grid__player">{player.name}</span>
         <span className="draft-grid__meta">
           {player.nfl_team}
-          {player.bye_week ? ` · ${player.bye_week}` : ''}
+          {player.bye_week != null ? ` · Bye ${player.bye_week}` : ''}
+        </span>
+        <span className="draft-grid__round">
+          {formatRoundPick(pick.round, pickInRound, teamCount)}
         </span>
       </div>
 

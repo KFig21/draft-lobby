@@ -31,6 +31,19 @@ export function abbreviatedName(fullName: string): string {
   return `${first[0]}. ${rest.join(' ')}`;
 }
 
+/** "First initial. Last name" for draft-board cells — but a first name that's
+ * already initials (C.J., A.J., T.J.) is kept whole so it doesn't read as a
+ * different player, and D/ST entries ("BAL D/ST") aren't personal names, so
+ * they're left alone. Shared by the default (Hybrid) and clean cell styles. */
+export function abbreviatePlayerName(name: string, position: string): string {
+  if (position === 'DEF') return name;
+  const parts = name.trim().split(/\s+/);
+  if (parts.length < 2) return name;
+  const [first, ...rest] = parts;
+  if (/^([A-Z]\.){2,}$/.test(first)) return `${first} ${rest.join(' ')}`;
+  return `${first[0]?.toUpperCase() ?? ''}. ${rest.join(' ')}`;
+}
+
 /** "Round.pick" label — e.g. round 5, 2nd pick of the round. Zero-padded to
  * 2 digits once a draft has 10+ teams (round 5's 2nd pick reads as "5.02",
  * not "5.2", once picks-in-round can reach double digits); below that,

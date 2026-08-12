@@ -1,7 +1,7 @@
 import { POSITION_COLORS, type Position } from '@draft-lobby/shared';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlined';
 import LockIcon from '@mui/icons-material/Lock';
-import { formatRoundPick } from '../../../../lib/format';
+import { abbreviatePlayerName, formatRoundPick } from '../../../../lib/format';
 import type { PickRow, PlayerRow } from '../../../../lib/types';
 import type { ReactionEntry } from '../PickCell/PickCell';
 // Same reasoning as PickCell.tsx's identical import: this component also
@@ -9,20 +9,6 @@ import type { ReactionEntry } from '../PickCell/PickCell';
 // route that would otherwise never load DraftGrid.scss's base .draft-grid__cell.
 import '../../DraftGrid.scss';
 import './HybridPickCell.scss';
-
-// "First initial. Last name" — but a first name that's already initials
-// (C.J., A.J., T.J., D.J., ...) loses real information if trimmed down to
-// just its first letter ("C.J. Stroud" -> "C. Stroud" reads like a
-// different player), so those are kept whole instead. D/ST entries
-// ("BAL D/ST") aren't personal names at all — left alone.
-function abbreviateName(name: string, position: string): string {
-  if (position === 'DEF') return name;
-  const parts = name.trim().split(/\s+/);
-  if (parts.length < 2) return name;
-  const [first, ...rest] = parts;
-  if (/^([A-Z]\.){2,}$/.test(first)) return `${first} ${rest.join(' ')}`;
-  return `${first[0]?.toUpperCase() ?? ''}. ${rest.join(' ')}`;
-}
 
 /**
  * "Hybrid" draft cell style (Settings > Draft board): Big screen's
@@ -77,7 +63,7 @@ export function HybridPickCell({
     >
       <div className="hybrid-pick-cell__info">
         <span className="hybrid-pick-cell__name">
-          {abbreviateName(player.name, player.position)}
+          {abbreviatePlayerName(player.name, player.position)}
         </span>
         <span className="hybrid-pick-cell__meta">
           {player.nfl_team}

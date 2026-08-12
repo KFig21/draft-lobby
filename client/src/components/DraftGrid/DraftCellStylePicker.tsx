@@ -96,6 +96,7 @@ export function DraftCellStylePicker({
                     <PickCell
                       pick={SAMPLE_PICK}
                       player={player}
+                      teamCount={SAMPLE_TEAM_COUNT}
                       entry={showReactions ? SAMPLE_ENTRY : undefined}
                       hasComment={showReactions}
                       onEnter={() => {}}

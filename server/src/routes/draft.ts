@@ -402,12 +402,18 @@ draftRouter.post('/:id/start', async (req: AuthedRequest, res: Response) => {
 
   const { error: updateError } = await supabaseAdmin
     .from('lobbies')
-    .update({ status: 'DRAFTING', current_overall: firstOverall, pick_deadline: deadline })
+    .update({
+      status: 'DRAFTING',
+      current_overall: firstOverall,
+      pick_deadline: deadline,
+      started_at: new Date().toISOString(),
+    })
     .eq('id', lobbyId);
   if (updateError) {
     res.status(500).json({ error: updateError.message });
     return;
   }
+  await postSystemMessage(lobbyId, userId, '🏁 The draft has started');
   res.json({ ok: true });
 });
 

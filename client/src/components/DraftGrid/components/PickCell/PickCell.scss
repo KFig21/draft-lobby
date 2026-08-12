@@ -149,24 +149,41 @@
 .draft-grid__pick {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  align-items: flex-start;
+  gap: 0;
 }
 
-.draft-grid__pos {
-  font-weight: 800;
-  font-size: 0.65rem;
-}
-
+// Abbreviated name (e.g. "J. Chase") — the same top-line treatment as the
+// default cell, but in the theme text color since the surface here is a faded
+// position wash rather than a solid position fill.
 .draft-grid__player {
-  font-weight: 600;
+  max-width: 100%;
+  font-weight: 800;
+  font-size: 0.92rem;
+  color: $text;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+// Team · Bye (second line).
 .draft-grid__meta {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.55rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
   color: $text-muted;
-  font-size: 0.65rem;
+}
+
+// "round.pick" (third line), fainter so hierarchy reads name > team/bye > pick.
+.draft-grid__round {
+  font-size: 0.55rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: $text-muted;
 }
 
 // Fullscreen ("TV mode") scaling — matches DraftGrid.scss's own --fs-scale
@@ -180,19 +197,15 @@
     font-size: calc(0.72rem * var(--fs-scale));
   }
 
-  .draft-grid__pos {
-    font-size: calc(0.65rem * var(--fs-scale));
-  }
-
-  // The name itself — previously had no explicit size here, so it just
-  // inherited the table's own ambient font-size (0.75rem * --fs-scale, same
-  // as everything else). Broken out into its own rule so it can be tuned
-  // independently, same as its siblings above/below.
   .draft-grid__player {
-    font-size: calc(0.85rem * var(--fs-scale));
+    font-size: calc(0.96rem * var(--fs-scale));
   }
 
   .draft-grid__meta {
-    font-size: calc(0.65rem * var(--fs-scale));
+    font-size: calc(0.58rem * var(--fs-scale));
+  }
+
+  .draft-grid__round {
+    font-size: calc(0.58rem * var(--fs-scale));
   }
 }

@@ -426,12 +426,16 @@ export function DraftChat({
         )}
         {items.map((it) => {
           if (it.type === 'sys') {
+            // Draft start/complete milestones carry a timestamp (🏁 / 🏆);
+            // other system notes (pause/resume/rollback) don't.
+            const stamped = it.body.startsWith('🏁') || it.body.startsWith('🏆');
             return (
               <div
                 key={it.id}
                 className={`chat__system${it.body.startsWith('↩️') ? ' chat__system--danger' : ''}`}
               >
                 {it.body}
+                {stamped && <span className="chat__system-time">{formatTime(it.at)}</span>}
               </div>
             );
           }

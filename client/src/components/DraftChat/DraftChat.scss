@@ -69,6 +69,14 @@
     }
   }
 
+  // Timestamp trailing a start/complete milestone pill.
+  &__system-time {
+    margin-left: 6px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    opacity: 0.7;
+  }
+
   // ── Pick line ──
   &__pick {
     padding: $space $space * 1.25;

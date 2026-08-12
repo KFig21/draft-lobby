@@ -15,6 +15,19 @@ import {
 } from '@draft-lobby/shared';
 import { supabaseAdmin } from './supabase.js';
 
+/** "2m 14s" / "1h 5m 3s" — total draft duration for the completion message. */
+function formatDuration(ms: number): string {
+  const totalSeconds = Math.max(0, Math.round(ms / 1000));
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+  const parts: string[] = [];
+  if (h > 0) parts.push(`${h}h`);
+  if (h > 0 || m > 0) parts.push(`${m}m`);
+  parts.push(`${s}s`);
+  return parts.join(' ');
+}
+
 /** The team currently on the clock, with the flags the engine cares about. */
 export interface OnClockTeam {
   id: string;
@@ -545,18 +558,42 @@ export async function applyPick(
       .select('id');
     if (finalizeError) return { ok: false, error: 'db', message: finalizeError.message };
 
-    if (finalized && finalized.length > 0 && settings.draftMode !== 'MOCK') {
-      const { data: members } = await supabaseAdmin
-        .from('lobby_members')
-        .select('user_id')
-        .eq('lobby_id', lobbyId);
-      const rows = (members ?? []).map((m) => ({
-        actor_id: m.user_id,
-        type: 'DRAFT_COMPLETED',
-        lobby_id: lobbyId,
-        lobby_name: settings.name,
-      }));
-      if (rows.length) await supabaseAdmin.from('activity_events').insert(rows);
+    if (finalized && finalized.length > 0) {
+      // "Draft complete" chat message with total elapsed time. Posted by the
+      // single writer that flipped the status (the .neq guard above), so it
+      // fires exactly once. Chat exists for mock drafts too, so this isn't
+      // gated on draftMode the way the notifications below are.
+      const { data: lobbyMeta } = await supabaseAdmin
+        .from('lobbies')
+        .select('started_at, commissioner_id')
+        .eq('id', lobbyId)
+        .maybeSingle();
+      if (lobbyMeta?.commissioner_id) {
+        const elapsed =
+          lobbyMeta.started_at != null
+            ? ` · ${formatDuration(Date.now() - new Date(lobbyMeta.started_at as string).getTime())} elapsed`
+            : '';
+        await supabaseAdmin.from('chat_messages').insert({
+          lobby_id: lobbyId,
+          user_id: lobbyMeta.commissioner_id,
+          kind: 'SYSTEM',
+          body: `🏆 The draft is complete${elapsed}`,
+        });
+      }
+
+      if (settings.draftMode !== 'MOCK') {
+        const { data: members } = await supabaseAdmin
+          .from('lobby_members')
+          .select('user_id')
+          .eq('lobby_id', lobbyId);
+        const rows = (members ?? []).map((m) => ({
+          actor_id: m.user_id,
+          type: 'DRAFT_COMPLETED',
+          lobby_id: lobbyId,
+          lobby_name: settings.name,
+        }));
+        if (rows.length) await supabaseAdmin.from('activity_events').insert(rows);
+      }
     }
     return { ok: true, complete: true };
   }

@@ -937,21 +937,19 @@
     align-items: center;
     gap: 6px;
     font-weight: 800;
-    // "Draft complete" as a primary→accent gradient, clipped to the glyphs.
-    // Theme-aware ends keep it legible on both the dark and light top bars.
-    background: linear-gradient(90deg, $primary, $accent);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+    // Solid fill (no gradient): $accent on the dark top bar, $primary on light.
+    color: $accent;
 
     :root[data-theme='light'] & {
-      background: linear-gradient(90deg, $primary, $primary-hover);
-      -webkit-background-clip: text;
-      background-clip: text;
+      color: $primary;
     }
 
-    // Solid gold trophy (theme-aware keeper gold). Set explicitly since the
-    // parent's clipped-gradient text uses color: transparent.
+    // A touch larger on desktop, where there's room in the top bar.
+    @include lg {
+      font-size: 1.1rem;
+    }
+
+    // Solid gold trophy (theme-aware keeper gold).
     .draft__complete-trophy {
       color: $keeper;
     }

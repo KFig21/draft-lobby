@@ -230,6 +230,7 @@ export function DraftGrid({
                           key={team.id}
                           pick={pick}
                           player={player}
+                          teamCount={teams.length}
                           entry={reactionsByPick?.get(pick.id)}
                           hasComment={(commentsByPick?.get(pick.id)?.length ?? 0) > 0}
                           onReact={onReactPick}
