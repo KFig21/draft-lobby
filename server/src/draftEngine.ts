@@ -74,6 +74,13 @@ export const BOT_STRATEGY = {
    * would fall before the team's next pick (dimensionless multiplier). Higher =
    * bots reach harder to beat a positional run; 0 = ignore the draft slot. */
   urgencyWeight: 1,
+  /** How many picks before the end a bot will consider a KICKER — it's held out
+   * of the pool until `spotsLeft ≤ (empty K slots) + this`. Small = drafted in
+   * the very last rounds (matches how managers stream kickers). */
+  kickerDeferPicks: 1,
+  /** Same, for DEFENSE — a little larger than the kicker so D/ST goes a round or
+   * two earlier than K, but still late. */
+  defenseDeferPicks: 3,
 } as const;
 
 /** A user's profile username, for defaulting a team's name to it. */
@@ -555,6 +562,22 @@ export async function choosePlayer(
       !((p.position === 'K' || p.position === 'DEF') && have[p.position] >= needs.base[p.position]),
   );
   if (nonBackupKDEF.length > 0) pool = nonBackupKDEF;
+
+  // Stream K/DEF late: most managers don't spend a mid-round pick on a
+  // low-variance kicker/defense, they grab one in the final rounds. So a K/DEF
+  // is only a candidate once the team is within a few picks of having to fill
+  // its slot — the kicker held latest, the defense a little earlier. (When the
+  // window opens the empty-slot bonus below makes them get taken promptly.)
+  const teamPicks = Object.values(have).reduce((a, b) => a + b, 0);
+  const spotsLeft = roundsForSettings(settings) - teamPicks; // picks left, incl. this one
+  const kOk = spotsLeft <= Math.max(0, needs.base.K - have.K) + BOT_STRATEGY.kickerDeferPicks;
+  const defOk = spotsLeft <= Math.max(0, needs.base.DEF - have.DEF) + BOT_STRATEGY.defenseDeferPicks;
+  const timed = pool.filter((p) => {
+    if (p.position === 'K') return kOk;
+    if (p.position === 'DEF') return defOk;
+    return true;
+  });
+  if (timed.length > 0) pool = timed;
 
   // ── Value to THIS roster: marginal starting-lineup VOR ──
   // A player is worth how much they'd improve this team's optimal starting
