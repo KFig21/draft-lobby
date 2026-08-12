@@ -39,6 +39,8 @@ import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 import GridViewOutlinedIcon from '@mui/icons-material/GridViewOutlined';
+import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
+import MoreTimeIcon from '@mui/icons-material/MoreTime';
 import ZoomInMapIcon from '@mui/icons-material/ZoomInMap';
 import ZoomOutMapIcon from '@mui/icons-material/ZoomOutMap';
 import LeaderboardIcon from '@mui/icons-material/Leaderboard';
@@ -1919,6 +1921,55 @@ export function DraftBoardPage() {
     }
   }
 
+  // Commissioner "add time" — a token bucket, not a hard lockout: a burst of up
+  // to ADD_TIME_MAX quick clicks goes straight through, then it refills one
+  // token every ADD_TIME_REFILL_MS so time can still be topped up steadily
+  // without letting the clock be inflated without limit. The bucket lives in a
+  // ref (mutated only on click) and is *read* against clockNow (which ticks
+  // every second) so the button re-enables on its own as tokens refill.
+  const ADD_TIME_MAX = 10;
+  const ADD_TIME_REFILL_MS = 4000;
+  const addBucketRef = useRef({ tokens: ADD_TIME_MAX, at: Date.now() });
+  const [addTick, setAddTick] = useState(0);
+  const [addTimeMenuOpen, setAddTimeMenuOpen] = useState(false);
+  const addTokens = (() => {
+    void addTick; // re-derive after a consume/refund, not just on the clock tick
+    const b = addBucketRef.current;
+    return Math.min(ADD_TIME_MAX, b.tokens + Math.floor((clockNow - b.at) / ADD_TIME_REFILL_MS));
+  })();
+  async function addTime(seconds: number) {
+    const b = addBucketRef.current;
+    const refill = Math.floor((Date.now() - b.at) / ADD_TIME_REFILL_MS);
+    if (refill > 0) {
+      b.tokens = Math.min(ADD_TIME_MAX, b.tokens + refill);
+      b.at += refill * ADD_TIME_REFILL_MS;
+    }
+    if (b.tokens < 1) return; // out of tokens (the button is disabled anyway)
+    b.tokens -= 1;
+    setAddTick((n) => n + 1);
+    setCommishError(null);
+    try {
+      await api(`/lobbies/${id}/add-time`, { method: 'POST', body: { seconds } });
+    } catch (err) {
+      // Refund on failure so a network blip doesn't cost a click.
+      b.tokens = Math.min(ADD_TIME_MAX, b.tokens + 1);
+      setAddTick((n) => n + 1);
+      setCommishError(err instanceof Error ? err.message : 'Could not add time');
+    }
+  }
+  // Close the add-time preset menu on any outside click. Keyed on the shared
+  // `.draft__addtime` class so it works for whichever CommishTools instance is
+  // visible (the top bar's or the mobile bar's) without a per-instance ref.
+  useEffect(() => {
+    if (!addTimeMenuOpen) return;
+    function onDown(e: MouseEvent) {
+      const t = e.target;
+      if (!(t instanceof Element) || !t.closest('.draft__addtime')) setAddTimeMenuOpen(false);
+    }
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [addTimeMenuOpen]);
+
   // Commissioner backstop: auto-pick every skipped team's outstanding slot at
   // once (an abandoned team on an unlimited allowance, or the end-game).
   async function autopickSkipped() {
@@ -2045,10 +2096,21 @@ export function DraftBoardPage() {
     }
   }
 
-  const myTurnHighlight = isMyTurn && !isPaused && !isComplete;
-  const myTurnSecondsLeft = myTurnHighlight && lobby.pick_deadline
-    ? Math.max(0, Math.floor((new Date(lobby.pick_deadline).getTime() - clockNow) / 1000))
-    : null;
+  // The top bar keeps its "your pick" colour + warning/danger even while paused,
+  // using the frozen remaining time (pick_deadline goes null server-side when
+  // paused, so fall back to pick_deadline_remaining_ms — same as the on-clock
+  // cell below). The pulse still stops while paused (a frozen clock shouldn't
+  // throb), but the colour holds where it was instead of resetting to neutral.
+  const myTurnHighlight = isMyTurn && !isComplete;
+  const myTurnRemainingMs = !myTurnHighlight
+    ? null
+    : isPaused
+      ? lobby.pick_deadline_remaining_ms
+      : lobby.pick_deadline
+        ? new Date(lobby.pick_deadline).getTime() - clockNow
+        : null;
+  const myTurnSecondsLeft =
+    myTurnRemainingMs != null ? Math.max(0, Math.floor(myTurnRemainingMs / 1000)) : null;
   const myTurnUrgency =
     myTurnSecondsLeft == null
       ? null
@@ -2057,7 +2119,14 @@ export function DraftBoardPage() {
         : myTurnSecondsLeft <= 25
           ? 'warning'
           : null;
-  const myTurnFlashing = myTurnSecondsLeft != null && myTurnSecondsLeft <= 5;
+  const myTurnFlashing = !isPaused && myTurnSecondsLeft != null && myTurnSecondsLeft <= 5;
+
+  // There's a pick clock the commissioner can extend: a live deadline while
+  // drafting, or a frozen remaining while paused (an unlimited round has neither).
+  const hasExtendableClock =
+    !isComplete &&
+    !isStaging &&
+    (lobby.pick_deadline != null || (isPaused && lobby.pick_deadline_remaining_ms != null));
 
   // Same countdown, but for whichever team is on the clock (not just the
   // viewer) — drives the draft grid's on-clock cell progress fill/urgency
@@ -2223,6 +2292,46 @@ export function DraftBoardPage() {
           <FastForwardIcon fontSize="small" />
           <span className="draft__btn-label">Skip bots{autoSkipBots ? ' · On' : ''}</span>
         </button>
+        {hasExtendableClock && (
+          <div className="draft__addtime">
+            <button
+              className="draft__tool-btn draft__addtime-main"
+              onClick={() => addTime(5)}
+              disabled={addTokens < 1}
+              title={addTokens < 1 ? 'Add time is recharging…' : 'Add 5 seconds to the pick clock'}
+            >
+              <MoreTimeIcon fontSize="small" />
+              <span className="draft__btn-label">+5s</span>
+            </button>
+            <button
+              className="draft__tool-btn draft__addtime-caret"
+              onClick={() => setAddTimeMenuOpen((o) => !o)}
+              aria-label="More time options"
+              aria-expanded={addTimeMenuOpen}
+            >
+              <ArrowDropDownIcon fontSize="small" />
+            </button>
+            {addTimeMenuOpen && (
+              <div className="draft__addtime-menu" role="menu">
+                {[15, 30, 60].map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    role="menuitem"
+                    className="draft__addtime-item"
+                    onClick={() => {
+                      addTime(s);
+                      setAddTimeMenuOpen(false);
+                    }}
+                    disabled={addTokens < 1}
+                  >
+                    +{s < 60 ? `${s}s` : `${Math.floor(s / 60)}:00`}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
         {skipped.length > 0 && (
           <button
             className="draft__tool-btn"

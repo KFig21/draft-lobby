@@ -1777,6 +1777,76 @@ draftRouter.post('/:id/resume', async (req: AuthedRequest, res: Response) => {
   res.json({ ok: true, status: 'DRAFTING' });
 });
 
+/**
+ * POST /api/lobbies/:id/add-time — commissioner extends the current pick clock
+ * by `seconds`. Adds to the live deadline while DRAFTING, or to the frozen
+ * remaining while PAUSED. Uses a conditional update keyed on the value we read,
+ * retrying on a mismatch, so rapid clicks (the client's +5s spam) can't lose an
+ * increment to a concurrent write. Server-side rate limit backstops the client
+ * token bucket.
+ */
+draftRouter.post(
+  '/:id/add-time',
+  rateLimit('add-time', { max: 25, windowMs: 10_000 }),
+  async (req: AuthedRequest, res: Response) => {
+    const lobbyId = req.params.id;
+    const role = await getRole(lobbyId, req.user!.id);
+    if (!isCommish(role)) {
+      res.status(403).json({ error: 'Only the commissioner can add time' });
+      return;
+    }
+    const seconds = Number(req.body?.seconds);
+    if (!Number.isFinite(seconds) || seconds < 1 || seconds > 120) {
+      res.status(400).json({ error: 'Invalid amount' });
+      return;
+    }
+    const addMs = Math.round(seconds * 1000);
+
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const { data: lobby } = await supabaseAdmin
+        .from('lobbies')
+        .select('status, pick_deadline, pick_deadline_remaining_ms')
+        .eq('id', lobbyId)
+        .maybeSingle();
+      if (!lobby) {
+        res.status(404).json({ error: 'Lobby not found' });
+        return;
+      }
+      if (lobby.status === 'DRAFTING' && lobby.pick_deadline) {
+        const oldDeadline = lobby.pick_deadline as string;
+        const newDeadline = new Date(new Date(oldDeadline).getTime() + addMs).toISOString();
+        const { data: updated } = await supabaseAdmin
+          .from('lobbies')
+          .update({ pick_deadline: newDeadline })
+          .eq('id', lobbyId)
+          .eq('pick_deadline', oldDeadline)
+          .select('id');
+        if (updated && updated.length) {
+          res.json({ ok: true });
+          return;
+        }
+      } else if (lobby.status === 'PAUSED' && lobby.pick_deadline_remaining_ms != null) {
+        const oldMs = lobby.pick_deadline_remaining_ms as number;
+        const { data: updated } = await supabaseAdmin
+          .from('lobbies')
+          .update({ pick_deadline_remaining_ms: oldMs + addMs })
+          .eq('id', lobbyId)
+          .eq('pick_deadline_remaining_ms', oldMs)
+          .select('id');
+        if (updated && updated.length) {
+          res.json({ ok: true });
+          return;
+        }
+      } else {
+        res.status(409).json({ error: 'There’s no running clock to extend' });
+        return;
+      }
+      // Value changed under us (a tick, another add, or the clock advanced) — retry.
+    }
+    res.status(409).json({ error: 'Could not add time — try again' });
+  },
+);
+
 /** POST /api/lobbies/:id/rollback-to — commissioner rolls the draft back to
  * (and including) a specific pick, deleting it and every pick after it. */
 draftRouter.post('/:id/rollback-to', async (req: AuthedRequest, res: Response) => {
