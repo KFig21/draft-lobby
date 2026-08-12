@@ -243,7 +243,9 @@
         border-color: transparent;
 
         &:hover {
-          background: rgba(255, 255, 255, 0.85);
+          background: black;
+          color: white;
+          border: solid 1px black;
         }
       }
     }
@@ -485,6 +487,7 @@
       display: inline-flex;
     }
   }
+
   &__topbar--fill &__viewtoggle {
     display: inline-flex;
   }
@@ -1581,7 +1584,7 @@
           display: none;
         }
 
-        > * {
+        >* {
           flex-shrink: 0;
         }
       }
@@ -1806,7 +1809,7 @@
     white-space: nowrap;
     cursor: pointer;
 
-    & + & {
+    &+& {
       border-left: 1px solid $border;
     }
 
@@ -1906,6 +1909,7 @@
 
   // The immediate next pick reads in the accent colour; later picks stay muted.
   &__proj--next {
+
     &::before,
     &::after {
       background: color-mix(in srgb, #{$accent} 70%, transparent);
@@ -2065,6 +2069,7 @@
     transform: translateY(0);
   }
 }
+
 // ── Desktop 3-lane dashboard ──────────────────────────────────────────
 // Replaces the board + tabbed-sidebar layout for the windowed board view
 // (>=1100px; see DraftBoardPage's `useDashboard`). Fullscreen, mobile and the
@@ -2167,9 +2172,18 @@
     table-layout: fixed;
     min-width: calc(30px + var(--fs-cols, 12) * 128px);
 
-    .draft-grid__corner { width: 30px; }
-    .draft-grid__team { width: auto; max-width: none; }
-    .draft-grid__cell { width: auto; }
+    .draft-grid__corner {
+      width: 30px;
+    }
+
+    .draft-grid__team {
+      width: auto;
+      max-width: none;
+    }
+
+    .draft-grid__cell {
+      width: auto;
+    }
   }
 
   // Bottom pane lays queue | divider | list side by side (row), unlike the
@@ -2192,8 +2206,9 @@
   }
 
   &__chat {
+
     // DraftChat fills a flex column the same way it does in the sidebar.
-    > * {
+    >* {
       flex: 1;
       min-height: 0;
     }
@@ -2243,7 +2258,10 @@
     text-transform: uppercase;
     cursor: pointer;
 
-    &:hover { color: $danger; border-color: $danger; }
+    &:hover {
+      color: $danger;
+      border-color: $danger;
+    }
   }
 
   &__queue-list {
@@ -2284,7 +2302,11 @@
       font-weight: 800;
       line-height: 1;
     }
-    &-rank { font-size: 0.58rem; opacity: 0.85; }
+
+    &-rank {
+      font-size: 0.58rem;
+      opacity: 0.85;
+    }
 
     &-main {
       flex: 1;
@@ -2299,8 +2321,11 @@
       color: inherit;
       cursor: pointer;
 
-      &:hover .draft-dash__qrow-name { color: $accent; }
+      &:hover .draft-dash__qrow-name {
+        color: $accent;
+      }
     }
+
     &-name {
       font-size: 0.82rem;
       font-weight: 700;
@@ -2309,6 +2334,7 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
+
     &-sub {
       font-size: 0.68rem;
       color: $text-muted;
@@ -2336,7 +2362,10 @@
       font-size: 1rem;
       cursor: pointer;
 
-      &:hover { background: $bg-hover; color: $danger; }
+      &:hover {
+        background: $bg-hover;
+        color: $danger;
+      }
     }
   }
 
@@ -2347,7 +2376,11 @@
     place-items: center;
     z-index: 2;
   }
-  &__hdiv { cursor: row-resize; }
+
+  &__hdiv {
+    cursor: row-resize;
+  }
+
   &__vdiv {
     flex: 0 0 12px;
     cursor: col-resize;
@@ -2380,13 +2413,30 @@
 // here, scoped to the dashboard so the sidebar and mobile layouts are
 // untouched.
 .draft-dash__roster {
-  .draft__roster { padding: $space; }
+  .draft__roster {
+    padding: $space;
+  }
 
-  .lineup-view { gap: $space * 0.85; }
-  .lineup-view__label { font-size: 0.62rem; }
-  .lineup-view__select { padding: $space * 0.6 $space * 0.75; font-size: 0.88rem; }
-  .lineup-view__auto { font-size: 0.76rem; }
-  .lineup-view__section { gap: $space * 0.45; }
+  .lineup-view {
+    gap: $space * 0.85;
+  }
+
+  .lineup-view__label {
+    font-size: 0.62rem;
+  }
+
+  .lineup-view__select {
+    padding: $space * 0.6 $space * 0.75;
+    font-size: 0.88rem;
+  }
+
+  .lineup-view__auto {
+    font-size: 0.76rem;
+  }
+
+  .lineup-view__section {
+    gap: $space * 0.45;
+  }
 
   // Position breakdown: even 3×2 grid of equal-width chips rather than a
   // ragged wrapping flow.
@@ -2396,16 +2446,46 @@
     gap: $space * 0.45;
     padding: $space * 0.6;
   }
-  .roster-count { display: flex; min-width: 0; font-size: 0.64rem; }
-  .roster-count__pos { flex-shrink: 0; width: 2rem; min-width: 0; padding: 3px 4px; }
-  .roster-count__n { flex: 1; min-width: 0; padding: 3px 4px; }
 
-  .lineup-slot { gap: $space * 0.6; }
-  .lineup-slot__label { width: 2rem; font-size: 0.58rem; }
-  .lineup-slot__empty { padding: $space * 0.6; font-size: 0.74rem; }
+  .roster-count {
+    display: flex;
+    min-width: 0;
+    font-size: 0.64rem;
+  }
+
+  .roster-count__pos {
+    flex-shrink: 0;
+    width: 2rem;
+    min-width: 0;
+    padding: 3px 4px;
+  }
+
+  .roster-count__n {
+    flex: 1;
+    min-width: 0;
+    padding: 3px 4px;
+  }
+
+  .lineup-slot {
+    gap: $space * 0.6;
+  }
+
+  .lineup-slot__label {
+    width: 2rem;
+    font-size: 0.58rem;
+  }
+
+  .lineup-slot__empty {
+    padding: $space * 0.6;
+    font-size: 0.74rem;
+  }
 
   // Filled-slot cards: tighten padding + type so a full lineup fits the lane.
-  .player-card { padding: $space * 0.5 $space * 0.7; gap: $space * 0.6; }
+  .player-card {
+    padding: $space * 0.5 $space * 0.7;
+    gap: $space * 0.6;
+  }
+
   // Small square position chip (rounded), just the abbreviation.
   .player-card__pos {
     width: 26px;
@@ -2415,16 +2495,41 @@
     padding: 0;
     border-radius: 6px;
   }
-  .player-card__pos-abbr { font-size: 0.58rem; }
-  .player-card__pos-rank { font-size: 0.58rem; }
-  .player-card__name-text { font-size: 0.8rem; }
-  .player-card__sub { font-size: 0.68rem; }
-  .player-card__proj { font-size: 0.92rem; }
+
+  .player-card__pos-abbr {
+    font-size: 0.58rem;
+  }
+
+  .player-card__pos-rank {
+    font-size: 0.58rem;
+  }
+
+  .player-card__name-text {
+    font-size: 0.8rem;
+  }
+
+  .player-card__sub {
+    font-size: 0.68rem;
+  }
+
+  .player-card__proj {
+    font-size: 0.92rem;
+  }
+
   // ADP isn't needed in the tight roster lane — the projection carries it.
-  .player-card__adp { display: none; }
+  .player-card__adp {
+    display: none;
+  }
+
   // Keeper badge collapses to just its lock icon to save horizontal room.
-  .player-card__keeper-badge { padding: 2px; gap: 0; }
-  .player-card__keeper-word { display: none; }
+  .player-card__keeper-badge {
+    padding: 2px;
+    gap: 0;
+  }
+
+  .player-card__keeper-word {
+    display: none;
+  }
 }
 
 // Fullscreen menu modal on the Detailed layout resizes per tab: wide enough for
@@ -2446,22 +2551,65 @@
 }
 
 .draft-dash__chat {
-  .chat__scroll { padding: $space; gap: $space * 0.85; }
-  .chat__msg { gap: $space * 0.6; }
-  .chat__msg-name { font-size: 0.76rem; }
-  .chat__msg-time { font-size: 0.62rem; }
-  .chat__msg-text { font-size: 0.79rem; line-height: 1.3; }
-  .chat__reply { font-size: 0.66rem; }
+  .chat__scroll {
+    padding: $space;
+    gap: $space * 0.85;
+  }
+
+  .chat__msg {
+    gap: $space * 0.6;
+  }
+
+  .chat__msg-name {
+    font-size: 0.76rem;
+  }
+
+  .chat__msg-time {
+    font-size: 0.62rem;
+  }
+
+  .chat__msg-text {
+    font-size: 0.79rem;
+    line-height: 1.3;
+  }
+
+  .chat__reply {
+    font-size: 0.66rem;
+  }
+
   // Pick-message density only — the one-line-then-wrap behavior and the pinned
   // bottom-right pick number now live in the base DraftChat styles, so the
   // simple sidebar and lobby chats match this layout.
-  .chat__pick { padding: $space * 0.5 $space * 0.7; }
-  .chat__pick-main { gap: $space * 0.6; }
-  .chat__pick-text { flex: 1; min-width: 0; gap: 2px 4px; font-size: 0.78rem; }
-  .chat__pick-pos { width: 18px; height: 18px; font-size: 0.52rem; flex-shrink: 0; }
+  .chat__pick {
+    padding: $space * 0.5 $space * 0.7;
+  }
+
+  .chat__pick-main {
+    gap: $space * 0.6;
+  }
+
+  .chat__pick-text {
+    flex: 1;
+    min-width: 0;
+    gap: 2px 4px;
+    font-size: 0.78rem;
+  }
+
+  .chat__pick-pos {
+    width: 18px;
+    height: 18px;
+    font-size: 0.52rem;
+    flex-shrink: 0;
+  }
+
   .chat__reaction-text,
-  .chat__grade-text { font-size: 0.74rem; }
-  .chat__compose { padding: $space * 0.75 $space; }
+  .chat__grade-text {
+    font-size: 0.74rem;
+  }
+
+  .chat__compose {
+    padding: $space * 0.75 $space;
+  }
 }
 
 // ── Condensed pool filter bar (table / dashboard mode) ────────────────
@@ -2488,8 +2636,12 @@
     gap: 3px;
     overflow-x: auto;
     scrollbar-width: none;
-    &::-webkit-scrollbar { display: none; }
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
   }
+
   // Inactive: borderless muted text tab (pill-radius so the active fill is
   // pill-shaped; the transparent border keeps sizing stable when it activates).
   .chip {
@@ -2502,20 +2654,28 @@
     font-size: 0.78rem;
     line-height: 1.2;
 
-    &:hover { color: $text; background: none; }
+    &:hover {
+      color: $text;
+      background: none;
+    }
   }
+
   // Active: solid primary pill with white text (matching the original chip).
   .chip--active {
     border-color: transparent;
     background: $primary;
     color: #fff;
   }
+
   // The per-position pick count is redundant with the roster's position
   // breakdown — drop the "· N" from the position tabs (queue/favorite tabs
   // keep their counts, which aren't shown elsewhere).
   .chip:not(.chip--queue):not(.chip--fav) {
+
     .chip__dot,
-    .chip__count { display: none; }
+    .chip__count {
+      display: none;
+    }
   }
 
   // Search + toggles share the tabs' line, filling the width the tabs leave.
@@ -2525,11 +2685,33 @@
     flex-wrap: nowrap;
     gap: $space * 0.6;
   }
-  .pool__search-wrap { flex: 1 1 120px; min-width: 90px; }
-  .pool__search { padding: $space * 0.55 $space; padding-right: $space * 3; font-size: 0.82rem; }
-  .pool__toggles { flex-wrap: nowrap; flex-shrink: 0; gap: $space * 0.5; }
-  .pool__seg-btn { padding: $space * 0.4 $space * 0.7; font-size: 0.72rem; }
-  .pool__showdrafted { flex-shrink: 0; font-size: 0.72rem; }
+
+  .pool__search-wrap {
+    flex: 1 1 120px;
+    min-width: 90px;
+  }
+
+  .pool__search {
+    padding: $space * 0.55 $space;
+    padding-right: $space * 3;
+    font-size: 0.82rem;
+  }
+
+  .pool__toggles {
+    flex-wrap: nowrap;
+    flex-shrink: 0;
+    gap: $space * 0.5;
+  }
+
+  .pool__seg-btn {
+    padding: $space * 0.4 $space * 0.7;
+    font-size: 0.72rem;
+  }
+
+  .pool__showdrafted {
+    flex-shrink: 0;
+    font-size: 0.72rem;
+  }
 }
 
 // ── Dashboard players table (Rankings-style, dense) ───────────────────
@@ -2576,23 +2758,33 @@
     user-select: none;
 
     @include hover-only {
-      &:hover { color: $text; }
+      &:hover {
+        color: $text;
+      }
     }
 
-    &.is-active { color: $text; }
+    &.is-active {
+      color: $text;
+    }
   }
 
-  &__arrow { font-size: 0.72em; }
+  &__arrow {
+    font-size: 0.72em;
+  }
 
   &__row {
     cursor: pointer;
     transition: background-color 100ms ease;
 
     @include hover-only {
-      &:hover { background: $bg-overlay; }
+      &:hover {
+        background: $bg-overlay;
+      }
     }
 
-    &.is-drafted { opacity: 0.45; }
+    &.is-drafted {
+      opacity: 0.45;
+    }
   }
 
   // Favorite + queue marks — narrow leading column, two small icon buttons
@@ -2606,6 +2798,7 @@
     text-align: left;
     white-space: nowrap;
   }
+
   &__fav,
   &__q {
     display: inline-grid;
@@ -2619,11 +2812,23 @@
     color: $text-muted;
     cursor: pointer;
 
-    &:hover { background: $bg-hover; color: $text; }
+    &:hover {
+      background: $bg-hover;
+      color: $text;
+    }
   }
-  &__fav { margin-right: 2px; }
-  &__fav.is-on { color: $keeper; }
-  &__q.is-on { color: $accent; }
+
+  &__fav {
+    margin-right: 2px;
+  }
+
+  &__fav.is-on {
+    color: $keeper;
+  }
+
+  &__q.is-on {
+    color: $accent;
+  }
 
   // Player cell stays a real table cell (so its bottom border spans the full
   // column) — the flex layout lives on an inner wrapper. A `display:flex` on
@@ -2633,7 +2838,11 @@
     min-width: 160px;
     text-align: left;
   }
-  th#{&}__player { text-align: left; }
+
+  th#{&}__player {
+    text-align: left;
+  }
+
   &__player-inner {
     display: flex;
     align-items: center;
@@ -2655,7 +2864,14 @@
     font-weight: 800;
     white-space: nowrap;
   }
-  &__pos-dot { width: 3px; height: 3px; border-radius: 50%; background: currentColor; opacity: 0.6; }
+
+  &__pos-dot {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0.6;
+  }
 
   // Name, team and bye on a single line: name (bold) shrinks/ellipsizes, the
   // team + bye stay put beside it.
@@ -2668,6 +2884,7 @@
     line-height: 1.2;
     white-space: nowrap;
   }
+
   &__name {
     display: inline-flex;
     align-items: center;
@@ -2679,9 +2896,21 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  &__team { flex-shrink: 0; font-size: 0.72rem; color: $text-muted; white-space: nowrap; }
-  &__bye--warn { color: $warning; }
-  &__bye--danger { color: $danger; }
+
+  &__team {
+    flex-shrink: 0;
+    font-size: 0.72rem;
+    color: $text-muted;
+    white-space: nowrap;
+  }
+
+  &__bye--warn {
+    color: $warning;
+  }
+
+  &__bye--danger {
+    color: $danger;
+  }
 
   // Drafted "round.pick" chip lives at the right edge of the player cell.
   &__drafted {
@@ -2694,14 +2923,35 @@
     color: $text-muted;
   }
 
-  &__stat { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  &__stat {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
   &__pts,
-  &__adp { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  &__adp {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
   // Placeholder dashes (missing / zero stats) read muted, not full strength.
-  .is-dash { color: $text-muted; }
-  &__statline { color: $text-muted; font-size: 0.76rem; white-space: nowrap; }
-  &__pts { font-weight: 800; }
-  &__adp { color: $text-muted; }
+  .is-dash {
+    color: $text-muted;
+  }
+
+  &__statline {
+    color: $text-muted;
+    font-size: 0.76rem;
+    white-space: nowrap;
+  }
+
+  &__pts {
+    font-weight: 800;
+  }
+
+  &__adp {
+    color: $text-muted;
+  }
 
   // Center the stat columns — both the header and the values — so they line up
   // under each other. Compound `th./td.` selectors so this beats the generic
@@ -2711,7 +2961,9 @@
   & th#{&}__stat,
   & td#{&}__stat,
   & th#{&}__statline,
-  & td#{&}__statline { text-align: center; }
+  & td#{&}__statline {
+    text-align: center;
+  }
 
   // Actions: the Draft (hold) button, right-aligned. Kept a normal table cell
   // (the inline-flex button right-aligns via text-align) so its border spans
@@ -2721,12 +2973,23 @@
     white-space: nowrap;
     padding-right: $space;
   }
-  &__draft { padding: 4px 10px; font-size: 0.72rem; }
 
-  &__empty { padding: $space * 2; text-align: center; }
+  &__draft {
+    padding: 4px 10px;
+    font-size: 0.72rem;
+  }
+
+  &__empty {
+    padding: $space * 2;
+    text-align: center;
+  }
 
   // Projection ("your pick lands here") row — accent rule spanning the table.
-  &__proj td { padding: 0; border-bottom: none; }
+  &__proj td {
+    padding: 0;
+    border-bottom: none;
+  }
+
   &__proj-label {
     display: flex;
     align-items: center;
@@ -2746,6 +3009,7 @@
       background: color-mix(in srgb, #{$text-muted} 40%, transparent);
     }
   }
+
   &__proj.is-next &__proj-label {
     color: $accent;
 
