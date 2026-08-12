@@ -48,6 +48,16 @@ export const VALUATION_TUNING = {
    * and pulls scarce positions back toward the pack; lowering it sharpens them.
    */
   replacementDepth: 1.0,
+  /**
+   * Per-position multiplier on VOR — the "positional adjustment" every real
+   * ranking system applies to reconcile mechanical VOR with how a position is
+   * actually drafted. Mechanical VOR structurally *under*-values QBs in
+   * superflex (their replacement, ~QB24, is still a high scorer, so elite-QB
+   * value gets compressed) and *over*-values elite TEs (the steep TE cliff
+   * inflates their VOR past what anyone pays). >1 lifts a position, <1 lowers
+   * it. Tune against a trusted cheat sheet for the league's format.
+   */
+  positionValueWeight: { QB: 1.2, RB: 1, WR: 1, TE: 0.7, K: 1, DEF: 1 } as Record<Position, number>,
 } as const;
 
 const FLEX_ELIGIBLE = SLOT_ELIGIBILITY.FLEX; // RB/WR/TE
@@ -135,10 +145,13 @@ export function computePlayerValues(
   teamCount: number,
 ): Map<string, PlayerValue> {
   const replacement = replacementByPosition(players, rosterComposition, teamCount);
+  const weight = VALUATION_TUNING.positionValueWeight;
   const ranked = players
     .map((p) => ({
       id: p.id,
-      vor: (Number.isFinite(p.points) ? p.points : 0) - replacement[p.position],
+      // Points over replacement, then the position's value weight (lifts QBs,
+      // tempers the elite-TE premium — see VALUATION_TUNING).
+      vor: ((Number.isFinite(p.points) ? p.points : 0) - replacement[p.position]) * (weight[p.position] ?? 1),
       replacement: replacement[p.position],
     }))
     .sort((a, b) => b.vor - a.vor);
