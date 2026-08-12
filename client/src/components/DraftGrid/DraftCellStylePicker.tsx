@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { DraftCellStyle } from '../../lib/draftCellStyle';
 import type { PickRow, PlayerRow } from '../../lib/types';
 import { BoldPickCell } from './components/BoldPickCell/BoldPickCell';
-import { HybridPickCell } from './components/HybridPickCell/HybridPickCell';
+import { DefaultPickCell } from './components/DefaultPickCell/DefaultPickCell';
 import type { ReactionEntry } from './components/PickCell/PickCell';
 import { PickCell } from './components/PickCell/PickCell';
 import { randomSamplePlayer } from './samplePlayers';
@@ -24,7 +24,7 @@ const SAMPLE_PICK: PickRow = {
 // showReactions is on (see the Props comment below).
 const SAMPLE_ENTRY: ReactionEntry = { counts: { '🔥': 2 }, mine: new Set() };
 
-// A 12-team league, just to give Hybrid's round.pick line something to
+// A 12-team league, just to give Default's round.pick line something to
 // render (and show off its 10+ team zero-padding, e.g. "1.01").
 const SAMPLE_TEAM_COUNT = 12;
 
@@ -103,7 +103,7 @@ export function DraftCellStylePicker({
                       onLeave={() => {}}
                     />
                   ) : (
-                    <HybridPickCell
+                    <DefaultPickCell
                       pick={SAMPLE_PICK}
                       player={player}
                       teamCount={SAMPLE_TEAM_COUNT}

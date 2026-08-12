@@ -5,7 +5,7 @@
 // hover/flag treatment can never fight another style's for which one wins.
 // .draft-grid__cell (base size/border/padding/vertical-align: top) is still
 // shared, since that's just cell geometry every style fits into.
-.hybrid-pick-cell {
+.default-pick-cell {
   cursor: pointer;
   // Flags hang half outside this box (like Big screen's) and the hover
   // reactions tray unfolds below it.
@@ -31,7 +31,7 @@
         box-shadow: 0 0 0 6px black, 0 0 0 8px white;
       }
 
-      .hybrid-pick-cell__react-pop {
+      .default-pick-cell__react-pop {
         display: flex;
       }
     }
@@ -112,7 +112,7 @@
     color: #1a1a1a;
   }
 
-  &__flag-chip.hybrid-pick-cell__keeper-flag {
+  &__flag-chip.default-pick-cell__keeper-flag {
     background: $keeper;
   }
 
@@ -165,23 +165,23 @@
 // Fullscreen ("TV mode"): grows with --fs-scale, same mechanism as the
 // other two styles' fill-mode font sizes.
 .draft-grid--fill {
-  .hybrid-pick-cell__name {
+  .default-pick-cell__name {
     font-size: calc(0.96rem * var(--fs-scale));
   }
 
-  .hybrid-pick-cell__meta {
+  .default-pick-cell__meta {
     font-size: calc(0.58rem * var(--fs-scale));
   }
 
-  .hybrid-pick-cell__round {
+  .default-pick-cell__round {
     font-size: calc(0.58rem * var(--fs-scale));
   }
 
-  .hybrid-pick-cell__react-flag {
+  .default-pick-cell__react-flag {
     font-size: calc(0.6rem * var(--fs-scale));
   }
 
-  .hybrid-pick-cell__flag-chip {
+  .default-pick-cell__flag-chip {
     min-width: calc(14px * var(--fs-scale));
     height: calc(14px * var(--fs-scale));
 
@@ -190,7 +190,7 @@
     }
   }
 
-  .hybrid-pick-cell__rchip {
+  .default-pick-cell__rchip {
     font-size: calc(0.72rem * var(--fs-scale));
   }
 }

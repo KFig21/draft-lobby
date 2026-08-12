@@ -15,7 +15,7 @@ import type { MemberRow, PickRow, PlayerRow, TeamRow } from './types';
  * canvas API, so the output is identical on every machine, OS and browser —
  * verifying it anywhere proves it everywhere.
  *
- * The export mirrors the viewer's selected cell style ('default'/Hybrid,
+ * The export mirrors the viewer's selected cell style ('default',
  * 'bold'/Big screen, or 'clean'), and shows only made picks (no transient
  * on-the-clock / skipped overlays).
  */
@@ -126,7 +126,7 @@ function fitText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number):
 }
 
 // "First initial. Last name" — but keep names that are already initials
-// (C.J., A.J.) whole, and leave D/ST entries alone. Mirrors HybridPickCell.
+// (C.J., A.J.) whole, and leave D/ST entries alone. Mirrors DefaultPickCell.
 function abbreviateName(name: string, position: string): string {
   if (position === 'DEF') return name;
   const parts = name.trim().split(/\s+/);
@@ -173,7 +173,7 @@ interface CellFlags {
 
 // The bottom-right corner flag row — keeper lock (rightmost), then comment,
 // then reaction "!!", stacking leftward like the live board (row-reverse).
-// `chip` styles (Hybrid/Big): each on a rounded disc hanging off the corner.
+// `chip` styles (Default/Big): each on a rounded disc hanging off the corner.
 // `bare` (Clean): flat muted glyphs tucked just inside the corner.
 function drawFlags(
   ctx: CanvasRenderingContext2D,
@@ -255,7 +255,7 @@ function wrapLines(
 }
 
 // ── Per-style pick-cell renderers (top-left of the cell is x,y) ──────────
-function drawHybridCell(
+function drawDefaultCell(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
@@ -601,7 +601,7 @@ export function renderBoardCanvas(opts: BoardRenderOptions): HTMLCanvasElement {
       };
       if (cellStyle === 'bold') drawBoldCell(ctx, x, y, pick, player, pal, flags);
       else if (cellStyle === 'clean') drawCleanCell(ctx, x, y, pick, player, pal, flags);
-      else drawHybridCell(ctx, x, y, pick, player, pal, teamCount, flags);
+      else drawDefaultCell(ctx, x, y, pick, player, pal, teamCount, flags);
     });
   }
 

@@ -64,12 +64,11 @@
     border-spacing: 0;
 
     // These styles otherwise share .draft-grid__cell's normal 52px height,
-    // but Clean's 3-line layout (position/name/team-bye) and Default's
-    // (Hybrid's) 3-line layout both need more room than that and grow the
-    // cell taller — Big screen's 1-2 lines don't, so the swatches ended up
-    // different heights. Pinned to one fixed height (bigger than any style
-    // needs) so every swatch lands at the same size regardless of which
-    // style renders taller.
+    // but Clean's and Default's 3-line layouts (name / team-bye / round.pick)
+    // both need more room than that and grow the cell taller — Big screen's
+    // 1-2 lines don't, so the swatches ended up different heights. Pinned to
+    // one fixed height (bigger than any style needs) so every swatch lands at
+    // the same size regardless of which style renders taller.
     .draft-grid__cell {
       height: 70px;
     }

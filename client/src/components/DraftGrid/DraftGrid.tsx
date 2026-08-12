@@ -10,7 +10,7 @@ import type { ChatMessageRow, MemberRow, PickRow, PlayerRow, TeamRow } from '../
 import { Avatar } from '../Avatar/Avatar';
 import { ChampionBadge } from '../ChampionBadge/ChampionBadge';
 import { BoldPickCell } from './components/BoldPickCell/BoldPickCell';
-import { HybridPickCell } from './components/HybridPickCell/HybridPickCell';
+import { DefaultPickCell } from './components/DefaultPickCell/DefaultPickCell';
 import { PickCell, type ReactionEntry } from './components/PickCell/PickCell';
 import './DraftGrid.scss';
 
@@ -244,9 +244,9 @@ export function DraftGrid({
                         />
                       );
                     }
-                    // 'default' — see draftCellStyle.ts's comment for why this is Hybrid.
+                    // 'default' — see draftCellStyle.ts's comment for why this is Default.
                     return (
-                      <HybridPickCell
+                      <DefaultPickCell
                         key={team.id}
                         pick={pick}
                         player={player}

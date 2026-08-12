@@ -34,7 +34,7 @@ export function abbreviatedName(fullName: string): string {
 /** "First initial. Last name" for draft-board cells — but a first name that's
  * already initials (C.J., A.J., T.J.) is kept whole so it doesn't read as a
  * different player, and D/ST entries ("BAL D/ST") aren't personal names, so
- * they're left alone. Shared by the default (Hybrid) and clean cell styles. */
+ * they're left alone. Shared by the default and clean cell styles. */
 export function abbreviatePlayerName(name: string, position: string): string {
   if (position === 'DEF') return name;
   const parts = name.trim().split(/\s+/);

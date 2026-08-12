@@ -1,9 +1,9 @@
-/** How a drafted pick renders on the draft board. 'default' (formerly
- * "hybrid") is a position-colored fill with an abbreviated name pinned to
- * the top corner and team/bye/round underneath — laid out for reading up
- * close. 'bold' is meant for a big screen viewed from across the room — the
- * same fill, but just the player's name, large. 'clean' (formerly
- * "default") is the plain, uncolored board look. Per-device preference (not
+/** How a drafted pick renders on the draft board. 'default' is a
+ * position-colored fill with an abbreviated name pinned to the top corner and
+ * team/bye/round underneath — laid out for reading up close. 'bold' is meant
+ * for a big screen viewed from across the room — the same fill, but just the
+ * player's name, large. 'clean' is the same layout as 'default' on a faded
+ * position-tinted surface rather than a solid fill. Per-device preference (not
  * synced), same pattern as toastPrefs. */
 export type DraftCellStyle = 'default' | 'bold' | 'clean';
 

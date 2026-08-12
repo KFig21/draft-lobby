@@ -21,8 +21,8 @@ export interface ReactionEntry {
 }
 
 /** The "clean" draft cell style: the same data orientation as the default
- * (Hybrid) cell — abbreviated name, team & bye, then the round.pick line — but
- * on a faded position-tinted surface (see PickCell.scss) rather than a solid
+ * cell — abbreviated name, team & bye, then the round.pick line — but on a
+ * faded position-tinted surface (see PickCell.scss) rather than a solid
  * position fill. Plus reaction/comment indicators and the hover reactions
  * popover. */
 export function PickCell({

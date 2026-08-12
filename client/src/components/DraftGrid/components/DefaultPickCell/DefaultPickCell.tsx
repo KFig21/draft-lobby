@@ -8,10 +8,10 @@ import type { ReactionEntry } from '../PickCell/PickCell';
 // renders standalone in Settings' cell-style picker, a separate lazy-loaded
 // route that would otherwise never load DraftGrid.scss's base .draft-grid__cell.
 import '../../DraftGrid.scss';
-import './HybridPickCell.scss';
+import './DefaultPickCell.scss';
 
 /**
- * "Hybrid" draft cell style (Settings > Draft board): Big screen's
+ * "Default" draft cell style (Settings > Draft board): Big screen's
  * position-colored fill and corner flags/hover, but laid out for reading up
  * close rather than across a room — an abbreviated name pinned to the top
  * corner, team/bye underneath, and the round.pick (e.g. "5.02") on a third
@@ -23,7 +23,7 @@ import './HybridPickCell.scss';
  * style's selectors independent rules out any hover/specificity fights
  * between them for good.
  */
-export function HybridPickCell({
+export function DefaultPickCell({
   pick,
   player,
   teamCount,
@@ -53,7 +53,7 @@ export function HybridPickCell({
 
   return (
     <td
-      className={`draft-grid__cell hybrid-pick-cell${
+      className={`draft-grid__cell default-pick-cell${
         pick.is_keeper ? ' draft-grid__cell--keeper' : ''
       }`}
       style={{ background: posColor }}
@@ -61,37 +61,37 @@ export function HybridPickCell({
       onMouseEnter={onEnter}
       onMouseLeave={onLeave}
     >
-      <div className="hybrid-pick-cell__info">
-        <span className="hybrid-pick-cell__name">
+      <div className="default-pick-cell__info">
+        <span className="default-pick-cell__name">
           {abbreviatePlayerName(player.name, player.position)}
         </span>
-        <span className="hybrid-pick-cell__meta">
+        <span className="default-pick-cell__meta">
           {player.nfl_team}
           {player.bye_week != null && (
             <>
-              <span className="hybrid-pick-cell__dot" aria-hidden>
+              <span className="default-pick-cell__dot" aria-hidden>
                 ·
               </span>
               Bye {player.bye_week}
             </>
           )}
         </span>
-        <span className="hybrid-pick-cell__round">
+        <span className="default-pick-cell__round">
           {formatRoundPick(pick.round, pickInRound, teamCount)}
         </span>
       </div>
 
       {/* Same corner-badge treatment as Big screen (see BoldPickCell.tsx). */}
       {(pick.is_keeper || active.length > 0 || hasComment) && (
-        <span className="hybrid-pick-cell__flags" aria-hidden>
+        <span className="default-pick-cell__flags" aria-hidden>
           {pick.is_keeper && (
-            <span className="hybrid-pick-cell__flag-chip hybrid-pick-cell__keeper-flag">
+            <span className="default-pick-cell__flag-chip default-pick-cell__keeper-flag">
               <LockIcon sx={{ fontSize: 9 }} />
             </span>
           )}
           {hasComment && (
             <span
-              className="hybrid-pick-cell__flag-chip"
+              className="default-pick-cell__flag-chip"
               style={{ ['--flag-color' as string]: posColor }}
             >
               <ChatBubbleOutlineIcon sx={{ fontSize: 9 }} />
@@ -99,7 +99,7 @@ export function HybridPickCell({
           )}
           {active.length > 0 && (
             <span
-              className="hybrid-pick-cell__flag-chip hybrid-pick-cell__react-flag"
+              className="default-pick-cell__flag-chip default-pick-cell__react-flag"
               style={{ ['--flag-color' as string]: posColor }}
             >
               !!
@@ -109,12 +109,12 @@ export function HybridPickCell({
       )}
 
       {active.length > 0 && (
-        <div className="hybrid-pick-cell__react-pop" onClick={(e) => e.stopPropagation()}>
+        <div className="default-pick-cell__react-pop" onClick={(e) => e.stopPropagation()}>
           {active.map((e) => (
             <button
               key={e}
               type="button"
-              className={`hybrid-pick-cell__rchip${entry?.mine.has(e) ? ' is-mine' : ''}`}
+              className={`default-pick-cell__rchip${entry?.mine.has(e) ? ' is-mine' : ''}`}
               onClick={() => onReact?.(pick.id, e)}
             >
               {e}
