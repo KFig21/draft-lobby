@@ -1,5 +1,12 @@
 import { z } from 'zod';
-import { SLOT_ELIGIBILITY, SLOT_MAX, rosterSlotSchema, type Position } from './positions.js';
+import {
+  POSITIONS,
+  SLOT_ELIGIBILITY,
+  SLOT_MAX,
+  positionSchema,
+  rosterSlotSchema,
+  type Position,
+} from './positions.js';
 import { DEFAULT_SCORING_RULES, scoringRulesSchema } from './scoring.js';
 import { CHAT_LOCK_MS, MAX_CHAT_LOCK_MS } from './social.js';
 
@@ -94,6 +101,81 @@ export function draftablePositions(composition: RosterComposition): Set<Position
   return positions;
 }
 
+// ── Per-position roster limits ──────────────────────────────────────
+/**
+ * A single position's roster bounds: `min` players a team must end up with
+ * (0 = no floor) and `max` it may hold (`null` = "No max"). Enforced hard at
+ * pick time — see pickAllowedForLimits.
+ */
+export const positionLimitSchema = z.object({
+  min: z.number().int().min(0),
+  max: z.number().int().min(0).nullable(),
+});
+export type PositionLimit = z.infer<typeof positionLimitSchema>;
+
+/**
+ * Per-position min/max map. A missing position (or the whole map missing on an
+ * older lobby's stored settings) means "no limits" — always read through
+ * positionLimitFor, never the raw field, so that default is applied uniformly.
+ */
+export const positionLimitsSchema = z.record(positionSchema, positionLimitSchema);
+export type PositionLimits = Partial<Record<Position, PositionLimit>>;
+
+/** A position's effective bounds, defaulting an unset position to no limits. */
+export function positionLimitFor(
+  limits: PositionLimits | undefined,
+  pos: Position,
+): PositionLimit {
+  const l = limits?.[pos];
+  return { min: l?.min ?? 0, max: l?.max ?? null };
+}
+
+/** Whether any position carries a real (non-default) limit — drives whether the
+ * rules screen shows a "Position limits" section and whether enforcement runs. */
+export function hasAnyPositionLimit(limits: PositionLimits | undefined): boolean {
+  if (!limits) return false;
+  return POSITIONS.some((pos) => {
+    const { min, max } = positionLimitFor(limits, pos);
+    return min > 0 || max != null;
+  });
+}
+
+/**
+ * Whether a team may draft a player of position `pos` given its current roster
+ * (`have` counts by position, keepers included), how many roster spots it has
+ * left (`remainingSpots`), and the league's limits.
+ *
+ * Two independent bounds (see the plan's derivation):
+ *   max — never hold more than `max[pos]`.
+ *   min — a "reserved" floor: drafting a still-needed position is always fine;
+ *         drafting an already-satisfied one is only allowed while there's a
+ *         spare spot beyond every outstanding minimum, so the last spots get
+ *         held back for unmet floors.
+ *
+ * The one predicate the client (to disable buttons), the /pick route (to
+ * reject), and the bot chooser (to filter) all share.
+ */
+export function pickAllowedForLimits(
+  limits: PositionLimits | undefined,
+  have: Record<Position, number>,
+  remainingSpots: number,
+  pos: Position,
+): { ok: boolean; reason?: 'max' | 'min' } {
+  const { max } = positionLimitFor(limits, pos);
+  if (max != null && have[pos] >= max) return { ok: false, reason: 'max' };
+
+  let totalDeficit = 0;
+  for (const p of POSITIONS) {
+    const { min } = positionLimitFor(limits, p);
+    totalDeficit += Math.max(0, min - have[p]);
+  }
+  const myDeficit = Math.max(0, positionLimitFor(limits, pos).min - have[pos]);
+  // Needed position → always ok; otherwise only if a spot is free beyond the
+  // outstanding minimums (the "< remainingSpots" leaves room for this pick too).
+  if (myDeficit > 0 || totalDeficit < remainingSpots) return { ok: true };
+  return { ok: false, reason: 'min' };
+}
+
 // ── Per-round pick timers ───────────────────────────────────────────
 export const MIN_PICK_SECONDS = 15;
 export const MAX_PICK_SECONDS = 5 * 60; // 5 minutes
@@ -179,6 +261,9 @@ export const lobbySettingsSchema = z.object({
   draftMode: draftModeSchema.default('LIVE'),
   // Rounds are derived from the roster (one pick per spot) — not stored.
   rosterComposition: rosterCompositionSchema,
+  /** Per-position roster floors/ceilings. Omitted positions = no limits;
+   * defaults to no limits at all, so existing leagues are unaffected. */
+  positionLimits: positionLimitsSchema.default(() => ({})),
   /** Per-round pick clock. */
   pickTiers: pickTiersSchema,
   /** Seconds a bot / auto-draft team gets on the clock. Capped at runtime by
@@ -205,6 +290,42 @@ export const lobbySettingsSchema = z.object({
   scheduledStart: z.string().datetime().nullable().default(null),
   /** Scoring rules (drives projections / power rankings). */
   scoring: scoringRulesSchema.default(DEFAULT_SCORING_RULES),
+}).superRefine((s, ctx) => {
+  // Position limits must be internally consistent and leave a fillable roster.
+  const limits = s.positionLimits ?? {};
+  const rounds = rosterSize(s.rosterComposition);
+  // Dedicated (single-position) starter slots per position — a position's max
+  // can't sit below the lineup that already forces that many of it.
+  const dedicated: Record<Position, number> = { QB: 0, RB: 0, WR: 0, TE: 0, K: 0, DEF: 0 };
+  for (const { slot, count } of s.rosterComposition) {
+    if (slot in dedicated) dedicated[slot as Position] += count;
+  }
+  let minSum = 0;
+  for (const pos of POSITIONS) {
+    const { min, max } = positionLimitFor(limits, pos);
+    minSum += min;
+    if (max != null && min > max) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `${pos} minimum can't exceed its maximum`,
+        path: ['positionLimits', pos],
+      });
+    }
+    if (max != null && max < dedicated[pos]) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `${pos} maximum must be at least ${dedicated[pos]} (its starting spots)`,
+        path: ['positionLimits', pos],
+      });
+    }
+  }
+  if (minSum > rounds) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: `Position minimums add up to ${minSum}, more than the ${rounds} roster spots`,
+      path: ['positionLimits'],
+    });
+  }
 });
 export type LobbySettings = z.infer<typeof lobbySettingsSchema>;
 
@@ -234,6 +355,7 @@ export const DEFAULT_LOBBY_SETTINGS: LobbySettings = {
   visibility: 'PRIVATE',
   draftMode: 'LIVE',
   rosterComposition: DEFAULT_ROSTER,
+  positionLimits: {},
   pickTiers: DEFAULT_PICK_TIERS,
   botPickSeconds: DEFAULT_BOT_PICK_SECONDS,
   allowSkips: false,
@@ -262,6 +384,7 @@ export const SETTINGS_FIELD_GROUP: Record<keyof LobbySettings, SettingsGroup> = 
   visibility: 'structural',
   draftMode: 'structural',
   rosterComposition: 'structural',
+  positionLimits: 'structural',
   keepersEnabled: 'structural',
   scheduledStart: 'structural',
   scoring: 'scoring',

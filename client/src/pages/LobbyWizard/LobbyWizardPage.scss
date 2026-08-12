@@ -369,3 +369,64 @@
     font-variant-numeric: tabular-nums;
   }
 }
+
+// Per-position min/max grid — reuses the .lineup__stepper/.lineup__step/
+// .lineup__count controls, laid out as a 3-column grid (position · Min · Max).
+.poslimits {
+  display: flex;
+  flex-direction: column;
+
+  &__head,
+  &__row {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: center;
+    gap: $space * 1.5;
+  }
+
+  &__head {
+    padding-bottom: $space * 0.5;
+    color: $text-muted;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+
+    // Center each header label over its stepper (which centers on the count).
+    span {
+      text-align: center;
+    }
+  }
+
+  &__row {
+    padding: $space * 1.25 0;
+    border-top: 1px solid $border;
+  }
+
+  &__pos {
+    display: inline-flex;
+    align-items: center;
+    gap: $space * 0.75;
+    font-weight: 700;
+
+    // Position colour chip, matching the board's position coding.
+    &::before {
+      content: '';
+      width: 10px;
+      height: 10px;
+      border-radius: 3px;
+      background: var(--pos);
+    }
+  }
+
+  // "No max" is wider than a bare number — give the count room so the steppers
+  // don't shift between numeric and "No max" states.
+  &__max {
+    min-width: 3.5rem;
+  }
+
+  &__note {
+    margin-top: $space;
+    font-size: 0.75rem;
+  }
+}

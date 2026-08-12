@@ -4,6 +4,8 @@ import {
   MAX_STARTING_SPOTS,
   MAX_TEAMS,
   MIN_PICK_SECONDS,
+  POSITIONS,
+  POSITION_COLORS,
   ROSTER_SLOTS,
   SCORING_PRESETS,
   SLOT_HINTS,
@@ -13,10 +15,13 @@ import {
   MATCH_ROUND_PICK_SECONDS,
   UNLIMITED_PICK_SECONDS,
   matchPreset,
+  positionLimitFor,
   rosterSize,
   startingSpots,
   type LobbySettings,
   type PickTier,
+  type Position,
+  type PositionLimit,
   type RosterSlot,
   type ScoringRules,
   type SettingsGroup,
@@ -143,6 +148,45 @@ export function LeagueSettingsFields({ settings, onChange, nameField, editableGr
   function stepSlot(slot: RosterSlot, delta: number) {
     const current = rosterMap.get(slot) ?? 0;
     setSlotCount(slot, Math.max(0, Math.min(SLOT_MAX[slot], current + delta)));
+  }
+
+  // ── Position limits ──
+  // Dedicated (single-position) starter slots per position — a position's max
+  // can never sit below the lineup that already forces that many of it, so it's
+  // the floor the Max stepper stops at (mirrors the shared schema guard).
+  const dedicatedByPos = useMemo(() => {
+    const d: Record<Position, number> = { QB: 0, RB: 0, WR: 0, TE: 0, K: 0, DEF: 0 };
+    for (const { slot, count } of settings.rosterComposition) {
+      if (slot in d) d[slot as Position] += count;
+    }
+    return d;
+  }, [settings.rosterComposition]);
+
+  function setPositionLimit(pos: Position, patch: Partial<PositionLimit>) {
+    const next = { ...positionLimitFor(settings.positionLimits, pos), ...patch };
+    const map: Partial<Record<Position, PositionLimit>> = { ...(settings.positionLimits ?? {}) };
+    // Prune back to "no limit" so the stored map only ever holds real limits —
+    // keeps hasAnyPositionLimit and the rules display trivially correct.
+    if (next.min === 0 && next.max == null) delete map[pos];
+    else map[pos] = next;
+    set('positionLimits', map);
+  }
+  function stepMin(pos: Position, delta: number) {
+    const { min, max } = positionLimitFor(settings.positionLimits, pos);
+    const ceiling = max ?? rounds;
+    setPositionLimit(pos, { min: Math.max(0, Math.min(ceiling, min + delta)) });
+  }
+  function stepMax(pos: Position, delta: number) {
+    const { min, max } = positionLimitFor(settings.positionLimits, pos);
+    const floor = Math.max(min, dedicatedByPos[pos]);
+    if (delta > 0) {
+      if (max == null) return; // already "No max"
+      const nv = max + 1;
+      setPositionLimit(pos, { max: nv > rounds ? null : nv }); // step past roster size → no max
+    } else {
+      const base = max == null ? rounds : max - 1; // stepping down from "No max" lands at the roster size
+      setPositionLimit(pos, { max: Math.max(floor, base) });
+    }
   }
 
   // ── Pick-timer tiers ──
@@ -336,6 +380,85 @@ export function LeagueSettingsFields({ settings, onChange, nameField, editableGr
               );
             })}
           </div>
+        </SettingsGroupFieldset>
+      </section>
+
+      {/* Position limits */}
+      <section className="wizard__section">
+        <div className="wizard__section-head">
+          <h2>Position limits</h2>
+          <span className="muted">How many of each position a team can roster</span>
+        </div>
+        <SettingsGroupFieldset editable={canEdit('structural')}>
+          <div className="poslimits">
+            <div className="poslimits__head" aria-hidden="true">
+              <span />
+              <span>Min</span>
+              <span>Max</span>
+            </div>
+            {POSITIONS.map((pos) => {
+              const { min, max } = positionLimitFor(settings.positionLimits, pos);
+              const minCeiling = max ?? rounds;
+              const maxFloor = Math.max(min, dedicatedByPos[pos]);
+              return (
+                <div className="poslimits__row" key={pos}>
+                  <span
+                    className="poslimits__pos"
+                    style={{ ['--pos' as string]: POSITION_COLORS[pos] }}
+                  >
+                    {SLOT_LABELS[pos]}
+                  </span>
+                  <div className="lineup__stepper poslimits__stepper">
+                    <button
+                      type="button"
+                      className="lineup__step"
+                      aria-label={`Lower ${SLOT_LABELS[pos]} minimum`}
+                      disabled={min <= 0}
+                      onClick={() => stepMin(pos, -1)}
+                    >
+                      <RemoveIcon fontSize="small" />
+                    </button>
+                    <span className="lineup__count">{min}</span>
+                    <button
+                      type="button"
+                      className="lineup__step"
+                      aria-label={`Raise ${SLOT_LABELS[pos]} minimum`}
+                      disabled={min >= minCeiling}
+                      onClick={() => stepMin(pos, 1)}
+                    >
+                      <AddIcon fontSize="small" />
+                    </button>
+                  </div>
+                  <div className="lineup__stepper poslimits__stepper">
+                    <button
+                      type="button"
+                      className="lineup__step"
+                      aria-label={`Lower ${SLOT_LABELS[pos]} maximum`}
+                      disabled={max != null && max <= maxFloor}
+                      onClick={() => stepMax(pos, -1)}
+                    >
+                      <RemoveIcon fontSize="small" />
+                    </button>
+                    <span className="lineup__count poslimits__max">
+                      {max == null ? 'No max' : max}
+                    </span>
+                    <button
+                      type="button"
+                      className="lineup__step"
+                      aria-label={`Raise ${SLOT_LABELS[pos]} maximum`}
+                      disabled={max == null}
+                      onClick={() => stepMax(pos, 1)}
+                    >
+                      <AddIcon fontSize="small" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <p className="muted poslimits__note">
+            Min 0 = no floor · step Max past {rounds} for “No max”.
+          </p>
         </SettingsGroupFieldset>
       </section>
 

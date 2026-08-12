@@ -1,4 +1,5 @@
 import {
+  POSITIONS,
   POSITION_COLORS,
   ROSTER_SLOTS,
   SCORING_PRESETS,
@@ -8,6 +9,7 @@ import {
   groupScoringRules,
   isUnlimitedPick,
   matchPreset,
+  positionLimitFor,
   roundsForSettings,
   startingSpots,
   type LobbySettings,
@@ -20,6 +22,7 @@ import PersonOutlineIcon from '@mui/icons-material/PersonOutlined';
 import SaveIcon from '@mui/icons-material/Save';
 import ScoreboardIcon from '@mui/icons-material/Scoreboard';
 import TimerOutlinedIcon from '@mui/icons-material/TimerOutlined';
+import TuneIcon from '@mui/icons-material/Tune';
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../auth/AuthContext';
 import { api } from '../../lib/api';
@@ -128,6 +131,24 @@ export function LeagueRulesModal({ settings, defaultName, onClose }: Props) {
       .map((slot) => ({ slot, count: counts.get(slot) ?? 0 }))
       .filter((r) => r.count > 0);
   }, [settings.rosterComposition]);
+
+  // Per-position min/max, only for positions carrying a real limit — the
+  // section hides entirely when a league sets none.
+  const positionLimitRows = useMemo(
+    () =>
+      POSITIONS.map((pos) => ({ pos, ...positionLimitFor(settings.positionLimits, pos) }))
+        .filter((l) => l.min > 0 || l.max != null)
+        .map((l) => ({
+          pos: l.pos,
+          text:
+            l.min > 0 && l.max != null
+              ? `${l.min}–${l.max}`
+              : l.min > 0
+                ? `min ${l.min}`
+                : `max ${l.max}`,
+        })),
+    [settings.positionLimits],
+  );
 
   useEffect(() => {
     if (!userId) return;
@@ -344,6 +365,30 @@ export function LeagueRulesModal({ settings, defaultName, onClose }: Props) {
             })}
           </ul>
         </section>
+
+        {/* Position limits (only when the league sets any) */}
+        {positionLimitRows.length > 0 && (
+          <section className="rules-modal__section">
+            <h3 className="rules-modal__h3">
+              <TuneIcon fontSize="small" className="rules-modal__h-icon" />
+              Position limits
+              <span className="muted rules-modal__h-sub">min–max per team</span>
+            </h3>
+            <ul className="rules-modal__lineup">
+              {positionLimitRows.map(({ pos, text }) => (
+                <li key={pos} className="rules-modal__slot">
+                  <span
+                    className="rules-modal__slot-badge"
+                    style={{ background: POSITION_COLORS[pos] }}
+                  >
+                    {SLOT_LABELS[pos]}
+                  </span>
+                  <span className="rules-modal__slot-count">{text}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         {/* Scoring */}
         <section className="rules-modal__section">

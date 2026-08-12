@@ -8,8 +8,10 @@ import {
   draftablePositions,
   draftPositionForOverall,
   extractMentionedUsernames,
+  hasAnyPositionLimit,
   openSlots,
   overallForDraftPosition,
+  pickAllowedForLimits,
   roundsForSettings,
   secondsForRound,
   type Avatar as AvatarData,
@@ -1738,6 +1740,39 @@ export function DraftBoardPage() {
     if (pos) myPosCounts[pos] = (myPosCounts[pos] ?? 0) + 1;
   }
 
+  // Per-position roster limits: mirror the server rule client-side so blocked
+  // Draft buttons grey out with a reason instead of failing on tap. The pick
+  // lands on the team that owns the slot — my own team, or (commish covering the
+  // clock) the on-clock team. Only computed when the league sets any limit.
+  const positionLimits = lobby.settings.positionLimits;
+  const limitsEnabled = hasAnyPositionLimit(positionLimits);
+  const limitTeamId = iOwnAnOpenSlot ? myTeamId : onClockTeam?.id ?? myTeamId;
+  const limitHave: Record<Position, number> = { QB: 0, RB: 0, WR: 0, TE: 0, K: 0, DEF: 0 };
+  let limitTeamPicks = 0;
+  if (limitsEnabled && limitTeamId) {
+    for (const p of picks) {
+      if (p.team_id !== limitTeamId) continue;
+      limitTeamPicks += 1;
+      const pos = playersById.get(p.player_id)?.position as Position | undefined;
+      if (pos) limitHave[pos] += 1;
+    }
+  }
+  const limitRemainingSpots = roundsForSettings(lobby.settings) - limitTeamPicks;
+  function limitBlock(player: PlayerRow): string | undefined {
+    if (!limitsEnabled || !limitTeamId) return undefined;
+    const verdict = pickAllowedForLimits(
+      positionLimits,
+      limitHave,
+      limitRemainingSpots,
+      player.position as Position,
+    );
+    if (verdict.ok) return undefined;
+    const pos = player.position === 'DEF' ? 'D/ST' : player.position;
+    return verdict.reason === 'max'
+      ? `Roster limit reached for ${pos}`
+      : 'Save your last spots for your position minimums';
+  }
+
   // My drafted-player count per (position, bye week) — powers the bye-clash
   // color coding in the player pool and the clash breakdown shown in the
   // player/pick detail modals. Skipped entirely when the setting is off.
@@ -2318,6 +2353,7 @@ export function DraftBoardPage() {
                 onPick={canPick ? () => pick(p) : undefined}
                 onHoldPick={canPick ? () => holdDraft(p) : undefined}
                 disabled={!canPick}
+                blockedReason={limitBlock(p)}
                 onOpenDetail={() => setDetailPlayer(p)}
                 byeClashCount={
                   p.bye_week != null ? byeLookup.get(`${p.position}:${p.bye_week}`) : undefined
@@ -2600,7 +2636,8 @@ export function DraftBoardPage() {
                             className="button button--primary pool-table__draft"
                             onTap={() => pick(p)}
                             onHold={() => holdDraft(p)}
-                            title="Hold to draft instantly · tap to confirm"
+                            disabled={!!limitBlock(p)}
+                            title={limitBlock(p) ?? 'Hold to draft instantly · tap to confirm'}
                             ariaLabel={`Draft ${p.name}`}
                           >
                             Draft
@@ -2647,6 +2684,7 @@ export function DraftBoardPage() {
                   onPick={!isDrafted && canPick ? () => pick(p) : undefined}
                   onHoldPick={!isDrafted && canPick ? () => holdDraft(p) : undefined}
                   disabled={!canPick}
+                  blockedReason={isDrafted ? undefined : limitBlock(p)}
                   onQueue={isDrafted ? undefined : () => toggleQueue(p.id)}
                   queued={queue.includes(p.id)}
                   onFavorite={canFavorite ? () => toggleFavorite(p.id) : undefined}
@@ -2830,7 +2868,8 @@ export function DraftBoardPage() {
                     className="button button--primary draft-dash__qrow-draft"
                     onTap={() => setSelected(p)}
                     onHold={() => holdDraft(p)}
-                    title="Hold to draft instantly · tap to confirm"
+                    disabled={!!limitBlock(p)}
+                    title={limitBlock(p) ?? 'Hold to draft instantly · tap to confirm'}
                     ariaLabel={`Draft ${p.name}`}
                   >
                     Draft
@@ -3543,6 +3582,7 @@ export function DraftBoardPage() {
               : undefined
           }
           disabled={!canPick}
+          blockedReason={draftedIds.has(detailPlayer.id) ? undefined : limitBlock(detailPlayer)}
           onQueue={
             draftedIds.has(detailPlayer.id) ? undefined : () => toggleQueue(detailPlayer.id)
           }

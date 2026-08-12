@@ -17,6 +17,9 @@ export interface PlayerCardProps {
    * lock-in modal. Omit to make holding fall back to onPick. */
   onHoldPick?: () => void;
   disabled?: boolean;
+  /** When set, the Draft button is disabled and its tooltip shows this reason
+   * instead of the hold hint (e.g. a per-position roster limit was reached). */
+  blockedReason?: string;
   onQueue?: () => void;
   queued?: boolean;
   /** Cross-draft favorite star (favorite_players) — separate from the
@@ -56,6 +59,7 @@ export function PlayerCard({
   onPick,
   onHoldPick,
   disabled,
+  blockedReason,
   onQueue,
   queued,
   onFavorite,
@@ -180,8 +184,8 @@ export function PlayerCard({
           className="button button--primary player-card__draft"
           onTap={onPick}
           onHold={onHoldPick ?? onPick}
-          disabled={disabled}
-          title="Hold to draft instantly · tap to confirm"
+          disabled={disabled || !!blockedReason}
+          title={blockedReason ?? 'Hold to draft instantly · tap to confirm'}
           ariaLabel={`Draft ${player.name}`}
         >
           Draft

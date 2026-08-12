@@ -13,11 +13,13 @@ import {
   extractMentionedUsernames,
   gradeReactionSchema,
   gradeTeamSchema,
+  hasAnyPositionLimit,
   inviteToLobbySchema,
   makePickSchema,
   offerKeeperOptionsSchema,
   openSlots,
   overallForDraftPosition,
+  pickAllowedForLimits,
   pickCommentSchema,
   postChatSchema,
   renameTeamSchema,
@@ -29,6 +31,7 @@ import {
   setKeeperCountSchema,
   updateKeeperOptionSchema,
   type LobbySettings,
+  type Position,
 } from '@draft-lobby/shared';
 import { requireAuth, type AuthedRequest } from '../middleware/auth.js';
 import { rateLimit } from '../middleware/rateLimit.js';
@@ -1375,6 +1378,51 @@ draftRouter.post('/:id/pick', async (req: AuthedRequest, res: Response) => {
     targetOverall = requestedOverall;
   }
   const round = Math.floor((targetOverall - 1) / settings.teamCount) + 1;
+
+  // Per-position roster limits (hard max + reserved min). Only queried when the
+  // league actually sets any limit, so unlimited leagues pay nothing here. The
+  // bot/auto path enforces the same rule inside choosePlayer.
+  if (hasAnyPositionLimit(settings.positionLimits)) {
+    const { data: teamPickRows } = await supabaseAdmin
+      .from('picks')
+      .select('player_id')
+      .eq('lobby_id', lobbyId)
+      .eq('team_id', target.id);
+    const teamPlayerIds = (teamPickRows ?? []).map((r) => r.player_id as string);
+    const { data: posRows } = await supabaseAdmin
+      .from('players')
+      .select('id, position')
+      .in('id', [...teamPlayerIds, playerId]);
+    const posById = new Map((posRows ?? []).map((p) => [p.id as string, p.position as Position]));
+
+    const have: Record<Position, number> = { QB: 0, RB: 0, WR: 0, TE: 0, K: 0, DEF: 0 };
+    for (const pid of teamPlayerIds) {
+      const pos = posById.get(pid);
+      if (pos) have[pos] += 1;
+    }
+    const remainingSpots = roundsForSettings(settings) - teamPlayerIds.length;
+    const pickedPos = posById.get(playerId);
+    if (pickedPos) {
+      const verdict = pickAllowedForLimits(settings.positionLimits, have, remainingSpots, pickedPos);
+      if (!verdict.ok) {
+        const label = (p: Position) => (p === 'DEF' ? 'D/ST' : p);
+        let message: string;
+        if (verdict.reason === 'max') {
+          message = `Roster limit reached for ${label(pickedPos)}`;
+        } else {
+          const needed = (['QB', 'RB', 'WR', 'TE', 'K', 'DEF'] as Position[])
+            .filter((p) => have[p] < (settings.positionLimits?.[p]?.min ?? 0))
+            .map(label);
+          message =
+            needed.length > 0
+              ? `Draft ${needed.join('/')} to meet your position minimums first`
+              : 'Save your remaining spots for your position minimums';
+        }
+        res.status(409).json({ error: message });
+        return;
+      }
+    }
+  }
 
   const result = await applyPick(
     lobbyId,

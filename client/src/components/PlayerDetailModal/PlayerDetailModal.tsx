@@ -26,6 +26,9 @@ interface Props {
    * button becomes a hold-to-draft control; tapping still runs `onPick`. */
   onHoldPick?: () => void;
   disabled?: boolean;
+  /** When set, the Draft button is disabled and this reason is shown beneath it
+   * (e.g. a per-position roster limit was reached). */
+  blockedReason?: string;
   onQueue?: () => void;
   queued?: boolean;
   /** Cross-draft "favorite" star (favorite_players). Separate from the queue
@@ -51,6 +54,7 @@ export function PlayerDetailModal({
   onPick,
   onHoldPick,
   disabled,
+  blockedReason,
   onQueue,
   queued,
   onFavorite,
@@ -111,29 +115,33 @@ export function PlayerDetailModal({
         <ByeClashes byeWeek={player.bye_week} counts={byeClashCounts} />
 
         {onPick && (
-          <div className="player-detail__actions">
-            {onHoldPick ? (
-              <HoldButton
-                className="button button--primary player-detail__draft"
-                onTap={onPick}
-                onHold={onHoldPick}
-                disabled={disabled}
-                title="Hold to draft instantly · tap to confirm"
-                ariaLabel={`Draft ${player.name}`}
-              >
-                Draft {player.name}
-              </HoldButton>
-            ) : (
-              <button
-                type="button"
-                className="button button--primary player-detail__draft"
-                onClick={onPick}
-                disabled={disabled}
-              >
-                Draft {player.name}
-              </button>
-            )}
-          </div>
+          <>
+            <div className="player-detail__actions">
+              {onHoldPick ? (
+                <HoldButton
+                  className="button button--primary player-detail__draft"
+                  onTap={onPick}
+                  onHold={onHoldPick}
+                  disabled={disabled || !!blockedReason}
+                  title={blockedReason ?? 'Hold to draft instantly · tap to confirm'}
+                  ariaLabel={`Draft ${player.name}`}
+                >
+                  Draft {player.name}
+                </HoldButton>
+              ) : (
+                <button
+                  type="button"
+                  className="button button--primary player-detail__draft"
+                  onClick={onPick}
+                  disabled={disabled || !!blockedReason}
+                  title={blockedReason}
+                >
+                  Draft {player.name}
+                </button>
+              )}
+            </div>
+            {blockedReason && <p className="player-detail__block-note">{blockedReason}</p>}
+          </>
         )}
       </div>
     </div>

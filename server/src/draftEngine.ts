@@ -3,10 +3,13 @@ import {
   computeFantasyPoints,
   UNLIMITED_PICK_SECONDS,
   draftPositionForOverall,
+  hasAnyPositionLimit,
   isMatchRoundBot,
   isUnlimitedPick,
   openSlots,
   overallForDraftPosition,
+  pickAllowedForLimits,
+  positionLimitFor,
   roundsForSettings,
   secondsForRound,
   type LobbySettings,
@@ -450,8 +453,26 @@ export async function choosePlayer(
     });
   if (available.length === 0) return null;
 
+  // Per-position roster limits: a bot only considers players it would be allowed
+  // to draft (hard max + reserved minimum — the same rule the /pick route
+  // enforces for humans), falling back to the full list only if that somehow
+  // leaves nothing (e.g. keepers over-committed the roster).
+  const limits = settings.positionLimits;
+  const remainingSpots =
+    roundsForSettings(settings) - Object.values(have).reduce((a, b) => a + b, 0);
+  const candidates = hasAnyPositionLimit(limits)
+    ? available.filter((p) => pickAllowedForLimits(limits, have, remainingSpots, p.position).ok)
+    : available;
+  const pool = candidates.length > 0 ? candidates : available;
+
   const needs = computeNeeds(settings);
-  const dedicatedNeed = (pos: Position) => Math.max(0, needs.base[pos] - have[pos]);
+  // How many more of a position an unmet floor still requires — folded into the
+  // starter "need" so bots draft toward their minimums, not only when the
+  // reserved-spot rule finally forces it at the very end.
+  const minDeficit = (pos: Position) =>
+    Math.max(0, positionLimitFor(limits, pos).min - have[pos]);
+  const dedicatedNeed = (pos: Position) =>
+    Math.max(0, needs.base[pos] - have[pos], minDeficit(pos));
   const skillOverflow = Math.max(
     0,
     have.RB + have.WR + have.TE - (needs.base.RB + needs.base.WR + needs.base.TE),
@@ -466,33 +487,33 @@ export async function choosePlayer(
   const superflexRemaining = Math.max(0, needs.superflex - superflexOverflow);
 
   // 1) Unmet dedicated starter needs — skill/QB before kicker/defense.
-  const skillFirst = available.find(
+  const skillFirst = pool.find(
     (p) => p.position !== 'K' && p.position !== 'DEF' && dedicatedNeed(p.position) > 0,
   );
   if (skillFirst) return skillFirst.id;
 
   // 2) Flex, then superflex.
   if (flexRemaining > 0) {
-    const flexPick = available.find((p) => SKILL.includes(p.position));
+    const flexPick = pool.find((p) => SKILL.includes(p.position));
     if (flexPick) return flexPick.id;
   }
   if (superflexRemaining > 0) {
-    const sfPick = available.find((p) => SUPERFLEX_POS.includes(p.position));
+    const sfPick = pool.find((p) => SUPERFLEX_POS.includes(p.position));
     if (sfPick) return sfPick.id;
   }
 
   // 3) Remaining dedicated needs (kicker/defense).
-  const kdNeed = available.find((p) => dedicatedNeed(p.position) > 0);
+  const kdNeed = pool.find((p) => dedicatedNeed(p.position) > 0);
   if (kdNeed) return kdNeed.id;
 
   // 4) Bench: best value, but don't stockpile kickers/defenses past the requirement.
-  const bench = available.find((p) => {
+  const bench = pool.find((p) => {
     if ((p.position === 'K' || p.position === 'DEF') && have[p.position] >= needs.base[p.position]) {
       return false;
     }
     return true;
   });
-  return (bench ?? available[0]).id;
+  return (bench ?? pool[0]).id;
 }
 
 /**

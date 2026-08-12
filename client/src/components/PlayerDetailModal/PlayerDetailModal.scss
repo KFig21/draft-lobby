@@ -122,4 +122,14 @@
   &__draft {
     flex: 1;
   }
+
+  // Why the Draft button is disabled (a per-position roster limit), shown right
+  // under it so the reason isn't hidden in a tooltip.
+  &__block-note {
+    margin-top: $space;
+    text-align: center;
+    color: $warning;
+    font-size: 0.82rem;
+    font-weight: 600;
+  }
 }

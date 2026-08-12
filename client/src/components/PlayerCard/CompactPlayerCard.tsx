@@ -19,6 +19,7 @@ export function CompactPlayerCard({
   onPick,
   onHoldPick,
   disabled,
+  blockedReason,
   onQueue,
   queued,
   onFavorite,
@@ -132,8 +133,8 @@ export function CompactPlayerCard({
           className="button button--primary compact-card__draft"
           onTap={onPick}
           onHold={onHoldPick ?? onPick}
-          disabled={disabled}
-          title="Hold to draft instantly · tap to confirm"
+          disabled={disabled || !!blockedReason}
+          title={blockedReason ?? 'Hold to draft instantly · tap to confirm'}
           ariaLabel={`Draft ${player.name}`}
         >
           Draft
