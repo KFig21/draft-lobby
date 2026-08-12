@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import type { DraftCellStyle } from '../../lib/draftCellStyle';
+import type { DraftBoardLayout, DraftCellStyle } from '../../lib/draftCellStyle';
 import type { PlayerCardStyle } from '../../lib/playerCardStyle';
 import { TOAST_CATEGORIES, type ToastCategory, type ToastPrefs } from '../../toast/toastPrefs';
+import { BoardLayoutPicker } from '../BoardLayoutPicker/BoardLayoutPicker';
 import { DraftCellStylePicker } from '../DraftGrid/DraftCellStylePicker';
 import { randomSamplePlayer } from '../DraftGrid/samplePlayers';
 import { Modal } from '../Modal/Modal';
@@ -12,6 +13,8 @@ import './DraftUserSettingsModal.scss';
 
 interface Props {
   onClose: () => void;
+  boardLayout: DraftBoardLayout;
+  onBoardLayoutChange: (layout: DraftBoardLayout) => void;
   cellStyle: DraftCellStyle;
   onCellStyleChange: (style: DraftCellStyle) => void;
   cardStyle: PlayerCardStyle;
@@ -39,6 +42,8 @@ interface Props {
  */
 export function DraftUserSettingsModal({
   onClose,
+  boardLayout,
+  onBoardLayoutChange,
   cellStyle,
   onCellStyleChange,
   cardStyle,
@@ -63,6 +68,13 @@ export function DraftUserSettingsModal({
       <div className="draft-user-settings">
         <section className="draft-user-settings__section">
           <h3>Draft board</h3>
+          <div className="draft-user-settings__row">
+            <div className="draft-user-settings__row-main">
+              <span className="draft-user-settings__row-name">Desktop layout</span>
+              <span className="muted">How the draft room is arranged on wide screens</span>
+            </div>
+          </div>
+          <BoardLayoutPicker value={boardLayout} onChange={onBoardLayoutChange} />
           <div className="draft-user-settings__row">
             <div className="draft-user-settings__row-main">
               <span className="draft-user-settings__row-name">Cell style</span>

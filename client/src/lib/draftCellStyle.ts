@@ -76,3 +76,24 @@ export function getShowPickProjection(): boolean {
 export function setShowPickProjection(show: boolean): void {
   localStorage.setItem(PICK_PROJECTION_STORAGE_KEY, show ? '1' : '0');
 }
+
+/** Which desktop draft-board layout to use. 'detailed' is the 3-lane dashboard
+ * (roster · board+players · chat, all visible at once); 'simple' is the classic
+ * board with a tabbed sidebar. Only affects wide screens — mobile and the
+ * fullscreen/TV view always use the classic layout. Per-device preference, same
+ * pattern as the toggles above; defaults to 'detailed'. */
+export type DraftBoardLayout = 'simple' | 'detailed';
+
+const BOARD_LAYOUT_STORAGE_KEY = 'draftBoardLayout';
+
+export function getDraftBoardLayout(): DraftBoardLayout {
+  try {
+    return localStorage.getItem(BOARD_LAYOUT_STORAGE_KEY) === 'simple' ? 'simple' : 'detailed';
+  } catch {
+    return 'detailed';
+  }
+}
+
+export function setDraftBoardLayout(layout: DraftBoardLayout): void {
+  localStorage.setItem(BOARD_LAYOUT_STORAGE_KEY, layout);
+}

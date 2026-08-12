@@ -2067,3 +2067,639 @@
     transform: translateY(0);
   }
 }
+// ── Desktop 3-lane dashboard ──────────────────────────────────────────
+// Replaces the board + tabbed-sidebar layout for the windowed board view
+// (>=1100px; see DraftBoardPage's `useDashboard`). Fullscreen, mobile and the
+// desktop Power Rankings view keep the original layout, so this whole block
+// only ever applies to elements that render at desktop widths.
+.draft-dash {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  // Left + right lanes share one width; the center takes the rest. The single
+  // row is minmax(0,1fr) so lanes fill the bounded height and scroll inside
+  // rather than growing to their content.
+  --dash-lane-w: clamp(258px, 22vw, 312px);
+  grid-template-columns: var(--dash-lane-w) 1fr var(--dash-lane-w);
+  grid-template-rows: minmax(0, 1fr);
+  gap: $space;
+  padding: $space;
+
+  &__lane {
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+  }
+
+  // Card primitive shared by every pane.
+  &__pane {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    background: $bg-raised;
+    border: 1px solid $border;
+    border-radius: $radius;
+    overflow: hidden;
+  }
+
+  // Center column: board over players, split by a draggable row.
+  &__center {
+    min-width: 0;
+    min-height: 0;
+    display: grid;
+    grid-template-rows: var(--board-pct, 56%) 12px 1fr;
+    gap: 0;
+  }
+
+  &__board-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding: $space * 1.25;
+  }
+
+  // Bottom pane lays queue | divider | list side by side (row), unlike the
+  // default column pane.
+  &__bottom {
+    flex-direction: row;
+  }
+
+  &__players {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  // Roster / chat panels fill their pane (they bring their own chrome).
+  &__roster .draft__roster {
+    padding: $space * 1.25;
+  }
+
+  &__chat {
+    // DraftChat fills a flex column the same way it does in the sidebar.
+    > * {
+      flex: 1;
+      min-height: 0;
+    }
+  }
+
+  // Queue split (bottom-right) — shares the pane background (no tint).
+  &__queue {
+    flex: 0 0 var(--queue-w, 264px);
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  &__pane-head {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 9px 12px;
+    border-bottom: 1px solid $border;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: $accent;
+  }
+
+  &__count {
+    background: color-mix(in srgb, #{$accent} 20%, transparent);
+    border-radius: 999px;
+    padding: 1px 8px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  // "Clear" sits at the right end of the Queue header.
+  &__queue-clear {
+    margin-left: auto;
+    padding: 2px 8px;
+    border: 1px solid $border;
+    border-radius: 999px;
+    background: none;
+    color: $text-muted;
+    font: inherit;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    cursor: pointer;
+
+    &:hover { color: $danger; border-color: $danger; }
+  }
+
+  &__queue-list {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding: $space * 0.75;
+    display: flex;
+    flex-direction: column;
+    gap: $space * 0.5;
+  }
+
+  // Compact queue row — its own tight layout (pos · name/sub · Draft · remove)
+  // rather than the roomy pool card, which overflowed the narrow queue pane
+  // once the Draft button appeared on the user's pick.
+  &__qrow {
+    display: flex;
+    align-items: center;
+    gap: $space * 0.6;
+    padding: $space * 0.5 $space * 0.6;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: $bg;
+
+    &-pos {
+      flex-shrink: 0;
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1px;
+      width: 30px;
+      min-height: 30px;
+      padding: 2px 0;
+      border-radius: 6px;
+      color: #05231a;
+      font-size: 0.6rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+    &-rank { font-size: 0.58rem; opacity: 0.85; }
+
+    &-main {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      padding: 0;
+      border: none;
+      background: none;
+      text-align: left;
+      color: inherit;
+      cursor: pointer;
+
+      &:hover .draft-dash__qrow-name { color: $accent; }
+    }
+    &-name {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: $text;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    &-sub {
+      font-size: 0.68rem;
+      color: $text-muted;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    &-draft {
+      flex-shrink: 0;
+      padding: 4px 10px;
+      font-size: 0.72rem;
+    }
+
+    &-remove {
+      flex-shrink: 0;
+      display: inline-grid;
+      place-items: center;
+      width: 22px;
+      height: 22px;
+      border: none;
+      border-radius: 999px;
+      background: none;
+      color: $text-muted;
+      font-size: 1rem;
+      cursor: pointer;
+
+      &:hover { background: $bg-hover; color: $danger; }
+    }
+  }
+
+  // ── Drag handles ──
+  &__hdiv,
+  &__vdiv {
+    display: grid;
+    place-items: center;
+    z-index: 2;
+  }
+  &__hdiv { cursor: row-resize; }
+  &__vdiv {
+    flex: 0 0 12px;
+    cursor: col-resize;
+    border-left: 1px solid $border;
+    border-right: 1px solid $border;
+  }
+
+  &__grip {
+    width: 32px;
+    height: 4px;
+    border-radius: 999px;
+    background: $border;
+    transition: background 0.14s ease;
+
+    &--v {
+      width: 4px;
+      height: 32px;
+    }
+  }
+
+  &__hdiv:hover &__grip,
+  &__vdiv:hover &__grip {
+    background: $accent;
+  }
+}
+
+// ── Dashboard density tuning ──────────────────────────────────────────
+// The roster and chat panels are built for the wider tabbed sidebar; in the
+// dashboard's narrower lanes they read oversized. Tighten their spacing/type
+// here, scoped to the dashboard so the sidebar and mobile layouts are
+// untouched.
+.draft-dash__roster {
+  .draft__roster { padding: $space; }
+
+  .lineup-view { gap: $space * 0.85; }
+  .lineup-view__label { font-size: 0.62rem; }
+  .lineup-view__select { padding: $space * 0.6 $space * 0.75; font-size: 0.88rem; }
+  .lineup-view__auto { font-size: 0.76rem; }
+  .lineup-view__section { gap: $space * 0.45; }
+
+  // Position breakdown: even 3×2 grid of equal-width chips rather than a
+  // ragged wrapping flow.
+  .lineup-view__composition {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: $space * 0.45;
+    padding: $space * 0.6;
+  }
+  .roster-count { display: flex; min-width: 0; font-size: 0.64rem; }
+  .roster-count__pos { flex-shrink: 0; width: 2rem; min-width: 0; padding: 3px 4px; }
+  .roster-count__n { flex: 1; min-width: 0; padding: 3px 4px; }
+
+  .lineup-slot { gap: $space * 0.6; }
+  .lineup-slot__label { width: 2rem; font-size: 0.58rem; }
+  .lineup-slot__empty { padding: $space * 0.6; font-size: 0.74rem; }
+
+  // Filled-slot cards: tighten padding + type so a full lineup fits the lane.
+  .player-card { padding: $space * 0.5 $space * 0.7; gap: $space * 0.6; }
+  // Small square position chip (rounded), just the abbreviation.
+  .player-card__pos {
+    width: 26px;
+    min-width: 26px;
+    height: 26px;
+    min-height: 0;
+    padding: 0;
+    border-radius: 6px;
+  }
+  .player-card__pos-abbr { font-size: 0.58rem; }
+  .player-card__pos-rank { font-size: 0.58rem; }
+  .player-card__name-text { font-size: 0.8rem; }
+  .player-card__sub { font-size: 0.68rem; }
+  .player-card__proj { font-size: 0.92rem; }
+  // ADP isn't needed in the tight roster lane — the projection carries it.
+  .player-card__adp { display: none; }
+  // Keeper badge collapses to just its lock icon to save horizontal room.
+  .player-card__keeper-badge { padding: 2px; gap: 0; }
+  .player-card__keeper-word { display: none; }
+}
+
+.draft-dash__chat {
+  .chat__scroll { padding: $space; gap: $space * 0.85; }
+  .chat__msg { gap: $space * 0.6; }
+  .chat__msg-name { font-size: 0.76rem; }
+  .chat__msg-time { font-size: 0.62rem; }
+  .chat__msg-text { font-size: 0.79rem; line-height: 1.3; }
+  .chat__reply { font-size: 0.66rem; }
+  // Pick messages: keep the sentence on one line (name ellipsizes if needed)
+  // and pin the pick number to the card's bottom-right corner.
+  .chat__pick { padding: $space * 0.5 $space * 0.7; position: relative; }
+  .chat__pick-main { align-items: center; gap: $space * 0.6; }
+  .chat__pick-text {
+    flex: 1;
+    min-width: 0;
+    flex-wrap: nowrap;
+    gap: 4px;
+    font-size: 0.78rem;
+  }
+  .chat__pick-text > strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .chat__pick-text > strong:first-of-type { flex-shrink: 0; }
+  .chat__pick-pos { width: 18px; height: 18px; font-size: 0.52rem; flex-shrink: 0; }
+  .chat__pick-num {
+    position: absolute;
+    right: $space * 0.7;
+    bottom: $space * 0.35;
+    font-size: 0.62rem;
+    white-space: nowrap;
+  }
+  // In the pinned corner the leading "·" separator reads as noise — drop it
+  // (it stays inline in the sidebar/mobile chat, where it separates the name).
+  .chat__pick-num-dot { display: none; }
+  .chat__reaction-text,
+  .chat__grade-text { font-size: 0.74rem; }
+  .chat__compose { padding: $space * 0.75 $space; }
+}
+
+// ── Dashboard players filter bar (condensed to one line) ──────────────
+// The pool's two-row filter header (position chips over search + toggles) is
+// squeezed onto a single line here, and the position filters render as compact
+// text tabs instead of pills to reclaim width. Desktop dashboard only — the
+// sidebar/mobile pool keeps its roomier two-row pill layout.
+.draft-dash__players {
+  .pool__filters {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    min-width: 0;
+    gap: $space;
+    padding: $space $space * 1.25;
+  }
+
+  // Position filters → underlined tabs (no pill), so a full row of them costs
+  // far less width. Active tab is accent-colored with an accent underline.
+  .chip-row {
+    flex: 0 1 auto;
+    min-width: 0;
+    flex-wrap: nowrap;
+    gap: 3px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    &::-webkit-scrollbar { display: none; }
+  }
+  // Inactive: borderless muted text tab (pill-radius so the active fill is
+  // pill-shaped; the transparent border keeps sizing stable when it activates).
+  .pool__filters .chip {
+    flex-shrink: 0;
+    padding: 4px 10px;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    background: none;
+    color: $text-muted;
+    font-size: 0.78rem;
+    line-height: 1.2;
+
+    &:hover { color: $text; background: none; }
+  }
+  // Active: solid primary pill with white text (matching the original chip).
+  .pool__filters .chip--active {
+    border-color: transparent;
+    background: $primary;
+    color: #fff;
+  }
+  // The per-position pick count is redundant with the roster's position
+  // breakdown — drop the "· N" from the position tabs (queue/favorite tabs
+  // keep their counts, which aren't shown elsewhere).
+  .pool__filters .chip:not(.chip--queue):not(.chip--fav) {
+    .chip__dot,
+    .chip__count { display: none; }
+  }
+
+  // Search + toggles share the tabs' line, filling the width the tabs leave.
+  .pool__searchrow {
+    flex: 1 1 auto;
+    min-width: 0;
+    flex-wrap: nowrap;
+    gap: $space * 0.6;
+  }
+  .pool__search-wrap { flex: 1 1 120px; min-width: 90px; }
+  .pool__search { padding: $space * 0.55 $space; padding-right: $space * 3; font-size: 0.82rem; }
+  .pool__toggles { flex-wrap: nowrap; flex-shrink: 0; gap: $space * 0.5; }
+  .pool__seg-btn { padding: $space * 0.4 $space * 0.7; font-size: 0.72rem; }
+  .pool__showdrafted { flex-shrink: 0; font-size: 0.72rem; }
+}
+
+// ── Dashboard players table (Rankings-style, dense) ───────────────────
+// Table variant of the player pool used in the desktop dashboard (see
+// renderPlayersPool's `table` option): sortable columns + per-position stat
+// columns, sized tight for the bottom pane.
+.pool-table-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.pool-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 12.5px;
+
+  th {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    padding: 7px 8px;
+    background: $bg-raised;
+    border-bottom: 1px solid $border;
+    color: $text-muted;
+    font-size: 0.66rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  td {
+    padding: 6px 8px;
+    border-bottom: 1px solid $border;
+    vertical-align: middle;
+    text-align: right;
+  }
+
+  &__th {
+    cursor: pointer;
+    user-select: none;
+
+    @include hover-only {
+      &:hover { color: $text; }
+    }
+
+    &.is-active { color: $text; }
+  }
+
+  &__arrow { font-size: 0.72em; }
+
+  &__row {
+    cursor: pointer;
+    transition: background-color 100ms ease;
+
+    @include hover-only {
+      &:hover { background: $bg-overlay; }
+    }
+
+    &.is-drafted { opacity: 0.45; }
+  }
+
+  // Favorite + queue marks — narrow leading column, two small icon buttons
+  // side by side. Kept as a plain table cell (not display:flex): a flex box on
+  // the row's leading cell breaks the row's cell flow, so the inline-grid
+  // buttons flow inline instead.
+  &__marks {
+    width: 56px;
+    padding-left: $space * 0.6;
+    padding-right: 0;
+    text-align: left;
+    white-space: nowrap;
+  }
+  &__fav,
+  &__q {
+    display: inline-grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    vertical-align: middle;
+    border: none;
+    border-radius: 999px;
+    background: none;
+    color: $text-muted;
+    cursor: pointer;
+
+    &:hover { background: $bg-hover; color: $text; }
+  }
+  &__fav { margin-right: 2px; }
+  &__fav.is-on { color: $keeper; }
+  &__q.is-on { color: $accent; }
+
+  // Player cell stays a real table cell (so its bottom border spans the full
+  // column) — the flex layout lives on an inner wrapper. A `display:flex` on
+  // the <td> itself only stretches to the content width, leaving the border
+  // stopping short of the column edge.
+  &__player {
+    min-width: 160px;
+    text-align: left;
+  }
+  th#{&}__player { text-align: left; }
+  &__player-inner {
+    display: flex;
+    align-items: center;
+    gap: $space * 0.75;
+    min-width: 0;
+  }
+
+  &__pos {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    min-width: 3.3rem;
+    padding: 2px 5px;
+    border-radius: $radius-sm;
+    color: #05231a;
+    font-size: 0.62rem;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+  &__pos-dot { width: 3px; height: 3px; border-radius: 50%; background: currentColor; opacity: 0.6; }
+
+  // Name, team and bye on a single line: name (bold) shrinks/ellipsizes, the
+  // team + bye stay put beside it.
+  &__nameblock {
+    min-width: 0;
+    display: flex;
+    flex-direction: row;
+    align-items: baseline;
+    gap: 6px;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+  &__name {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex: 0 1 auto;
+    min-width: 0;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  &__team { flex-shrink: 0; font-size: 0.72rem; color: $text-muted; white-space: nowrap; }
+  &__bye--warn { color: $warning; }
+  &__bye--danger { color: $danger; }
+
+  // Drafted "round.pick" chip lives at the right edge of the player cell.
+  &__drafted {
+    margin-left: auto;
+    flex-shrink: 0;
+    padding-left: $space;
+    font-size: 0.72rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: $text-muted;
+  }
+
+  &__stat { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  &__pts,
+  &__adp { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  // Placeholder dashes (missing / zero stats) read muted, not full strength.
+  .is-dash { color: $text-muted; }
+  &__statline { color: $text-muted; font-size: 0.76rem; white-space: nowrap; }
+  &__pts { font-weight: 800; }
+  &__adp { color: $text-muted; }
+
+  // Center the stat columns — both the header and the values — so they line up
+  // under each other. Compound `th./td.` selectors so this beats the generic
+  // `.pool-table th/td { text-align: right }` rule regardless of source order
+  // (a bare `&__stat` loses the specificity tie). Pts/ADP stay right-aligned
+  // as the summary metrics.
+  & th#{&}__stat,
+  & td#{&}__stat,
+  & th#{&}__statline,
+  & td#{&}__statline { text-align: center; }
+
+  // Actions: the Draft (hold) button, right-aligned. Kept a normal table cell
+  // (the inline-flex button right-aligns via text-align) so its border spans
+  // the column like every other cell.
+  &__act {
+    text-align: right;
+    white-space: nowrap;
+    padding-right: $space;
+  }
+  &__draft { padding: 4px 10px; font-size: 0.72rem; }
+
+  &__empty { padding: $space * 2; text-align: center; }
+
+  // Projection ("your pick lands here") row — accent rule spanning the table.
+  &__proj td { padding: 0; border-bottom: none; }
+  &__proj-label {
+    display: flex;
+    align-items: center;
+    gap: $space * 0.75;
+    padding: 4px 8px;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: $text-muted;
+
+    &::before,
+    &::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: color-mix(in srgb, #{$text-muted} 40%, transparent);
+    }
+  }
+  &__proj.is-next &__proj-label {
+    color: $accent;
+
+    &::before,
+    &::after {
+      background: color-mix(in srgb, #{$accent} 60%, transparent);
+    }
+  }
+}

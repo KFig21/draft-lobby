@@ -13,11 +13,14 @@ import { useAuth } from '../../auth/AuthContext';
 import { ProfileEditor } from '../../components/ProfileEditor/ProfileEditor';
 import { ThemeToggle } from '../../components/ThemeToggle/ThemeToggle';
 import { ToggleSwitch } from '../../components/ToggleSwitch/ToggleSwitch';
+import { BoardLayoutPicker } from '../../components/BoardLayoutPicker/BoardLayoutPicker';
 import { DraftCellStylePicker } from '../../components/DraftGrid/DraftCellStylePicker';
 import { randomSamplePlayer } from '../../components/DraftGrid/samplePlayers';
 import { PlayerCardStylePicker } from '../../components/PlayerCard/PlayerCardStylePicker';
 import { TeamColorPreview } from '../../components/PlayerStatBlock/TeamColorPreview';
 import {
+  getDraftBoardLayout,
+  setDraftBoardLayout,
   getDraftCellStyle,
   setDraftCellStyle,
   getShowCellReactions,
@@ -26,6 +29,7 @@ import {
   setShowByeClashes,
   getShowPickProjection,
   setShowPickProjection,
+  type DraftBoardLayout,
   type DraftCellStyle,
 } from '../../lib/draftCellStyle';
 import { getDefaultScoringChoice, setDefaultScoringChoice } from '../../lib/defaultScoring';
@@ -72,6 +76,7 @@ export function SettingsPage() {
   const [showCellReactions, setShowCellReactionsState] = useState(() => getShowCellReactions());
   const [showByeClashes, setShowByeClashesState] = useState(() => getShowByeClashes());
   const [showPickProjection, setShowPickProjectionState] = useState(() => getShowPickProjection());
+  const [boardLayout, setBoardLayoutState] = useState<DraftBoardLayout>(() => getDraftBoardLayout());
   const [defaultScoring, setDefaultScoringState] = useState(() => getDefaultScoringChoice());
   const [cardStyle, setCardStyleState] = useState<PlayerCardStyle>(() => getPlayerCardStyle());
   const [teamColors, setTeamColorsState] = useState(() => getTeamColorsEnabled());
@@ -102,6 +107,11 @@ export function SettingsPage() {
   function updateShowPickProjection(show: boolean) {
     setShowPickProjection(show);
     setShowPickProjectionState(show);
+  }
+
+  function updateBoardLayout(layout: DraftBoardLayout) {
+    setDraftBoardLayout(layout);
+    setBoardLayoutState(layout);
   }
 
   function updateDefaultScoring(choice: string) {
@@ -168,6 +178,13 @@ export function SettingsPage() {
       {/* Draft board */}
       <section className="settings__section">
         <h2>Draft board</h2>
+        <div className="settings__row">
+          <div className="settings__row-main">
+            <span className="settings__row-name">Desktop layout</span>
+            <span className="muted">How the draft room is arranged on wide screens</span>
+          </div>
+        </div>
+        <BoardLayoutPicker value={boardLayout} onChange={updateBoardLayout} />
         <div className="settings__row">
           <div className="settings__row-main">
             <span className="settings__row-name">Cell style</span>

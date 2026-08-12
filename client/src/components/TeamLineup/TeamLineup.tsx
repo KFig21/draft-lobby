@@ -228,7 +228,9 @@ function LineupSlot({
   const { slot, player, pick } = row;
   return (
     <li className="lineup-slot">
-      <span className="lineup-slot__label">{SLOT_LABELS[slot]}</span>
+      <span className="lineup-slot__label">
+        {slot === 'BENCH' ? 'BE' : SLOT_LABELS[slot]}
+      </span>
       {player ? (
         pick && onPickClick ? (
           <button

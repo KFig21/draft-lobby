@@ -2,6 +2,7 @@ import {
   DEFAULT_SCORING_RULES,
   DRAFT_RESULTS_LOCK_MS,
   POSITIONS,
+  POSITION_COLORS,
   ROLLBACK_LOCK_MS,
   defaultAvatar,
   draftablePositions,
@@ -17,7 +18,9 @@ import {
 } from '@draft-lobby/shared';
 import AlternateEmailIcon from '@mui/icons-material/AlternateEmail';
 import BookmarkIcon from '@mui/icons-material/Bookmark';
+import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder';
 import StarIcon from '@mui/icons-material/Star';
+import StarBorderIcon from '@mui/icons-material/StarBorder';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlined';
 import CheckIcon from '@mui/icons-material/Check';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
@@ -111,17 +114,23 @@ import {
 } from '../../lib/playerCardStyle';
 import { getTeamColorsEnabled, setTeamColorsEnabled } from '../../lib/nflTeamColors';
 import { scorePlayers } from '../../lib/playerPoints';
+import { BASE_SORT_KEYS, POS_STAT_COLS, fmtStat } from '../../lib/positionStats';
+import { INJURY_ABBR, INJURY_SEVERITY } from '../../lib/injuryStatus';
+import { HoldButton } from '../../components/HoldButton/HoldButton';
 import { api } from '../../lib/api';
 import { byeClashCountsForWeek, byeClashLookup } from '../../lib/byeClashes';
 import {
+  getDraftBoardLayout,
   getDraftCellStyle,
   getShowByeClashes,
   getShowCellReactions,
   getShowPickProjection,
+  setDraftBoardLayout,
   setDraftCellStyle,
   setShowByeClashes,
   setShowCellReactions,
   setShowPickProjection,
+  type DraftBoardLayout,
   type DraftCellStyle,
 } from '../../lib/draftCellStyle';
 import { renderBoardCanvas } from '../../lib/boardCanvas';
@@ -238,6 +247,7 @@ export function DraftBoardPage() {
   const [showCellReactions, setShowCellReactionsState] = useState(() => getShowCellReactions());
   const [showByeClashes, setShowByeClashesState] = useState(() => getShowByeClashes());
   const [showPickProjection, setShowPickProjectionState] = useState(() => getShowPickProjection());
+  const [boardLayout, setBoardLayoutState] = useState<DraftBoardLayout>(() => getDraftBoardLayout());
   const [cardStyle, setCardStyleState] = useState<PlayerCardStyle>(() => getPlayerCardStyle());
   const [teamColors, setTeamColorsState] = useState(() => getTeamColorsEnabled());
   const [toastPrefs, setToastPrefsState] = useState(() => getToastPrefs());
@@ -264,6 +274,10 @@ export function DraftBoardPage() {
     setShowPickProjection(show);
     setShowPickProjectionState(show);
   }
+  function updateBoardLayout(layout: DraftBoardLayout) {
+    setDraftBoardLayout(layout);
+    setBoardLayoutState(layout);
+  }
   function updateTeamColors(enabled: boolean) {
     setTeamColorsEnabled(enabled);
     setTeamColorsState(enabled);
@@ -285,7 +299,42 @@ export function DraftBoardPage() {
   // rank), 'prev' shows last season's actuals. Sort key: 'points' sorts by the
   // currently-shown stat's points, 'adp' by average draft position.
   const [statMode, setStatMode] = useState<'proj' | 'prev'>('proj');
-  const [sortMode, setSortMode] = useState<'points' | 'adp'>('points');
+  // Pool sort: one of the fixed columns ('points' | 'name' | 'adp') or a raw
+  // stat key (when the dashboard table is filtered to a position), plus a
+  // direction. 'points' desc is the default ranking.
+  const [sortMode, setSortMode] = useState<'points' | 'name' | 'adp' | (string & {})>('points');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  // Natural (first-click) direction: A→Z for name, earliest-first for ADP,
+  // high-to-low for points and every stat column.
+  const poolNaturalDir = (key: string): 'asc' | 'desc' =>
+    key === 'name' || key === 'adp' ? 'asc' : 'desc';
+  // The Pts/ADP quick buttons just set a column in its natural direction.
+  function setPoolSort(key: 'points' | 'adp') {
+    setSortMode(key);
+    setSortDir(poolNaturalDir(key));
+  }
+  // Sortable table headers: natural → reversed → reset (points, high-to-low).
+  function togglePoolSort(key: string) {
+    const natural = poolNaturalDir(key);
+    if (sortMode !== key) {
+      setSortMode(key);
+      setSortDir(natural);
+    } else if (sortDir === natural) {
+      setSortDir(natural === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortMode('points');
+      setSortDir('desc');
+    }
+  }
+  // A stat-column sort only makes sense while that position's columns are shown;
+  // if the filter changes away, fall back to the default points ranking.
+  useEffect(() => {
+    const cols = POS_STAT_COLS[filter as Position];
+    if (!BASE_SORT_KEYS.has(sortMode) && !cols?.some((c) => c.key === sortMode)) {
+      setSortMode('points');
+      setSortDir('desc');
+    }
+  }, [filter, sortMode]);
   // Per-device pool-row density (Settings, or the in-room settings modal).
   // The two layouts are separate components, chosen here at the render call.
   const PoolCard = cardStyle === 'compact' ? CompactPlayerCard : PlayerCard;
@@ -547,6 +596,65 @@ export function DraftBoardPage() {
     draggingRef.current = true;
     document.body.style.userSelect = 'none';
     document.body.style.cursor = 'col-resize';
+  }
+
+  // ── Desktop dashboard: resizable center split (board over players) + a
+  // resizable queue pane. The vertical split is a percent so it keeps its
+  // proportion as the window resizes; the queue is a fixed px width. Both
+  // persist across sessions, same as the sidebar width above.
+  const dashCenterRef = useRef<HTMLDivElement>(null);
+  const dashBottomRef = useRef<HTMLDivElement>(null);
+  const dashDragRef = useRef<null | 'h' | 'v'>(null);
+  const [dashBoardPct, setDashBoardPct] = useState(() => {
+    const v = Number(localStorage.getItem('draftDashBoardPct'));
+    return v >= 25 && v <= 80 ? v : 56;
+  });
+  const [dashQueueW, setDashQueueW] = useState(() => {
+    const v = Number(localStorage.getItem('draftDashQueueW'));
+    return v >= 180 && v <= 460 ? v : 264;
+  });
+  useEffect(() => {
+    localStorage.setItem('draftDashBoardPct', String(Math.round(dashBoardPct)));
+  }, [dashBoardPct]);
+  useEffect(() => {
+    localStorage.setItem('draftDashQueueW', String(Math.round(dashQueueW)));
+  }, [dashQueueW]);
+  useEffect(() => {
+    function onMove(e: PointerEvent) {
+      if (dashDragRef.current === 'h') {
+        const el = dashCenterRef.current;
+        if (!el) return;
+        const r = el.getBoundingClientRect();
+        setDashBoardPct(Math.min(80, Math.max(25, ((e.clientY - r.top) / r.height) * 100)));
+      } else if (dashDragRef.current === 'v') {
+        const el = dashBottomRef.current;
+        if (!el) return;
+        const r = el.getBoundingClientRect();
+        // Queue sits on the right, so its width grows as the divider is dragged
+        // leftward — measure from the right edge. Keep the list ≥ ~320px.
+        setDashQueueW(Math.min(r.width - 320, Math.max(180, r.right - e.clientX)));
+      }
+    }
+    function onUp() {
+      if (!dashDragRef.current) return;
+      dashDragRef.current = null;
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+    }
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+  }, []);
+  function startDashDrag(dir: 'h' | 'v') {
+    return (e: React.PointerEvent) => {
+      e.preventDefault();
+      dashDragRef.current = dir;
+      document.body.style.userSelect = 'none';
+      document.body.style.cursor = dir === 'h' ? 'row-resize' : 'col-resize';
+    };
   }
 
   const userId = session?.user.id;
@@ -1487,19 +1595,23 @@ export function DraftBoardPage() {
       if (q && !p.name.toLowerCase().includes(q)) return false;
       return true;
     });
-    // Sort by the active lens: points (of the shown stat, descending) or ADP
-    // (ascending). Missing values always sink to the bottom either way.
+    // Sort by the active column/direction. Missing values always sink to the
+    // bottom regardless of direction (comparator computed ascending, then
+    // flipped for descending).
     const pointsOf = (p: PlayerRow) => (statMode === 'prev' ? p.prev_points : p.proj_points);
-    rows.sort((a, b) => {
+    const statsOf = (p: PlayerRow) => (statMode === 'prev' ? p.prev_stats : p.proj_stats) ?? {};
+    function compareAsc(a: PlayerRow, b: PlayerRow): number {
+      if (sortMode === 'name') return a.name.localeCompare(b.name);
       if (sortMode === 'adp') {
-        const av = a.adp ?? Infinity;
-        const bv = b.adp ?? Infinity;
-        return av - bv;
+        if (a.adp == null && b.adp == null) return 0;
+        if (a.adp == null) return 1;
+        if (b.adp == null) return -1;
+        return a.adp - b.adp;
       }
-      const av = pointsOf(a) ?? -Infinity;
-      const bv = pointsOf(b) ?? -Infinity;
-      return bv - av;
-    });
+      if (sortMode === 'points') return (pointsOf(a) ?? -Infinity) - (pointsOf(b) ?? -Infinity);
+      return (statsOf(a)[sortMode] ?? -Infinity) - (statsOf(b)[sortMode] ?? -Infinity);
+    }
+    rows.sort((a, b) => (sortDir === 'asc' ? compareAsc(a, b) : compareAsc(b, a)));
     return rows;
   }, [
     players,
@@ -1512,6 +1624,7 @@ export function DraftBoardPage() {
     showDrafted,
     statMode,
     sortMode,
+    sortDir,
   ]);
 
   // Only offer bye weeks that actually appear in the pool right now (not a
@@ -2072,7 +2185,7 @@ export function DraftBoardPage() {
   // rather than a nested <PlayersPool/> component — the latter would be a
   // new component type on every render and remount the subtree, dropping
   // focus out of the search input on every keystroke.
-  function renderPlayersPool() {
+  function renderPlayersPool(opts: { hideQueue?: boolean; table?: boolean } = {}) {
     if (!lobby) return null; // already guaranteed by the guard above — narrows for TS
     // Opens the pick-confirm dialog. The fullscreen Menu modal (if open) stays
     // open behind it — LockInModal now stacks above it (see its z-index) — so
@@ -2108,6 +2221,31 @@ export function DraftBoardPage() {
           {line.isNext ? 'Your pick' : `Round ${line.round}`}
         </span>
       </div>
+    );
+
+    // ── Table mode (dashboard) helpers ──
+    // Position stat columns when filtered to a single position; else a generic
+    // stat line. colCount spans star + player + stats + pts + adp + actions.
+    const statCols = POS_STAT_COLS[filter as Position];
+    const colCount = 5 + (statCols ? statCols.length : 1);
+    const sortTh = (label: string, key: string, cls?: string) => (
+      <th
+        className={`pool-table__th${sortMode === key ? ' is-active' : ''}${cls ? ` ${cls}` : ''}`}
+        onClick={() => togglePoolSort(key)}
+        aria-sort={sortMode === key ? (sortDir === 'asc' ? 'ascending' : 'descending') : undefined}
+      >
+        {label}
+        {sortMode === key && <span className="pool-table__arrow">{sortDir === 'asc' ? ' ▲' : ' ▼'}</span>}
+      </th>
+    );
+    const projRow = (line: ProjLine) => (
+      <tr className={`pool-table__proj${line.isNext ? ' is-next' : ''}`} aria-hidden>
+        <td colSpan={colCount}>
+          <span className="pool-table__proj-label">
+            {line.isNext ? 'Your pick' : `Round ${line.round}`}
+          </span>
+        </td>
+      </tr>
     );
 
     // Don't offer a filter chip for a position/slot this league's roster
@@ -2164,7 +2302,7 @@ export function DraftBoardPage() {
     );
     return (
       <>
-        {queuedPlayers.length > 0 && (
+        {!opts.hideQueue && queuedPlayers.length > 0 && (
           <div className="pool__queue">
             <div className="pool__queue-head">Queue ({queuedPlayers.length})</div>
             {queuedPlayers.map((p) => (
@@ -2280,7 +2418,7 @@ export function DraftBoardPage() {
                 <button
                   type="button"
                   className={`pool__seg-btn ${sortMode === 'points' ? 'is-active' : ''}`}
-                  onClick={() => setSortMode('points')}
+                  onClick={() => setPoolSort('points')}
                   title="Sort by points"
                 >
                   Pts
@@ -2288,7 +2426,7 @@ export function DraftBoardPage() {
                 <button
                   type="button"
                   className={`pool__seg-btn ${sortMode === 'adp' ? 'is-active' : ''}`}
-                  onClick={() => setSortMode('adp')}
+                  onClick={() => setPoolSort('adp')}
                   title="Sort by average draft position"
                 >
                   ADP
@@ -2306,53 +2444,243 @@ export function DraftBoardPage() {
             </div>
           </div>
         </div>
-        <div className="pool__list">
-          {displayed.map((p, i) => {
-            const isDrafted = draftedIds.has(p.id);
-            const line = projectionByIndex.get(i);
-            const card = (
-              <PoolCard
-                player={p}
-                statMode={statMode}
-                posRank={statMode === 'prev' ? p.prev_rank : p.proj_rank}
-                drafted={isDrafted}
-                draftedLabel={isDrafted ? pickLabelByPlayerId.get(p.id) : undefined}
-                onPick={!isDrafted && canPick ? () => pick(p) : undefined}
-                onHoldPick={!isDrafted && canPick ? () => holdDraft(p) : undefined}
-                disabled={!canPick}
-                onQueue={isDrafted ? undefined : () => toggleQueue(p.id)}
-                queued={queue.includes(p.id)}
-                onFavorite={canFavorite ? () => toggleFavorite(p.id) : undefined}
-                favorited={favoriteIds?.has(p.id) ?? false}
-                onOpenDetail={() => {
-                  // A drafted player opens its pick (who took them, round/pick);
-                  // an available one opens the plain player-detail modal.
-                  const pk = isDrafted ? pickByPlayerId.get(p.id) : undefined;
-                  if (pk) setPickModal(pk);
-                  else setDetailPlayer(p);
-                }}
-                byeClashCount={
-                  p.bye_week != null ? byeLookup.get(`${p.position}:${p.bye_week}`) : undefined
-                }
-              />
-            );
-            return line ? (
-              <Fragment key={p.id}>
-                {renderProjectionLine(line)}
-                {card}
-              </Fragment>
-            ) : (
-              <Fragment key={p.id}>{card}</Fragment>
-            );
-          })}
-          {/* A pick projected to land past the last shown player draws its line
-              at the very end of the list. */}
-          {(() => {
-            const tail = projectionByIndex.get(displayed.length);
-            return tail ? renderProjectionLine(tail) : null;
-          })()}
-          {available.length === 0 && <p className="muted pool__empty">No players match.</p>}
-        </div>
+        {opts.table ? (
+          <div className="pool-table-wrap">
+            <table className="pool-table">
+              <thead>
+                <tr>
+                  <th className="pool-table__marks" aria-label="Favorite & queue" />
+                  {sortTh('Player', 'name', 'pool-table__player')}
+                  {statCols ? (
+                    statCols.map((c) => sortTh(c.label, c.key, 'pool-table__stat'))
+                  ) : (
+                    <th className="pool-table__statline">Stats</th>
+                  )}
+                  {sortTh('Pts', 'points', 'pool-table__pts')}
+                  {sortTh('ADP', 'adp', 'pool-table__adp')}
+                  <th className="pool-table__act" aria-label="Draft" />
+                </tr>
+              </thead>
+              <tbody>
+                {displayed.map((p, i) => {
+                  const isDrafted = draftedIds.has(p.id);
+                  const line = projectionByIndex.get(i);
+                  const posRank = statMode === 'prev' ? p.prev_rank : p.proj_rank;
+                  const points = statMode === 'prev' ? p.prev_points : p.proj_points;
+                  const stats = (statMode === 'prev' ? p.prev_stats : p.proj_stats) ?? {};
+                  const statLine = statMode === 'prev' ? p.prev_stat_line : p.proj_stat_line;
+                  const injury = INJURY_ABBR[p.injury_status];
+                  const clash =
+                    p.bye_week != null ? byeLookup.get(`${p.position}:${p.bye_week}`) : undefined;
+                  const isFav = favoriteIds?.has(p.id) ?? false;
+                  const isQueued = queue.includes(p.id);
+                  const row = (
+                    <tr
+                      className={`pool-table__row${isDrafted ? ' is-drafted' : ''}`}
+                      onClick={() => {
+                        const pk = isDrafted ? pickByPlayerId.get(p.id) : undefined;
+                        if (pk) setPickModal(pk);
+                        else setDetailPlayer(p);
+                      }}
+                    >
+                      <td className="pool-table__marks">
+                        {canFavorite && (
+                          <button
+                            type="button"
+                            className={`pool-table__fav${isFav ? ' is-on' : ''}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleFavorite(p.id);
+                            }}
+                            aria-label={isFav ? 'Remove favorite' : 'Add favorite'}
+                          >
+                            {isFav ? (
+                              <StarIcon fontSize="inherit" />
+                            ) : (
+                              <StarBorderIcon fontSize="inherit" />
+                            )}
+                          </button>
+                        )}
+                        {!isDrafted && (
+                          <button
+                            type="button"
+                            className={`pool-table__q${isQueued ? ' is-on' : ''}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleQueue(p.id);
+                            }}
+                            aria-label={isQueued ? 'Remove from queue' : 'Add to queue'}
+                            title={isQueued ? 'Remove from queue' : 'Add to queue'}
+                          >
+                            {isQueued ? (
+                              <BookmarkIcon fontSize="inherit" />
+                            ) : (
+                              <BookmarkBorderIcon fontSize="inherit" />
+                            )}
+                          </button>
+                        )}
+                      </td>
+                      <td className="pool-table__player">
+                        <div className="pool-table__player-inner">
+                        <span
+                          className="pool-table__pos"
+                          style={{ background: POSITION_COLORS[p.position as Position] }}
+                        >
+                          {p.position}
+                          {posRank != null && (
+                            <>
+                              <span className="pool-table__pos-dot" />
+                              {posRank}
+                            </>
+                          )}
+                        </span>
+                        <span className="pool-table__nameblock">
+                          <span className="pool-table__name">
+                            {p.name}
+                            {injury && (
+                              <span
+                                className={`injury-badge injury-badge--${
+                                  INJURY_SEVERITY[p.injury_status] ?? 'danger'
+                                }`}
+                                title={p.injury_status}
+                              >
+                                {injury}
+                              </span>
+                            )}
+                          </span>
+                          <span className="pool-table__team">
+                            {p.nfl_team}
+                            {p.bye_week != null && (
+                              <span
+                                className={
+                                  clash
+                                    ? clash >= 2
+                                      ? 'pool-table__bye--danger'
+                                      : 'pool-table__bye--warn'
+                                    : undefined
+                                }
+                              >
+                                {' '}
+                                · Bye {p.bye_week}
+                              </span>
+                            )}
+                          </span>
+                        </span>
+                        {isDrafted && (
+                          <span className="pool-table__drafted">
+                            {pickLabelByPlayerId.get(p.id) ?? 'Drafted'}
+                          </span>
+                        )}
+                        </div>
+                      </td>
+                      {statCols ? (
+                        statCols.map((c) => {
+                          const s = fmtStat(stats[c.key]);
+                          return (
+                            <td
+                              key={c.key}
+                              className={`pool-table__stat${s === '—' ? ' is-dash' : ''}`}
+                            >
+                              {s}
+                            </td>
+                          );
+                        })
+                      ) : (
+                        <td className="pool-table__statline muted">{statLine ?? '—'}</td>
+                      )}
+                      <td className={`pool-table__pts${points == null ? ' is-dash' : ''}`}>
+                        {points != null ? points.toFixed(1) : '—'}
+                      </td>
+                      <td className={`pool-table__adp${p.adp == null ? ' is-dash' : ''}`}>
+                        {p.adp != null ? p.adp.toFixed(1) : '—'}
+                      </td>
+                      <td className="pool-table__act">
+                        {!isDrafted && canPick && (
+                          <HoldButton
+                            className="button button--primary pool-table__draft"
+                            onTap={() => pick(p)}
+                            onHold={() => holdDraft(p)}
+                            title="Hold to draft instantly · tap to confirm"
+                            ariaLabel={`Draft ${p.name}`}
+                          >
+                            Draft
+                          </HoldButton>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                  return line ? (
+                    <Fragment key={p.id}>
+                      {projRow(line)}
+                      {row}
+                    </Fragment>
+                  ) : (
+                    <Fragment key={p.id}>{row}</Fragment>
+                  );
+                })}
+                {(() => {
+                  const tail = projectionByIndex.get(displayed.length);
+                  return tail ? projRow(tail) : null;
+                })()}
+                {available.length === 0 && (
+                  <tr>
+                    <td className="pool-table__empty muted" colSpan={colCount}>
+                      No players match.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="pool__list">
+            {displayed.map((p, i) => {
+              const isDrafted = draftedIds.has(p.id);
+              const line = projectionByIndex.get(i);
+              const card = (
+                <PoolCard
+                  player={p}
+                  statMode={statMode}
+                  posRank={statMode === 'prev' ? p.prev_rank : p.proj_rank}
+                  drafted={isDrafted}
+                  draftedLabel={isDrafted ? pickLabelByPlayerId.get(p.id) : undefined}
+                  onPick={!isDrafted && canPick ? () => pick(p) : undefined}
+                  onHoldPick={!isDrafted && canPick ? () => holdDraft(p) : undefined}
+                  disabled={!canPick}
+                  onQueue={isDrafted ? undefined : () => toggleQueue(p.id)}
+                  queued={queue.includes(p.id)}
+                  onFavorite={canFavorite ? () => toggleFavorite(p.id) : undefined}
+                  favorited={favoriteIds?.has(p.id) ?? false}
+                  onOpenDetail={() => {
+                    // A drafted player opens its pick (who took them, round/pick);
+                    // an available one opens the plain player-detail modal.
+                    const pk = isDrafted ? pickByPlayerId.get(p.id) : undefined;
+                    if (pk) setPickModal(pk);
+                    else setDetailPlayer(p);
+                  }}
+                  byeClashCount={
+                    p.bye_week != null ? byeLookup.get(`${p.position}:${p.bye_week}`) : undefined
+                  }
+                />
+              );
+              return line ? (
+                <Fragment key={p.id}>
+                  {renderProjectionLine(line)}
+                  {card}
+                </Fragment>
+              ) : (
+                <Fragment key={p.id}>{card}</Fragment>
+              );
+            })}
+            {/* A pick projected to land past the last shown player draws its line
+                at the very end of the list. */}
+            {(() => {
+              const tail = projectionByIndex.get(displayed.length);
+              return tail ? renderProjectionLine(tail) : null;
+            })()}
+            {available.length === 0 && <p className="muted pool__empty">No players match.</p>}
+          </div>
+        )}
       </>
     );
   }
@@ -2362,6 +2690,261 @@ export function DraftBoardPage() {
   // .draft__sidebar-tabs/.draft__panel-body/etc. are styled as standalone
   // BEM-ish classes (not scoped to .draft__sidebar specifically), so this
   // markup renders identically wherever it's dropped in.
+  // ── Panel bodies, shared by the tabbed sidebar and the desktop dashboard ──
+  function renderRosterPanel() {
+    if (!lobby) return null;
+    return (
+      <div className="draft__roster">
+        <TeamLineup
+          teams={teams}
+          selectedTeamId={rosterTeamId}
+          onSelectTeam={setRosterTeamSel}
+          picks={picks}
+          playersById={playersById}
+          settings={lobby.settings}
+          myUserId={userId}
+          isCommish={isCommish}
+          onToggleAuto={isComplete ? undefined : toggleAuto}
+          onPickClick={setPickModal}
+          belowSelect={
+            isComplete && !isDesktop
+              ? (() => {
+                  const voteCount = crownVotes.filter((v) => v.team_id === rosterTeamId).length;
+                  const teamGrades = grades.filter((g) => g.team_id === rosterTeamId);
+                  const appGrade = powerRankGradeByTeam.get(rosterTeamId) ?? null;
+                  return (
+                    <>
+                      <span className="lineup-view__label">Report Card</span>
+                      <button
+                        type="button"
+                        className="draft__results-summary"
+                        onClick={() => {
+                          if (isFullscreen) {
+                            setCenterView('rankings');
+                            setShowFsMenu(false);
+                          } else setResultsDrawerView((v) => (v === 'closed' ? 'open' : 'closed'));
+                        }}
+                      >
+                        <GradeBadge grade={appGrade} size={44} />
+                        <div className="draft__results-summary-main">
+                          <span className="draft__results-summary-item">
+                            <EmojiEventsOutlinedIcon fontSize="small" /> {voteCount} vote
+                            {voteCount === 1 ? '' : 's'}
+                          </span>
+                          <span className="draft__results-summary-item muted">
+                            {teamGrades.length} grade
+                            {teamGrades.length === 1 ? '' : 's'}
+                          </span>
+                        </div>
+                        <ChevronRightIcon
+                          fontSize="small"
+                          className="draft__results-summary-chevron"
+                        />
+                      </button>
+                    </>
+                  );
+                })()
+              : isStaging && lobby.settings.keepersEnabled
+                ? (
+                    <button
+                      type="button"
+                      className="draft__view-keepers-btn"
+                      onClick={() => setShowTeamKeepers(true)}
+                    >
+                      <LockOutlinedIcon fontSize="small" /> View keepers
+                    </button>
+                  )
+                : undefined
+          }
+        />
+      </div>
+    );
+  }
+
+  function renderChatPanel() {
+    if (!lobby) return null;
+    return (
+      <DraftChat
+        lobbyId={id}
+        status={lobby.status}
+        completedAt={lobby.completed_at}
+        chatLockMs={lobby.chat_lock_ms}
+        picks={picks}
+        grades={grades}
+        teamsById={teamsById}
+        playersById={playersById}
+        members={members}
+        onOpenPick={setPickModal}
+        focusMessageId={focusMessageId}
+        onFocusHandled={() => setFocusMessageId(null)}
+        viewOnly={!isMember}
+      />
+    );
+  }
+
+  // Queued players as their own scrollable pane — the dashboard's bottom-left
+  // split (mirrors the pool's inline queue, which is hidden in dashboard mode).
+  function renderQueuePane() {
+    return (
+      <div className="draft-dash__queue">
+        <div className="draft-dash__pane-head">
+          Queue <span className="draft-dash__count">{queuedPlayers.length}</span>
+          {queuedPlayers.length > 0 && (
+            <button
+              type="button"
+              className="draft-dash__queue-clear"
+              onClick={() => setQueue([])}
+              title="Clear the entire queue"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+        <div className="draft-dash__queue-list">
+          {queuedPlayers.map((p) => {
+            const posRank = statMode === 'prev' ? p.prev_rank : p.proj_rank;
+            const points = statMode === 'prev' ? p.prev_points : p.proj_points;
+            return (
+              <div className="draft-dash__qrow" key={p.id}>
+                <span
+                  className="draft-dash__qrow-pos"
+                  style={{ background: POSITION_COLORS[p.position as Position] }}
+                >
+                  {p.position}
+                  {posRank != null && <span className="draft-dash__qrow-rank">{posRank}</span>}
+                </span>
+                <button
+                  type="button"
+                  className="draft-dash__qrow-main"
+                  onClick={() => setDetailPlayer(p)}
+                >
+                  <span className="draft-dash__qrow-name">{p.name}</span>
+                  <span className="draft-dash__qrow-sub">
+                    {p.nfl_team}
+                    {p.bye_week != null && ` · Bye ${p.bye_week}`}
+                    {points != null && ` · ${points.toFixed(1)}`}
+                  </span>
+                </button>
+                {canPick && (
+                  <HoldButton
+                    className="button button--primary draft-dash__qrow-draft"
+                    onTap={() => setSelected(p)}
+                    onHold={() => holdDraft(p)}
+                    title="Hold to draft instantly · tap to confirm"
+                    ariaLabel={`Draft ${p.name}`}
+                  >
+                    Draft
+                  </HoldButton>
+                )}
+                <button
+                  type="button"
+                  className="draft-dash__qrow-remove"
+                  onClick={() => toggleQueue(p.id)}
+                  aria-label={`Remove ${p.name} from queue`}
+                  title="Remove from queue"
+                >
+                  <CloseIcon fontSize="inherit" />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  // Desktop 3-lane dashboard: roster | (board over players) | chat, with a
+  // draggable split between board & players and — when players are queued — a
+  // draggable queue pane beside the list.
+  function renderDashboard() {
+    const showQueueSplit = queuedPlayers.length > 0;
+    return (
+      <div className="draft-dash">
+        <aside className="draft-dash__lane">
+          <div className="draft-dash__pane draft-dash__roster">{renderRosterPanel()}</div>
+        </aside>
+
+        <div
+          className="draft-dash__center"
+          ref={dashCenterRef}
+          style={{ ['--board-pct' as string]: `${dashBoardPct}%` }}
+        >
+          <div className="draft-dash__pane draft-dash__board">
+            <div className="draft-dash__board-scroll">{renderDraftGrid()}</div>
+          </div>
+          <div
+            className="draft-dash__hdiv"
+            onPointerDown={startDashDrag('h')}
+            role="separator"
+            aria-orientation="horizontal"
+            aria-label="Resize board and players"
+          >
+            <span className="draft-dash__grip" />
+          </div>
+          <div
+            className={`draft-dash__pane draft-dash__bottom${showQueueSplit ? ' is-split' : ''}`}
+            ref={dashBottomRef}
+            style={{ ['--queue-w' as string]: `${dashQueueW}px` }}
+          >
+            <div className="draft-dash__players">
+              {renderPlayersPool({ hideQueue: true, table: true })}
+            </div>
+            {showQueueSplit && (
+              <>
+                <div
+                  className="draft-dash__vdiv"
+                  onPointerDown={startDashDrag('v')}
+                  role="separator"
+                  aria-orientation="vertical"
+                  aria-label="Resize queue and players"
+                >
+                  <span className="draft-dash__grip draft-dash__grip--v" />
+                </div>
+                {renderQueuePane()}
+              </>
+            )}
+          </div>
+        </div>
+
+        <aside className="draft-dash__lane">
+          <div className="draft-dash__pane draft-dash__chat">{renderChatPanel()}</div>
+        </aside>
+      </div>
+    );
+  }
+
+  function renderDraftGrid() {
+    if (!lobby) return null;
+    return (
+      <DraftGrid
+        teams={teams}
+        members={members}
+        rounds={totalRounds}
+        picks={picks}
+        playersById={playersById}
+        onClockTeamId={isComplete || isStaging ? null : onClockTeam?.id ?? null}
+        myTeamId={myTeam?.id ?? null}
+        currentRound={round}
+        draftType={lobby.settings.draftType}
+        onTeamClick={openTeamRoster}
+        reactionsByPick={showCellReactions ? reactionsByPick : undefined}
+        onReactPick={isMember ? reactPick : undefined}
+        onPickClick={setPickModal}
+        commentsByPick={showCellReactions ? commentsByPick : undefined}
+        cellStyle={cellStyle}
+        fill={isFullscreen}
+        fillRowHeight={fsRowHeight}
+        onMyClockCellClick={openPlayersPool}
+        onCommishClockCellClick={isCommish ? openPlayersPool : undefined}
+        onClockUrgency={onClockCellUrgency}
+        onClockFlashing={onClockCellFlashing}
+        onClockElapsedPct={onClockCellElapsedPct}
+        skippedCells={isComplete || isStaging ? undefined : skippedCellKeys}
+        onRollbackSkipped={isCommish && !rollbackLocked ? openSkipRollback : undefined}
+      />
+    );
+  }
+
   function renderSidebarPanels() {
     if (!lobby) return null; // already guaranteed by the guard above — narrows for TS
     return (
@@ -2402,74 +2985,7 @@ export function DraftBoardPage() {
             mobileTab === 'roster' ? 'is-mobile-active' : ''
           }`}
         >
-          <div className="draft__roster">
-            <TeamLineup
-              teams={teams}
-              selectedTeamId={rosterTeamId}
-              onSelectTeam={setRosterTeamSel}
-              picks={picks}
-              playersById={playersById}
-              settings={lobby.settings}
-              myUserId={userId}
-              isCommish={isCommish}
-              onToggleAuto={isComplete ? undefined : toggleAuto}
-              onPickClick={setPickModal}
-              belowSelect={
-                isComplete && !isDesktop
-                  ? (() => {
-                      const voteCount = crownVotes.filter((v) => v.team_id === rosterTeamId).length;
-                      const teamGrades = grades.filter((g) => g.team_id === rosterTeamId);
-                      const appGrade = powerRankGradeByTeam.get(rosterTeamId) ?? null;
-                      return (
-                        <>
-                          <span className="lineup-view__label">Report Card</span>
-                          <button
-                            type="button"
-                            className="draft__results-summary"
-                            onClick={() => {
-                              // The fullscreen modal has no room for a second
-                              // slide-in drawer on top of itself — jump to the
-                              // Power Rankings center view (and close the menu so
-                              // it's visible) instead.
-                              if (isFullscreen) {
-                                setCenterView('rankings');
-                                setShowFsMenu(false);
-                              } else setResultsDrawerView((v) => (v === 'closed' ? 'open' : 'closed'));
-                            }}
-                          >
-                            <GradeBadge grade={appGrade} size={44} />
-                            <div className="draft__results-summary-main">
-                              <span className="draft__results-summary-item">
-                                <EmojiEventsOutlinedIcon fontSize="small" /> {voteCount} vote
-                                {voteCount === 1 ? '' : 's'}
-                              </span>
-                              <span className="draft__results-summary-item muted">
-                                {teamGrades.length} grade
-                                {teamGrades.length === 1 ? '' : 's'}
-                              </span>
-                            </div>
-                            <ChevronRightIcon
-                              fontSize="small"
-                              className="draft__results-summary-chevron"
-                            />
-                          </button>
-                        </>
-                      );
-                    })()
-                  : isStaging && lobby.settings.keepersEnabled
-                    ? (
-                        <button
-                          type="button"
-                          className="draft__view-keepers-btn"
-                          onClick={() => setShowTeamKeepers(true)}
-                        >
-                          <LockOutlinedIcon fontSize="small" /> View keepers
-                        </button>
-                      )
-                    : undefined
-              }
-            />
-          </div>
+          {renderRosterPanel()}
         </div>
 
         {/* Chat */}
@@ -2478,21 +2994,7 @@ export function DraftBoardPage() {
             mobileTab === 'chat' ? 'is-mobile-active' : ''
           }`}
         >
-          <DraftChat
-            lobbyId={id}
-            status={lobby.status}
-            completedAt={lobby.completed_at}
-            chatLockMs={lobby.chat_lock_ms}
-            picks={picks}
-            grades={grades}
-            teamsById={teamsById}
-            playersById={playersById}
-            members={members}
-            onOpenPick={setPickModal}
-            focusMessageId={focusMessageId}
-            onFocusHandled={() => setFocusMessageId(null)}
-            viewOnly={!isMember}
-          />
+          {renderChatPanel()}
         </div>
 
         {/* Rankings (mobile) — Power Rankings + crown vote + peer grading. On
@@ -2530,6 +3032,12 @@ export function DraftBoardPage() {
       </>
     );
   }
+
+  // The 3-lane desktop dashboard replaces the board + tabbed-sidebar layout for
+  // the windowed board view (>=1100px). Fullscreen, mobile, and the desktop
+  // Power Rankings view all keep the original layout below.
+  const useDashboard =
+    isDesktop && !isFullscreen && centerView === 'board' && boardLayout === 'detailed';
 
   return (
     <div className="draft">
@@ -2868,6 +3376,10 @@ export function DraftBoardPage() {
       )}
 
       <div className="draft__body" style={{ ['--sidebar-w' as string]: `${sidebarWidth}px` }}>
+        {useDashboard ? (
+          renderDashboard()
+        ) : (
+          <>
         <section
           ref={boardSectionRef}
           className={`draft__board ${mobileTab === 'board' ? 'is-mobile-active' : ''}${
@@ -2915,32 +3427,7 @@ export function DraftBoardPage() {
               }
             />
           ) : (
-            <DraftGrid
-              teams={teams}
-              members={members}
-              rounds={totalRounds}
-              picks={picks}
-              playersById={playersById}
-              onClockTeamId={isComplete || isStaging ? null : onClockTeam?.id ?? null}
-              myTeamId={myTeam?.id ?? null}
-              currentRound={round}
-              draftType={lobby.settings.draftType}
-              onTeamClick={openTeamRoster}
-              reactionsByPick={showCellReactions ? reactionsByPick : undefined}
-              onReactPick={isMember ? reactPick : undefined}
-              onPickClick={setPickModal}
-              commentsByPick={showCellReactions ? commentsByPick : undefined}
-              cellStyle={cellStyle}
-              fill={isFullscreen}
-              fillRowHeight={fsRowHeight}
-              onMyClockCellClick={openPlayersPool}
-              onCommishClockCellClick={isCommish ? openPlayersPool : undefined}
-              onClockUrgency={onClockCellUrgency}
-              onClockFlashing={onClockCellFlashing}
-              onClockElapsedPct={onClockCellElapsedPct}
-              skippedCells={isComplete || isStaging ? undefined : skippedCellKeys}
-              onRollbackSkipped={isCommish && !rollbackLocked ? openSkipRollback : undefined}
-            />
+            renderDraftGrid()
           )}
         </section>
 
@@ -2969,6 +3456,8 @@ export function DraftBoardPage() {
             view={resultsDrawerView}
             onViewChange={setResultsDrawerView}
           />
+        )}
+          </>
         )}
           </>
         )}
@@ -3618,6 +4107,8 @@ export function DraftBoardPage() {
       {showUserSettings && (
         <DraftUserSettingsModal
           onClose={() => setShowUserSettings(false)}
+          boardLayout={boardLayout}
+          onBoardLayoutChange={updateBoardLayout}
           cellStyle={cellStyle}
           onCellStyleChange={updateCellStyle}
           cardStyle={cardStyle}

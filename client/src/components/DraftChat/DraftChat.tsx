@@ -508,7 +508,9 @@ export function DraftChat({
                     </span>
                   )}
                   <strong>{player?.name ?? 'a player'}</strong>
-                  <span className="muted">· Pick {pick.overall}</span>
+                  <span className="chat__pick-num muted">
+                    <span className="chat__pick-num-dot">· </span>Pick {pick.overall}
+                  </span>
                 </span>
               </>
             );
@@ -538,21 +540,23 @@ export function DraftChat({
                       setOpenPalette((k) => (k === `PICK:${pick.id}` ? null : `PICK:${pick.id}`))
                     }
                     onCloseOpen={() => setOpenPalette(null)}
+                    trailing={
+                      !locked && (
+                        <button
+                          type="button"
+                          className="chat__reply-btn"
+                          aria-label={`Reply to ${team?.name ?? 'this'} pick`}
+                          title="Reply"
+                          onClick={() => {
+                            setReplyTarget(pick);
+                            composeRef.current?.focus();
+                          }}
+                        >
+                          <ReplyIcon sx={{ fontSize: 16 }} />
+                        </button>
+                      )
+                    }
                   />
-                  {!locked && (
-                    <button
-                      type="button"
-                      className="chat__reply-btn"
-                      aria-label={`Reply to ${team?.name ?? 'this'} pick`}
-                      title="Reply"
-                      onClick={() => {
-                        setReplyTarget(pick);
-                        composeRef.current?.focus();
-                      }}
-                    >
-                      <ReplyIcon sx={{ fontSize: 16 }} />
-                    </button>
-                  )}
                 </div>
               </div>
             );
@@ -740,6 +744,7 @@ function ReactionBar({
   open,
   onToggleOpen,
   onCloseOpen,
+  trailing,
 }: {
   entry: ReactionEntry | undefined;
   onReact: (emoji: string) => void;
@@ -748,6 +753,10 @@ function ReactionBar({
   open: boolean;
   onToggleOpen: () => void;
   onCloseOpen: () => void;
+  /** Extra control (e.g. a reply button) rendered as the last item in the
+   * reaction flow, so it wraps alongside the chips and stays next to the
+   * add-reaction button instead of drifting to the far edge. */
+  trailing?: React.ReactNode;
 }) {
   const barRef = useRef<HTMLDivElement>(null);
   useClickOutside(barRef, onCloseOpen, open);
@@ -796,6 +805,7 @@ function ReactionBar({
           <AddReactionOutlinedIcon sx={{ fontSize: 16 }} />
         </button>
       )}
+      {trailing}
       {open && (
         <div className="chat-react__palette">
           {sortReactionEmojis(entry?.counts).map((e) => (

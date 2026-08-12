@@ -1,0 +1,52 @@
+@use 'variables' as *;
+
+.board-layout-picker {
+  display: flex;
+  flex-direction: column;
+  gap: $space * 0.75;
+
+  &__option {
+    display: flex;
+    align-items: flex-start;
+    gap: $space * 0.75;
+    padding: $space * 0.75 $space;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    cursor: pointer;
+    transition:
+      border-color 120ms ease,
+      background 120ms ease;
+
+    input {
+      margin-top: 2px;
+      accent-color: $primary;
+      cursor: pointer;
+    }
+
+    @media (hover: hover) {
+      &:hover {
+        border-color: $primary;
+      }
+    }
+
+    &.is-selected {
+      border-color: $primary;
+      background: rgba($primary, 0.08);
+    }
+  }
+
+  &__text {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+  }
+
+  &__name {
+    font-weight: 700;
+  }
+
+  &__desc {
+    font-size: 0.8rem;
+  }
+}

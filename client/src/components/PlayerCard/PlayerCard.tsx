@@ -100,7 +100,8 @@ export function PlayerCard({
           <span className="player-card__name-text">{player.name}</span>
           {isKeeper && (
             <span className="player-card__keeper-badge">
-              <LockOutlinedIcon sx={{ fontSize: 11 }} /> Keeper
+              <LockOutlinedIcon sx={{ fontSize: 11 }} />
+              <span className="player-card__keeper-word">Keeper</span>
             </span>
           )}
           {injury && (

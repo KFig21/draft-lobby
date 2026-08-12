@@ -25,6 +25,7 @@ import { useFavorites } from '../../hooks/useFavorites';
 import { getDefaultScoringChoice, setDefaultScoringChoice } from '../../lib/defaultScoring';
 import { INJURY_ABBR, INJURY_SEVERITY } from '../../lib/injuryStatus';
 import { scorePlayers } from '../../lib/playerPoints';
+import { BASE_SORT_KEYS, POS_STAT_COLS, fmtStat } from '../../lib/positionStats';
 import { supabase } from '../../supabase';
 import type { PlayerRow } from '../../lib/types';
 import {
@@ -42,51 +43,7 @@ type StatYear = 'proj' | 'prev';
 type SortKey = 'points' | 'name' | 'adp' | (string & {});
 type SortDir = 'asc' | 'desc';
 
-/** Per-position stat columns shown — and made sortable — when the list is
- * filtered to a single position. Keyed by the raw scoring-catalog stat key, so
- * values read straight off proj_stats / prev_stats. Positions without an entry
- * (K, DEF, and the ALL/FLEX/OP multi-position views) keep the generic stat
- * line instead. */
-interface StatCol {
-  key: string;
-  label: string;
-}
-const POS_STAT_COLS: Partial<Record<Position, StatCol[]>> = {
-  QB: [
-    { key: 'passingYards', label: 'Pass Yd' },
-    { key: 'passingTd', label: 'Pass TD' },
-    { key: 'interception', label: 'INT' },
-    { key: 'rushingYards', label: 'Rush Yd' },
-    { key: 'rushingTd', label: 'Rush TD' },
-  ],
-  RB: [
-    { key: 'rushingYards', label: 'Rush Yd' },
-    { key: 'rushingTd', label: 'Rush TD' },
-    { key: 'reception', label: 'Rec' },
-    { key: 'receivingYards', label: 'Rec Yd' },
-    { key: 'receivingTd', label: 'Rec TD' },
-  ],
-  WR: [
-    { key: 'reception', label: 'Rec' },
-    { key: 'receivingYards', label: 'Rec Yd' },
-    { key: 'receivingTd', label: 'Rec TD' },
-    { key: 'rushingYards', label: 'Rush Yd' },
-    { key: 'rushingTd', label: 'Rush TD' },
-  ],
-  TE: [
-    { key: 'reception', label: 'Rec' },
-    { key: 'receivingYards', label: 'Rec Yd' },
-    { key: 'receivingTd', label: 'Rec TD' },
-  ],
-};
-const BASE_SORT_KEYS = new Set(['points', 'name', 'adp']);
-
 const CURRENT_YEAR = new Date().getUTCFullYear();
-
-/** A stat value for a position column — rounded, thousands-separated, em dash
- * when the stat is missing. */
-const fmtStat = (v: number | undefined): string =>
-  v == null ? '—' : Math.round(v).toLocaleString('en-US');
 
 /** Interactive draft cheat sheet: the full player pool, ranked under a
  * chosen scoring format (any preset or one of the user's saved formats) and
