@@ -69,6 +69,14 @@
     }
   }
 
+  // Leading icon (replaces the message's stored emoji). Inline so the message
+  // text still wraps naturally; nudged to sit on the text baseline.
+  &__system-icon {
+    font-size: 1.05em;
+    vertical-align: -0.2em;
+    margin-right: 3px;
+  }
+
   // Timestamp trailing a start/complete milestone pill.
   &__system-time {
     margin-left: 6px;

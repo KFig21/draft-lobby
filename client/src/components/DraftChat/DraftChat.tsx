@@ -10,10 +10,17 @@ import {
 import AddReactionOutlinedIcon from '@mui/icons-material/AddReactionOutlined';
 import CloseIcon from '@mui/icons-material/Close';
 import EmojiEmotionsOutlinedIcon from '@mui/icons-material/EmojiEmotionsOutlined';
+import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import PauseIcon from '@mui/icons-material/Pause';
 import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import ReplyIcon from '@mui/icons-material/Reply';
 import SendIcon from '@mui/icons-material/Send';
+import SkipNextIcon from '@mui/icons-material/SkipNext';
+import SportsScoreIcon from '@mui/icons-material/SportsScore';
+import UndoIcon from '@mui/icons-material/Undo';
+import type { SvgIconComponent } from '@mui/icons-material';
 import type { EmojiClickData, Theme } from 'emoji-picker-react';
 import {
   Suspense,
@@ -429,12 +436,14 @@ export function DraftChat({
             // Draft start/complete milestones carry a timestamp (🏁 / 🏆);
             // other system notes (pause/resume/rollback) don't.
             const stamped = it.body.startsWith('🏁') || it.body.startsWith('🏆');
+            const { Icon, text } = parseSystemBody(it.body);
             return (
               <div
                 key={it.id}
                 className={`chat__system${it.body.startsWith('↩️') ? ' chat__system--danger' : ''}`}
               >
-                {it.body}
+                {Icon && <Icon className="chat__system-icon" fontSize="inherit" />}
+                {text}
                 {stamped && <span className="chat__system-time">{formatTime(it.at)}</span>}
               </div>
             );
@@ -832,6 +841,28 @@ function ReactionBar({
       )}
     </div>
   );
+}
+
+// System messages are stored with a leading emoji (server-side). Map each to a
+// MUI icon rendered in its place, so the chat reads with consistent iconography
+// instead of raw emoji. Order matters only in that each prefix is unique.
+const SYSTEM_ICONS: { prefix: string; Icon: SvgIconComponent }[] = [
+  { prefix: '🏁', Icon: SportsScoreIcon }, // draft started
+  { prefix: '🏆', Icon: EmojiEventsIcon }, // draft complete
+  { prefix: '⏸️', Icon: PauseIcon }, // paused
+  { prefix: '▶️', Icon: PlayArrowIcon }, // resumed
+  { prefix: '⏭️', Icon: SkipNextIcon }, // team skipped
+  { prefix: '🔒', Icon: LockOutlinedIcon }, // keeper(s)
+  { prefix: '↩️', Icon: UndoIcon }, // rollback
+];
+
+/** Split a system message into its icon (from the leading emoji) and the
+ * remaining text. Falls back to no icon / the untouched body if unrecognized. */
+function parseSystemBody(body: string): { Icon: SvgIconComponent | null; text: string } {
+  for (const { prefix, Icon } of SYSTEM_ICONS) {
+    if (body.startsWith(prefix)) return { Icon, text: body.slice(prefix.length).trimStart() };
+  }
+  return { Icon: null, text: body };
 }
 
 // Cap the hover tooltip's name list — a draft with dozens of reactors would
