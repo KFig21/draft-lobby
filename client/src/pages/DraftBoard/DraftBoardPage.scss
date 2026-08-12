@@ -2121,6 +2121,22 @@
     padding: $space * 1.25;
   }
 
+  // Equal-width team columns (like fullscreen's fill mode) instead of the
+  // default content-sized auto layout, which made some columns ~2x others.
+  // table-layout: fixed shares the width evenly; the corner/round column is
+  // pinned narrow so the team columns split the rest. The per-team floor is set
+  // wide enough that names stay readable — the board scrolls horizontally once
+  // the columns no longer all fit, and still stretches to fill wider screens.
+  &__board .draft-grid {
+    width: 100%;
+    table-layout: fixed;
+    min-width: calc(30px + var(--fs-cols, 12) * 128px);
+
+    .draft-grid__corner { width: 30px; }
+    .draft-grid__team { width: auto; max-width: none; }
+    .draft-grid__cell { width: auto; }
+  }
+
   // Bottom pane lays queue | divider | list side by side (row), unlike the
   // default column pane.
   &__bottom {
@@ -2376,6 +2392,24 @@
   .player-card__keeper-word { display: none; }
 }
 
+// Fullscreen menu modal on the Detailed layout resizes per tab: wide enough for
+// the players table (all stat columns + ADP, no horizontal scroll), narrower
+// for roster/chat — animated so switching tabs glides between the two widths.
+// Compound selector so the width beats the base `.dialog` rule regardless of
+// stylesheet order.
+.dialog.draft__fs-menu-dialog {
+  width: min(640px, 100%);
+  transition: width 220ms ease;
+
+  &.is-players {
+    width: min(1040px, 100%);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}
+
 .draft-dash__chat {
   .chat__scroll { padding: $space; gap: $space * 0.85; }
   .chat__msg { gap: $space * 0.6; }
@@ -2412,23 +2446,23 @@
   .chat__compose { padding: $space * 0.75 $space; }
 }
 
-// ── Dashboard players filter bar (condensed to one line) ──────────────
-// The pool's two-row filter header (position chips over search + toggles) is
-// squeezed onto a single line here, and the position filters render as compact
-// text tabs instead of pills to reclaim width. Desktop dashboard only — the
-// sidebar/mobile pool keeps its roomier two-row pill layout.
-.draft-dash__players {
-  .pool__filters {
-    flex-direction: row;
-    flex-wrap: nowrap;
-    align-items: center;
-    min-width: 0;
-    gap: $space;
-    padding: $space $space * 1.25;
-  }
+// ── Condensed pool filter bar (table / dashboard mode) ────────────────
+// When the pool renders as the dense sortable table (opts.table — the desktop
+// dashboard AND the fullscreen Detailed players tab), its two-row filter header
+// is squeezed onto one line: position filters become compact pill tabs, and the
+// search + toggles share their line. The `.pool__filters` element carries both
+// classes, so the compound selector cleanly beats the base `.pool__filters …`
+// rules regardless of source order. Sidebar/mobile keep the roomier two-row
+// pill layout (no modifier).
+.pool__filters.pool__filters--condensed {
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  min-width: 0;
+  gap: $space;
+  padding: $space $space * 1.25;
 
-  // Position filters → underlined tabs (no pill), so a full row of them costs
-  // far less width. Active tab is accent-colored with an accent underline.
+  // Position filters → compact pill tabs, so a full row costs less width.
   .chip-row {
     flex: 0 1 auto;
     min-width: 0;
@@ -2440,7 +2474,7 @@
   }
   // Inactive: borderless muted text tab (pill-radius so the active fill is
   // pill-shaped; the transparent border keeps sizing stable when it activates).
-  .pool__filters .chip {
+  .chip {
     flex-shrink: 0;
     padding: 4px 10px;
     border: 1px solid transparent;
@@ -2453,7 +2487,7 @@
     &:hover { color: $text; background: none; }
   }
   // Active: solid primary pill with white text (matching the original chip).
-  .pool__filters .chip--active {
+  .chip--active {
     border-color: transparent;
     background: $primary;
     color: #fff;
@@ -2461,7 +2495,7 @@
   // The per-position pick count is redundant with the roster's position
   // breakdown — drop the "· N" from the position tabs (queue/favorite tabs
   // keep their counts, which aren't shown elsewhere).
-  .pool__filters .chip:not(.chip--queue):not(.chip--fav) {
+  .chip:not(.chip--queue):not(.chip--fav) {
     .chip__dot,
     .chip__count { display: none; }
   }

@@ -6,6 +6,8 @@ interface Props {
   title: string;
   onClose: () => void;
   wide?: boolean;
+  /** Extra class on the dialog card — e.g. a caller-specific width override. */
+  className?: string;
   /** Optional leading icon shown before the title in the header. */
   icon?: ReactNode;
   /** Optional fixed bar below the scroll area (e.g. Save/Cancel actions) — a
@@ -15,7 +17,7 @@ interface Props {
 }
 
 /** A centered, scrollable dialog. Closes on overlay click or Escape. */
-export function Modal({ title, onClose, wide, icon, footer, children }: Props) {
+export function Modal({ title, onClose, wide, className, icon, footer, children }: Props) {
   const { closing, requestClose } = useModalClose(onClose);
 
   useEffect(() => {
@@ -31,8 +33,8 @@ export function Modal({ title, onClose, wide, icon, footer, children }: Props) {
     >
       <div
         className={`dialog modal-anim-card ${wide ? 'dialog--wide' : ''}${
-          closing ? ' is-closing' : ''
-        }`}
+          className ? ` ${className}` : ''
+        }${closing ? ' is-closing' : ''}`}
         role="dialog"
         aria-modal="true"
         aria-label={title}

@@ -120,16 +120,13 @@ export function DraftGrid({
       <table
         ref={tableRef}
         className={`draft-grid${fill ? ' draft-grid--fill' : ''}`}
-        style={
-          fill
-            ? {
-                // Column count drives the fill-mode min-width (so the board
-                // scrolls instead of crushing names on a narrow screen).
-                ['--fs-cols' as string]: teams.length,
-                ...(fillRowHeight ? { ['--fs-row-h' as string]: `${fillRowHeight}px` } : {}),
-              }
-            : undefined
-        }
+        style={{
+          // Column count drives the min-width in both fill mode and the
+          // desktop dashboard's equal-column layout (so the board scrolls
+          // instead of crushing names on a narrow pane).
+          ['--fs-cols' as string]: teams.length,
+          ...(fill && fillRowHeight ? { ['--fs-row-h' as string]: `${fillRowHeight}px` } : {}),
+        }}
       >
         <thead>
           <tr>

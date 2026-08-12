@@ -2326,7 +2326,7 @@ export function DraftBoardPage() {
             ))}
           </div>
         )}
-        <div className="pool__filters">
+        <div className={`pool__filters${opts.table ? ' pool__filters--condensed' : ''}`}>
           <div className="chip-row">
             <button
               className={`chip ${filter === 'ALL' ? 'chip--active' : ''}`}
@@ -2976,7 +2976,14 @@ export function DraftBoardPage() {
             mobileTab === 'players' ? 'is-mobile-active' : ''
           }`}
         >
-          {renderPlayersPool()}
+          {/* In fullscreen, a Detailed-layout user gets the dense sortable
+              table (stats + per-position columns) here too — matching their
+              draft-board pool. This panel only renders fullscreen (the menu
+              modal), on the simple sidebar, or on mobile; the table is gated to
+              the fullscreen+detailed case so the other two keep the card list. */}
+          {renderPlayersPool(
+            isFullscreen && boardLayout === 'detailed' ? { table: true } : {},
+          )}
         </div>
 
         {/* Roster */}
@@ -4098,7 +4105,12 @@ export function DraftBoardPage() {
         <Modal
           title={SIDEBAR_TABS.find((t) => t.key === panelTab)?.label ?? 'Menu'}
           onClose={() => setShowFsMenu(false)}
-          wide
+          wide={boardLayout !== 'detailed'}
+          // Detailed layout: the modal resizes per tab (wide for the players
+          // table, narrower for roster/chat) with a width transition.
+          className={
+            boardLayout === 'detailed' ? `draft__fs-menu-dialog is-${panelTab}` : undefined
+          }
         >
           <div className="draft__fs-sidebar">{renderSidebarPanels()}</div>
         </Modal>
