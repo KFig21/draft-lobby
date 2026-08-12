@@ -2112,11 +2112,48 @@
     gap: 0;
   }
 
+  // Anchors the zoom control over the board's top-left corner axis, and drives
+  // the board zoom (fit-all ↔ 100% / pinch) via a CSS variable applied to the
+  // grid's own scroll container — `zoom` (not transform) keeps the sticky
+  // header/round column and scrolling intact.
+  &__board {
+    position: relative;
+
+    .grid-scroll {
+      zoom: var(--board-zoom, 1);
+    }
+  }
+
   &__board-scroll {
     flex: 1;
     min-height: 0;
     overflow: auto;
     padding: $space * 1.25;
+  }
+
+  // Zoom out / back-in toggle, tucked into the top-left corner axis (over the
+  // grid's blank corner cell). Sits above the sticky header/round column.
+  &__zoom-btn {
+    position: absolute;
+    top: $space;
+    left: $space;
+    z-index: 30;
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: $bg-overlay;
+    color: $text-muted;
+    cursor: pointer;
+    transition: color 120ms ease, border-color 120ms ease;
+
+    &:hover {
+      color: $text;
+      border-color: $primary;
+    }
   }
 
   // Equal-width team columns (like fullscreen's fill mode) instead of the

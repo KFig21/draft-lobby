@@ -39,6 +39,8 @@ import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 import GridViewOutlinedIcon from '@mui/icons-material/GridViewOutlined';
+import ZoomInMapIcon from '@mui/icons-material/ZoomInMap';
+import ZoomOutMapIcon from '@mui/icons-material/ZoomOutMap';
 import LeaderboardIcon from '@mui/icons-material/Leaderboard';
 import GroupsIcon from '@mui/icons-material/Groups';
 import HomeIcon from '@mui/icons-material/Home';
@@ -62,7 +64,7 @@ import SportsFootballIcon from '@mui/icons-material/SportsFootball';
 import TableChartOutlinedIcon from '@mui/icons-material/TableChartOutlined';
 import UndoIcon from '@mui/icons-material/Undo';
 import type { SvgIconComponent } from '@mui/icons-material';
-import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   Link,
   Navigate,
@@ -618,6 +620,41 @@ export function DraftBoardPage() {
   const dashCenterRef = useRef<HTMLDivElement>(null);
   const dashBottomRef = useRef<HTMLDivElement>(null);
   const dashDragRef = useRef<null | 'h' | 'v'>(null);
+
+  // Detailed-board zoom: a fit-all ↔ 100% toggle plus trackpad pinch. Uses the
+  // CSS `zoom` property (not `transform`) on the grid's own scroll container so
+  // the sticky team-header row / round column and horizontal scroll keep working
+  // while the board is scaled. The wheel listener is attached natively
+  // (non-passive) via a callback ref because React's onWheel is passive and
+  // can't preventDefault the browser's own ctrl+wheel page zoom.
+  const MIN_BOARD_ZOOM = 0.35;
+  const [boardZoom, setBoardZoom] = useState(1);
+  const boardPaneEl = useRef<HTMLDivElement | null>(null);
+  const boardWheelCleanup = useRef<(() => void) | null>(null);
+  const clampZoom = (z: number) => Math.min(1, Math.max(MIN_BOARD_ZOOM, Math.round(z * 1000) / 1000));
+  const setBoardPaneRef = useCallback((el: HTMLDivElement | null) => {
+    boardWheelCleanup.current?.();
+    boardWheelCleanup.current = null;
+    boardPaneEl.current = el;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey) return; // trackpad pinch arrives as ctrl+wheel
+      e.preventDefault();
+      setBoardZoom((z) => clampZoom(z - e.deltaY * 0.01));
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    boardWheelCleanup.current = () => el.removeEventListener('wheel', onWheel);
+  }, []);
+  function toggleBoardZoom() {
+    setBoardZoom((z) => {
+      if (z < 0.999) return 1; // already zoomed out → back to 100%
+      // The grid owns its own scroll (.grid-scroll); at zoom 1 its scrollWidth is
+      // the board's natural width, so this scales just enough to fit every team.
+      const gs = boardPaneEl.current?.querySelector<HTMLElement>('.grid-scroll');
+      if (!gs || gs.scrollWidth === 0) return 1;
+      return clampZoom(gs.clientWidth / gs.scrollWidth);
+    });
+  }
   const [dashBoardPct, setDashBoardPct] = useState(() => {
     const v = Number(localStorage.getItem('draftDashBoardPct'));
     return v >= 25 && v <= 80 ? v : 56;
@@ -2922,7 +2959,28 @@ export function DraftBoardPage() {
           ref={dashCenterRef}
           style={{ ['--board-pct' as string]: `${dashBoardPct}%` }}
         >
-          <div className="draft-dash__pane draft-dash__board">
+          <div
+            className="draft-dash__pane draft-dash__board"
+            ref={setBoardPaneRef}
+            style={{ ['--board-zoom' as string]: boardZoom }}
+          >
+            <button
+              type="button"
+              className="draft-dash__zoom-btn"
+              onClick={toggleBoardZoom}
+              title={
+                boardZoom < 0.999
+                  ? 'Zoom back in (100%)'
+                  : 'Zoom out to see every team · pinch to zoom'
+              }
+              aria-label={boardZoom < 0.999 ? 'Zoom board back in' : 'Zoom board out to see all teams'}
+            >
+              {boardZoom < 0.999 ? (
+                <ZoomInMapIcon fontSize="small" />
+              ) : (
+                <ZoomOutMapIcon fontSize="small" />
+              )}
+            </button>
             <div className="draft-dash__board-scroll">{renderDraftGrid()}</div>
           </div>
           <div
