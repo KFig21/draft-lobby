@@ -2415,30 +2415,13 @@
   .chat__msg-time { font-size: 0.62rem; }
   .chat__msg-text { font-size: 0.79rem; line-height: 1.3; }
   .chat__reply { font-size: 0.66rem; }
-  // Pick messages fit on one line when the team + player names allow, and wrap
-  // to a second line when they don't — rather than squishing/ellipsizing them.
-  // The pick number stays pinned to the card's bottom-right corner, on the
-  // reactions row below the text, so wrapping never collides with it.
-  .chat__pick { padding: $space * 0.5 $space * 0.7; position: relative; }
-  .chat__pick-main { align-items: flex-start; gap: $space * 0.6; }
-  .chat__pick-text {
-    flex: 1;
-    min-width: 0;
-    flex-wrap: wrap;
-    gap: 2px 4px;
-    font-size: 0.78rem;
-  }
+  // Pick-message density only — the one-line-then-wrap behavior and the pinned
+  // bottom-right pick number now live in the base DraftChat styles, so the
+  // simple sidebar and lobby chats match this layout.
+  .chat__pick { padding: $space * 0.5 $space * 0.7; }
+  .chat__pick-main { gap: $space * 0.6; }
+  .chat__pick-text { flex: 1; min-width: 0; gap: 2px 4px; font-size: 0.78rem; }
   .chat__pick-pos { width: 18px; height: 18px; font-size: 0.52rem; flex-shrink: 0; }
-  .chat__pick-num {
-    position: absolute;
-    right: $space * 0.7;
-    bottom: $space * 0.35;
-    font-size: 0.62rem;
-    white-space: nowrap;
-  }
-  // In the pinned corner the leading "·" separator reads as noise — drop it
-  // (it stays inline in the sidebar/mobile chat, where it separates the name).
-  .chat__pick-num-dot { display: none; }
   .chat__reaction-text,
   .chat__grade-text { font-size: 0.74rem; }
   .chat__compose { padding: $space * 0.75 $space; }

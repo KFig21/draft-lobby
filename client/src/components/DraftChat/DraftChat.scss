@@ -79,6 +79,7 @@
 
   // ── Pick line ──
   &__pick {
+    position: relative; // anchors the pinned pick number (bottom-right corner)
     padding: $space $space * 1.25;
     border: 1px solid $border;
     border-left: 3px solid $accent;
@@ -127,6 +128,29 @@
     flex-wrap: wrap;
     gap: 5px;
     font-size: 0.9rem;
+  }
+
+  // Position badge + player name as one flex item, so when the sentence can't
+  // fit one line it wraps as a unit ("TEAM drafted" / "POS Player") instead of
+  // breaking between the badge and the name.
+  &__pick-player {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  // Pick number pinned to the card's bottom-right corner (on the reactions row,
+  // below the text — so a wrapped second line never collides with it). Its
+  // leading "·" separator is dropped in the corner.
+  &__pick-num {
+    position: absolute;
+    right: $space;
+    bottom: $space * 0.5;
+    font-size: 0.68rem;
+    white-space: nowrap;
+  }
+  &__pick-num-dot {
+    display: none;
   }
 
   &__pick-pos {

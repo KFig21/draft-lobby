@@ -503,15 +503,20 @@ export function DraftChat({
                 <span className="chat__pick-text">
                   <strong>{team?.name ?? 'A team'}</strong>
                   <span>{pick.is_keeper ? 'kept' : 'drafted'}</span>
-                  {player && (
-                    <span
-                      className="chat__pick-pos"
-                      style={{ background: POSITION_COLORS[player.position as Position] }}
-                    >
-                      {player.position}
-                    </span>
-                  )}
-                  <strong>{player?.name ?? 'a player'}</strong>
+                  {/* Position + name are one group so they wrap to the next
+                      line together ("TEAM drafted" / "POS Player") rather than
+                      breaking between the badge and the name. */}
+                  <span className="chat__pick-player">
+                    {player && (
+                      <span
+                        className="chat__pick-pos"
+                        style={{ background: POSITION_COLORS[player.position as Position] }}
+                      >
+                        {player.position}
+                      </span>
+                    )}
+                    <strong>{player?.name ?? 'a player'}</strong>
+                  </span>
                   <span className="chat__pick-num muted">
                     <span className="chat__pick-num-dot">· </span>Pick {pick.overall}
                   </span>
