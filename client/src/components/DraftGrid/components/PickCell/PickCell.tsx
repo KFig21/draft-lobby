@@ -69,7 +69,7 @@ export function PickCell({
           <span className="draft-grid__pos" style={{ color: posColor }}>
             {player.position}
           </span>
-          {` ${player.nfl_team}`}
+          {` · ${player.nfl_team}`}
           {player.bye_week != null ? ` · Bye ${player.bye_week}` : ''}
         </span>
         <span className="draft-grid__pickround">
@@ -77,31 +77,18 @@ export function PickCell({
         </span>
       </div>
 
-      {/* Reaction / comment / keeper chips hanging off the bottom-right corner
-          — the same chip treatment as the default and big-screen cell styles. */}
-      {(pick.is_keeper || active.length > 0 || hasComment) && (
+      {/* Keeper lock — its own always-visible corner element (never gives way to
+          the hover reactions popover). */}
+      {pick.is_keeper && <LockIcon className="draft-grid__keeper-flag" sx={{ fontSize: 11 }} />}
+
+      {/* Subtle, uncluttered reaction/comment indicators (grayed; hidden on
+          hover, when the reactions popover takes over). */}
+      {(active.length > 0 || hasComment) && (
         <span className="draft-grid__flags" aria-hidden>
-          {pick.is_keeper && (
-            <span className="draft-grid__flag-chip draft-grid__keeper-flag">
-              <LockIcon sx={{ fontSize: 9 }} />
-            </span>
-          )}
           {hasComment && (
-            <span
-              className="draft-grid__flag-chip"
-              style={{ ['--flag-color']: posColor } as CSSProperties}
-            >
-              <ChatBubbleOutlineIcon sx={{ fontSize: 9 }} />
-            </span>
+            <ChatBubbleOutlineIcon className="draft-grid__comment-flag" sx={{ fontSize: 11 }} />
           )}
-          {active.length > 0 && (
-            <span
-              className="draft-grid__flag-chip draft-grid__react-flag"
-              style={{ ['--flag-color']: posColor } as CSSProperties}
-            >
-              !!
-            </span>
-          )}
+          {active.length > 0 && <span className="draft-grid__react-flag">!!</span>}
         </span>
       )}
 

@@ -66,6 +66,10 @@ export function DefaultPickCell({
           {abbreviatePlayerName(player.name, player.position)}
         </span>
         <span className="default-pick-cell__meta">
+          {player.position}
+          <span className="default-pick-cell__dot" aria-hidden>
+            ·
+          </span>
           {player.nfl_team}
           {player.bye_week != null && (
             <>
