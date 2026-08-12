@@ -1,4 +1,5 @@
 import {
+  DEFAULT_LOBBY_SETTINGS,
   DEFAULT_SCORING_RULES,
   POSITIONS,
   POSITION_COLORS,
@@ -40,7 +41,7 @@ const SUPERFLEX_POS: Position[] = ['QB', 'RB', 'WR', 'TE'];
 type StatYear = 'proj' | 'prev';
 // A sort key is one of the fixed columns or a raw scoring-catalog stat key
 // (when the list is filtered to one position and shows that position's stats).
-type SortKey = 'points' | 'name' | 'adp' | (string & {});
+type SortKey = 'points' | 'name' | 'value' | (string & {});
 type SortDir = 'asc' | 'desc';
 
 const CURRENT_YEAR = new Date().getUTCFullYear();
@@ -62,7 +63,7 @@ export function RankingsPage() {
   const [search, setSearch] = useState('');
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [detailPlayer, setDetailPlayer] = useState<PlayerRow | null>(null);
-  const [sortKey, setSortKey] = useState<SortKey>('points');
+  const [sortKey, setSortKey] = useState<SortKey>('value');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   // Mobile only: the filters live in a slide-up bottom sheet (desktop shows
   // them inline). Closed by default so the table gets the full screen.
@@ -108,7 +109,17 @@ export function RankingsPage() {
 
   // Same recompute-from-raw-stats helper the draft board uses — this page is
   // just a different "lobby" (an arbitrary ruleset) feeding the same engine.
-  const players = useMemo(() => scorePlayers(rawPlayers, rules), [rawPlayers, rules]);
+  // Rankings has no lobby, so value against a standard 12-team roster — enough
+  // for a general league-aware cheat sheet. (A per-format picker here is a
+  // future nicety; the draft board already values against the real lobby.)
+  const players = useMemo(
+    () =>
+      scorePlayers(rawPlayers, rules, {
+        rosterComposition: DEFAULT_LOBBY_SETTINGS.rosterComposition,
+        teamCount: DEFAULT_LOBBY_SETTINGS.teamCount,
+      }),
+    [rawPlayers, rules],
+  );
 
   // Persists to the same "default scoring format" preference Settings'
   // dropdown manages, so whatever the user last picks here (or just saved) is
@@ -141,7 +152,7 @@ export function RankingsPage() {
   // Natural (first-click) direction: A→Z for name, earliest-first for ADP,
   // high-to-low for points and every stat column.
   function naturalDir(key: SortKey): SortDir {
-    return key === 'name' || key === 'adp' ? 'asc' : 'desc';
+    return key === 'name' || key === 'value' ? 'asc' : 'desc';
   }
 
   // Tri-state sort. A fresh column starts in its natural direction; clicking the
@@ -157,9 +168,9 @@ export function RankingsPage() {
     if (sortDir === natural) {
       setSortDir(natural === 'asc' ? 'desc' : 'asc');
     } else {
-      // Third click — reset to the default ranking.
-      setSortKey('points');
-      setSortDir('desc');
+      // Third click — reset to the default ranking (league value, best first).
+      setSortKey('value');
+      setSortDir('asc');
     }
   }
 
@@ -173,11 +184,9 @@ export function RankingsPage() {
     function compareAsc(a: PlayerRow, b: PlayerRow): number {
       if (sortKey === 'points') return pointsOf(a) - pointsOf(b);
       if (sortKey === 'name') return a.name.localeCompare(b.name);
-      if (sortKey === 'adp') {
-        if (a.adp == null && b.adp == null) return 0;
-        if (a.adp == null) return 1;
-        if (b.adp == null) return -1;
-        return a.adp - b.adp;
+      if (sortKey === 'value') {
+        // Ascending = best value first (rank 1); unranked sinks.
+        return (a.value_rank ?? Infinity) - (b.value_rank ?? Infinity);
       }
       // A stat column — sort by its raw value, missing/absent last.
       return (statsOf(a)[sortKey] ?? -Infinity) - (statsOf(b)[sortKey] ?? -Infinity);
@@ -410,7 +419,7 @@ export function RankingsPage() {
                   <th className="rankings-table__stats">Stats</th>
                 )}
                 <SortHeader label="Points" sortKeyFor="points" className="rankings-table__points" />
-                <SortHeader label="ADP" sortKeyFor="adp" className="rankings-table__adp" />
+                <SortHeader label="Value" sortKeyFor="value" className="rankings-table__adp" />
               </tr>
             </thead>
             <tbody>
@@ -479,8 +488,15 @@ export function RankingsPage() {
                     <td className="rankings-table__points">
                       {points != null ? points.toFixed(1) : '—'}
                     </td>
-                    <td className="rankings-table__adp muted">
-                      {p.adp != null ? p.adp.toFixed(1) : '—'}
+                    <td
+                      className="rankings-table__adp muted"
+                      title={
+                        p.value != null
+                          ? `${p.value > 0 ? '+' : ''}${p.value.toFixed(1)} pts over replacement`
+                          : undefined
+                      }
+                    >
+                      {p.value_rank != null ? `#${p.value_rank}` : '—'}
                     </td>
                   </tr>
                 );

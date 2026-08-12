@@ -141,8 +141,17 @@ export function PlayerCard({
       )}
       <div className="player-card__stats">
         <span className="player-card__proj">{points != null ? points.toFixed(1) : '—'}</span>
-        {player.adp != null && (
-          <span className="player-card__adp">ADP {player.adp.toFixed(1)}</span>
+        {player.value_rank != null && (
+          <span
+            className="player-card__adp"
+            title={
+              player.value != null
+                ? `${player.value > 0 ? '+' : ''}${player.value.toFixed(1)} pts over replacement`
+                : undefined
+            }
+          >
+            Val #{player.value_rank}
+          </span>
         )}
       </div>
       {(onFavorite || onQueue) && (

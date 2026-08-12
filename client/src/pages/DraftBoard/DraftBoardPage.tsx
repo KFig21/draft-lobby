@@ -238,8 +238,18 @@ export function DraftBoardPage() {
   // agree with each other and with the lobby's actual scoring format,
   // instead of everyone independently trusting Sleeper's flat PPR total.
   const players = useMemo(
-    () => scorePlayers(rawPlayers, lobby?.settings.scoring ?? DEFAULT_SCORING_RULES),
-    [rawPlayers, lobby?.settings.scoring],
+    () =>
+      scorePlayers(
+        rawPlayers,
+        lobby?.settings.scoring ?? DEFAULT_SCORING_RULES,
+        lobby
+          ? {
+              rosterComposition: lobby.settings.rosterComposition,
+              teamCount: lobby.settings.teamCount,
+            }
+          : undefined,
+      ),
+    [rawPlayers, lobby?.settings.scoring, lobby?.settings.rosterComposition, lobby?.settings.teamCount],
   );
 
   // Personal preferences (also editable from Settings directly) — read once
@@ -299,19 +309,20 @@ export function DraftBoardPage() {
   const [showDrafted, setShowDrafted] = useState(false);
   // Pool stat lens: 'proj' shows this season's projections (points + position
   // rank), 'prev' shows last season's actuals. Sort key: 'points' sorts by the
-  // currently-shown stat's points, 'adp' by average draft position.
+  // currently-shown stat's points, 'value' by league-aware value rank.
   const [statMode, setStatMode] = useState<'proj' | 'prev'>('proj');
-  // Pool sort: one of the fixed columns ('points' | 'name' | 'adp') or a raw
+  // Pool sort: one of the fixed columns ('points' | 'name' | 'value') or a raw
   // stat key (when the dashboard table is filtered to a position), plus a
-  // direction. 'points' desc is the default ranking.
-  const [sortMode, setSortMode] = useState<'points' | 'name' | 'adp' | (string & {})>('points');
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
-  // Natural (first-click) direction: A→Z for name, earliest-first for ADP,
+  // direction. 'value' asc (best value first) is the default ranking — the
+  // league-aware order that replaces generic ADP.
+  const [sortMode, setSortMode] = useState<'points' | 'name' | 'value' | (string & {})>('value');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  // Natural (first-click) direction: A→Z for name, best-value-first for value,
   // high-to-low for points and every stat column.
   const poolNaturalDir = (key: string): 'asc' | 'desc' =>
-    key === 'name' || key === 'adp' ? 'asc' : 'desc';
-  // The Pts/ADP quick buttons just set a column in its natural direction.
-  function setPoolSort(key: 'points' | 'adp') {
+    key === 'name' || key === 'value' ? 'asc' : 'desc';
+  // The Pts/Value quick buttons just set a column in its natural direction.
+  function setPoolSort(key: 'points' | 'value') {
     setSortMode(key);
     setSortDir(poolNaturalDir(key));
   }
@@ -324,8 +335,8 @@ export function DraftBoardPage() {
     } else if (sortDir === natural) {
       setSortDir(natural === 'asc' ? 'desc' : 'asc');
     } else {
-      setSortMode('points');
-      setSortDir('desc');
+      setSortMode('value');
+      setSortDir('asc');
     }
   }
   // A stat-column sort only makes sense while that position's columns are shown;
@@ -1604,11 +1615,11 @@ export function DraftBoardPage() {
     const statsOf = (p: PlayerRow) => (statMode === 'prev' ? p.prev_stats : p.proj_stats) ?? {};
     function compareAsc(a: PlayerRow, b: PlayerRow): number {
       if (sortMode === 'name') return a.name.localeCompare(b.name);
-      if (sortMode === 'adp') {
-        if (a.adp == null && b.adp == null) return 0;
-        if (a.adp == null) return 1;
-        if (b.adp == null) return -1;
-        return a.adp - b.adp;
+      if (sortMode === 'value') {
+        // Ascending = best value first (rank 1). Unranked always sinks.
+        const ar = a.value_rank ?? Infinity;
+        const br = b.value_rank ?? Infinity;
+        return ar - br;
       }
       if (sortMode === 'points') return (pointsOf(a) ?? -Infinity) - (pointsOf(b) ?? -Infinity);
       return (statsOf(a)[sortMode] ?? -Infinity) - (statsOf(b)[sortMode] ?? -Infinity);
@@ -2461,11 +2472,11 @@ export function DraftBoardPage() {
                 </button>
                 <button
                   type="button"
-                  className={`pool__seg-btn ${sortMode === 'adp' ? 'is-active' : ''}`}
-                  onClick={() => setPoolSort('adp')}
-                  title="Sort by average draft position"
+                  className={`pool__seg-btn ${sortMode === 'value' ? 'is-active' : ''}`}
+                  onClick={() => setPoolSort('value')}
+                  title="Sort by league value (points over positional replacement)"
                 >
-                  ADP
+                  Value
                 </button>
               </div>
               {SHOW_BYE_FILTER && byeFilter}
@@ -2493,7 +2504,7 @@ export function DraftBoardPage() {
                     <th className="pool-table__statline">Stats</th>
                   )}
                   {sortTh('Pts', 'points', 'pool-table__pts')}
-                  {sortTh('ADP', 'adp', 'pool-table__adp')}
+                  {sortTh('Value', 'value', 'pool-table__adp')}
                   <th className="pool-table__act" aria-label="Draft" />
                 </tr>
               </thead>
@@ -2627,8 +2638,11 @@ export function DraftBoardPage() {
                       <td className={`pool-table__pts${points == null ? ' is-dash' : ''}`}>
                         {points != null ? points.toFixed(1) : '—'}
                       </td>
-                      <td className={`pool-table__adp${p.adp == null ? ' is-dash' : ''}`}>
-                        {p.adp != null ? p.adp.toFixed(1) : '—'}
+                      <td
+                        className={`pool-table__adp${p.value_rank == null ? ' is-dash' : ''}`}
+                        title={p.value != null ? `${p.value > 0 ? '+' : ''}${p.value.toFixed(1)} pts over replacement` : undefined}
+                      >
+                        {p.value_rank != null ? p.value_rank : '—'}
                       </td>
                       <td className="pool-table__act">
                         {!isDrafted && canPick && (

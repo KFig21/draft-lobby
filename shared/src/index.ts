@@ -3,6 +3,7 @@ export * from './player.js';
 export * from './avatar.js';
 export * from './scoring.js';
 export * from './lobby.js';
+export * from './valuation.js';
 export * from './draft.js';
 export * from './social.js';
 export * from './rulesets.js';

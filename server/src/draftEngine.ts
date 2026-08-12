@@ -1,6 +1,7 @@
 import {
   AUTO_PICK_SECONDS,
   computeFantasyPoints,
+  computePlayerValues,
   UNLIMITED_PICK_SECONDS,
   draftPositionForOverall,
   hasAnyPositionLimit,
@@ -43,6 +44,33 @@ export interface OnClockTeam {
 
 const SKILL: Position[] = ['RB', 'WR', 'TE'];
 const SUPERFLEX_POS: Position[] = ['QB', 'RB', 'WR', 'TE'];
+
+/**
+ * Bot draft-strategy tuning — the one place to reshape how bots draft. Plain
+ * constants (no UI/DB wiring); edit and rebuild to retune. Bots value players by
+ * league-aware VOR (points over positional replacement, shared/valuation.ts) and
+ * then layer roster construction + snake-slot urgency on top; these weights
+ * balance those layers. Units are fantasy points (same scale as VOR), except the
+ * two dimensionless factors noted below.
+ */
+export const BOT_STRATEGY = {
+  /** Extra value a player gets for filling an unmet starting slot (or a position
+   * minimum), over raw VOR — a starter is worth more to a team than a same-value
+   * bench body. Higher = bots complete their starting lineup before chasing
+   * best-available depth. */
+  starterNeedBoost: 20,
+  /** Fraction of VOR shaved off a "luxury" pick at a position the team doesn't
+   * need (dimensionless, 0–1). 0 = pure best-available; toward 1 = strongly
+   * avoid over-stacking one position. */
+  benchLuxuryDamp: 0.5,
+  /** VOR at/above which a player is "too good to pass" and never damped, even if
+   * it fills no need. Raising it makes bots more strictly roster-driven. */
+  eliteVorThreshold: 40,
+  /** Weight on snake-gap urgency — the value cliff at a needed position that
+   * would fall before the team's next pick (dimensionless multiplier). Higher =
+   * bots reach harder to beat a positional run; 0 = ignore the draft slot. */
+  urgencyWeight: 1,
+} as const;
 
 /** A user's profile username, for defaulting a team's name to it. */
 export async function usernameOf(userId: string): Promise<string | null> {
@@ -410,20 +438,29 @@ async function loadPlayerPool(season: number): Promise<PoolPlayer[]> {
 }
 
 /**
- * Pick the best available player that fits the team's roster needs:
- * unmet starter needs first (skill/QB before K/DEF), then flex, then best
- * bench value — while never over-drafting kickers or defenses.
+ * Choose a player for an auto-drafting team, the way a savvy manager would:
+ * value everyone by league-aware **VOR** (points over positional replacement —
+ * shared/valuation.ts, the same number the human's pool shows), then layer
+ * roster construction and snake-slot awareness on top:
+ *   • a starter-slot (or position-minimum) need adds value over a bench body;
+ *   • a "luxury" pick at a position the team doesn't need is discounted;
+ *   • **snake-gap urgency** — if a needed position's value would fall off a
+ *     cliff before this team picks again (its slot on the board), grab it now.
+ * All weights live in BOT_STRATEGY. Never over-drafts kickers/defenses, never
+ * violates position limits, and always returns a pick so the draft can't stall.
  */
 export async function choosePlayer(
   lobbyId: string,
   settings: LobbySettings,
   teamId: string,
 ): Promise<string | null> {
-  const [{ data: allPicks }, { data: lobbyRow }] = await Promise.all([
+  const [{ data: allPicks }, { data: lobbyRow }, { data: teamRow }] = await Promise.all([
     supabaseAdmin.from('picks').select('player_id, team_id').eq('lobby_id', lobbyId),
     supabaseAdmin.from('lobbies').select('season').eq('id', lobbyId).single(),
+    supabaseAdmin.from('teams').select('draft_position').eq('id', teamId).single(),
   ]);
   const season = (lobbyRow?.season as number | undefined) ?? new Date().getUTCFullYear();
+  const draftPosition = (teamRow?.draft_position as number | undefined) ?? 1;
   const players = await loadPlayerPool(season);
 
   const drafted = new Set((allPicks ?? []).map((p) => p.player_id as string));
@@ -453,26 +490,41 @@ export async function choosePlayer(
     });
   if (available.length === 0) return null;
 
+  // League-aware value (VOR) over the FULL pool, so replacement level matches
+  // the static baseline the human's board is sorted by (shared/valuation.ts).
+  const values = computePlayerValues(
+    players.map((p) => ({ id: p.id, position: p.position, points: pointsFor(p) })),
+    settings.rosterComposition,
+    settings.teamCount,
+  );
+  const vorOf = (p: PoolPlayer) => values.get(p.id)?.vor ?? 0;
+
   // Per-position roster limits: a bot only considers players it would be allowed
   // to draft (hard max + reserved minimum — the same rule the /pick route
   // enforces for humans), falling back to the full list only if that somehow
   // leaves nothing (e.g. keepers over-committed the roster).
   const limits = settings.positionLimits;
+  const needs = computeNeeds(settings);
   const remainingSpots =
     roundsForSettings(settings) - Object.values(have).reduce((a, b) => a + b, 0);
-  const candidates = hasAnyPositionLimit(limits)
+  const allowed = hasAnyPositionLimit(limits)
     ? available.filter((p) => pickAllowedForLimits(limits, have, remainingSpots, p.position).ok)
     : available;
-  const pool = candidates.length > 0 ? candidates : available;
+  let pool = allowed.length > 0 ? allowed : available;
+  // Never roster a backup kicker/defense — a 2nd K/DEF is pure waste until it's
+  // the only thing left (which the fallback below still allows).
+  const nonBackupKDEF = pool.filter(
+    (p) =>
+      !((p.position === 'K' || p.position === 'DEF') && have[p.position] >= needs.base[p.position]),
+  );
+  if (nonBackupKDEF.length > 0) pool = nonBackupKDEF;
 
-  const needs = computeNeeds(settings);
-  // How many more of a position an unmet floor still requires — folded into the
-  // starter "need" so bots draft toward their minimums, not only when the
-  // reserved-spot rule finally forces it at the very end.
+  // ── Roster state: which starter slots are still open ──
   const minDeficit = (pos: Position) =>
     Math.max(0, positionLimitFor(limits, pos).min - have[pos]);
-  const dedicatedNeed = (pos: Position) =>
-    Math.max(0, needs.base[pos] - have[pos], minDeficit(pos));
+  const dedicatedNeed = (pos: Position) => Math.max(0, needs.base[pos] - have[pos]);
+  // Flex/superflex slots still open after skill/OP overflow soaks the dedicated
+  // ones (same overflow math the grade lineup uses).
   const skillOverflow = Math.max(
     0,
     have.RB + have.WR + have.TE - (needs.base.RB + needs.base.WR + needs.base.TE),
@@ -485,35 +537,64 @@ export async function choosePlayer(
       Math.min(needs.flex, skillOverflow),
   );
   const superflexRemaining = Math.max(0, needs.superflex - superflexOverflow);
+  const fillsStarterSlot = (pos: Position): boolean =>
+    dedicatedNeed(pos) > 0 ||
+    (flexRemaining > 0 && SKILL.includes(pos)) ||
+    (superflexRemaining > 0 && SUPERFLEX_POS.includes(pos));
+  // A pick "fills a need" if it completes a starter slot or chases an unmet
+  // position minimum (so bots work toward minimums before the reserved-spot rule
+  // forces it at the very end).
+  const fillsNeed = (pos: Position): boolean => fillsStarterSlot(pos) || minDeficit(pos) > 0;
 
-  // 1) Unmet dedicated starter needs — skill/QB before kicker/defense.
-  const skillFirst = pool.find(
-    (p) => p.position !== 'K' && p.position !== 'DEF' && dedicatedNeed(p.position) > 0,
+  // ── Snake-slot urgency: the value cliff before this team's next pick ──
+  // Picks until this team is up again, from its slot on the snake board. At the
+  // turn (gap≈1) there's no reason to reach; mid-round (gap≈2·teams) a value
+  // cliff at a needed position is worth grabbing now.
+  const teamPicksSoFar = Object.values(have).reduce((a, b) => a + b, 0);
+  const curRound = teamPicksSoFar + 1;
+  const gap = Math.max(
+    1,
+    overallForDraftPosition(curRound + 1, draftPosition, settings.teamCount, settings.draftType) -
+      overallForDraftPosition(curRound, draftPosition, settings.teamCount, settings.draftType),
   );
-  if (skillFirst) return skillFirst.id;
-
-  // 2) Flex, then superflex.
-  if (flexRemaining > 0) {
-    const flexPick = pool.find((p) => SKILL.includes(p.position));
-    if (flexPick) return flexPick.id;
-  }
-  if (superflexRemaining > 0) {
-    const sfPick = pool.find((p) => SUPERFLEX_POS.includes(p.position));
-    if (sfPick) return sfPick.id;
-  }
-
-  // 3) Remaining dedicated needs (kicker/defense).
-  const kdNeed = pool.find((p) => dedicatedNeed(p.position) > 0);
-  if (kdNeed) return kdNeed.id;
-
-  // 4) Bench: best value, but don't stockpile kickers/defenses past the requirement.
-  const bench = pool.find((p) => {
-    if ((p.position === 'K' || p.position === 'DEF') && have[p.position] >= needs.base[p.position]) {
-      return false;
+  const byVor = [...pool].sort((a, b) => vorOf(b) - vorOf(a));
+  // Assume the `gap` best-value players are gone before we pick again (everyone
+  // drafts on value); for each position, the best one NOT in that set is what
+  // would survive. urgency[pos] = how much value falls off at pos by waiting.
+  const goneSoon = new Set(byVor.slice(0, gap).map((p) => p.id));
+  const bestSurvivingVor: Partial<Record<Position, number>> = {};
+  const bestNowVor: Partial<Record<Position, number>> = {};
+  for (const p of byVor) {
+    if (bestNowVor[p.position] === undefined) bestNowVor[p.position] = vorOf(p);
+    if (!goneSoon.has(p.id) && bestSurvivingVor[p.position] === undefined) {
+      bestSurvivingVor[p.position] = vorOf(p);
     }
-    return true;
-  });
-  return (bench ?? pool[0]).id;
+  }
+  const urgencyForPos = (pos: Position): number =>
+    Math.max(0, (bestNowVor[pos] ?? 0) - (bestSurvivingVor[pos] ?? 0));
+
+  // ── Score every candidate and take the best ──
+  const scoreOf = (p: PoolPlayer): number => {
+    const vor = vorOf(p);
+    const need = fillsNeed(p.position);
+    let score = vor;
+    if (need) score += BOT_STRATEGY.starterNeedBoost + BOT_STRATEGY.urgencyWeight * urgencyForPos(p.position);
+    else if (vor < BOT_STRATEGY.eliteVorThreshold) score -= BOT_STRATEGY.benchLuxuryDamp * Math.max(0, vor);
+    return score;
+  };
+  let best = pool[0];
+  let bestScore = -Infinity;
+  for (const p of pool) {
+    const s = scoreOf(p);
+    if (
+      s > bestScore ||
+      (s === bestScore && (vorOf(p) > vorOf(best) || (vorOf(p) === vorOf(best) && pointsFor(p) > pointsFor(best))))
+    ) {
+      best = p;
+      bestScore = s;
+    }
+  }
+  return best.id;
 }
 
 /**

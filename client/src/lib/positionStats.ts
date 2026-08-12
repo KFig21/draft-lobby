@@ -43,7 +43,7 @@ export const POS_STAT_COLS: Partial<Record<Position, StatCol[]>> = {
 };
 
 /** The fixed (non-stat) sort keys, used to tell a stat-column sort apart. */
-export const BASE_SORT_KEYS = new Set(['points', 'name', 'adp']);
+export const BASE_SORT_KEYS = new Set(['points', 'name', 'value']);
 
 /** A stat value for a position column — rounded, thousands-separated, em dash
  * when the stat is missing or rounds to zero (a "—" reads cleaner than a wall

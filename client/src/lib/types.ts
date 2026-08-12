@@ -185,6 +185,11 @@ export interface PlayerRow {
   proj_stat_line: string | null;
   proj_stats: Record<string, number> | null;
   adp: number | null;
+  /** League-aware value (points over positional replacement) + its overall rank
+   * (1 = best value in this league's roster/scoring). Attached client-side by
+   * scorePlayers, not persisted — absent on the raw pool until it's scored. */
+  value?: number | null;
+  value_rank?: number | null;
   prev_points: number | null;
   prev_rank: number | null;
   prev_stat_line: string | null;
