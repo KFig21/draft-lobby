@@ -5,8 +5,16 @@ import CheckRoundedIcon from '@mui/icons-material/CheckRounded';
 import ChevronLeftRoundedIcon from '@mui/icons-material/ChevronLeftRounded';
 import ChevronRightRoundedIcon from '@mui/icons-material/ChevronRightRounded';
 import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined';
+import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder';
+import TerminalIcon from '@mui/icons-material/Terminal';
 import { useMemo, useState } from 'react';
-import { copyText, groupDraftForEspn, type EspnPick } from '../../lib/espnExport';
+import {
+  buildEspnAutofillData,
+  copyText,
+  groupDraftForEspn,
+  type EspnPick,
+} from '../../lib/espnExport';
+import { buildEspnAutofillScript, buildEspnBookmarklet } from '../../lib/espnAutofillScript';
 import type { PickRow, PlayerRow, TeamRow } from '../../lib/types';
 import { Modal } from '../Modal/Modal';
 import './EspnExportModal.scss';
@@ -43,6 +51,28 @@ export function EspnExportModal({ teams, picks, playersById, myTeamId, onClose }
   const [flash, setFlash] = useState<number | null>(null);
   const [allFlash, setAllFlash] = useState(false);
 
+  // 'copy' = the guided per-pick checklist; 'auto' = the page-script autofill.
+  const [mode, setMode] = useState<'copy' | 'auto'>('copy');
+  const autofillData = useMemo(
+    () => buildEspnAutofillData(teams, picks, playersById),
+    [teams, picks, playersById],
+  );
+  const [scriptFlash, setScriptFlash] = useState(false);
+  const [bmFlash, setBmFlash] = useState(false);
+
+  async function copyScript() {
+    if (await copyText(buildEspnAutofillScript(autofillData))) {
+      setScriptFlash(true);
+      window.setTimeout(() => setScriptFlash(false), 1600);
+    }
+  }
+  async function copyBookmarklet() {
+    if (await copyText(buildEspnBookmarklet(autofillData))) {
+      setBmFlash(true);
+      window.setTimeout(() => setBmFlash(false), 1600);
+    }
+  }
+
   const team = grouped[teamIdx];
   if (!team) return null;
 
@@ -74,6 +104,29 @@ export function EspnExportModal({ teams, picks, playersById, myTeamId, onClose }
       className="espn-export"
       onClose={onClose}
     >
+      <div className="espn-export__tabs" role="tablist">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mode === 'copy'}
+          className={`espn-export__tab${mode === 'copy' ? ' is-active' : ''}`}
+          onClick={() => setMode('copy')}
+        >
+          Guided copy
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mode === 'auto'}
+          className={`espn-export__tab${mode === 'auto' ? ' is-active' : ''}`}
+          onClick={() => setMode('auto')}
+        >
+          Auto-fill <span className="espn-export__beta-pill">beta</span>
+        </button>
+      </div>
+
+      {mode === 'copy' ? (
+      <>
       <p className="espn-export__intro">
         ESPN's <em>Input Offline Draft Results</em> page has no bulk import, so enter one team
         per column. For each pick: <strong>Copy</strong> the name here, paste it into the ESPN
@@ -191,6 +244,75 @@ export function EspnExportModal({ teams, picks, playersById, myTeamId, onClose }
               <ChevronRightRoundedIcon fontSize="small" />
             </button>
           )}
+        </div>
+      )}
+      </>
+      ) : (
+        <div className="espn-export__auto">
+          <p className="espn-export__intro">
+            This runs a small script on ESPN's page that <strong>types each pick for you</strong> —
+            you click the matching dropdown row and press <strong>Fill next</strong>. Your draft
+            data never leaves your browser.
+          </p>
+
+          <ol className="espn-export__steps">
+            <li>
+              <div className="espn-export__step-head">
+                <TerminalIcon fontSize="small" />
+                <strong>Recommended — paste into the console</strong>
+              </div>
+              <p>
+                On ESPN's <em>Input Offline Draft Results</em> page, open the browser console
+                (<kbd>F12</kbd> → Console, or <kbd>⌥⌘I</kbd>), paste, and press Enter. The first
+                time, Chrome may ask you to type <code>allow pasting</code>.
+              </p>
+              <button type="button" className="espn-export__scriptbtn" onClick={copyScript}>
+                {scriptFlash ? (
+                  <>
+                    <CheckRoundedIcon fontSize="inherit" /> Copied script
+                  </>
+                ) : (
+                  <>
+                    <ContentCopyOutlinedIcon fontSize="inherit" /> Copy console script
+                  </>
+                )}
+              </button>
+            </li>
+            <li>
+              <div className="espn-export__step-head">
+                <BookmarkBorderIcon fontSize="small" />
+                <strong>Or a bookmarklet</strong>
+              </div>
+              <p>
+                Make a new bookmark and paste this as its <em>URL</em>, then click it on the ESPN
+                page. If nothing happens, ESPN is blocking bookmarklets — use the console script.
+              </p>
+              <button type="button" className="espn-export__scriptbtn" onClick={copyBookmarklet}>
+                {bmFlash ? (
+                  <>
+                    <CheckRoundedIcon fontSize="inherit" /> Copied bookmarklet
+                  </>
+                ) : (
+                  <>
+                    <ContentCopyOutlinedIcon fontSize="inherit" /> Copy bookmarklet
+                  </>
+                )}
+              </button>
+            </li>
+          </ol>
+
+          <div className="espn-export__auto-note">
+            A panel appears bottom-right: pick a team, click that team&rsquo;s <strong>Round 1</strong>{' '}
+            cell in ESPN, then press <strong>Fill next</strong> for each pick — clicking the matching
+            row in ESPN between fills.
+          </div>
+          <p className="espn-export__beta">
+            Beta — built without access to ESPN&rsquo;s live page, so if it misbehaves the{' '}
+            <button type="button" className="espn-export__linklike" onClick={() => setMode('copy')}>
+              Guided copy
+            </button>{' '}
+            tab always works.
+          </p>
         </div>
       )}
     </Modal>

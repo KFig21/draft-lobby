@@ -85,6 +85,32 @@ export function groupDraftForEspn(
   }));
 }
 
+/** The compact draft payload embedded into the auto-fill page script. Short keys
+ * keep the generated bookmarklet/console blob small. */
+export interface EspnAutofillData {
+  teams: { name: string; picks: { r: number; name: string; team: string; pos: string }[] }[];
+}
+
+/** Build the auto-fill payload: every team (draft-slot order) and its picks in
+ * round order, names already ESPN-normalized (see toEspnSearchName). */
+export function buildEspnAutofillData(
+  teams: TeamRow[],
+  picks: PickRow[],
+  playersById: Map<string, PlayerRow>,
+): EspnAutofillData {
+  return {
+    teams: groupDraftForEspn(teams, picks, playersById).map((t) => ({
+      name: t.name,
+      picks: t.picks.map((p) => ({
+        r: p.round,
+        name: p.espnName,
+        team: p.nflTeam,
+        pos: p.position === 'DEF' ? 'D/ST' : p.position,
+      })),
+    })),
+  };
+}
+
 /**
  * Copy text to the clipboard, with a legacy fallback for any browser/context
  * where the async Clipboard API is unavailable. Returns whether it succeeded.
