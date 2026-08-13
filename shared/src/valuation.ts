@@ -57,11 +57,12 @@ export const VALUATION_TUNING = {
    * inflates their VOR past what anyone pays). >1 lifts a position, <1 lowers
    * it. Tune against a trusted cheat sheet for the league's format.
    *
-   * K/DEF are held very low on purpose: they're streamed week-to-week, so their
+   * K/DEF get tiny weights because they're streamed week-to-week — their
    * season-projection spread over replacement is NOT draftable value (a top
-   * defense is a waiver pickup, not a mid-round pick). These small weights keep
-   * them out of the top ~100 so the board ranks them where they're actually
-   * taken — the last couple of rounds. Bots also defer them (see draftEngine).
+   * defense is a waiver pickup, not a mid-round pick), so their VOR should read
+   * near-nothing. Their board RANK is not set by this weight, though — plain VOR
+   * can't sink them far enough (their best is still positive) — it's forced to
+   * the last-rounds band by the K/DEF rank floor in computePlayerValues.
    */
   positionValueWeight: { QB: 1.2, RB: 1, WR: 1, TE: 0.6, K: 0.05, DEF: 0.1 } as Record<Position, number>,
 } as const;
@@ -152,18 +153,36 @@ export function computePlayerValues(
 ): Map<string, PlayerValue> {
   const replacement = replacementByPosition(players, rosterComposition, teamCount);
   const weight = VALUATION_TUNING.positionValueWeight;
-  const ranked = players
-    .map((p) => ({
-      id: p.id,
-      // Points over replacement, then the position's value weight (lifts QBs,
-      // tempers the elite-TE premium — see VALUATION_TUNING).
-      vor: ((Number.isFinite(p.points) ? p.points : 0) - replacement[p.position]) * (weight[p.position] ?? 1),
-      replacement: replacement[p.position],
-    }))
-    .sort((a, b) => b.vor - a.vor);
+  const scored = players.map((p) => ({
+    id: p.id,
+    position: p.position,
+    // Points over replacement, then the position's value weight (lifts QBs,
+    // tempers the elite-TE premium — see VALUATION_TUNING).
+    vor: ((Number.isFinite(p.points) ? p.points : 0) - replacement[p.position]) * (weight[p.position] ?? 1),
+    replacement: replacement[p.position],
+  }));
+
+  // K/DEF are streamed, so plain VOR can't rank them low enough: their best is
+  // still a small POSITIVE value, which lands them right where skill VOR crosses
+  // zero (~top of the bench) no matter how far their weight is cut. So rank the
+  // skill/QB/TE pool by VOR, then slot K/DEF in AFTER the league's non-K/DEF
+  // picks — every roster spot except the lone K + DEF, across all teams — so the
+  // board ranks them where they're actually taken (the final rounds), the way a
+  // cheat sheet does. Their true VOR is still returned (for the tooltip); only
+  // the ordering changes. Bots ignore valueRank (they read vor + slot need).
+  const isKDef = (pos: Position) => pos === 'K' || pos === 'DEF';
+  const byVor = <T extends { vor: number }>(a: T, b: T) => b.vor - a.vor;
+  const skill = scored.filter((p) => !isKDef(p.position)).sort(byVor);
+  const kdef = scored.filter((p) => isKDef(p.position)).sort(byVor);
+  const rosterSize = rosterComposition.reduce((n, r) => n + r.count, 0);
+  const kdefSlots = rosterComposition
+    .filter((r) => isKDef(r.slot as Position))
+    .reduce((n, r) => n + r.count, 0);
+  const floor = Math.min(skill.length, Math.max(0, (rosterSize - kdefSlots) * teamCount));
+  const order = [...skill.slice(0, floor), ...kdef, ...skill.slice(floor)];
 
   const out = new Map<string, PlayerValue>();
-  ranked.forEach((p, i) => {
+  order.forEach((p, i) => {
     out.set(p.id, { vor: round1(p.vor), valueRank: i + 1, replacement: round1(p.replacement) });
   });
   return out;
