@@ -922,6 +922,15 @@
       margin-inline: auto;
     }
 
+    // Same treatment for the Players tab's card list (simple layout — the
+    // Detailed layout renders the wide stats table here instead, which has no
+    // .pool__list, so it's untouched). Only the list is capped; the filter bar
+    // above it keeps the full modal width.
+    .pool__list {
+      max-width: 600px;
+      margin-inline: auto;
+    }
+
     // On a TV the projection is the key number, so bump it up from the pool's
     // 0.9rem — scoped to the roster so the fullscreen player pool is untouched.
     .draft__roster .player-card__proj {
