@@ -56,8 +56,14 @@ export const VALUATION_TUNING = {
    * value gets compressed) and *over*-values elite TEs (the steep TE cliff
    * inflates their VOR past what anyone pays). >1 lifts a position, <1 lowers
    * it. Tune against a trusted cheat sheet for the league's format.
+   *
+   * K/DEF are held very low on purpose: they're streamed week-to-week, so their
+   * season-projection spread over replacement is NOT draftable value (a top
+   * defense is a waiver pickup, not a mid-round pick). These small weights keep
+   * them out of the top ~100 so the board ranks them where they're actually
+   * taken — the last couple of rounds. Bots also defer them (see draftEngine).
    */
-  positionValueWeight: { QB: 1.2, RB: 1, WR: 1, TE: 0.6, K: 0.4, DEF: 0.75 } as Record<Position, number>,
+  positionValueWeight: { QB: 1.2, RB: 1, WR: 1, TE: 0.6, K: 0.05, DEF: 0.1 } as Record<Position, number>,
 } as const;
 
 const FLEX_ELIGIBLE = SLOT_ELIGIBILITY.FLEX; // RB/WR/TE

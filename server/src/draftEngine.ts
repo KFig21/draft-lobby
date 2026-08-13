@@ -70,6 +70,19 @@ export const BOT_STRATEGY = {
    * bye/injury insurance and upside, not starter value. Small, so slot-fillers
    * outrank pure depth; mainly decides late-round bench picks and ties. */
   benchWeight: 0.2,
+  /** Bench-depth allowance for "onesie" positions (QB, TE) — how many BACKUPS
+   * beyond the team's startable slots at that position still carry bench value.
+   * You only ever start one QB/TE (a QB also fills OP in superflex), so a single
+   * backup is realistic and a 3rd is nearly unheard of. Once a team is at
+   * `startable + this`, further QBs/TEs get NO bench premium, so they lose to
+   * RB/WR depth — this is what stops bots stockpiling 3 TEs. Raise to let bots
+   * carry more; 0 forbids backups entirely. */
+  onesieBenchBackups: 1,
+  /** Bench-depth buffer for RB/WR beyond their startable slots (dedicated +
+   * FLEX/OP) — these churn through byes/injuries and rotate through FLEX, so a
+   * bot keeps real depth here. Generous on purpose; mostly a ceiling that a
+   * 15-round draft rarely reaches. */
+  skillBenchDepth: 4,
   /** Weight on snake-gap urgency — the value cliff at a startable position that
    * would fall before the team's next pick (dimensionless multiplier). Higher =
    * bots reach harder to beat a positional run; 0 = ignore the draft slot. */
@@ -555,13 +568,32 @@ export async function choosePlayer(
     ? available.filter((p) => pickAllowedForLimits(limits, have, remainingSpots, p.position).ok)
     : available;
   let pool = allowed.length > 0 ? allowed : available;
-  // Never roster a backup kicker/defense — a 2nd K/DEF is pure waste until it's
-  // the only thing left (which the fallback below still allows).
-  const nonBackupKDEF = pool.filter(
-    (p) =>
-      !((p.position === 'K' || p.position === 'DEF') && have[p.position] >= needs.base[p.position]),
-  );
-  if (nonBackupKDEF.length > 0) pool = nonBackupKDEF;
+  // Realistic roster depth per position: a bot won't stockpile a position past
+  // what it would actually carry. K/DEF get no backup (streamed); QB/TE are
+  // "onesie" positions — one starter (a QB also fills OP) plus a lone backup, so
+  // a 3rd is filtered out (this is what stops teams hoarding 3 TEs); RB/WR stay
+  // deep for byes/injuries/FLEX. Falls back to the full pool if this would leave
+  // nothing (degenerate late-draft states). Allowance also caps the bench
+  // premium in scoreOf.
+  let flexSlotCount = 0;
+  let superflexSlotCount = 0;
+  const dedSlotCount: Partial<Record<Position, number>> = {};
+  for (const { slot, count } of settings.rosterComposition) {
+    if (slot === 'BENCH' || slot === 'IDP') continue;
+    if (slot === 'FLEX') flexSlotCount += count;
+    else if (slot === 'SUPERFLEX') superflexSlotCount += count;
+    else dedSlotCount[slot as Position] = (dedSlotCount[slot as Position] ?? 0) + count;
+  }
+  const benchAllowanceFor = (pos: Position): number => {
+    const ded = dedSlotCount[pos] ?? 0;
+    if (pos === 'QB') return ded + superflexSlotCount + BOT_STRATEGY.onesieBenchBackups;
+    if (pos === 'TE') return ded + BOT_STRATEGY.onesieBenchBackups;
+    if (pos === 'RB' || pos === 'WR')
+      return ded + flexSlotCount + superflexSlotCount + BOT_STRATEGY.skillBenchDepth;
+    return ded; // K/DEF — no backups (streamed; also deferred to late rounds below)
+  };
+  const withinDepth = pool.filter((p) => have[p.position] < benchAllowanceFor(p.position));
+  if (withinDepth.length > 0) pool = withinDepth;
 
   // Stream K/DEF late: most managers don't spend a mid-round pick on a
   // low-variance kicker/defense, they grab one in the final rounds. So a K/DEF
@@ -692,7 +724,13 @@ export async function choosePlayer(
     // Completing an empty starter slot (esp. a scarce, position-locked one) beats
     // adding depth — this is what stops a team ending with 0 QB or a 3rd TE.
     const slotBonus = slotBonusFor(p.position);
-    const bench = BOT_STRATEGY.benchWeight * Math.max(0, vor);
+    // Bench premium only up to a realistic depth at the position — past a lone
+    // QB/TE backup a surplus one is dead weight, so it earns nothing here and
+    // loses to RB/WR depth (the fix for bots hoarding 3 TEs).
+    const bench =
+      have[p.position] < benchAllowanceFor(p.position)
+        ? BOT_STRATEGY.benchWeight * Math.max(0, vor)
+        : 0;
     // Only reach for a positional run at a slot this player would actually start.
     const urgency = starterValue > 0 || slotBonus > 0 ? BOT_STRATEGY.urgencyWeight * urgencyForPos(p.position) : 0;
     return starterValue + slotBonus + bench + urgency;
