@@ -409,7 +409,7 @@
   }
 
   // Match the filter controls' side gutter ($space * 3) on the outer columns,
-  // so the star and ADP line up with the dropdown / search edges above.
+  // so the star and Points line up with the dropdown / search edges above.
   th:first-child,
   td:first-child {
     padding-left: $space * 3;
@@ -564,11 +564,6 @@
     font-size: 0.76rem;
   }
 
-  &__adp {
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
-  }
-
   &__stats {
     white-space: nowrap;
     font-size: 0.8rem;
@@ -595,7 +590,7 @@
 
   // ── Mobile: no horizontal scroll, no frozen columns ──────────────────
   // Three columns only — rank, player (chip + full name + team/bye all on one
-  // line), and proj points — sized to fit a phone screen. Stats, ADP and the
+  // line), and proj points — sized to fit a phone screen. Stats and the
   // favorites star are dropped (favoriting still works via the row's detail
   // modal); the player column flexes to absorb the leftover width.
   @media (max-width: #{$bp-md - 1px}) {
@@ -612,8 +607,7 @@
     // Columns not shown on phones.
     &__star,
     &__stats,
-    &__statcol,
-    &__adp {
+    &__statcol {
       display: none;
     }
 
