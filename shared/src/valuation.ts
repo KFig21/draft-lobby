@@ -64,7 +64,7 @@ export const VALUATION_TUNING = {
    * can't sink them far enough (their best is still positive) — it's forced to
    * the last-rounds band by the K/DEF rank floor in computePlayerValues.
    */
-  positionValueWeight: { QB: 1.2, RB: 1, WR: 1, TE: 0.6, K: 0.05, DEF: 0.1 } as Record<Position, number>,
+  positionValueWeight: { QB: 1.2, RB: 1, WR: 1, TE: 0.45, K: 0.05, DEF: 0.1 } as Record<Position, number>,
 } as const;
 
 const FLEX_ELIGIBLE = SLOT_ELIGIBILITY.FLEX; // RB/WR/TE
@@ -165,21 +165,36 @@ export function computePlayerValues(
   // K/DEF are streamed, so plain VOR can't rank them low enough: their best is
   // still a small POSITIVE value, which lands them right where skill VOR crosses
   // zero (~top of the bench) no matter how far their weight is cut. So rank the
-  // skill/QB/TE pool by VOR, then slot K/DEF in AFTER the league's non-K/DEF
-  // picks — every roster spot except the lone K + DEF, across all teams — so the
-  // board ranks them where they're actually taken (the final rounds), the way a
-  // cheat sheet does. Their true VOR is still returned (for the tooltip); only
-  // the ordering changes. Bots ignore valueRank (they read vor + slot need).
+  // skill/QB/TE pool by VOR and place K/DEF by hand:
+  //   • only the top few of EACH position are ever draftable in a stream-them
+  //     league (≈ one per team + a couple of matchup streamers). Those float
+  //     into the last-rounds band, AFTER the league's non-K/DEF picks (every
+  //     roster spot except the lone K + DEF, all teams) — where a cheat sheet
+  //     puts the top defense/kicker.
+  //   • every deeper K/DEF is pure junk (a 13th kicker) and sinks to the very
+  //     bottom, below the useful deep-skill fliers — a backup kicker must not
+  //     outrank a startable QB/RB/WR on the board.
+  // True VOR is still returned (tooltip); only ordering changes. Bots ignore
+  // valueRank (they read vor + slot need), so draft behavior is unaffected.
   const isKDef = (pos: Position) => pos === 'K' || pos === 'DEF';
   const byVor = <T extends { vor: number }>(a: T, b: T) => b.vor - a.vor;
   const skill = scored.filter((p) => !isKDef(p.position)).sort(byVor);
-  const kdef = scored.filter((p) => isKDef(p.position)).sort(byVor);
+  const draftablePerKDefPos = teamCount + 2; // ~one per team + streamers
+  const topKDef: typeof scored = [];
+  const junkKDef: typeof scored = [];
+  for (const pos of ['DEF', 'K'] as const) {
+    const ranked = scored.filter((p) => p.position === pos).sort(byVor);
+    topKDef.push(...ranked.slice(0, draftablePerKDefPos));
+    junkKDef.push(...ranked.slice(draftablePerKDefPos));
+  }
+  topKDef.sort(byVor);
+  junkKDef.sort(byVor);
   const rosterSize = rosterComposition.reduce((n, r) => n + r.count, 0);
   const kdefSlots = rosterComposition
     .filter((r) => isKDef(r.slot as Position))
     .reduce((n, r) => n + r.count, 0);
   const floor = Math.min(skill.length, Math.max(0, (rosterSize - kdefSlots) * teamCount));
-  const order = [...skill.slice(0, floor), ...kdef, ...skill.slice(floor)];
+  const order = [...skill.slice(0, floor), ...topKDef, ...skill.slice(floor), ...junkKDef];
 
   const out = new Map<string, PlayerValue>();
   order.forEach((p, i) => {
