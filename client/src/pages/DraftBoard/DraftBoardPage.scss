@@ -2212,6 +2212,14 @@
     border-radius: 999px;
     align-self: center;
     background: color-mix(in srgb, $accent 12%, transparent);
+
+    // Light mode: the mint accent washes out — use the teal primary instead
+    // (mirrors the app's accent convention: $accent on dark, $primary on light).
+    :root[data-theme='light'] & {
+      color: $primary;
+      border-color: $primary;
+      background: color-mix(in srgb, $primary 12%, transparent);
+    }
   }
 }
 

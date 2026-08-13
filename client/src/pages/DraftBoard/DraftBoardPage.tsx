@@ -4385,7 +4385,7 @@ export function DraftBoardPage() {
                         screenshotCanvasRef.current = null;
                       }}
                     >
-                      Options
+                      Back
                     </button>
                     <button
                       type="button"
