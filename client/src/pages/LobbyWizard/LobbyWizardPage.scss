@@ -14,6 +14,12 @@
     max-width: 640px;
     margin-inline: auto;
     padding-inline: $space * 3;
+
+    // Phone: the section cards carry their own padding, so 24px of side
+    // gutter on top of that pushed the content in too far — tighten it.
+    @media (max-width: #{$bp-md - 1px}) {
+      padding-inline: $space * 2;
+    }
   }
 
   // Pinned page header with a full-width bottom border.
@@ -38,6 +44,10 @@
     display: flex;
     flex-direction: column;
     gap: $space * 3;
+
+    @media (max-width: #{$bp-md - 1px}) {
+      gap: $space * 2;
+    }
   }
 
   &__section {
@@ -46,6 +56,13 @@
     gap: $space * 2;
     @include card-surface;
     padding: $space * 3;
+
+    // Phone: the roomy 24px card padding + inner gaps read as inflated on a
+    // small screen — pull the padding and control spacing in a notch.
+    @media (max-width: #{$bp-md - 1px}) {
+      gap: $space * 1.5;
+      padding: $space * 2;
+    }
 
     h2 {
       font-size: 1rem;

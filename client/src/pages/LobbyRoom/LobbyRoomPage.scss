@@ -337,13 +337,14 @@
   }
 }
 
-// Tablet tier (nav is a left rail, and the chat is a bottom drawer rather than
-// a third column): nothing frames the content pane's right edge, so a bordered
-// card would butt its border flush against it. Inset the bordered cards with an
-// outer margin — their border then lines up with the transparent sections'
-// rows (already inset by those sections' own padding), for one consistent
-// gutter. The full-bleed sticky header keeps spanning edge-to-edge.
-@media (min-width: $bp-md) and (max-width: #{$bp-lg - 1px}) {
+// Below desktop (mobile + tablet): nothing frames the content pane's right
+// edge, so these bordered cards would butt their border flush against it. The
+// transparent sections inset their bordered rows via .room__main > *'s
+// padding, but on a card that padding just becomes internal padding while the
+// border still runs edge-to-edge. Inset the cards with an outer margin instead
+// — their border then lines up with the transparent sections' rows, for one
+// consistent gutter. The full-bleed sticky header keeps spanning edge-to-edge.
+@media (max-width: #{$bp-lg - 1px}) {
   .room__overview,
   .room__invite {
     width: auto;
