@@ -201,12 +201,15 @@ function drawFlags(
     cx -= size + gap;
   };
   if (flags.keeper) step(keeper, bare ? keeper : '#1a1a1a', () => padlock(ctx, cx, cy, bare ? keeper : '#1a1a1a'));
+  // Clean (bare) flags take the cell's position colour (passed in as posColor,
+  // already darkened for light mode by the caller); default/bold draw dark ink
+  // on a position-filled chip.
   if (flags.comment) {
-    const ink = bare ? '#8a94a6' : '#1a1a1a';
+    const ink = bare ? posColor : '#1a1a1a';
     step(posColor, ink, () => bubble(ctx, cx, cy, ink));
   }
   if (flags.reaction) {
-    const ink = bare ? '#8a94a6' : '#1a1a1a';
+    const ink = bare ? posColor : '#1a1a1a';
     step(posColor, ink, () => {
       ctx.font = `900 8px ${FONT}`;
       ctx.textAlign = 'center';
@@ -392,7 +395,10 @@ function drawCleanCell(
   ctx.fillStyle = pal.textMuted;
   ctx.fillText(formatRoundPick(pick.round, pickInRound, teamCount), tx, y + CELL_PAD + 38);
 
-  drawFlags(ctx, x, y, flags, posColor, pal.keeper, true);
+  // Position-coloured comment/reaction flags, darkened in light mode like the
+  // position label so they read on the wash.
+  const flagColor = isLight ? mixColors(posColor, 0.6, '#000000') : posColor;
+  drawFlags(ctx, x, y, flags, flagColor, pal.keeper, true);
 }
 
 // Inset gold keeper outline shared by all three cell styles (matches the
