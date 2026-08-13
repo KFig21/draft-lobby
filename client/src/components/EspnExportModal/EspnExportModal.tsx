@@ -25,6 +25,8 @@ interface Props {
   playersById: Map<string, PlayerRow>;
   /** The viewer's own team — ESPN's first column is usually theirs, so start there. */
   myTeamId?: string | null;
+  /** Return to the export menu. */
+  onBack?: () => void;
   onClose: () => void;
 }
 
@@ -35,7 +37,7 @@ interface Props {
  * user clicks the right autocomplete row; the Copy button checks it off and the
  * next pick lights up. See lib/espnExport for the ESPN name normalization.
  */
-export function EspnExportModal({ teams, picks, playersById, myTeamId, onClose }: Props) {
+export function EspnExportModal({ teams, picks, playersById, myTeamId, onBack, onClose }: Props) {
   const grouped = useMemo(
     () => groupDraftForEspn(teams, picks, playersById),
     [teams, picks, playersById],
@@ -115,6 +117,7 @@ export function EspnExportModal({ teams, picks, playersById, myTeamId, onClose }
       icon={<ChecklistIcon fontSize="small" />}
       wide
       className="espn-export"
+      onBack={onBack}
       onClose={onClose}
     >
       <div className="espn-export__tabs" role="tablist">

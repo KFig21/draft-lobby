@@ -1,0 +1,40 @@
+@use 'variables' as *;
+
+.data-export {
+  &__blurb {
+    margin: 0 0 $space * 1.25;
+    color: $text-muted;
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+
+  // Raw file contents — scrolls both ways inside its own box so the modal body
+  // never runs sideways.
+  &__preview {
+    margin: 0;
+    max-height: 46vh;
+    overflow: auto;
+    padding: $space * 1.25;
+    background: $bg;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.78rem;
+    line-height: 1.5;
+    color: $text;
+    white-space: pre;
+    tab-size: 2;
+  }
+
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: $space;
+  }
+
+  &__act {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+}

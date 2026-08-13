@@ -70,6 +70,28 @@
     }
   }
 
+  // Back arrow at the header's start (opt-in via the Modal `onBack` prop).
+  &__back {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    color: $text-muted;
+    cursor: pointer;
+    font-size: 1.3rem;
+    line-height: 1;
+    padding: $space * 0.25 $space * 0.5;
+    margin-left: -$space * 0.5;
+    border-radius: $radius-sm;
+
+    &:hover {
+      color: $text;
+      background: $bg-hover;
+    }
+  }
+
   &__body {
     // min-height:0 lets the body shrink below its content inside the flex
     // column so it — and only it — scrolls, keeping header + footer pinned.

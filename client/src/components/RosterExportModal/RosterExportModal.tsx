@@ -29,6 +29,8 @@ interface Props {
   grades: DraftGradeRow[];
   /** The viewer's team — the default roster shown. */
   myTeamId: string | null;
+  /** Return to the export menu. */
+  onBack?: () => void;
   onClose: () => void;
 }
 
@@ -69,6 +71,7 @@ export function RosterExportModal({
   crownVotes,
   grades,
   myTeamId,
+  onBack,
   onClose,
 }: Props) {
   const model = useMemo(
@@ -114,7 +117,7 @@ export function RosterExportModal({
   );
 
   return (
-    <Modal title="Share a roster" onClose={onClose} footer={footer}>
+    <Modal title="Share a roster" onBack={onBack} onClose={onClose} footer={footer}>
       <div className="roster-export">
         {model.teams.length > 1 && (
           <label className="roster-export__pick">

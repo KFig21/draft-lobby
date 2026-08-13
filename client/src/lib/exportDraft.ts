@@ -22,13 +22,23 @@ function slugify(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'draft';
 }
 
-interface ExportOptions {
+export interface ExportOptions {
   lobbyName: string;
   picks: PickRow[];
   teamsById: Map<string, TeamRow>;
   playersById: Map<string, PlayerRow>;
   /** Whether the league runs keepers — drops the Keeper column/field when off. */
   keepers: boolean;
+}
+
+export type ExportFormat = 'csv' | 'xls' | 'json';
+
+/** A built export's file content plus its name and MIME — enough to preview,
+ * copy, or download it. */
+export interface BuiltExport {
+  content: string;
+  filename: string;
+  mime: string;
 }
 
 /** One drafted player, resolved from a pick + the player it landed. */
@@ -91,11 +101,11 @@ function playerCells(pl: ExportPlayer, keepers: boolean): (string | number)[] {
 }
 
 /**
- * Download the draft as a CSV, one team block after another going down the
- * file (team name, a header row, then that team's picks, then a blank line).
- * Opens directly in Excel and Sheets.
+ * The draft as CSV text: one team block after another going down the file (team
+ * name, a header row, then that team's picks, then a blank line). Opens directly
+ * in Excel and Sheets.
  */
-export function exportDraftCsv(opts: ExportOptions): void {
+function buildCsv(opts: ExportOptions): string {
   const header = teamHeaders(opts.keepers);
   const lines: string[] = [];
   groupByTeam(opts).forEach((t, i) => {
@@ -104,16 +114,16 @@ export function exportDraftCsv(opts: ExportOptions): void {
     lines.push(header.map(csvCell).join(','));
     for (const pl of t.players) lines.push(playerCells(pl, opts.keepers).map(csvCell).join(','));
   });
-  triggerDownload(lines.join('\n'), `${slugify(opts.lobbyName)}-teams.csv`, 'text/csv');
+  return lines.join('\n');
 }
 
 /**
- * Download the draft as an Excel-native file with each team laid out as its own
+ * The draft as an Excel-native (.xls) document with each team laid out as its own
  * block of columns side by side (scroll horizontally across teams). Uses the
- * SpreadsheetML 2003 (.xls) XML format — no dependency, and Excel/Sheets open it
- * as a real spreadsheet.
+ * SpreadsheetML 2003 XML format — no dependency, and Excel/Sheets open it as a
+ * real spreadsheet.
  */
-export function exportDraftExcel(opts: ExportOptions): void {
+function buildXls(opts: ExportOptions): string {
   const teams = groupByTeam(opts);
   const headers = teamHeaders(opts.keepers);
   const esc = (v: string | number) =>
@@ -183,16 +193,16 @@ export function exportDraftExcel(opts: ExportOptions): void {
    '',
  )}</Table></Worksheet>
 </Workbook>`;
-  triggerDownload(xml, `${slugify(opts.lobbyName)}-teams.xls`, 'application/vnd.ms-excel');
+  return xml;
 }
 
 /**
- * Download the draft as JSON — one object per team, each holding an array of
- * its drafted players as objects. Meant for feeding into another tool/script,
- * so it uses real types (numbers, a boolean for isKeeper, null for a missing
- * bye) rather than the display-formatted strings CSV/Excel use.
+ * The draft as JSON — one object per team, each holding an array of its drafted
+ * players as objects. Meant for feeding into another tool/script, so it uses real
+ * types (numbers, a boolean for isKeeper, null for a missing bye) rather than the
+ * display-formatted strings CSV/Excel use.
  */
-export function exportDraftJson(opts: ExportOptions): void {
+function buildJson(opts: ExportOptions): string {
   const data = groupByTeam(opts).map((t) => ({
     team: t.team.name,
     draftPosition: t.team.draft_position,
@@ -207,11 +217,24 @@ export function exportDraftJson(opts: ExportOptions): void {
       ...(opts.keepers ? { isKeeper: pl.isKeeper } : {}),
     })),
   }));
-  triggerDownload(
-    JSON.stringify(data, null, 2),
-    `${slugify(opts.lobbyName)}-teams.json`,
-    'application/json',
-  );
+  return JSON.stringify(data, null, 2);
+}
+
+/**
+ * Build a draft export's file content, name, and MIME — WITHOUT downloading — so
+ * a preview modal can show it, copy it, and download it on demand.
+ */
+export function buildDraftExport(format: ExportFormat, opts: ExportOptions): BuiltExport {
+  const base = `${slugify(opts.lobbyName)}-teams`;
+  if (format === 'csv') return { content: buildCsv(opts), filename: `${base}.csv`, mime: 'text/csv' };
+  if (format === 'xls')
+    return { content: buildXls(opts), filename: `${base}.xls`, mime: 'application/vnd.ms-excel' };
+  return { content: buildJson(opts), filename: `${base}.json`, mime: 'application/json' };
+}
+
+/** Trigger the browser download for an already-built export. */
+export function downloadDraftExport(b: BuiltExport): void {
+  triggerDownload(b.content, b.filename, b.mime);
 }
 
 /** Download a canvas as a PNG under `filename` (no extension needed). */

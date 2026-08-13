@@ -84,6 +84,7 @@ import { DraftGrid, type ReactionEntry } from '../../components/DraftGrid/DraftG
 import { DraftOutroModal } from '../../components/DraftOutroModal/DraftOutroModal';
 import { PowerRankingsBoard } from '../../components/PowerRankings/PowerRankingsBoard';
 import { PowerRankingsMobile } from '../../components/PowerRankings/PowerRankingsMobile';
+import { DataExportModal } from '../../components/DataExportModal/DataExportModal';
 import { EspnExportModal } from '../../components/EspnExportModal/EspnExportModal';
 import { GradeExportModal } from '../../components/GradeExportModal/GradeExportModal';
 import { RosterExportModal } from '../../components/RosterExportModal/RosterExportModal';
@@ -145,12 +146,7 @@ import {
 } from '../../lib/draftCellStyle';
 import { renderBoardCanvas } from '../../lib/boardCanvas';
 import { computePowerRankings } from '../../lib/powerRankings';
-import {
-  downloadBoardScreenshot,
-  exportDraftCsv,
-  exportDraftExcel,
-  exportDraftJson,
-} from '../../lib/exportDraft';
+import { downloadBoardScreenshot, type ExportFormat } from '../../lib/exportDraft';
 import { avatarForTeam } from '../../lib/teamAvatar';
 import { useClickOutside } from '../../lib/useClickOutside';
 import { supabase } from '../../supabase';
@@ -443,6 +439,9 @@ export function DraftBoardPage() {
   const [showGradeExport, setShowGradeExport] = useState(false);
   const [showRosterExport, setShowRosterExport] = useState(false);
   const [showEspnExport, setShowEspnExport] = useState(false);
+  // CSV/Excel/JSON open a preview modal (copy / download / back) rather than
+  // downloading straight away; null when closed.
+  const [dataExport, setDataExport] = useState<ExportFormat | null>(null);
   // Commissioner mid-draft settings editor (clocks + skips at this phase).
   const [showLobbySettings, setShowLobbySettings] = useState(false);
   // Board screenshot (see captureBoardScreenshot): 'menu' shows the CSV/Excel/
@@ -1339,19 +1338,6 @@ export function DraftBoardPage() {
         tone: 'warning',
       });
     }
-  }
-
-  function doExport(kind: 'csv' | 'xls' | 'json') {
-    const opts = {
-      lobbyName: lobby?.name ?? 'draft',
-      picks,
-      teamsById,
-      playersById,
-      keepers: lobby?.settings.keepersEnabled ?? false,
-    };
-    if (kind === 'csv') exportDraftCsv(opts);
-    else if (kind === 'xls') exportDraftExcel(opts);
-    else exportDraftJson(opts);
   }
 
   /**
@@ -4306,8 +4292,8 @@ export function DraftBoardPage() {
                   <button
                     className="button draft-export-options__opt"
                     onClick={() => {
-                      doExport('csv');
                       setShowExport(false);
+                      setDataExport('csv');
                     }}
                   >
                     <InsertDriveFileOutlinedIcon fontSize="small" />
@@ -4319,8 +4305,8 @@ export function DraftBoardPage() {
                   <button
                     className="button draft-export-options__opt"
                     onClick={() => {
-                      doExport('xls');
                       setShowExport(false);
+                      setDataExport('xls');
                     }}
                   >
                     <TableChartOutlinedIcon fontSize="small" />
@@ -4332,8 +4318,8 @@ export function DraftBoardPage() {
                   <button
                     className="button draft-export-options__opt"
                     onClick={() => {
-                      doExport('json');
                       setShowExport(false);
+                      setDataExport('json');
                     }}
                   >
                     <DataObjectOutlinedIcon fontSize="small" />
@@ -4446,6 +4432,10 @@ export function DraftBoardPage() {
           settings={lobby.settings}
           crownVotes={crownVotes}
           grades={grades}
+          onBack={() => {
+            setShowGradeExport(false);
+            setShowExport(true);
+          }}
           onClose={() => setShowGradeExport(false)}
         />
       )}
@@ -4462,6 +4452,10 @@ export function DraftBoardPage() {
           crownVotes={crownVotes}
           grades={grades}
           myTeamId={myTeam?.id ?? null}
+          onBack={() => {
+            setShowRosterExport(false);
+            setShowExport(true);
+          }}
           onClose={() => setShowRosterExport(false)}
         />
       )}
@@ -4472,7 +4466,29 @@ export function DraftBoardPage() {
           picks={picks}
           playersById={playersById}
           myTeamId={myTeam?.id ?? null}
+          onBack={() => {
+            setShowEspnExport(false);
+            setShowExport(true);
+          }}
           onClose={() => setShowEspnExport(false)}
+        />
+      )}
+
+      {dataExport && lobby && (
+        <DataExportModal
+          format={dataExport}
+          opts={{
+            lobbyName: lobby.name,
+            picks,
+            teamsById,
+            playersById,
+            keepers: lobby.settings.keepersEnabled ?? false,
+          }}
+          onBack={() => {
+            setDataExport(null);
+            setShowExport(true);
+          }}
+          onClose={() => setDataExport(null)}
         />
       )}
 

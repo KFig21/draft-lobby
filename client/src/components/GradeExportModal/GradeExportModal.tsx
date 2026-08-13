@@ -26,6 +26,8 @@ interface Props {
   settings: LobbySettings;
   crownVotes: DraftCrownVoteRow[];
   grades: DraftGradeRow[];
+  /** Return to the export menu. */
+  onBack?: () => void;
   onClose: () => void;
 }
 
@@ -47,7 +49,7 @@ function CanvasPreview({ canvas }: { canvas: HTMLCanvasElement }) {
 }
 
 export function GradeExportModal(props: Props) {
-  const { lobbyName, season, teams, members, picks, playersById, settings, crownVotes, grades, onClose } =
+  const { lobbyName, season, teams, members, picks, playersById, settings, crownVotes, grades, onBack, onClose } =
     props;
   const [mode, setMode] = useState<'single' | 'full'>('single');
   const [busy, setBusy] = useState(false);
@@ -93,7 +95,7 @@ export function GradeExportModal(props: Props) {
   );
 
   return (
-    <Modal title="Share draft grades" onClose={onClose} wide footer={footer}>
+    <Modal title="Share draft grades" onBack={onBack} onClose={onClose} wide footer={footer}>
       <div className="grade-export">
         <div className="segmented grade-export__tabs">
           <button

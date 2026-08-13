@@ -5,6 +5,9 @@ import './Modal.scss';
 interface Props {
   title: string;
   onClose: () => void;
+  /** When set, a back arrow appears at the header's start (e.g. to return to a
+   * parent menu). Distinct from onClose, which dismisses the modal entirely. */
+  onBack?: () => void;
   wide?: boolean;
   /** Extra class on the dialog card — e.g. a caller-specific width override. */
   className?: string;
@@ -17,7 +20,7 @@ interface Props {
 }
 
 /** A centered, scrollable dialog. Closes on overlay click or Escape. */
-export function Modal({ title, onClose, wide, className, icon, footer, children }: Props) {
+export function Modal({ title, onClose, onBack, wide, className, icon, footer, children }: Props) {
   const { closing, requestClose } = useModalClose(onClose);
 
   useEffect(() => {
@@ -42,6 +45,11 @@ export function Modal({ title, onClose, wide, className, icon, footer, children 
       >
         <header className="dialog__header">
           <div className="dialog__title">
+            {onBack && (
+              <button className="dialog__back" onClick={onBack} aria-label="Back">
+                ←
+              </button>
+            )}
             {icon && <span className="dialog__title-icon">{icon}</span>}
             <h2>{title}</h2>
           </div>
