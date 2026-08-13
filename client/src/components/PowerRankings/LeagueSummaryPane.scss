@@ -319,6 +319,15 @@ $bstrong: color-mix(in srgb, #{$text} 22%, transparent);
     align-items: flex-end;
     justify-content: center;
     padding-bottom: 2px;
+
+    // $warning is desaturated to a muddy ochre in light mode (that token is
+    // tuned for text/icon legibility on near-white, not for a large solid
+    // fill). As a bar it reads as an ugly brown, so use a vivid, saturated
+    // amber-orange that pops on the white card instead. Dark mode keeps its
+    // bright $warning (#f6a642) fill.
+    :root[data-theme='light'] & {
+      background: #d97706;
+    }
   }
 
   &__byen {
