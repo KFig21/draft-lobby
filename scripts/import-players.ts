@@ -4,8 +4,12 @@
  *   • Sleeper /players/nfl             → injury status + depth players beyond the ADP list
  *   • Sleeper /stats/.../{lastSeason}  → real prev_points/prev_rank (PPR) + prev_stat_line +
  *     prev_stats (raw per-category line, QB/RB/WR/TE — see toStatLine)
- *   • Sleeper /projections/.../{season} → real proj_points + proj_stat_line + proj_stats;
- *     proj_rank computed from final proj_points; ADP-rank estimate fills any proj_points gaps
+ *   • Sleeper /projections/.../{season} → real proj_points + proj_stat_line + proj_stats.
+ *     Sleeper's projection feed is the source of truth for who produces: a skill
+ *     player (QB/RB/WR/TE) it doesn't project is a backup/deep body, so they get a
+ *     small floor (never a fabricated starter total) — and if they're ALSO off every
+ *     Sleeper depth chart they're dropped as retired. K/DEF keep the positional
+ *     estimate (Sleeper doesn't cover DST). proj_rank computed from final points.
  *
  * proj_stats/prev_stats let the app compute fantasy points under ANY scoring
  * format (shared/src/scoring.ts computeFantasyPoints) instead of only ever
@@ -69,10 +73,14 @@ const NOTABLE_INCLUDE = new Set(
   ),
 );
 
-// Clearly-retired players to drop from the *draftable* pool. Matched on
-// name+position. We only remove their CURRENT-season player_seasons row (the app
-// defines the pool by that row), never the players row itself — so any historical
-// pick/keeper that references them stays intact. Extend this list as needed.
+// Manual override on top of the AUTOMATIC retired gate in main() (a skill player
+// off every Sleeper depth chart AND unprojected is dropped on its own). Use this
+// only for judgment calls the data can't make — e.g. someone Sleeper still lists
+// on a depth chart but who won't realistically play. Matched on name+position. We
+// only remove their CURRENT-season player_seasons row (the app defines the pool by
+// that row), never the players row itself — so any historical pick/keeper that
+// references them stays intact. (The inverse escape hatch — force-keeping someone
+// the auto gate would drop — is NOTABLE_INCLUDE above.)
 const RETIRED_EXCLUDE: { name: string; position: Pos }[] = [
   { name: 'Ben Roethlisberger', position: 'QB' },
 ];
@@ -330,20 +338,38 @@ function formatStatLine(pos: Pos, s: SleeperStatLine): string | null {
   }
 }
 
-// ── Projection estimate — fallback for anyone Sleeper has no real projection for ──
+// ── Projection fallback — fills proj_points ONLY where Sleeper has no real one ──
+// K/DEF get a full positional estimate: Sleeper's projection feed doesn't cover
+// DST and is spotty for kickers, so the estimate is their only ranking signal.
 const POS_BASE: Record<Pos, number> = {
   QB: 380, RB: 285, WR: 275, TE: 205, K: 155, DEF: 135,
 };
-function estimateProjections(players: PoolPlayer[]): void {
+// Skill positions (QB/RB/WR/TE) are different: a REAL Sleeper projection means
+// "expected to contribute". A skill player Sleeper DOESN'T project is a backup /
+// deep-roster body — so instead of a fabricated starter total they fall to this
+// small floor, decayed by ADP rank so backups still order among themselves but
+// land far below any real starter (which is why a #3 QB no longer reads ~200 pts).
+const SKILL_FLOOR_BASE: Record<Pos, number> = {
+  QB: 55, RB: 45, WR: 45, TE: 32, K: 0, DEF: 0,
+};
+const SKILL_POS = new Set<Pos>(['QB', 'RB', 'WR', 'TE']);
+
+// Fill proj_points for anyone Sleeper left blank. Real Sleeper projections
+// (applied before this) are never overwritten — only the gaps get filled: skill
+// backups to their small floor, K/DEF to the positional estimate.
+function fillMissingProjections(players: PoolPlayer[]): void {
   const byPos = new Map<Pos, PoolPlayer[]>();
   for (const p of players) {
     (byPos.get(p.position) ?? byPos.set(p.position, []).get(p.position)!).push(p);
   }
   for (const [pos, group] of byPos) {
-    // Rank within position: ADP'd players first (by ADP), then the rest.
+    const base = SKILL_POS.has(pos) ? SKILL_FLOOR_BASE[pos] : POS_BASE[pos];
+    // Rank within position: ADP'd players first (by ADP), then the rest — so the
+    // decay index tracks draftability (a rostered backup edges out a camp body).
     group.sort((a, b) => (a.adp ?? 9999) - (b.adp ?? 9999));
     group.forEach((p, i) => {
-      p.proj_points = Math.round(POS_BASE[pos] * Math.pow(0.985, i) * 10) / 10;
+      if (p.proj_points != null) return; // never clobber a real Sleeper projection
+      p.proj_points = Math.round(base * Math.pow(0.985, i) * 10) / 10;
     });
   }
 }
@@ -362,7 +388,7 @@ async function main() {
   }
   if (!ffc.length) throw new Error('Could not fetch ADP data from FFC');
 
-  const pool: PoolPlayer[] = [];
+  let pool: PoolPlayer[] = [];
   const seen = new Set<string>(); // normalizedName|position
   const teamByeMap = new Map<string, number>(); // team -> bye (from FFC)
 
@@ -426,6 +452,12 @@ async function main() {
   // below (those endpoints are keyed by Sleeper's own player_id, not name).
   const sleeper = await fetchSleeper();
   const sleeperIdByKey = new Map<string, string>();
+  // Keys (normalizedName|pos) Sleeper lists on an actual depth chart — a non-null
+  // depth_chart_order with a team. This is the "on an NFL roster" signal: Sleeper's
+  // `active` flag is useless (it stays true for players who retired years ago),
+  // while a null depth slot is what actually flags stale/retired data. Drives the
+  // retired gate below.
+  const depthChartKeys = new Set<string>();
   if (sleeper) {
     const injuryByKey = new Map<string, string>();
     let depthAdded = 0;
@@ -436,6 +468,7 @@ async function main() {
       if (!full) continue;
       const keyStr = `${normalize(full)}|${pos}`;
       if (sp.player_id) sleeperIdByKey.set(keyStr, sp.player_id);
+      if (sp.team != null && sp.depth_chart_order != null) depthChartKeys.add(keyStr);
       if (sp.active && sp.injury_status) {
         injuryByKey.set(keyStr, mapInjury(sp.injury_status));
       }
@@ -477,10 +510,9 @@ async function main() {
     console.log(`Sleeper: enriched injuries, added ${depthAdded} depth players`);
   }
 
-  // 3) Baseline estimated projections for everyone, then overwrite with real
-  // Sleeper data wherever it's available (real always wins over the estimate).
-  estimateProjections(pool);
-
+  // 3) Apply the REAL Sleeper stats/projections. Anything Sleeper leaves blank is
+  // filled afterward (fillMissingProjections, below the retired gate) so real data
+  // always wins and we never fabricate a projection over a real one.
   const prevSeason = SEASON - 1;
   const [prevStats, projections] = await Promise.all([
     fetchSleeperStatsOrProjections('stats', prevSeason),
@@ -488,10 +520,15 @@ async function main() {
   ]);
   let realPrevCount = 0;
   let realProjCount = 0;
+  // Keys (normalizedName|pos) that got a REAL Sleeper projection — the "expected to
+  // contribute in {SEASON}" signal. Used to leave their points untouched in
+  // fillMissingProjections AND to keep them out of the retired gate below.
+  const realProjKeys = new Set<string>();
   if (prevStats || projections) {
     for (const p of pool) {
       if (p.position === 'DEF') continue; // Sleeper keys DST stats differently — skip for now.
-      const sleeperId = sleeperIdByKey.get(`${normalize(p.name)}|${p.position}`);
+      const key = `${normalize(p.name)}|${p.position}`;
+      const sleeperId = sleeperIdByKey.get(key);
       if (!sleeperId) continue;
       const prev = prevStats?.[sleeperId];
       if (prev?.pts_ppr != null) {
@@ -506,17 +543,47 @@ async function main() {
         p.proj_points = Math.round(proj.pts_ppr * 10) / 10;
         p.proj_stat_line = formatStatLine(p.position, proj);
         p.proj_stats = toStatLine(p.position, proj);
+        realProjKeys.add(key);
         realProjCount++;
       }
     }
   }
   console.log(
     `Sleeper stats/projections: ${realPrevCount} players got real ${prevSeason} results, ` +
-      `${realProjCount} got real ${SEASON} projections (rest use the ADP-rank estimate)`,
+      `${realProjCount} got real ${SEASON} projections`,
   );
 
-  // Positional rank by final proj_points (after the estimate/real merge above),
-  // same convention as prev_rank — lets the UI show "projected to move up/down".
+  // 3b) Retired gate. A skill player Sleeper neither PROJECTS nor lists on any
+  // depth chart isn't a 2026 fantasy asset — drop them from the pool (Blake
+  // Bortles, Le'Veon Bell, … whenever they're still in the feed). An active backup
+  // survives on its depth slot (Cooper Rush = ATL #3) and then falls to the skill
+  // floor. Never gates K/DEF, and is skipped if Sleeper was unavailable (no depth
+  // data → don't drop anyone). NOTABLE_INCLUDE force-keeps a listed veteran; the
+  // manual RETIRED_EXCLUDE force-drops. Step 5's reconcile then syncs the DB to the
+  // final pool — that's what evicts retired players who've left the feed entirely.
+  const excludedKeys = new Set(RETIRED_EXCLUDE.map((r) => `${normalize(r.name)}|${r.position}`));
+  if (sleeper) {
+    for (const p of pool) {
+      if (!SKILL_POS.has(p.position)) continue;
+      const key = `${normalize(p.name)}|${p.position}`;
+      const keep =
+        realProjKeys.has(key) || depthChartKeys.has(key) || NOTABLE_INCLUDE.has(normalize(p.name));
+      if (!keep) excludedKeys.add(key);
+    }
+  }
+  const beforeGate = pool.length;
+  pool = pool.filter((p) => !excludedKeys.has(`${normalize(p.name)}|${p.position}`));
+  console.log(
+    `Retired gate: dropped ${beforeGate - pool.length} unrostered, unprojected skill player(s) from the pool`,
+  );
+
+  // 3c) Fill the gaps Sleeper left (skill backups → small floor, K/DEF → estimate).
+  // Runs AFTER the real-projection merge and the gate, so real data always wins and
+  // dropped players never get a floor.
+  fillMissingProjections(pool);
+
+  // Positional rank by final proj_points (after the real/floor merge above), same
+  // convention as prev_rank — lets the UI show "projected to move up/down".
   const byPos = new Map<Pos, PoolPlayer[]>();
   for (const p of pool) {
     (byPos.get(p.position) ?? byPos.set(p.position, []).get(p.position)!).push(p);
@@ -660,29 +727,52 @@ async function main() {
     if (error) throw new Error(error.message);
   }
 
-  // 5) Drop clearly-retired players from the draftable pool by removing their
-  // CURRENT-season row. The players row (and any pick/keeper/favorite pointing at
-  // it) is left untouched — the app just stops listing them because the pool is
-  // defined by current-season player_seasons rows (client/src/hooks/usePlayers).
-  let retiredRemoved = 0;
-  for (const r of RETIRED_EXCLUDE) {
-    const { data: rows, error } = await supabase
-      .from('players')
-      .select('id')
-      .eq('name', r.name)
-      .eq('position', r.position);
-    if (error) throw new Error(error.message);
-    for (const row of rows ?? []) {
-      const { error: delErr } = await supabase
+  // 5) Reconcile the {SEASON} pool: the kept `pool` is now the definitive draftable
+  // set, so delete any CURRENT-season player_seasons row whose player isn't in it.
+  // This is what finally evicts stale retired players a PRIOR import left behind
+  // that have since dropped off the feed ENTIRELY (Blake Bortles, Le'Veon Bell, …)
+  // — the gate above only sees players still in FFC/Sleeper, so it can't reach them.
+  // Only the current-season row is removed; the players row + any pick/keeper/
+  // favorite pointing at it stay intact (the pool is defined by current rows —
+  // client/src/hooks/usePlayers). Requires Sleeper (its depth data is the basis for
+  // the whole pool) and a healthy pool size, so a truncated fetch can't wipe every
+  // draft's player list. Collect-then-delete so paging isn't disturbed by deletes.
+  if (!sleeper || pool.length < 300) {
+    console.warn(
+      `⚠️  Skipping pool reconcile (sleeper=${!!sleeper}, kept=${pool.length}) to avoid a bad-fetch wipe`,
+    );
+  } else {
+    const keptKeys = new Set(pool.map((p) => `${normalize(p.name)}|${p.position}`));
+    const stale: string[] = [];
+    for (let from = 0; ; from += 500) {
+      const { data, error } = await supabase
+        .from('player_seasons')
+        .select('player_id, players!inner ( name, position )')
+        .eq('season', SEASON)
+        .order('player_id', { ascending: true })
+        .range(from, from + 499);
+      if (error) throw new Error(error.message);
+      const rows = (data ?? []) as unknown as {
+        player_id: string;
+        players: { name: string; position: string } | { name: string; position: string }[] | null;
+      }[];
+      for (const r of rows) {
+        const ident = Array.isArray(r.players) ? r.players[0] : r.players;
+        if (!ident) continue;
+        if (!keptKeys.has(`${normalize(ident.name)}|${ident.position}`)) stale.push(r.player_id);
+      }
+      if (rows.length < 500) break;
+    }
+    for (let i = 0; i < stale.length; i += 500) {
+      const { error } = await supabase
         .from('player_seasons')
         .delete()
-        .eq('player_id', row.id)
-        .eq('season', SEASON);
-      if (delErr) throw new Error(delErr.message);
-      retiredRemoved++;
+        .eq('season', SEASON)
+        .in('player_id', stale.slice(i, i + 500));
+      if (error) throw new Error(error.message);
     }
+    if (stale.length) console.log(`Reconcile: removed ${stale.length} stale player(s) from the ${SEASON} pool`);
   }
-  if (retiredRemoved) console.log(`Removed ${retiredRemoved} retired player(s) from the ${SEASON} pool`);
 
   console.log(`✅ Imported ${pool.length} real players`);
 }
