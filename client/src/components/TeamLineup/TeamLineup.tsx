@@ -18,11 +18,6 @@ interface Props {
   picks: PickRow[];
   playersById: Map<string, PlayerRow>;
   settings: LobbySettings;
-  /** Current user id — controls whether the auto-draft toggle is theirs to flip. */
-  myUserId?: string;
-  isCommish?: boolean;
-  /** When provided, shows an auto-draft toggle for the selected team. */
-  onToggleAuto?: (teamId: string, on: boolean) => void;
   /** Click a drafted player's card to open that pick's detail modal. */
   onPickClick?: (pick: PickRow) => void;
   /** Rendered directly beneath the team dropdown (and its bot/auto status row). */
@@ -41,9 +36,6 @@ export function TeamLineup({
   picks,
   playersById,
   settings,
-  myUserId,
-  isCommish,
-  onToggleAuto,
   onPickClick,
   belowSelect,
 }: Props) {
@@ -64,11 +56,6 @@ export function TeamLineup({
     .sort(([a], [b]) => a - b)
     .map(([week, byePlayers]) => ({ week, players: byePlayers }));
   const selectedTeam = teams.find((t) => t.id === selectedTeamId);
-  const canToggleAuto =
-    !!onToggleAuto &&
-    !!selectedTeam &&
-    !selectedTeam.is_bot &&
-    (isCommish || selectedTeam.owner_id === myUserId);
 
   // Roster composition: how many players drafted at each position.
   const posCounts: Record<Position, number> = { QB: 0, RB: 0, WR: 0, TE: 0, K: 0, DEF: 0 };
@@ -94,29 +81,11 @@ export function TeamLineup({
         ))}
       </select>
 
-      {selectedTeam && (
+      {selectedTeam?.is_bot && (
         <div className="lineup-view__auto">
-          {selectedTeam.is_bot ? (
-            <span className="bot-badge">
-              <SmartToyIcon fontSize="inherit" /> Bot — drafts automatically
-            </span>
-          ) : canToggleAuto ? (
-            <label className="auto-toggle">
-              <input
-                type="checkbox"
-                checked={selectedTeam.auto_draft}
-                onChange={(e) => onToggleAuto!(selectedTeam.id, e.target.checked)}
-              />
-              <span>
-                Auto-draft {selectedTeam.auto_draft ? 'on' : 'off'}
-                {isCommish && selectedTeam.owner_id !== myUserId ? ' (for this team)' : ''}
-              </span>
-            </label>
-          ) : onToggleAuto && selectedTeam.auto_draft ? (
-            <span className="bot-badge">
-              <SmartToyIcon fontSize="inherit" /> Auto-drafting
-            </span>
-          ) : null}
+          <span className="bot-badge">
+            <SmartToyIcon fontSize="inherit" /> Bot — drafts automatically
+          </span>
         </div>
       )}
 

@@ -2992,9 +2992,6 @@ export function DraftBoardPage() {
           picks={picks}
           playersById={playersById}
           settings={lobby.settings}
-          myUserId={userId}
-          isCommish={isCommish}
-          onToggleAuto={isComplete ? undefined : toggleAuto}
           onPickClick={setPickModal}
           belowSelect={
             isComplete && !isDesktop

@@ -33,21 +33,6 @@
     display: flex;
     align-items: center;
     font-size: 0.85rem;
-
-    .auto-toggle {
-      display: inline-flex;
-      align-items: center;
-      gap: $space * 0.75;
-      cursor: pointer;
-      font-weight: 600;
-
-      input {
-        width: 16px;
-        height: 16px;
-        accent-color: $accent;
-        cursor: pointer;
-      }
-    }
   }
 
   &__composition {
