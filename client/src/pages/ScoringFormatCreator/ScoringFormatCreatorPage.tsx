@@ -416,7 +416,7 @@ export function ScoringFormatCreatorPage({ embedded = false, onSaved }: Props = 
 
         <div className="scoring__footer">
           <span className="scoring__count">{enabledCount} categories</span>
-          <button className="scoring__save" disabled={saving}>
+          <button className="button button--primary" disabled={saving}>
             {saving ? 'Saving…' : editId ? 'Save changes' : 'Save format'}
           </button>
         </div>

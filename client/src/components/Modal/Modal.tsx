@@ -1,4 +1,5 @@
 import { useEffect, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { useModalClose } from '../../lib/useModalClose';
 import './Modal.scss';
 
@@ -29,7 +30,11 @@ export function Modal({ title, onClose, onBack, wide, className, icon, footer, c
     return () => window.removeEventListener('keydown', onKey);
   }, [requestClose]);
 
-  return (
+  // Portal to <body> so a modal opened from inside another modal isn't trapped
+  // by the parent card's transform (the open animation leaves a lingering
+  // transform, which would make this fixed overlay position relative to the
+  // parent card instead of the viewport).
+  return createPortal(
     <div
       className={`dialog-overlay modal-anim-backdrop${closing ? ' is-closing' : ''}`}
       onClick={requestClose}
@@ -64,6 +69,7 @@ export function Modal({ title, onClose, onBack, wide, className, icon, footer, c
           </footer>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

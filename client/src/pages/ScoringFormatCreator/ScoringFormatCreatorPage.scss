@@ -1,4 +1,3 @@
-@use 'sass:color';
 @use 'variables' as *;
 @use 'mixins' as *;
 
@@ -115,6 +114,13 @@
       border-color: $accent;
       color: $accent;
       background: rgba($accent, 0.12);
+
+      // Accent convention: mint on dark, teal primary on light.
+      :root[data-theme='light'] & {
+        border-color: $primary;
+        color: $primary;
+        background: rgba($primary, 0.12);
+      }
     }
   }
 
@@ -187,6 +193,12 @@
     color: #05231a;
     font-size: 0.8rem;
     font-weight: 700;
+
+    // Accent convention: mint on dark, teal primary on light.
+    :root[data-theme='light'] & {
+      background: $primary;
+      color: #fff;
+    }
   }
 
   &__group-body {
@@ -303,23 +315,5 @@
   &__count {
     color: $text-muted;
     font-size: 0.85rem;
-  }
-
-  &__save {
-    padding: $space $space * 3;
-    border: none;
-    border-radius: 999px;
-    background: $accent;
-    color: #05231a;
-    font-weight: 700;
-    cursor: pointer;
-
-    &:hover {
-      background: color.adjust($accent, $lightness: 5%);
-    }
-
-    &:disabled {
-      opacity: 0.6;
-    }
   }
 }
