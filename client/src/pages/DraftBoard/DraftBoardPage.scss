@@ -647,6 +647,7 @@
     &:hover:not(:disabled) {
       background: $bg-hover;
     }
+
     &:disabled {
       opacity: 0.4;
       cursor: not-allowed;
@@ -664,8 +665,10 @@
   // press) state stuck until you tap elsewhere — very obvious when spamming
   // +5s. Hold the neutral chip look through hover/active/focus there.
   @media (hover: none) {
+
     &__addtime-main,
     &__addtime-caret {
+
       &:hover:not(:disabled),
       &:active:not(:disabled),
       &:focus,
@@ -908,6 +911,21 @@
     // there's no bottom nav reachable from inside this modal, so force it.
     .draft__sidebar-tabs {
       display: flex !important;
+    }
+
+    // The roster stretched edge-to-edge across the wide modal, leaving a big
+    // gap between each player's name and their projection. Cap it to a
+    // centered column so the rows read tighter (the tab strip above stays
+    // full width). Layout-agnostic — works whether the dialog is 640 or 720.
+    .draft__roster {
+      max-width: 560px;
+      margin-inline: auto;
+    }
+
+    // On a TV the projection is the key number, so bump it up from the pool's
+    // 0.9rem — scoped to the roster so the fullscreen player pool is untouched.
+    .draft__roster .player-card__proj {
+      font-size: 1.2rem;
     }
   }
 
@@ -3106,11 +3124,23 @@
   }
 
   &__proj.is-next &__proj-label {
-    color: $accent;
 
-    &::before,
-    &::after {
-      background: color-mix(in srgb, #{$accent} 60%, transparent);
+    :root[data-theme='light'] & {
+      color: $primary;
+
+      &::before,
+      &::after {
+        background: color-mix(in srgb, #{$primary} 60%, transparent);
+      }
+    }
+
+    :root[data-theme='dark'] & {
+      color: $accent;
+
+      &::before,
+      &::after {
+        background: color-mix(in srgb, #{$accent} 60%, transparent);
+      }
     }
   }
 }

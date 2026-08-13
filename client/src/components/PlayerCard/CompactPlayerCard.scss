@@ -46,7 +46,9 @@
     align-items: center;
     justify-content: center;
     gap: 2px;
-    width: 36px;
+    // Wide enough that a 3-letter abbr + two-digit rank ("WR 22", "DEF 1")
+    // doesn't crowd the chip edges.
+    width: 38px;
     min-height: 24px;
     padding: 2px 0;
     border-radius: $radius-sm;
