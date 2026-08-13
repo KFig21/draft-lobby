@@ -938,14 +938,17 @@
   }
 
   &-pills {
+    // One row of grades that shares the pane width — the pills flex-shrink to
+    // fit rather than wrapping the last one (F) onto a lonely second line.
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 5px;
     margin-bottom: 10px;
   }
 
   &-pill {
-    width: 34px;
+    flex: 1 1 0;
+    min-width: 0;
     height: 30px;
     border: 1px solid $bstrong;
     background: $bg-overlay;
