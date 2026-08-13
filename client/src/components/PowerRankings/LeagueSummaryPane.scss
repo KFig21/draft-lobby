@@ -128,7 +128,7 @@ $bstrong: color-mix(in srgb, #{$text} 22%, transparent);
     align-items: flex-end;
 
     :root[data-theme='light'] & {
-      color: color-mix(in srgb, var(--c) 62%, #0b1014);
+      color: color-mix(in srgb, var(--c) 90%, #0b1014);
     }
   }
 
