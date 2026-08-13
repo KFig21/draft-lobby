@@ -98,6 +98,26 @@
         flex: 1;
         min-width: 0;
       }
+
+      // One uniform action-button treatment for every navigated-in (Back)
+      // footer — the export sub-modals. Snug, single-line, icon-aligned, and
+      // non-shrinking, so a three-button row (Back · Copy · Download) fits a
+      // phone-width footer instead of wrapping its label onto a second line.
+      // Owning it here (not per modal) also avoids equal-specificity overrides
+      // fighting over source order.
+      .button {
+        display: inline-flex;
+        align-items: center;
+        gap: $space * 0.4;
+        flex-shrink: 0;
+        white-space: nowrap;
+        padding: $space * 0.75 $space * 1.6;
+        font-size: 0.92rem;
+
+        svg {
+          font-size: 1.15em;
+        }
+      }
     }
   }
 

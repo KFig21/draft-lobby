@@ -60,7 +60,7 @@ export function DataExportModal({ format, opts, onBack, onClose }: Props) {
 
   const footer = (
     <div className="data-export__actions">
-      <button type="button" className="button data-export__act" onClick={copy}>
+      <button type="button" className="button" onClick={copy}>
         {copied ? (
           <>
             <CheckRoundedIcon fontSize="small" /> Copied
@@ -73,10 +73,10 @@ export function DataExportModal({ format, opts, onBack, onClose }: Props) {
       </button>
       <button
         type="button"
-        className="button button--primary data-export__act"
+        className="button button--primary"
         onClick={() => downloadDraftExport(built)}
       >
-        <DownloadOutlinedIcon fontSize="small" /> Download {meta.label}
+        <DownloadOutlinedIcon fontSize="small" /> Download
       </button>
     </div>
   );

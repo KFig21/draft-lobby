@@ -26,15 +26,11 @@
     tab-size: 2;
   }
 
+  // Button styling is shared across export sub-modals — see Modal.scss
+  // `.dialog__footer--back .button`.
   &__actions {
     display: flex;
     justify-content: flex-end;
     gap: $space;
-  }
-
-  &__act {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
   }
 }

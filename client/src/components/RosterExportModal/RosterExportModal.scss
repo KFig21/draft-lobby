@@ -74,21 +74,10 @@
     gap: $space * 1.5;
     width: 100%;
 
+    // Button styling is shared across export sub-modals — see Modal.scss
+    // `.dialog__footer--back .button`.
     .muted {
       font-size: 0.8rem;
-    }
-
-    .button {
-      display: inline-flex;
-      align-items: center;
-      gap: $space * 0.4;
-      flex-shrink: 0;
-      padding: $space * 0.6 $space * 1.6;
-      white-space: nowrap;
-
-      svg {
-        font-size: 1.15em;
-      }
     }
   }
 }
