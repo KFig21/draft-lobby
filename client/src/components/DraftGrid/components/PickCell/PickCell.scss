@@ -186,6 +186,15 @@
 // spelled out here (colour set inline per cell in PickCell.tsx).
 .draft-grid__pos {
   font-weight: 800;
+  color: var(--pos);
+
+  // The stronger light-mode wash (see the cell background above) is the same
+  // hue as this label, so the plain position colour blends into it. Darken to
+  // a deep shade of the same hue — keeps the colour-coding but stays legible
+  // on the light fill. Dark mode's fainter wash reads fine at full colour.
+  :root[data-theme='light'] & {
+    color: color-mix(in srgb, var(--pos) 60%, black);
+  }
 }
 
 // "round.pick" (third line), fainter so hierarchy reads name > team/bye > pick.

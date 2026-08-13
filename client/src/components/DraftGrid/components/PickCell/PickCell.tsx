@@ -66,9 +66,10 @@ export function PickCell({
           {abbreviatePlayerName(player.name, player.position)}
         </span>
         <span className="draft-grid__meta">
-          <span className="draft-grid__pos" style={{ color: posColor }}>
-            {player.position}
-          </span>
+          {/* Colour comes from CSS via the cell's --pos custom property (set on
+              the <td> below), so light mode can darken it for contrast against
+              the stronger light-mode wash — see PickCell.scss. */}
+          <span className="draft-grid__pos">{player.position}</span>
           {` · ${player.nfl_team}`}
           {player.bye_week != null ? ` · Bye ${player.bye_week}` : ''}
         </span>
