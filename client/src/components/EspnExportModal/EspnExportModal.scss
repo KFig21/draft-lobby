@@ -1,0 +1,227 @@
+@use 'variables' as *;
+
+.espn-export {
+  &__intro {
+    margin: 0;
+    color: $text-muted;
+    font-size: 0.9rem;
+    line-height: 1.55;
+
+    em { color: $text; font-style: normal; font-weight: 600; }
+    strong { color: $text; font-weight: 700; }
+  }
+
+  // ── Team (ESPN column) stepper ──
+  &__teambar {
+    display: flex;
+    align-items: stretch;
+    gap: $space * 0.75;
+    margin-top: $space * 1.5;
+  }
+
+  &__step {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    flex: 0 0 auto;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: $bg;
+    color: $text;
+    cursor: pointer;
+
+    &:hover:not(:disabled) { background: $bg-hover; }
+    &:disabled { opacity: 0.4; cursor: not-allowed; }
+  }
+
+  &__teamsel {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+
+    &-cap {
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: $text-muted;
+    }
+
+    select {
+      width: 100%;
+      padding: $space * 0.75 $space;
+      border: 1px solid $border;
+      border-radius: $radius-sm;
+      background: $bg;
+      color: $text;
+      font-size: 0.95rem;
+      font-weight: 700;
+    }
+  }
+
+  &__meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $space;
+    margin: $space * 1.25 0 $space * 0.75;
+  }
+
+  &__count {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: $text-muted;
+    font-variant-numeric: tabular-nums;
+
+    &.is-done {
+      color: $primary;
+      :root[data-theme='dark'] & { color: $accent; }
+    }
+  }
+
+  &__copyall {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0;
+    background: none;
+    border: none;
+    color: $text-muted;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+
+    &:hover { color: $text; }
+    svg { font-size: 0.95rem; }
+  }
+
+  // ── The per-pick checklist ──
+  &__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: $space * 0.5;
+    max-height: min(48vh, 460px);
+    overflow-y: auto;
+    // Keep the scrollbar from crowding the copy buttons.
+    padding-right: $space * 0.5;
+  }
+
+  &__row {
+    display: grid;
+    grid-template-columns: auto 1fr auto auto;
+    align-items: center;
+    gap: $space * 0.75;
+    padding: $space * 0.6 $space * 0.75;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: $bg;
+    transition: opacity 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+
+    // The next pick to enter — a clear ring so the user never loses their place.
+    &.is-current {
+      border-color: $primary;
+      box-shadow: 0 0 0 1px $primary;
+      :root[data-theme='dark'] & {
+        border-color: $accent;
+        box-shadow: 0 0 0 1px $accent;
+      }
+    }
+
+    &.is-copied {
+      opacity: 0.55;
+      background: $bg-overlay;
+    }
+  }
+
+  &__round {
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: $text-muted;
+    font-variant-numeric: tabular-nums;
+    min-width: 26px;
+  }
+
+  &__name {
+    font-weight: 700;
+    font-size: 0.95rem;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  // Team · position pill, tinted to the position (matches the roster views) — it
+  // tells the user which autocomplete row to click when names collide.
+  &__badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    color: var(--pos);
+    background: color-mix(in srgb, var(--pos) 16%, transparent);
+    border: 1px solid color-mix(in srgb, var(--pos) 32%, transparent);
+  }
+
+  &__copy {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: $space * 0.45 $space * 0.85;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: $bg-raised;
+    color: $text;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+
+    &:hover:not(:disabled) { background: $bg-hover; }
+    &:disabled { opacity: 0.4; cursor: not-allowed; }
+    svg { font-size: 0.95rem; }
+  }
+
+  // ── Column-complete banner ──
+  &__complete {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: $space * 0.75;
+    margin-top: $space * 1.25;
+    padding: $space;
+    border-radius: $radius-sm;
+    border: 1px solid color-mix(in srgb, $primary 35%, transparent);
+    background: color-mix(in srgb, $primary 8%, transparent);
+    font-size: 0.9rem;
+
+    :root[data-theme='dark'] & {
+      border-color: color-mix(in srgb, $accent 35%, transparent);
+      background: color-mix(in srgb, $accent 10%, transparent);
+    }
+
+    > svg {
+      color: $primary;
+      :root[data-theme='dark'] & { color: $accent; }
+    }
+  }
+
+  &__alldone { font-weight: 700; margin-left: auto; }
+
+  &__nextteam {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding-right: $space * 0.75;
+  }
+}

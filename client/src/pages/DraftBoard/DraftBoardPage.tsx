@@ -27,6 +27,7 @@ import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlined';
 import CheckIcon from '@mui/icons-material/Check';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import AssignmentIndOutlinedIcon from '@mui/icons-material/AssignmentIndOutlined';
+import ChecklistIcon from '@mui/icons-material/Checklist';
 import CloseIcon from '@mui/icons-material/Close';
 import DataObjectOutlinedIcon from '@mui/icons-material/DataObjectOutlined';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
@@ -83,6 +84,7 @@ import { DraftGrid, type ReactionEntry } from '../../components/DraftGrid/DraftG
 import { DraftOutroModal } from '../../components/DraftOutroModal/DraftOutroModal';
 import { PowerRankingsBoard } from '../../components/PowerRankings/PowerRankingsBoard';
 import { PowerRankingsMobile } from '../../components/PowerRankings/PowerRankingsMobile';
+import { EspnExportModal } from '../../components/EspnExportModal/EspnExportModal';
 import { GradeExportModal } from '../../components/GradeExportModal/GradeExportModal';
 import { RosterExportModal } from '../../components/RosterExportModal/RosterExportModal';
 import { DraftUserSettingsModal } from '../../components/DraftUserSettingsModal/DraftUserSettingsModal';
@@ -440,6 +442,7 @@ export function DraftBoardPage() {
   const [showExport, setShowExport] = useState(false);
   const [showGradeExport, setShowGradeExport] = useState(false);
   const [showRosterExport, setShowRosterExport] = useState(false);
+  const [showEspnExport, setShowEspnExport] = useState(false);
   // Commissioner mid-draft settings editor (clocks + skips at this phase).
   const [showLobbySettings, setShowLobbySettings] = useState(false);
   // Board screenshot (see captureBoardScreenshot): 'menu' shows the CSV/Excel/
@@ -4306,6 +4309,19 @@ export function DraftBoardPage() {
                       <span className="muted">A clean PNG of a team's roster</span>
                     </span>
                   </button>
+                  <button
+                    className="button draft-export-options__opt"
+                    onClick={() => {
+                      setShowExport(false);
+                      setShowEspnExport(true);
+                    }}
+                  >
+                    <ChecklistIcon fontSize="small" />
+                    <span>
+                      <strong>Enter in ESPN</strong>
+                      <span className="muted">Guided copy-paste into ESPN's offline draft</span>
+                    </span>
+                  </button>
                 </>
               )}
               <button
@@ -4442,6 +4458,16 @@ export function DraftBoardPage() {
           grades={grades}
           myTeamId={myTeam?.id ?? null}
           onClose={() => setShowRosterExport(false)}
+        />
+      )}
+
+      {showEspnExport && lobby && (
+        <EspnExportModal
+          teams={teams}
+          picks={picks}
+          playersById={playersById}
+          myTeamId={myTeam?.id ?? null}
+          onClose={() => setShowEspnExport(false)}
         />
       )}
 
