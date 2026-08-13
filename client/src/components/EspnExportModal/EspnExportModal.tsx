@@ -67,9 +67,11 @@ export function EspnExportModal({ teams, picks, playersById, myTeamId, onClose }
   // React's href handling) and never pass it as a prop, so React can't clobber it.
   const bookmarkletHref = useMemo(() => buildEspnBookmarklet(autofillData), [autofillData]);
   const dragRef = useRef<HTMLAnchorElement>(null);
+  // `mode` is a dep: the anchor only exists on the auto tab, so the href must be
+  // (re)applied when that tab mounts, not just on first render (when it's absent).
   useEffect(() => {
     if (dragRef.current) dragRef.current.setAttribute('href', bookmarkletHref);
-  }, [bookmarkletHref]);
+  }, [bookmarkletHref, mode]);
 
   async function copyScript() {
     if (await copyText(buildEspnAutofillScript(autofillData))) {

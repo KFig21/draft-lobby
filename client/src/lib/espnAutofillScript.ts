@@ -89,14 +89,27 @@ const PAGE_SCRIPT = String.raw`(function(){
     return best;
   }
 
-  function clickEl(e){
-    var o = { bubbles: true, cancelable: true, view: window };
-    ["mousedown","mouseup","click"].forEach(function(t){ try { e.dispatchEvent(new MouseEvent(t, o)); } catch(x){} });
-    try { e.click(); } catch(x){}
+  // Click the option the way a real user does: dispatch a full pointer+mouse
+  // sequence on the ACTUAL topmost element at the row's center (elementFromPoint),
+  // not the row container — a container click often misses the real handler.
+  function clickOption(row){
+    var r = row.getBoundingClientRect();
+    var x = r.left + r.width / 2, y = r.top + r.height / 2;
+    var tgt = document.elementFromPoint(x, y);
+    if (!tgt || box.contains(tgt)) tgt = row; // never click our own panel
+    var o = { bubbles: true, cancelable: true, view: window, clientX: x, clientY: y, button: 0 };
+    try { tgt.dispatchEvent(new PointerEvent("pointerdown", o)); } catch(e){}
+    try { tgt.dispatchEvent(new MouseEvent("mousedown", o)); } catch(e){}
+    try { tgt.dispatchEvent(new PointerEvent("pointerup", o)); } catch(e){}
+    try { tgt.dispatchEvent(new MouseEvent("mouseup", o)); } catch(e){}
+    try { tgt.dispatchEvent(new MouseEvent("click", o)); } catch(e){}
+    try { tgt.click(); } catch(e){}
   }
 
-  // Type a name into a cell, then poll for its dropdown row and click it. done(ok)
-  // reports whether a matching row was found and clicked.
+  // Type a name into a cell, poll for its dropdown row, click it, then VERIFY:
+  // a real selection replaces the input cell with a chip, so the input leaves the
+  // DOM. If it's still there the click didn't take — report a miss (never a silent
+  // "done") so the pick gets flagged for a manual fix.
   function doPick(target, p, done){
     target.focus();
     setValue(target, p.name);
@@ -104,7 +117,12 @@ const PAGE_SCRIPT = String.raw`(function(){
     var iv = setInterval(function(){
       tries++;
       var opt = findOption(p);
-      if (opt){ clearInterval(iv); clickEl(opt); setTimeout(function(){ done(true); }, 140); return; }
+      if (opt){
+        clearInterval(iv);
+        clickOption(opt);
+        setTimeout(function(){ done(!document.contains(target)); }, 360);
+        return;
+      }
       if (tries >= MAX){ clearInterval(iv); done(false); }
     }, 120);
   }
