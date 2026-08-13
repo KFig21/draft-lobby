@@ -918,7 +918,7 @@
     // centered column so the rows read tighter (the tab strip above stays
     // full width). Layout-agnostic — works whether the dialog is 640 or 720.
     .draft__roster {
-      max-width: 560px;
+      max-width: 600px;
       margin-inline: auto;
     }
 
@@ -3062,19 +3062,24 @@
     font-weight: 800;
   }
 
+  // Rank (formerly the far-right "ADP" metric) now leads the row, just left of
+  // the player name — a compact, muted index column.
   &__adp {
+    width: 3rem;
     color: $text-muted;
   }
 
-  // Center the stat columns — both the header and the values — so they line up
-  // under each other. Compound `th./td.` selectors so this beats the generic
-  // `.pool-table th/td { text-align: right }` rule regardless of source order
-  // (a bare `&__stat` loses the specificity tie). Pts/ADP stay right-aligned
-  // as the summary metrics.
+  // Center the stat columns AND the leading rank column — both the header and
+  // the values — so they line up under each other. Compound `th./td.`
+  // selectors so this beats the generic `.pool-table th/td { text-align:
+  // right }` rule regardless of source order (a bare `&__stat` loses the
+  // specificity tie). Pts stays right-aligned as the summary metric.
   & th#{&}__stat,
   & td#{&}__stat,
   & th#{&}__statline,
-  & td#{&}__statline {
+  & td#{&}__statline,
+  & th#{&}__adp,
+  & td#{&}__adp {
     text-align: center;
   }
 

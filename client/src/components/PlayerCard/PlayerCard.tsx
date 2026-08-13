@@ -155,7 +155,7 @@ export function PlayerCard({
                 : undefined
             }
           >
-            ADP {player.value_rank.toFixed(1)}
+            Rank {player.value_rank.toFixed(1)}
           </span>
         )}
       </div>
