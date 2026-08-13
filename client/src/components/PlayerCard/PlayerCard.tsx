@@ -47,6 +47,10 @@ export interface PlayerCardProps {
   /** Which stat the big number reflects: 'proj' (this season's projection,
    * default) or 'prev' (last season's actual points). */
   statMode?: 'proj' | 'prev';
+  /** Hide the league-value line under the projection. Used in the roster
+   * lineup, where a draft-value rank is pointless for already-drafted players
+   * (and the row needs the vertical space) — the projection stays. */
+  hideValue?: boolean;
 }
 
 /** The roomy ("comfy") player-pool row: color-coded position, name, a second
@@ -71,6 +75,7 @@ export function PlayerCard({
   draftedLabel,
   byeClashCount,
   statMode = 'proj',
+  hideValue,
 }: PlayerCardProps) {
   const color = POSITION_COLORS[player.position as Position];
   const injury = INJURY_ABBR[player.injury_status];
@@ -141,7 +146,7 @@ export function PlayerCard({
       )}
       <div className="player-card__stats">
         <span className="player-card__proj">{points != null ? points.toFixed(1) : '—'}</span>
-        {player.value_rank != null && (
+        {!hideValue && player.value_rank != null && (
           <span
             className="player-card__adp"
             title={

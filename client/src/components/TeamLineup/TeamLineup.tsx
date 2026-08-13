@@ -238,11 +238,11 @@ function LineupSlot({
             className="lineup-slot__card lineup-slot__card--link"
             onClick={() => onPickClick(pick)}
           >
-            <PlayerCard player={player} isKeeper={pick.is_keeper} />
+            <PlayerCard player={player} isKeeper={pick.is_keeper} hideValue />
           </button>
         ) : (
           <div className="lineup-slot__card">
-            <PlayerCard player={player} isKeeper={pick?.is_keeper} />
+            <PlayerCard player={player} isKeeper={pick?.is_keeper} hideValue />
           </div>
         )
       ) : (
