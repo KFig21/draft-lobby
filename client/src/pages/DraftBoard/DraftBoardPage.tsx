@@ -4221,10 +4221,41 @@ export function DraftBoardPage() {
       {showExport && (
         <Modal
           title={exportStep === 'screenshot' ? 'Board screenshot' : 'Export draft'}
+          onBack={
+            exportStep !== 'screenshot'
+              ? undefined
+              : screenshotUrl
+                ? () => {
+                    // Preview → back to the options step (discard this render).
+                    setScreenshotUrl(null);
+                    screenshotCanvasRef.current = null;
+                  }
+                : () => setExportStep('menu') // Options → back to the export menu.
+          }
           onClose={() => {
             setShowExport(false);
             resetExport();
           }}
+          footer={
+            exportStep !== 'screenshot' ? undefined : (
+              <div className="draft-export-screenshot__actions">
+                {screenshotUrl ? (
+                  <button type="button" className="button button--primary" onClick={downloadBoardImage}>
+                    <FileDownloadOutlinedIcon fontSize="small" /> Download PNG
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="button button--primary"
+                    onClick={() => captureBoardScreenshot(screenshotAnonymize, screenshotHighlightMine)}
+                    disabled={screenshotBusy}
+                  >
+                    {screenshotBusy ? 'Rendering…' : 'Create image'}
+                  </button>
+                )}
+              </div>
+            )
+          }
         >
           {exportStep === 'menu' ? (
             <div className="draft-export-options">
@@ -4368,7 +4399,7 @@ export function DraftBoardPage() {
               </label>
               {screenshotError && <p className="draft-export-screenshot__error">{screenshotError}</p>}
 
-              {screenshotUrl ? (
+              {screenshotUrl && (
                 <>
                   <div className="draft-export-screenshot__preview">
                     <img src={screenshotUrl} alt="Draft board preview" />
@@ -4376,45 +4407,7 @@ export function DraftBoardPage() {
                   <p className="draft-export-screenshot__hint">
                     Long-press the image to save it to your photos — or use Download below.
                   </p>
-                  <div className="draft-export-screenshot__actions">
-                    <button
-                      type="button"
-                      className="button"
-                      onClick={() => {
-                        setScreenshotUrl(null);
-                        screenshotCanvasRef.current = null;
-                      }}
-                    >
-                      Back
-                    </button>
-                    <button
-                      type="button"
-                      className="button button--primary"
-                      onClick={downloadBoardImage}
-                    >
-                      <FileDownloadOutlinedIcon fontSize="small" /> Download PNG
-                    </button>
-                  </div>
                 </>
-              ) : (
-                <div className="draft-export-screenshot__actions">
-                  <button
-                    type="button"
-                    className="button"
-                    onClick={() => setExportStep('menu')}
-                    disabled={screenshotBusy}
-                  >
-                    Back
-                  </button>
-                  <button
-                    type="button"
-                    className="button button--primary"
-                    onClick={() => captureBoardScreenshot(screenshotAnonymize, screenshotHighlightMine)}
-                    disabled={screenshotBusy}
-                  >
-                    {screenshotBusy ? 'Rendering…' : 'Create image'}
-                  </button>
-                </div>
               )}
             </div>
           )}

@@ -2166,20 +2166,12 @@
     font-size: 0.85rem;
   }
 
+  // Footer action wrapper (right-aligned). Button styling is shared across the
+  // export sub-modals — see Modal.scss `.dialog__footer--back .button`.
   &__actions {
     display: flex;
     justify-content: flex-end;
     gap: $space;
-
-    .button {
-      display: inline-flex;
-      align-items: center;
-      gap: $space * 0.4;
-
-      svg {
-        font-size: 1.15em;
-      }
-    }
   }
 
   // Rendered board preview — long-press → "Save to Photos" on mobile.
