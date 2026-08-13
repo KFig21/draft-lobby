@@ -913,26 +913,10 @@
       display: flex !important;
     }
 
-    // The roster stretched edge-to-edge across the wide modal, leaving a big
-    // gap between each player's name and their projection. Cap it to a
-    // centered column so the rows read tighter (the tab strip above stays
-    // full width). Layout-agnostic — works whether the dialog is 640 or 720.
-    .draft__roster {
-      max-width: 600px;
-      margin-inline: auto;
-    }
-
-    // Same treatment for the Players tab's card list (simple layout — the
-    // Detailed layout renders the wide stats table here instead, which has no
-    // .pool__list, so it's untouched). Only the list is capped; the filter bar
-    // above it keeps the full modal width.
-    .pool__list {
-      max-width: 600px;
-      margin-inline: auto;
-    }
-
     // On a TV the projection is the key number, so bump it up from the pool's
     // 0.9rem — scoped to the roster so the fullscreen player pool is untouched.
+    // (Panel widths are set on the dialog itself — see .draft__fs-menu-dialog:
+    // the simple layout caps every tab at 600px.)
     .draft__roster .player-card__proj {
       font-size: 1.2rem;
     }
@@ -2665,6 +2649,12 @@
 
   &.is-players {
     width: min(1040px, 100%);
+  }
+
+  // Simple layout: one width for every tab (no per-tab stats table to make
+  // room for), narrower than the detailed default so the panels don't sprawl.
+  &.is-simple {
+    width: min(600px, 100%);
   }
 
   @media (prefers-reduced-motion: reduce) {

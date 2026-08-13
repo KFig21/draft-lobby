@@ -4337,11 +4337,13 @@ export function DraftBoardPage() {
         <Modal
           title={SIDEBAR_TABS.find((t) => t.key === panelTab)?.label ?? 'Menu'}
           onClose={() => setShowFsMenu(false)}
-          wide={boardLayout !== 'detailed'}
           // Detailed layout: the modal resizes per tab (wide for the players
-          // table, narrower for roster/chat) with a width transition.
+          // table, narrower for roster/chat). Simple layout: a single 600px
+          // width for every tab. Both handled by .draft__fs-menu-dialog.
           className={
-            boardLayout === 'detailed' ? `draft__fs-menu-dialog is-${panelTab}` : undefined
+            boardLayout === 'detailed'
+              ? `draft__fs-menu-dialog is-${panelTab}`
+              : 'draft__fs-menu-dialog is-simple'
           }
         >
           <div className="draft__fs-sidebar">{renderSidebarPanels()}</div>
