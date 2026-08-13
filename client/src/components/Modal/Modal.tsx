@@ -5,8 +5,8 @@ import './Modal.scss';
 interface Props {
   title: string;
   onClose: () => void;
-  /** When set, a back arrow appears at the header's start (e.g. to return to a
-   * parent menu). Distinct from onClose, which dismisses the modal entirely. */
+  /** When set, a "Back" button appears at the footer's start (e.g. to return to
+   * a parent menu). Distinct from onClose, which dismisses the modal entirely. */
   onBack?: () => void;
   wide?: boolean;
   /** Extra class on the dialog card — e.g. a caller-specific width override. */
@@ -45,11 +45,6 @@ export function Modal({ title, onClose, onBack, wide, className, icon, footer, c
       >
         <header className="dialog__header">
           <div className="dialog__title">
-            {onBack && (
-              <button className="dialog__back" onClick={onBack} aria-label="Back">
-                ←
-              </button>
-            )}
             {icon && <span className="dialog__title-icon">{icon}</span>}
             <h2>{title}</h2>
           </div>
@@ -58,7 +53,16 @@ export function Modal({ title, onClose, onBack, wide, className, icon, footer, c
           </button>
         </header>
         <div className="dialog__body">{children}</div>
-        {footer && <footer className="dialog__footer">{footer}</footer>}
+        {(footer || onBack) && (
+          <footer className={`dialog__footer${onBack ? ' dialog__footer--back' : ''}`}>
+            {onBack && (
+              <button type="button" className="button dialog__back-btn" onClick={onBack}>
+                Back
+              </button>
+            )}
+            {footer}
+          </footer>
+        )}
       </div>
     </div>
   );
