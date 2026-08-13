@@ -57,12 +57,10 @@ export const VALUATION_TUNING = {
    * inflates their VOR past what anyone pays). >1 lifts a position, <1 lowers
    * it. Tune against a trusted cheat sheet for the league's format.
    *
-   * K/DEF get tiny weights because they're streamed week-to-week — their
-   * season-projection spread over replacement is NOT draftable value (a top
-   * defense is a waiver pickup, not a mid-round pick), so their VOR should read
-   * near-nothing. Their board RANK is not set by this weight, though — plain VOR
-   * can't sink them far enough (their best is still positive) — it's forced to
-   * the last-rounds band by the K/DEF rank floor in computePlayerValues.
+   * K/DEF weights are near-zero only so their tooltip VOR reads as ~nothing
+   * (they're streamed — season spread over replacement isn't draftable value).
+   * Their board RANK is not set by this weight at all: computePlayerValues puts
+   * every K/DEF in the late-round pool and ranks it by projection points.
    */
   positionValueWeight: { QB: 1.2, RB: 1, WR: 1, TE: 0.45, K: 0.05, DEF: 0.1 } as Record<Position, number>,
 } as const;
@@ -153,64 +151,41 @@ export function computePlayerValues(
 ): Map<string, PlayerValue> {
   const replacement = replacementByPosition(players, rosterComposition, teamCount);
   const weight = VALUATION_TUNING.positionValueWeight;
-  const scored = players.map((p) => ({
-    id: p.id,
-    position: p.position,
-    // Points over replacement, then the position's value weight (lifts QBs,
-    // tempers the elite-TE premium — see VALUATION_TUNING).
-    vor: ((Number.isFinite(p.points) ? p.points : 0) - replacement[p.position]) * (weight[p.position] ?? 1),
-    replacement: replacement[p.position],
-  }));
+  const scored = players.map((p) => {
+    const points = Number.isFinite(p.points) ? p.points : 0;
+    return {
+      id: p.id,
+      position: p.position,
+      points,
+      // Points over replacement, then the position's value weight (lifts QBs,
+      // tempers the elite-TE premium — see VALUATION_TUNING).
+      vor: (points - replacement[p.position]) * (weight[p.position] ?? 1),
+      replacement: replacement[p.position],
+    };
+  });
 
-  // K/DEF/TE all share a problem plain VOR can't fix: their best players still
-  // have a small POSITIVE value, so cutting their weight only lands them where
-  // skill VOR crosses zero (~top of the bench), and their long FLAT tail (30
-  // similar TEs, 45 kickers) then clusters right there — dozens of them jam into
-  // the top 100. A cheat sheet doesn't do that: only a handful of each are
-  // draftable; the rest are streamable filler. So keep just the top few of each
-  // and sink the rest below the useful deep-skill fliers. Two shapes:
-  //   • TE — the elite few are genuine early picks, so they keep their NATURAL
-  //     VOR rank; only TE beyond the top `teDraftable` becomes junk (ESPN: ~8
-  //     TEs in the top 100, a 30th TE near pick 300).
-  //   • K/DEF — streamed and low even at the top, so the top `kdefDraftable`
-  //     FLOAT as a block into the last-rounds band (after the league's non-K/DEF
-  //     picks), and the rest become junk.
-  // Junk (deep TEs + deep K/DEF) sinks to the very bottom, below every startable
-  // skill flier. True VOR is still returned (tooltip); only ordering changes,
-  // and bots ignore valueRank (they read vor + slot need), so drafting is
-  // unaffected.
+  // Two-region ranking, the way a cheat sheet actually reads:
+  //   • ABOVE replacement (VOR > 0, skill) — the startable pool. Rank by VOR, so
+  //     scarcity and the league format drive it (elite QBs vault up a superflex
+  //     board; a scarce position beats a deep one at equal points).
+  //   • BELOW replacement (everyone else) — the late-round pool. Rank by RAW
+  //     PROJECTION POINTS. This is the key: past replacement you draft the
+  //     highest-projected flex body available, and VOR is the WRONG tool there —
+  //     it normalizes per position, so the flat TE/K/DEF tail (30 near-identical
+  //     TEs, 45 kickers) all collapses to ~0 and clusters in one spot, jamming
+  //     the top 100. Raw points instead INTERLEAVES positions: a 135-pt kicker
+  //     or 30th TE lands among the 135-pt bench skill, ~where ESPN has them.
+  // K/DEF are always in the late pool (streamed) regardless of their tiny +VOR.
+  // True VOR is still returned (tooltip); only ordering changes, and bots ignore
+  // valueRank (they read vor + slot need), so drafting is unaffected.
   const isKDef = (pos: Position) => pos === 'K' || pos === 'DEF';
-  const byVor = <T extends { vor: number }>(a: T, b: T) => b.vor - a.vor;
-  const junk: typeof scored = [];
-
-  const teDraftable = teamCount; // ~one startable TE per team; deeper TEs are filler
-  const teSorted = scored.filter((p) => p.position === 'TE').sort(byVor);
-  const keptTE = new Set(teSorted.slice(0, teDraftable).map((p) => p.id));
-  junk.push(...teSorted.slice(teDraftable));
-
-  const kdefDraftable = teamCount + 2; // one per team + a couple of streamers
-  const topKDef: typeof scored = [];
-  for (const pos of ['DEF', 'K'] as const) {
-    const ranked = scored.filter((p) => p.position === pos).sort(byVor);
-    topKDef.push(...ranked.slice(0, kdefDraftable));
-    junk.push(...ranked.slice(kdefDraftable));
-  }
-  topKDef.sort(byVor);
-  junk.sort(byVor);
-
-  // Skill = QB/RB/WR + only the elite (kept) TEs; K/DEF and junk TEs are placed
-  // separately above.
-  const skill = scored
-    .filter(
-      (p) => !isKDef(p.position) && (p.position !== 'TE' || keptTE.has(p.id)),
-    )
-    .sort(byVor);
-  const rosterSize = rosterComposition.reduce((n, r) => n + r.count, 0);
-  const kdefSlots = rosterComposition
-    .filter((r) => isKDef(r.slot as Position))
-    .reduce((n, r) => n + r.count, 0);
-  const floor = Math.min(skill.length, Math.max(0, (rosterSize - kdefSlots) * teamCount));
-  const order = [...skill.slice(0, floor), ...topKDef, ...skill.slice(floor), ...junk];
+  const startable = scored
+    .filter((p) => !isKDef(p.position) && p.vor > 0)
+    .sort((a, b) => b.vor - a.vor);
+  const lateRound = scored
+    .filter((p) => isKDef(p.position) || p.vor <= 0)
+    .sort((a, b) => b.points - a.points || b.vor - a.vor);
+  const order = [...startable, ...lateRound];
 
   const out = new Map<string, PlayerValue>();
   order.forEach((p, i) => {
