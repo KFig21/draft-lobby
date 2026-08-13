@@ -649,6 +649,24 @@
     bottom: calc(100% + 4px);
   }
 
+  // On touch (mobile), a tap leaves the chip's :hover/:active (primary fill +
+  // press) state stuck until you tap elsewhere — very obvious when spamming
+  // +5s. Hold the neutral chip look through hover/active/focus there.
+  @media (hover: none) {
+    &__addtime-main,
+    &__addtime-caret {
+      &:hover:not(:disabled),
+      &:active:not(:disabled),
+      &:focus,
+      &:focus-visible {
+        border-color: color-mix(in srgb, $text 16%, transparent);
+        background: color-mix(in srgb, $bg-raised 78%, $text 12%);
+        color: $text;
+        transform: none;
+      }
+    }
+  }
+
   // Mobile-only icon button in the top bar — members' "request pause". The
   // desktop top bar shows the full text button (in &__commish-tools) instead.
   &__reqpause-btn {
