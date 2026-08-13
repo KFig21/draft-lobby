@@ -164,28 +164,33 @@ export function computePlayerValues(
     };
   });
 
-  // Two-region ranking, the way a cheat sheet actually reads:
-  //   • ABOVE replacement (VOR > 0, skill) — the startable pool. Rank by VOR, so
-  //     scarcity and the league format drive it (elite QBs vault up a superflex
-  //     board; a scarce position beats a deep one at equal points).
-  //   • BELOW replacement (everyone else) — the late-round pool. Rank by RAW
-  //     PROJECTION POINTS. This is the key: past replacement you draft the
-  //     highest-projected flex body available, and VOR is the WRONG tool there —
-  //     it normalizes per position, so the flat TE/K/DEF tail (30 near-identical
-  //     TEs, 45 kickers) all collapses to ~0 and clusters in one spot, jamming
-  //     the top 100. Raw points instead INTERLEAVES positions: a 135-pt kicker
-  //     or 30th TE lands among the 135-pt bench skill, ~where ESPN has them.
-  // K/DEF are always in the late pool (streamed) regardless of their tiny +VOR.
-  // True VOR is still returned (tooltip); only ordering changes, and bots ignore
-  // valueRank (they read vor + slot need), so drafting is unaffected.
-  const isKDef = (pos: Position) => pos === 'K' || pos === 'DEF';
-  const startable = scored
-    .filter((p) => !isKDef(p.position) && p.vor > 0)
-    .sort((a, b) => b.vor - a.vor);
-  const lateRound = scored
-    .filter((p) => isKDef(p.position) || p.vor <= 0)
+  // Rank skill (RB/WR/TE/K/DEF) by league-scored PROJECTION POINTS — that's what
+  // a cheat sheet reads, and points interleave positions so the flat tail (30
+  // near-identical TEs, 45 kickers) SPREADS through the bench at its own point
+  // level instead of clustering. (Per-position VOR was the wrong ranking tool:
+  // it normalizes each position separately, so those flat tails collapse to ~0
+  // and pile up, and any startable/bench cutoff drops a cliff between a marginal
+  // TE10 and an ~identical TE11.)
+  //
+  // QBs are the exception: off the skill scoring scale (~1.5–2× a flex body),
+  // and their VALUE is exactly where the roster format lives — superflex floods
+  // the OP slot with QBs, so QB replacement runs deep and elite-QB VOR explodes,
+  // while 1-QB keeps it shallow. Points can't express that (a deflated elite-QB
+  // point total still can't clear an elite RB's), but VOR can. So place each QB
+  // at its VOR RANK among the whole pool — a superflex QB1 lands atop the board,
+  // a 1-QB QB1 sinks toward the mid rounds — and fill every non-QB slot in
+  // points order. One list: format-correct QBs threaded through smooth skill.
+  // VOR is still returned for the tooltip; bots read vor + slot need (not
+  // valueRank), so drafting is unaffected.
+  const byVorRank = [...scored].sort((a, b) => b.vor - a.vor);
+  const skillByPoints = scored
+    .filter((p) => p.position !== 'QB')
     .sort((a, b) => b.points - a.points || b.vor - a.vor);
-  const order = [...startable, ...lateRound];
+  const order: typeof scored = [];
+  let si = 0;
+  for (const slot of byVorRank) {
+    order.push(slot.position === 'QB' ? slot : skillByPoints[si++]);
+  }
 
   const out = new Map<string, PlayerValue>();
   order.forEach((p, i) => {
