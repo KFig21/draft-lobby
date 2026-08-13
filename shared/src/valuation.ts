@@ -162,39 +162,55 @@ export function computePlayerValues(
     replacement: replacement[p.position],
   }));
 
-  // K/DEF are streamed, so plain VOR can't rank them low enough: their best is
-  // still a small POSITIVE value, which lands them right where skill VOR crosses
-  // zero (~top of the bench) no matter how far their weight is cut. So rank the
-  // skill/QB/TE pool by VOR and place K/DEF by hand:
-  //   • only the top few of EACH position are ever draftable in a stream-them
-  //     league (≈ one per team + a couple of matchup streamers). Those float
-  //     into the last-rounds band, AFTER the league's non-K/DEF picks (every
-  //     roster spot except the lone K + DEF, all teams) — where a cheat sheet
-  //     puts the top defense/kicker.
-  //   • every deeper K/DEF is pure junk (a 13th kicker) and sinks to the very
-  //     bottom, below the useful deep-skill fliers — a backup kicker must not
-  //     outrank a startable QB/RB/WR on the board.
-  // True VOR is still returned (tooltip); only ordering changes. Bots ignore
-  // valueRank (they read vor + slot need), so draft behavior is unaffected.
+  // K/DEF/TE all share a problem plain VOR can't fix: their best players still
+  // have a small POSITIVE value, so cutting their weight only lands them where
+  // skill VOR crosses zero (~top of the bench), and their long FLAT tail (30
+  // similar TEs, 45 kickers) then clusters right there — dozens of them jam into
+  // the top 100. A cheat sheet doesn't do that: only a handful of each are
+  // draftable; the rest are streamable filler. So keep just the top few of each
+  // and sink the rest below the useful deep-skill fliers. Two shapes:
+  //   • TE — the elite few are genuine early picks, so they keep their NATURAL
+  //     VOR rank; only TE beyond the top `teDraftable` becomes junk (ESPN: ~8
+  //     TEs in the top 100, a 30th TE near pick 300).
+  //   • K/DEF — streamed and low even at the top, so the top `kdefDraftable`
+  //     FLOAT as a block into the last-rounds band (after the league's non-K/DEF
+  //     picks), and the rest become junk.
+  // Junk (deep TEs + deep K/DEF) sinks to the very bottom, below every startable
+  // skill flier. True VOR is still returned (tooltip); only ordering changes,
+  // and bots ignore valueRank (they read vor + slot need), so drafting is
+  // unaffected.
   const isKDef = (pos: Position) => pos === 'K' || pos === 'DEF';
   const byVor = <T extends { vor: number }>(a: T, b: T) => b.vor - a.vor;
-  const skill = scored.filter((p) => !isKDef(p.position)).sort(byVor);
-  const draftablePerKDefPos = teamCount + 2; // ~one per team + streamers
+  const junk: typeof scored = [];
+
+  const teDraftable = teamCount; // ~one startable TE per team; deeper TEs are filler
+  const teSorted = scored.filter((p) => p.position === 'TE').sort(byVor);
+  const keptTE = new Set(teSorted.slice(0, teDraftable).map((p) => p.id));
+  junk.push(...teSorted.slice(teDraftable));
+
+  const kdefDraftable = teamCount + 2; // one per team + a couple of streamers
   const topKDef: typeof scored = [];
-  const junkKDef: typeof scored = [];
   for (const pos of ['DEF', 'K'] as const) {
     const ranked = scored.filter((p) => p.position === pos).sort(byVor);
-    topKDef.push(...ranked.slice(0, draftablePerKDefPos));
-    junkKDef.push(...ranked.slice(draftablePerKDefPos));
+    topKDef.push(...ranked.slice(0, kdefDraftable));
+    junk.push(...ranked.slice(kdefDraftable));
   }
   topKDef.sort(byVor);
-  junkKDef.sort(byVor);
+  junk.sort(byVor);
+
+  // Skill = QB/RB/WR + only the elite (kept) TEs; K/DEF and junk TEs are placed
+  // separately above.
+  const skill = scored
+    .filter(
+      (p) => !isKDef(p.position) && (p.position !== 'TE' || keptTE.has(p.id)),
+    )
+    .sort(byVor);
   const rosterSize = rosterComposition.reduce((n, r) => n + r.count, 0);
   const kdefSlots = rosterComposition
     .filter((r) => isKDef(r.slot as Position))
     .reduce((n, r) => n + r.count, 0);
   const floor = Math.min(skill.length, Math.max(0, (rosterSize - kdefSlots) * teamCount));
-  const order = [...skill.slice(0, floor), ...topKDef, ...skill.slice(floor), ...junkKDef];
+  const order = [...skill.slice(0, floor), ...topKDef, ...skill.slice(floor), ...junk];
 
   const out = new Map<string, PlayerValue>();
   order.forEach((p, i) => {
