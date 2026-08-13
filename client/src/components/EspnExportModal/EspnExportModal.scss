@@ -405,4 +405,35 @@
 
     :root[data-theme='dark'] & { color: $accent; }
   }
+
+  &__bm-row {
+    display: flex;
+    align-items: center;
+    gap: $space * 0.75;
+    flex-wrap: wrap;
+  }
+
+  // Looks like a real bookmarklet chip; the grab cursor invites the drag.
+  &__bm-drag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: $space * 0.6 $space;
+    border-radius: $radius-sm;
+    background: $primary;
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 800;
+    text-decoration: none;
+    cursor: grab;
+    user-select: none;
+
+    &:active { cursor: grabbing; }
+    svg { font-size: 1rem; }
+
+    :root[data-theme='dark'] & {
+      background: $accent;
+      color: #08150f;
+    }
+  }
 }

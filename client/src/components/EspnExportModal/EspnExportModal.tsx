@@ -7,7 +7,7 @@ import ChevronRightRoundedIcon from '@mui/icons-material/ChevronRightRounded';
 import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined';
 import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder';
 import TerminalIcon from '@mui/icons-material/Terminal';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   buildEspnAutofillData,
   copyText,
@@ -59,6 +59,17 @@ export function EspnExportModal({ teams, picks, playersById, myTeamId, onClose }
   );
   const [scriptFlash, setScriptFlash] = useState(false);
   const [bmFlash, setBmFlash] = useState(false);
+
+  // The bookmarklet href is a ~10KB `javascript:` URL. React warns on (and may
+  // sanitize) `javascript:` hrefs, and pasting one into the address bar is
+  // stripped to a search by Chrome — so the reliable install is DRAGGING an
+  // anchor to the bookmarks bar. Set the href straight on the DOM node (bypassing
+  // React's href handling) and never pass it as a prop, so React can't clobber it.
+  const bookmarkletHref = useMemo(() => buildEspnBookmarklet(autofillData), [autofillData]);
+  const dragRef = useRef<HTMLAnchorElement>(null);
+  useEffect(() => {
+    if (dragRef.current) dragRef.current.setAttribute('href', bookmarkletHref);
+  }, [bookmarkletHref]);
 
   async function copyScript() {
     if (await copyText(buildEspnAutofillScript(autofillData))) {
@@ -250,9 +261,9 @@ export function EspnExportModal({ teams, picks, playersById, myTeamId, onClose }
       ) : (
         <div className="espn-export__auto">
           <p className="espn-export__intro">
-            This runs a small script on ESPN's page that <strong>types each pick for you</strong> —
-            you click the matching dropdown row and press <strong>Fill next</strong>. Your draft
-            data never leaves your browser.
+            This runs a small script on ESPN's page that <strong>types and selects each pick for
+            you</strong> — choose a team, click its Round 1 cell, then <strong>Auto-run team</strong>.
+            Your draft data never leaves your browser.
           </p>
 
           <ol className="espn-export__steps">
@@ -284,27 +295,44 @@ export function EspnExportModal({ teams, picks, playersById, myTeamId, onClose }
                 <strong>Or a bookmarklet</strong>
               </div>
               <p>
-                Make a new bookmark and paste this as its <em>URL</em>, then click it on the ESPN
-                page. If nothing happens, ESPN is blocking bookmarklets — use the console script.
+                <strong>Drag</strong> this up to your <em>bookmarks bar</em>, then click it while
+                you&rsquo;re on ESPN&rsquo;s page. Don&rsquo;t paste it into the address bar — Chrome
+                treats it as a search, not a script.
               </p>
-              <button type="button" className="espn-export__scriptbtn" onClick={copyBookmarklet}>
-                {bmFlash ? (
-                  <>
-                    <CheckRoundedIcon fontSize="inherit" /> Copied bookmarklet
-                  </>
-                ) : (
-                  <>
-                    <ContentCopyOutlinedIcon fontSize="inherit" /> Copy bookmarklet
-                  </>
-                )}
-              </button>
+              <div className="espn-export__bm-row">
+                <a
+                  ref={dragRef}
+                  className="espn-export__bm-drag"
+                  draggable
+                  onClick={(e) => e.preventDefault()}
+                >
+                  <BookmarkBorderIcon fontSize="inherit" /> Draft Lobby → ESPN
+                </a>
+                <button
+                  type="button"
+                  className="espn-export__scriptbtn"
+                  onClick={copyBookmarklet}
+                  title="Copy the javascript: URL to paste into a new bookmark manually"
+                >
+                  {bmFlash ? (
+                    <>
+                      <CheckRoundedIcon fontSize="inherit" /> Copied
+                    </>
+                  ) : (
+                    <>
+                      <ContentCopyOutlinedIcon fontSize="inherit" /> Copy instead
+                    </>
+                  )}
+                </button>
+              </div>
             </li>
           </ol>
 
           <div className="espn-export__auto-note">
-            A panel appears bottom-right: pick a team, click that team&rsquo;s <strong>Round 1</strong>{' '}
-            cell in ESPN, then press <strong>Fill next</strong> for each pick — clicking the matching
-            row in ESPN between fills.
+            A panel appears bottom-right: choose a team, click that team&rsquo;s <strong>Round 1</strong>{' '}
+            cell in ESPN, then hit <strong>Auto-run team</strong>. It fills <em>and</em> selects the
+            whole column; any pick it can&rsquo;t confidently match is listed so you can finish those
+            few by hand (their names are already typed in).
           </div>
           <p className="espn-export__beta">
             Beta — built without access to ESPN&rsquo;s live page, so if it misbehaves the{' '}

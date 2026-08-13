@@ -53,37 +53,71 @@ const PAGE_SCRIPT = String.raw`(function(){
     return ph.indexOf("player") >= 0 || ph.indexOf("name") >= 0 || ph.indexOf("search") >= 0;
   }
 
-  // Cluster candidate inputs by horizontal center into columns, each sorted top
-  // to bottom — the visual team-by-round grid, independent of DOM order/classes.
-  function buildGrid(){
+  // The next cell to fill in a column = the TOP-MOST still-empty input near that
+  // column's x. Robust to ESPN turning a filled cell into a chip (it drops out of
+  // the input list) or keeping the input (skipped because it now has a value).
+  function nextInput(colX){
     var all = [].slice.call(document.querySelectorAll("input")).filter(isCand);
-    var cols = [];
-    all.forEach(function(el){
-      var r = el.getBoundingClientRect();
-      var cx = r.left + r.width / 2;
-      var f = null;
-      for (var i=0;i<cols.length;i++){ if (Math.abs(cols[i].x - cx) < 40){ f = cols[i]; break; } }
-      if (!f){ f = { x: cx, items: [] }; cols.push(f); }
-      f.items.push({ el: el, y: r.top });
-    });
-    cols.sort(function(a,b){ return a.x - b.x; });
-    return cols.map(function(c){ return c.items.sort(function(a,b){ return a.y - b.y; }).map(function(o){ return o.el; }); });
-  }
-  function locate(grid, el){
-    for (var c=0;c<grid.length;c++){ var r = grid[c].indexOf(el); if (r >= 0) return { c: c, r: r }; }
+    var inCol = all.filter(function(e){ var r=e.getBoundingClientRect(); return Math.abs((r.left+r.width/2)-colX) < 40; });
+    inCol.sort(function(a,b){ return a.getBoundingClientRect().top - b.getBoundingClientRect().top; });
+    for (var i=0;i<inCol.length;i++){ if (!inCol[i].value || !inCol[i].value.trim()) return inCol[i]; }
     return null;
   }
 
-  var grid = buildGrid();
+  function visible(e){ var r = e.getBoundingClientRect(); return r.width>0 && r.height>0 && r.bottom>0 && r.top < (window.innerHeight+240); }
+
+  // Find ESPN's dropdown row for a pick: the SHORTEST visible non-input element
+  // whose text contains the player's name AND team abbrev (the team is what tells
+  // one "Josh Allen" from another). Shortest = the row itself, not a container.
+  function findOption(p){
+    var name = (p.name||"").toLowerCase();
+    var team = (p.team||"").toLowerCase();
+    if (!name) return null;
+    var nodes = document.body.getElementsByTagName("*");
+    var best = null, bestLen = 99999;
+    for (var i=0;i<nodes.length;i++){
+      var e = nodes[i];
+      var tag = e.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SCRIPT" || tag === "STYLE" || tag === "SELECT") continue;
+      var txt = (e.textContent || "").trim().toLowerCase();
+      if (txt.length < name.length || txt.length > 70) continue;
+      if (txt.indexOf(name) < 0) continue;
+      if (team && txt.indexOf(team) < 0) continue;
+      if (!visible(e)) continue;
+      if (txt.length < bestLen){ best = e; bestLen = txt.length; }
+    }
+    return best;
+  }
+
+  function clickEl(e){
+    var o = { bubbles: true, cancelable: true, view: window };
+    ["mousedown","mouseup","click"].forEach(function(t){ try { e.dispatchEvent(new MouseEvent(t, o)); } catch(x){} });
+    try { e.click(); } catch(x){}
+  }
+
+  // Type a name into a cell, then poll for its dropdown row and click it. done(ok)
+  // reports whether a matching row was found and clicked.
+  function doPick(target, p, done){
+    target.focus();
+    setValue(target, p.name);
+    var tries = 0, MAX = 24; // ~2.9s at 120ms — covers ESPN's query + render
+    var iv = setInterval(function(){
+      tries++;
+      var opt = findOption(p);
+      if (opt){ clearInterval(iv); clickEl(opt); setTimeout(function(){ done(true); }, 140); return; }
+      if (tries >= MAX){ clearInterval(iv); done(false); }
+    }, 120);
+  }
+
   var lastFocused = null;
   document.addEventListener("focusin", function(e){ if (isCand(e.target)) lastFocused = e.target; }, true);
 
-  var teamI = 0, pickI = 0, colIdx = null, rowIdx = null;
+  var teamI = 0, pickI = 0, colX = null, autoOn = false, busy = false, misses = [];
 
   // ---- panel ----
   function el(tag, parent){ var e = document.createElement(tag); if (parent) parent.appendChild(e); return e; }
   function primary(b){ b.style.background="#3fd6a5"; b.style.color="#08150f"; b.style.border="0"; b.style.borderRadius="8px"; b.style.padding="10px"; b.style.fontWeight="700"; b.style.fontSize="13px"; b.style.cursor="pointer"; }
-  function ghost(b){ b.style.background="#1b1e2b"; b.style.color="#e8eaf2"; b.style.border="1px solid #2e3347"; b.style.borderRadius="7px"; b.style.padding="7px"; b.style.fontSize="12px"; b.style.cursor="pointer"; }
+  function ghost(b){ b.style.background="#1b1e2b"; b.style.color="#e8eaf2"; b.style.border="1px solid #2e3347"; b.style.borderRadius="7px"; b.style.padding="8px"; b.style.fontSize="12px"; b.style.fontWeight="700"; b.style.cursor="pointer"; }
 
   var box = el("div"); box.id = PID;
   var bs = box.style;
@@ -93,18 +127,15 @@ const PAGE_SCRIPT = String.raw`(function(){
 
   var head = el("div", box); head.style.display="flex"; head.style.justifyContent="space-between"; head.style.alignItems="center"; head.style.marginBottom="10px";
   var title = el("strong", head); title.textContent = "Draft Lobby → ESPN"; title.style.fontSize="13px"; title.style.color="#3fd6a5";
-  var hide = el("button", head); hide.textContent = "✕"; ghost(hide); hide.style.padding="2px 7px"; hide.onclick = function(){ box.style.display = "none"; };
+  var hide = el("button", head); hide.textContent = "✕"; ghost(hide); hide.style.padding="2px 7px"; hide.onclick = function(){ autoOn=false; box.style.display = "none"; };
 
   var sel = el("select", box); sel.style.width="100%"; sel.style.margin="0 0 10px"; sel.style.padding="7px"; sel.style.boxSizing="border-box"; sel.style.background="#1b1e2b"; sel.style.color="#e8eaf2"; sel.style.border="1px solid #2e3347"; sel.style.borderRadius="7px"; sel.style.fontWeight="700";
   DATA.teams.forEach(function(t,i){ var o = el("option", sel); o.value=String(i); o.textContent=(i+1)+". "+t.name; });
   sel.onchange = function(){ selectTeam(parseInt(sel.value,10)); };
 
-  var cur = el("div", box); cur.style.minHeight="40px"; cur.style.marginBottom="4px";
-  var fill = el("button", box); fill.textContent = "Fill next pick"; primary(fill); fill.style.width="100%"; fill.onclick = fillNext;
-
-  var row2 = el("div", box); row2.style.display="flex"; row2.style.gap="6px"; row2.style.marginTop="6px";
-  var back = el("button", row2); back.textContent="← Back"; ghost(back); back.style.flex="1"; back.onclick = goBack;
-  var skip = el("button", row2); skip.textContent="Skip →"; ghost(skip); skip.style.flex="1"; skip.onclick = function(){ advance(); render(); };
+  var cur = el("div", box); cur.style.minHeight="42px"; cur.style.marginBottom="8px";
+  var auto = el("button", box); primary(auto); auto.style.width="100%"; auto.onclick = toggleAuto;
+  var fill = el("button", box); ghost(fill); fill.style.width="100%"; fill.style.marginTop="6px"; fill.textContent="Fill one pick"; fill.onclick = function(){ if (!busy && !autoOn) fillNext(); };
 
   var stat = el("div", box); stat.style.marginTop="10px"; stat.style.fontSize="12px"; stat.style.color="#8a94a6"; stat.style.minHeight="30px";
 
@@ -114,48 +145,62 @@ const PAGE_SCRIPT = String.raw`(function(){
   function render(){
     var team = DATA.teams[teamI];
     sel.value = String(teamI);
+    auto.textContent = autoOn ? "Stop" : "Auto-run team";
+    auto.style.background = autoOn ? "#f8577d" : "#3fd6a5";
+    auto.style.color = autoOn ? "#fff" : "#08150f";
+    fill.disabled = busy || autoOn; fill.style.opacity = (busy || autoOn) ? "0.5" : "1";
     clear(cur);
-    if (pickI >= team.picks.length){
-      var d = el("div", cur); d.textContent = "✓ " + team.name + " done (" + team.picks.length + " picks)"; d.style.fontWeight="700"; d.style.color="#3fd6a5";
+    var done = pickI >= team.picks.length;
+    if (done){
+      var d = el("div", cur); d.textContent = "✓ " + team.name + " complete"; d.style.fontWeight="700"; d.style.color="#3fd6a5";
       var n = el("div", cur); n.textContent = "Pick the next team above."; n.style.color="#8a94a6"; n.style.fontSize="12px";
       return;
     }
     var p = team.picks[pickI];
-    var l1 = el("div", cur); l1.textContent = "Round " + p.r + " · " + p.name; l1.style.fontWeight="700"; l1.style.fontSize="14px";
-    var l2 = el("div", cur); l2.textContent = "in ESPN click the [" + p.team + " " + p.pos + "] row"; l2.style.color="#8a94a6"; l2.style.fontSize="12px";
-    var prog = el("div", cur); prog.textContent = (pickI) + " / " + team.picks.length + " filled"; prog.style.color="#8a94a6"; prog.style.fontSize="11px"; prog.style.marginTop="3px";
+    var l1 = el("div", cur); l1.textContent = "R" + p.r + " · " + p.name; l1.style.fontWeight="700"; l1.style.fontSize="14px";
+    var l2 = el("div", cur); l2.textContent = p.team + " " + p.pos; l2.style.color="#8a94a6"; l2.style.fontSize="12px";
+    var prog = el("div", cur); prog.textContent = pickI + " / " + team.picks.length + " done"; prog.style.color="#8a94a6"; prog.style.fontSize="11px"; prog.style.marginTop="3px";
   }
 
-  function advance(){ pickI++; if (colIdx !== null && rowIdx !== null) rowIdx++; }
-  function goBack(){ if (pickI > 0){ pickI--; if (rowIdx !== null) rowIdx--; } render(); }
-
   function selectTeam(i){
-    teamI = i; pickI = 0; colIdx = null; rowIdx = null;
-    setStatus("Click " + DATA.teams[i].name + "'s Round 1 cell in ESPN, then press Fill next.");
+    autoOn = false; teamI = i; pickI = 0; colX = null; misses = [];
+    setStatus("Click " + DATA.teams[i].name + "'s Round 1 cell in ESPN, then Auto-run team.");
+    render();
+  }
+
+  function finishTeam(){
+    autoOn = false;
+    if (misses.length){ setStatus("Done — " + misses.length + " need a manual pick: " + misses.join(", ")); }
+    else { setStatus("✓ " + DATA.teams[teamI].name + " fully entered. Pick the next team above."); }
     render();
   }
 
   function fillNext(){
     var team = DATA.teams[teamI];
-    if (pickI >= team.picks.length){ setStatus("✓ That team is done — pick the next one above."); return; }
-    var target;
-    if (colIdx === null){
-      grid = buildGrid();
+    if (pickI >= team.picks.length){ finishTeam(); return; }
+    if (colX === null){
       var src = (lastFocused && document.contains(lastFocused)) ? lastFocused : null;
-      var pos = src ? locate(grid, src) : null;
-      if (!pos){ setStatus("First click " + team.name + "'s Round 1 cell in ESPN, then press Fill next."); return; }
-      colIdx = pos.c; rowIdx = pos.r;
-    } else {
-      rowIdx = rowIdx + 1;
+      if (!src){ autoOn = false; setStatus("First click " + team.name + "'s Round 1 cell in ESPN, then press a button below."); render(); return; }
+      var r = src.getBoundingClientRect(); colX = r.left + r.width/2;
     }
-    target = grid[colIdx] && grid[colIdx][rowIdx];
-    if (!target){ setStatus("No input below in this column — end of roster? Re-click a cell to retarget."); colIdx = null; return; }
+    var target = nextInput(colX);
+    if (!target){ autoOn = false; setStatus("No empty cell left in this column."); render(); return; }
     var p = team.picks[pickI];
-    target.focus();
-    setValue(target, p.name);
-    setStatus("Typed “" + p.name + "”. Click [" + p.team + " " + p.pos + "] in ESPN, then Fill next.");
-    pickI++;
-    render();
+    busy = true; setStatus("Filling R" + p.r + " " + p.name + "…"); render();
+    doPick(target, p, function(ok){
+      busy = false;
+      if (!ok) misses.push("R" + p.r + " " + p.name);
+      pickI++;
+      if (pickI >= team.picks.length){ finishTeam(); return; }
+      if (autoOn){ render(); setTimeout(fillNext, ok ? 320 : 260); }
+      else { setStatus(ok ? ("✓ R" + p.r + " " + p.name) : ("⚠ " + p.name + " — no match; select it in ESPN by hand.")); render(); }
+    });
+  }
+
+  function toggleAuto(){
+    if (busy) return;
+    if (autoOn){ autoOn = false; setStatus("Paused."); render(); return; }
+    autoOn = true; render(); fillNext();
   }
 
   document.body.appendChild(box);
