@@ -4242,8 +4242,67 @@ export function DraftBoardPage() {
         >
           {exportStep === 'menu' ? (
             <div className="draft-export-options">
+              {/* Draft Board (screenshot) — the one export available mid-draft too. */}
+              <button
+                className="button draft-export-options__opt"
+                onClick={() => {
+                  setScreenshotUrl(null);
+                  screenshotCanvasRef.current = null;
+                  setScreenshotError(null);
+                  setExportStep('screenshot');
+                }}
+              >
+                <PhotoCameraOutlinedIcon fontSize="small" />
+                <span>
+                  <strong>Draft Board</strong>
+                  <span className="muted">A PNG image of the draft board</span>
+                </span>
+              </button>
               {isComplete && (
                 <>
+                  <button
+                    className="button draft-export-options__opt"
+                    onClick={() => {
+                      setShowExport(false);
+                      setShowRosterExport(true);
+                    }}
+                  >
+                    <AssignmentIndOutlinedIcon fontSize="small" />
+                    <span>
+                      <strong>Roster</strong>
+                      <span className="muted">A clean PNG of a team's roster</span>
+                    </span>
+                  </button>
+                  <button
+                    className="button draft-export-options__opt"
+                    onClick={() => {
+                      setShowExport(false);
+                      setShowGradeExport(true);
+                    }}
+                  >
+                    <EmojiEventsOutlinedIcon fontSize="small" />
+                    <span>
+                      <strong>Draft Grades</strong>
+                      <span className="muted">Shareable grade cards — one or per team</span>
+                    </span>
+                  </button>
+                  {/* ESPN entry needs a desktop browser (console/bookmarklet + ESPN's
+                      offline-draft grid), so it's hidden below the desktop breakpoint. */}
+                  {isDesktop && (
+                    <button
+                      className="button draft-export-options__opt"
+                      onClick={() => {
+                        setShowExport(false);
+                        setShowEspnExport(true);
+                      }}
+                    >
+                      <ChecklistIcon fontSize="small" />
+                      <span>
+                        <strong>ESPN</strong>
+                        <span className="muted">Guided + auto-fill into ESPN's offline draft</span>
+                      </span>
+                    </button>
+                  )}
                   <button
                     className="button draft-export-options__opt"
                     onClick={() => {
@@ -4283,62 +4342,8 @@ export function DraftBoardPage() {
                       <span className="muted">One object per team, for scripts and tools</span>
                     </span>
                   </button>
-                  <button
-                    className="button draft-export-options__opt"
-                    onClick={() => {
-                      setShowExport(false);
-                      setShowGradeExport(true);
-                    }}
-                  >
-                    <EmojiEventsOutlinedIcon fontSize="small" />
-                    <span>
-                      <strong>Draft grades</strong>
-                      <span className="muted">Shareable grade cards — one or per team</span>
-                    </span>
-                  </button>
-                  <button
-                    className="button draft-export-options__opt"
-                    onClick={() => {
-                      setShowExport(false);
-                      setShowRosterExport(true);
-                    }}
-                  >
-                    <AssignmentIndOutlinedIcon fontSize="small" />
-                    <span>
-                      <strong>Roster</strong>
-                      <span className="muted">A clean PNG of a team's roster</span>
-                    </span>
-                  </button>
-                  <button
-                    className="button draft-export-options__opt"
-                    onClick={() => {
-                      setShowExport(false);
-                      setShowEspnExport(true);
-                    }}
-                  >
-                    <ChecklistIcon fontSize="small" />
-                    <span>
-                      <strong>Enter in ESPN</strong>
-                      <span className="muted">Guided copy-paste into ESPN's offline draft</span>
-                    </span>
-                  </button>
                 </>
               )}
-              <button
-                className="button draft-export-options__opt"
-                onClick={() => {
-                  setScreenshotUrl(null);
-                  screenshotCanvasRef.current = null;
-                  setScreenshotError(null);
-                  setExportStep('screenshot');
-                }}
-              >
-                <PhotoCameraOutlinedIcon fontSize="small" />
-                <span>
-                  <strong>Board screenshot</strong>
-                  <span className="muted">A PNG image of the draft board</span>
-                </span>
-              </button>
             </div>
           ) : (
             <div className="draft-export-screenshot">
