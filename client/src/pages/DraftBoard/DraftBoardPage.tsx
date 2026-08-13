@@ -2720,7 +2720,7 @@ export function DraftBoardPage() {
                         className={`pool-table__adp${p.value_rank == null ? ' is-dash' : ''}`}
                         title={p.value != null ? `${p.value > 0 ? '+' : ''}${p.value.toFixed(1)} pts over replacement` : undefined}
                       >
-                        {p.value_rank != null ? p.value_rank.toFixed(1) : '—'}
+                        {p.value_rank != null ? Math.round(p.value_rank) : '—'}
                       </td>
                       <td className="pool-table__player">
                         <div className="pool-table__player-inner">

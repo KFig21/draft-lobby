@@ -155,7 +155,7 @@ export function PlayerCard({
                 : undefined
             }
           >
-            Rank {player.value_rank.toFixed(1)}
+            Rank {Math.round(player.value_rank)}
           </span>
         )}
       </div>

@@ -920,6 +920,25 @@
     .draft__roster .player-card__proj {
       font-size: 1.2rem;
     }
+
+    // The position filter chips wrapped to a second row in this narrower
+    // (600px) modal. Keep them on one strip — same swipeable, hidden-scrollbar
+    // treatment as the mobile filter bar — and tighten the gap so the usual
+    // set fits without needing to scroll at all.
+    .chip-row {
+      flex-wrap: nowrap;
+      gap: $space * 0.5;
+      overflow-x: auto;
+      scrollbar-width: none;
+
+      &::-webkit-scrollbar {
+        display: none;
+      }
+
+      > * {
+        flex-shrink: 0;
+      }
+    }
   }
 
   // Auto-draft toggle: faded robot when off, filled + accent when on.
