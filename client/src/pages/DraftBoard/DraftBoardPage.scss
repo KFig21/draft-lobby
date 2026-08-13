@@ -1389,6 +1389,17 @@
   &__board {
     overflow: auto;
     padding: $space * 1.5;
+    // Anchors the floating mobile zoom-reset button; the grid scrolls inside
+    // its own .grid-scroll, so this stays put over the board.
+    position: relative;
+
+    // Mobile pinch-to-zoom (see the touch handler in DraftBoardPage): scale the
+    // grid's own scroll container with `zoom` (not transform) so the sticky
+    // header/round column and scrolling keep working. The variable defaults to
+    // 1, so desktop (which never sets it) is unaffected.
+    .grid-scroll {
+      zoom: var(--mobile-board-zoom, 1);
+    }
 
     // The Power Rankings board owns its own panel padding and draws full-height
     // dividers between its columns, so drop the board padding that would inset
@@ -1397,6 +1408,27 @@
       padding: 0;
       overflow: hidden;
     }
+  }
+
+  // Floating "Reset zoom" pill over the mobile board — only shown while pinched
+  // (see the guard in DraftBoardPage). Sits above the sticky grid header.
+  &__zoom-reset {
+    position: absolute;
+    bottom: $space * 1.5;
+    right: $space * 1.5;
+    z-index: 6;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: $space * 0.6 $space;
+    border: 1px solid $border;
+    border-radius: 999px;
+    background: $bg-raised;
+    color: $text;
+    font-size: 0.8rem;
+    font-weight: 700;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+    cursor: pointer;
   }
 
   &__sidebar {

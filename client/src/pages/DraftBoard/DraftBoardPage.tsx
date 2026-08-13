@@ -664,6 +664,83 @@ export function DraftBoardPage() {
       return clampZoom(gs.clientWidth / gs.scrollWidth);
     });
   }
+  // Mobile board pinch-to-zoom. Two-finger pinch scales the grid via the CSS
+  // `zoom` property on its scroll container (a CSS variable set on the board
+  // section) — same reasoning as the desktop zoom above: `zoom` (not transform)
+  // keeps the sticky header/round column and scrolling intact. Single-finger
+  // panning still scrolls; only a two-finger gesture zooms. Listeners are
+  // attached natively (touchmove non-passive) because React's onTouchMove is
+  // passive and can't preventDefault the browser's own page pinch. A floating
+  // "Reset zoom" button (rendered on the board) returns to 1×.
+  const MIN_MOBILE_ZOOM = 0.4;
+  const MAX_MOBILE_ZOOM = 2.5;
+  const [mobileZoom, setMobileZoom] = useState(1);
+  const mobileZoomRef = useRef(1);
+  mobileZoomRef.current = mobileZoom;
+  const clampMobileZoom = (z: number) =>
+    Math.min(MAX_MOBILE_ZOOM, Math.max(MIN_MOBILE_ZOOM, Math.round(z * 1000) / 1000));
+  useEffect(() => {
+    // Touch affordance only — never on desktop (where the dashboard has its own
+    // pinch/fit control). Depends on `lobby` so it re-runs once the board
+    // section actually mounts (past the loading guard), same as the fullscreen
+    // row-height effect above that reads this ref.
+    if (isDesktop) return;
+    const el = boardSectionRef.current;
+    if (!el) return;
+    let startZoom = 1;
+
+    // Safari (incl. iOS) drives pinch through non-standard gesture events and
+    // won't reliably let a touchmove cancel its own page zoom — prefer those
+    // there; every other browser gets the standard two-finger touch math.
+    if ('ongesturestart' in window) {
+      const onGStart = (e: Event) => {
+        e.preventDefault();
+        startZoom = mobileZoomRef.current;
+      };
+      const onGChange = (e: Event) => {
+        e.preventDefault();
+        setMobileZoom(clampMobileZoom(startZoom * (e as Event & { scale: number }).scale));
+      };
+      const onGEnd = (e: Event) => e.preventDefault();
+      el.addEventListener('gesturestart', onGStart);
+      el.addEventListener('gesturechange', onGChange);
+      el.addEventListener('gestureend', onGEnd);
+      return () => {
+        el.removeEventListener('gesturestart', onGStart);
+        el.removeEventListener('gesturechange', onGChange);
+        el.removeEventListener('gestureend', onGEnd);
+      };
+    }
+
+    let startDist = 0;
+    const pinchDist = (t: TouchList) =>
+      Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+    const onStart = (e: TouchEvent) => {
+      if (e.touches.length !== 2) return;
+      e.preventDefault();
+      startDist = pinchDist(e.touches);
+      startZoom = mobileZoomRef.current;
+    };
+    const onMove = (e: TouchEvent) => {
+      if (startDist === 0 || e.touches.length !== 2) return;
+      e.preventDefault(); // block the browser's own page pinch while zooming the board
+      setMobileZoom(clampMobileZoom(startZoom * (pinchDist(e.touches) / startDist)));
+    };
+    const onEnd = (e: TouchEvent) => {
+      if (e.touches.length < 2) startDist = 0;
+    };
+    el.addEventListener('touchstart', onStart, { passive: false });
+    el.addEventListener('touchmove', onMove, { passive: false });
+    el.addEventListener('touchend', onEnd, { passive: true });
+    el.addEventListener('touchcancel', onEnd, { passive: true });
+    return () => {
+      el.removeEventListener('touchstart', onStart);
+      el.removeEventListener('touchmove', onMove);
+      el.removeEventListener('touchend', onEnd);
+      el.removeEventListener('touchcancel', onEnd);
+    };
+  }, [isDesktop, lobby]);
+
   const [dashBoardPct, setDashBoardPct] = useState(() => {
     const v = Number(localStorage.getItem('draftDashBoardPct'));
     return v >= 25 && v <= 80 ? v : 56;
@@ -3627,6 +3704,7 @@ export function DraftBoardPage() {
           className={`draft__board ${mobileTab === 'board' ? 'is-mobile-active' : ''}${
             showPowerRankings ? ' draft__board--rankings' : ''
           }`}
+          style={{ ['--mobile-board-zoom' as string]: mobileZoom }}
         >
           {showPowerRankings ? (
             <PowerRankingsBoard
@@ -3670,6 +3748,18 @@ export function DraftBoardPage() {
             />
           ) : (
             renderDraftGrid()
+          )}
+          {/* Mobile pinch-zoom reset — floats over the board once zoomed. */}
+          {!isDesktop && !showPowerRankings && Math.abs(mobileZoom - 1) > 0.001 && (
+            <button
+              type="button"
+              className="draft__zoom-reset"
+              onClick={() => setMobileZoom(1)}
+              aria-label="Reset board zoom"
+            >
+              <ZoomInMapIcon fontSize="small" />
+              Reset zoom
+            </button>
           )}
         </section>
 
