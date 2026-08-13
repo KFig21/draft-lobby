@@ -318,6 +318,25 @@ function drawBoldCell(
   drawFlags(ctx, x, y, flags, posColor, pal.keeper, false);
 }
 
+// Per-channel sRGB blend, matching CSS `color-mix(in srgb, a <aPct%>, b)` — a
+// straight linear mix of the gamma-encoded channel values (what `in srgb`
+// does). aPct is 0..1 (the weight of `a`).
+function parseHex(hex: string): [number, number, number] {
+  let h = hex.replace('#', '');
+  if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+  const n = parseInt(h, 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+function mixColors(a: string, aPct: number, b: string): string {
+  const [ar, ag, ab] = parseHex(a);
+  const [br, bg, bb] = parseHex(b);
+  const r = Math.round(ar * aPct + br * (1 - aPct));
+  const g = Math.round(ag * aPct + bg * (1 - aPct));
+  const bl = Math.round(ab * aPct + bb * (1 - aPct));
+  return `rgb(${r}, ${g}, ${bl})`;
+}
+
 function drawCleanCell(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -325,13 +344,20 @@ function drawCleanCell(
   pick: PickRow,
   player: PlayerRow,
   pal: Palette,
+  teamCount: number,
   flags: CellFlags,
+  theme: 'dark' | 'light',
 ): void {
+  const posColor = POSITION_COLORS[player.position as Position] ?? pal.textMuted;
+  const isLight = theme === 'light';
+
+  // Position-tinted wash + border (mirrors PickCell.scss). Over the light base
+  // the tint washes out, so light mode mixes the position colour in harder.
   roundRect(ctx, x, y, CELL_W, CELL_H, RADIUS);
-  ctx.fillStyle = pal.cellBg;
+  ctx.fillStyle = mixColors(posColor, isLight ? 0.45 : 0.24, pal.cellBg);
   ctx.fill();
   roundRect(ctx, x + 0.5, y + 0.5, CELL_W - 1, CELL_H - 1, RADIUS);
-  ctx.strokeStyle = pal.border;
+  ctx.strokeStyle = mixColors(posColor, isLight ? 0.9 : 0.8, pal.border);
   ctx.lineWidth = 1;
   ctx.stroke();
   if (pick.is_keeper) keeperOutline(ctx, x, y, pal.keeper);
@@ -340,17 +366,32 @@ function drawCleanCell(
   const maxW = CELL_W - CELL_PAD * 2;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
-  ctx.fillStyle = POSITION_COLORS[player.position as Position] ?? pal.textMuted;
-  ctx.font = `800 10px ${FONT}`;
-  ctx.fillText(player.position, tx, y + CELL_PAD + 9);
+
+  // Line 1 — abbreviated name, in the theme text colour (the surface here is a
+  // faded position wash, not a solid fill). Same top-line as the DOM cell.
   ctx.fillStyle = pal.text;
-  ctx.font = `600 12px ${FONT}`;
-  ctx.fillText(fitText(ctx, player.name, maxW), tx, y + CELL_PAD + 24);
+  ctx.font = `800 12px ${FONT}`;
+  ctx.fillText(fitText(ctx, abbreviateName(player.name, player.position), maxW), tx, y + CELL_PAD + 12);
+
+  // Line 2 — POS · TEAM · Bye N. The position is spelled out in its colour
+  // (darkened in light mode, matching PickCell.scss) since the faded surface
+  // doesn't read as its position the way a solid fill does; the rest is muted.
+  const metaY = y + CELL_PAD + 26;
+  ctx.font = `800 9px ${FONT}`;
+  ctx.fillStyle = isLight ? mixColors(posColor, 0.6, '#000000') : posColor;
+  ctx.fillText(player.position, tx, metaY);
+  const posW = ctx.measureText(player.position).width;
+  ctx.font = `600 9px ${FONT}`;
   ctx.fillStyle = pal.textMuted;
-  ctx.font = `400 10px ${FONT}`;
-  const bye = player.bye_week != null ? ` · ${player.bye_week}` : '';
-  ctx.fillText(fitText(ctx, `${player.nfl_team}${bye}`, maxW), tx, y + CELL_PAD + 37);
-  const posColor = POSITION_COLORS[player.position as Position] ?? pal.textMuted;
+  const bye = player.bye_week != null ? ` · Bye ${player.bye_week}` : '';
+  ctx.fillText(fitText(ctx, ` · ${player.nfl_team}${bye}`, maxW - posW), tx + posW, metaY);
+
+  // Line 3 — round.pick, faintest (same hierarchy as the DOM).
+  const pickInRound = pick.overall - (pick.round - 1) * teamCount;
+  ctx.font = `600 9px ${FONT}`;
+  ctx.fillStyle = pal.textMuted;
+  ctx.fillText(formatRoundPick(pick.round, pickInRound, teamCount), tx, y + CELL_PAD + 38);
+
   drawFlags(ctx, x, y, flags, posColor, pal.keeper, true);
 }
 
@@ -600,7 +641,8 @@ export function renderBoardCanvas(opts: BoardRenderOptions): HTMLCanvasElement {
         reaction: reactionPickIds?.has(pick.id) ?? false,
       };
       if (cellStyle === 'bold') drawBoldCell(ctx, x, y, pick, player, pal, flags);
-      else if (cellStyle === 'clean') drawCleanCell(ctx, x, y, pick, player, pal, flags);
+      else if (cellStyle === 'clean')
+        drawCleanCell(ctx, x, y, pick, player, pal, teamCount, flags, theme);
       else drawDefaultCell(ctx, x, y, pick, player, pal, teamCount, flags);
     });
   }
