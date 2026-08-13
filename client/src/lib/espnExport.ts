@@ -34,6 +34,21 @@ export function toEspnSearchName(player: Pick<PlayerRow, 'name' | 'position' | '
   return player.name;
 }
 
+/**
+ * Our team abbreviations (Sleeper's) → ESPN's, where they differ. ESPN's
+ * autocomplete rows show the ESPN abbrev and the autofill matches a pick to its
+ * dropdown row on name + team, so a mismatch makes those players fail to
+ * auto-select. Washington is the known outlier (WAS → WSH); add others here if
+ * ESPN turns out to differ on more. NOT used for the D/ST search name, which is
+ * keyed on the raw abbrev via NFL_TEAM_NICKNAMES.
+ */
+const ESPN_TEAM_ABBR: Record<string, string> = {
+  WAS: 'WSH',
+};
+export function toEspnTeamAbbr(abbr: string): string {
+  return ESPN_TEAM_ABBR[abbr] ?? abbr;
+}
+
 /** One drafted player, resolved for the ESPN entry checklist. */
 export interface EspnPick {
   round: number;
@@ -73,7 +88,7 @@ export function groupDraftForEspn(
       round: p.round,
       overall: p.overall,
       espnName: player ? toEspnSearchName(player) : '',
-      nflTeam: player?.nfl_team ?? '',
+      nflTeam: player ? toEspnTeamAbbr(player.nfl_team) : '',
       position: player?.position ?? '',
     });
   }
