@@ -3830,6 +3830,19 @@ export function DraftBoardPage() {
               <MenuBookOutlinedIcon fontSize="small" />
               League rules
             </button>
+            {/* Personal draft-board preferences — the top bar's gear only shows
+                on desktop/fullscreen, so mobile reaches it from here. */}
+            <button
+              type="button"
+              className="navbar-drawer__link"
+              onClick={() => {
+                setShowUserSettings(true);
+                setDrawerOpen(false);
+              }}
+            >
+              <SettingsIcon fontSize="small" />
+              Your settings
+            </button>
             {/* Board PNG export during the live draft — the top-bar shortcut
                 only appears once the draft is complete, so mid-draft it lives
                 here instead. (Nothing to export while staging.) */}
