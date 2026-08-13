@@ -29,6 +29,8 @@ import {
   setShowByeClashes,
   getShowPickProjection,
   setShowPickProjection,
+  getShowPoolMarks,
+  setShowPoolMarks,
   type DraftBoardLayout,
   type DraftCellStyle,
 } from '../../lib/draftCellStyle';
@@ -76,6 +78,7 @@ export function SettingsPage() {
   const [showCellReactions, setShowCellReactionsState] = useState(() => getShowCellReactions());
   const [showByeClashes, setShowByeClashesState] = useState(() => getShowByeClashes());
   const [showPickProjection, setShowPickProjectionState] = useState(() => getShowPickProjection());
+  const [showPoolMarks, setShowPoolMarksState] = useState(() => getShowPoolMarks());
   const [boardLayout, setBoardLayoutState] = useState<DraftBoardLayout>(() => getDraftBoardLayout());
   const [defaultScoring, setDefaultScoringState] = useState(() => getDefaultScoringChoice());
   const [cardStyle, setCardStyleState] = useState<PlayerCardStyle>(() => getPlayerCardStyle());
@@ -107,6 +110,11 @@ export function SettingsPage() {
   function updateShowPickProjection(show: boolean) {
     setShowPickProjection(show);
     setShowPickProjectionState(show);
+  }
+
+  function updateShowPoolMarks(show: boolean) {
+    setShowPoolMarks(show);
+    setShowPoolMarksState(show);
   }
 
   function updateBoardLayout(layout: DraftBoardLayout) {
@@ -215,6 +223,17 @@ export function SettingsPage() {
           </div>
         </div>
         <PlayerCardStylePicker value={cardStyle} onChange={updateCardStyle} player={samplePlayer} />
+        <div className="settings__row">
+          <div className="settings__row-main">
+            <span className="settings__row-name">Favorite &amp; queue icons</span>
+            <span className="muted">Show the star and bookmark on each player in the pool</span>
+          </div>
+          <ToggleSwitch
+            label="Toggle favorite and queue icons"
+            checked={showPoolMarks}
+            onChange={updateShowPoolMarks}
+          />
+        </div>
         <div className="settings__row">
           <div className="settings__row-main">
             <span className="settings__row-name">Team colors</span>

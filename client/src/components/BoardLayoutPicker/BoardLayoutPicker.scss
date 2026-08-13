@@ -4,6 +4,10 @@
   display: flex;
   flex-direction: column;
   gap: $space * 0.75;
+  // The settings row that follows (Cell style) carries a top border; without
+  // this the Simple option sits flush against it. Breathing room to match the
+  // spacing the bordered rows give each other.
+  margin-bottom: $space;
 
   &__option {
     display: flex;

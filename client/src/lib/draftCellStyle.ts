@@ -77,6 +77,24 @@ export function setShowPickProjection(show: boolean): void {
   localStorage.setItem(PICK_PROJECTION_STORAGE_KEY, show ? '1' : '0');
 }
 
+/** Whether the favorite (star) and queue (bookmark) icons show on each row of
+ * the player pool (list cards and the dashboard table) — per-device preference,
+ * same pattern as the toggles above. When off the pool reads cleaner; you can
+ * still favorite/queue from a player's detail modal. Defaults to on. */
+const POOL_MARKS_STORAGE_KEY = 'showPoolMarks';
+
+export function getShowPoolMarks(): boolean {
+  try {
+    return localStorage.getItem(POOL_MARKS_STORAGE_KEY) !== '0';
+  } catch {
+    return true;
+  }
+}
+
+export function setShowPoolMarks(show: boolean): void {
+  localStorage.setItem(POOL_MARKS_STORAGE_KEY, show ? '1' : '0');
+}
+
 /** Which desktop draft-board layout to use. 'detailed' is the 3-lane dashboard
  * (roster · board+players · chat, all visible at once); 'simple' is the classic
  * board with a tabbed sidebar. Only affects wide screens — mobile and the

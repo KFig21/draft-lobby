@@ -25,6 +25,8 @@ interface Props {
   onShowByeClashesChange: (show: boolean) => void;
   showPickProjection: boolean;
   onShowPickProjectionChange: (show: boolean) => void;
+  showPoolMarks: boolean;
+  onShowPoolMarksChange: (show: boolean) => void;
   teamColors: boolean;
   onTeamColorsChange: (enabled: boolean) => void;
   toastPrefs: ToastPrefs;
@@ -54,6 +56,8 @@ export function DraftUserSettingsModal({
   onShowByeClashesChange,
   showPickProjection,
   onShowPickProjectionChange,
+  showPoolMarks,
+  onShowPoolMarksChange,
   teamColors,
   onTeamColorsChange,
   toastPrefs,
@@ -109,6 +113,17 @@ export function DraftUserSettingsModal({
             onChange={onCardStyleChange}
             player={samplePlayer}
           />
+          <div className="draft-user-settings__row">
+            <div className="draft-user-settings__row-main">
+              <span className="draft-user-settings__row-name">Favorite &amp; queue icons</span>
+              <span className="muted">Show the star and bookmark on each player in the pool</span>
+            </div>
+            <ToggleSwitch
+              label="Toggle favorite and queue icons"
+              checked={showPoolMarks}
+              onChange={onShowPoolMarksChange}
+            />
+          </div>
           <div className="draft-user-settings__row">
             <div className="draft-user-settings__row-main">
               <span className="draft-user-settings__row-name">Bye week clashes</span>

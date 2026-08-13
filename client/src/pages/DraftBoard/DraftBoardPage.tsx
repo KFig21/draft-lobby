@@ -131,11 +131,13 @@ import {
   getShowByeClashes,
   getShowCellReactions,
   getShowPickProjection,
+  getShowPoolMarks,
   setDraftBoardLayout,
   setDraftCellStyle,
   setShowByeClashes,
   setShowCellReactions,
   setShowPickProjection,
+  setShowPoolMarks,
   type DraftBoardLayout,
   type DraftCellStyle,
 } from '../../lib/draftCellStyle';
@@ -263,6 +265,7 @@ export function DraftBoardPage() {
   const [showCellReactions, setShowCellReactionsState] = useState(() => getShowCellReactions());
   const [showByeClashes, setShowByeClashesState] = useState(() => getShowByeClashes());
   const [showPickProjection, setShowPickProjectionState] = useState(() => getShowPickProjection());
+  const [showPoolMarks, setShowPoolMarksState] = useState(() => getShowPoolMarks());
   const [boardLayout, setBoardLayoutState] = useState<DraftBoardLayout>(() => getDraftBoardLayout());
   const [cardStyle, setCardStyleState] = useState<PlayerCardStyle>(() => getPlayerCardStyle());
   const [teamColors, setTeamColorsState] = useState(() => getTeamColorsEnabled());
@@ -289,6 +292,10 @@ export function DraftBoardPage() {
   function updateShowPickProjection(show: boolean) {
     setShowPickProjection(show);
     setShowPickProjectionState(show);
+  }
+  function updateShowPoolMarks(show: boolean) {
+    setShowPoolMarks(show);
+    setShowPoolMarksState(show);
   }
   function updateBoardLayout(layout: DraftBoardLayout) {
     setDraftBoardLayout(layout);
@@ -2420,9 +2427,10 @@ export function DraftBoardPage() {
 
     // ── Table mode (dashboard) helpers ──
     // Position stat columns when filtered to a single position; else a generic
-    // stat line. colCount spans star + player + stats + pts + adp + actions.
+    // stat line. colCount spans [marks] + player + stats + pts + rank + actions
+    // — the marks column drops out when the pool-marks setting is off.
     const statCols = POS_STAT_COLS[filter as Position];
-    const colCount = 5 + (statCols ? statCols.length : 1);
+    const colCount = (showPoolMarks ? 5 : 4) + (statCols ? statCols.length : 1);
     const sortTh = (label: string, key: string, cls?: string) => (
       <th
         className={`pool-table__th${sortMode === key ? ' is-active' : ''}${cls ? ` ${cls}` : ''}`}
@@ -2645,7 +2653,9 @@ export function DraftBoardPage() {
             <table className="pool-table">
               <thead>
                 <tr>
-                  <th className="pool-table__marks" aria-label="Favorite & queue" />
+                  {showPoolMarks && (
+                    <th className="pool-table__marks" aria-label="Favorite & queue" />
+                  )}
                   {sortTh('Rank', 'value', 'pool-table__adp')}
                   {sortTh('Player', 'name', 'pool-table__player')}
                   {statCols ? (
@@ -2679,43 +2689,45 @@ export function DraftBoardPage() {
                         else setDetailPlayer(p);
                       }}
                     >
-                      <td className="pool-table__marks">
-                        {canFavorite && (
-                          <button
-                            type="button"
-                            className={`pool-table__fav${isFav ? ' is-on' : ''}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleFavorite(p.id);
-                            }}
-                            aria-label={isFav ? 'Remove favorite' : 'Add favorite'}
-                          >
-                            {isFav ? (
-                              <StarIcon fontSize="inherit" />
-                            ) : (
-                              <StarBorderIcon fontSize="inherit" />
-                            )}
-                          </button>
-                        )}
-                        {!isDrafted && (
-                          <button
-                            type="button"
-                            className={`pool-table__q${isQueued ? ' is-on' : ''}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleQueue(p.id);
-                            }}
-                            aria-label={isQueued ? 'Remove from queue' : 'Add to queue'}
-                            title={isQueued ? 'Remove from queue' : 'Add to queue'}
-                          >
-                            {isQueued ? (
-                              <BookmarkIcon fontSize="inherit" />
-                            ) : (
-                              <BookmarkBorderIcon fontSize="inherit" />
-                            )}
-                          </button>
-                        )}
-                      </td>
+                      {showPoolMarks && (
+                        <td className="pool-table__marks">
+                          {canFavorite && (
+                            <button
+                              type="button"
+                              className={`pool-table__fav${isFav ? ' is-on' : ''}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleFavorite(p.id);
+                              }}
+                              aria-label={isFav ? 'Remove favorite' : 'Add favorite'}
+                            >
+                              {isFav ? (
+                                <StarIcon fontSize="inherit" />
+                              ) : (
+                                <StarBorderIcon fontSize="inherit" />
+                              )}
+                            </button>
+                          )}
+                          {!isDrafted && (
+                            <button
+                              type="button"
+                              className={`pool-table__q${isQueued ? ' is-on' : ''}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleQueue(p.id);
+                              }}
+                              aria-label={isQueued ? 'Remove from queue' : 'Add to queue'}
+                              title={isQueued ? 'Remove from queue' : 'Add to queue'}
+                            >
+                              {isQueued ? (
+                                <BookmarkIcon fontSize="inherit" />
+                              ) : (
+                                <BookmarkBorderIcon fontSize="inherit" />
+                              )}
+                            </button>
+                          )}
+                        </td>
+                      )}
                       <td
                         className={`pool-table__adp${p.value_rank == null ? ' is-dash' : ''}`}
                         title={p.value != null ? `${p.value > 0 ? '+' : ''}${p.value.toFixed(1)} pts over replacement` : undefined}
@@ -2848,9 +2860,9 @@ export function DraftBoardPage() {
                   onHoldPick={!isDrafted && canPick ? () => holdDraft(p) : undefined}
                   disabled={!canPick}
                   blockedReason={isDrafted ? undefined : limitBlock(p)}
-                  onQueue={isDrafted ? undefined : () => toggleQueue(p.id)}
+                  onQueue={!showPoolMarks || isDrafted ? undefined : () => toggleQueue(p.id)}
                   queued={queue.includes(p.id)}
-                  onFavorite={canFavorite ? () => toggleFavorite(p.id) : undefined}
+                  onFavorite={showPoolMarks && canFavorite ? () => toggleFavorite(p.id) : undefined}
                   favorited={favoriteIds?.has(p.id) ?? false}
                   onOpenDetail={() => {
                     // A drafted player opens its pick (who took them, round/pick);
@@ -4365,6 +4377,8 @@ export function DraftBoardPage() {
           onShowByeClashesChange={updateShowByeClashes}
           showPickProjection={showPickProjection}
           onShowPickProjectionChange={updateShowPickProjection}
+          showPoolMarks={showPoolMarks}
+          onShowPoolMarksChange={updateShowPoolMarks}
           teamColors={teamColors}
           onTeamColorsChange={updateTeamColors}
           toastPrefs={toastPrefs}
