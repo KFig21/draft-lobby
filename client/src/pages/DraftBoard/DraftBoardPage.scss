@@ -140,6 +140,17 @@
         color: $accent;
       }
 
+      // Paused while it's your turn: the bar is green → amber → red, and the
+      // default amber-on-faint-amber pill (see &__paused-pill) goes muddy on
+      // green and all but vanishes on the amber warning bar. A dark chip with
+      // amber text reads clearly on all three urgency grounds and keeps the
+      // "paused = amber" signal, so this one override covers every stage
+      // (warning/danger only restyle the bar background, not this pill).
+      .draft__paused-pill {
+        background: #05231a;
+        color: $warning;
+      }
+
       .draft__icon-btn:hover {
         background: black;
         color: white;
