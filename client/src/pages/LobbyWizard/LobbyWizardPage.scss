@@ -48,6 +48,13 @@
     @media (max-width: #{$bp-md - 1px}) {
       gap: $space * 2;
     }
+
+    // Embedded in the "Set up a league" modal: .dialog__body already pads the
+    // edges and each section card adds its own, so the full-page gap reads as
+    // excess here — pull it in at any width.
+    .dialog__body & {
+      gap: $space * 2;
+    }
   }
 
   &__section {
@@ -60,6 +67,13 @@
     // Phone: the roomy 24px card padding + inner gaps read as inflated on a
     // small screen — pull the padding and control spacing in a notch.
     @media (max-width: #{$bp-md - 1px}) {
+      gap: $space * 1.5;
+      padding: $space * 2;
+    }
+
+    // Same reasoning in the "Set up a league" modal at any width — the card
+    // padding otherwise stacks on the modal body's own padding.
+    .dialog__body & {
       gap: $space * 1.5;
       padding: $space * 2;
     }
