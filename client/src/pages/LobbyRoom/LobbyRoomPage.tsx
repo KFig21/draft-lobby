@@ -16,6 +16,7 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import GroupAddOutlinedIcon from '@mui/icons-material/GroupAddOutlined';
 import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';
+import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import EmojiEventsOutlinedIcon from '@mui/icons-material/EmojiEventsOutlined';
@@ -900,7 +901,7 @@ export function LobbyRoomPage() {
                       key={i}
                       className={`team-list__row${team ? ' team-list__row--draggable' : ' team-list__row--empty'}${
                         dragIndex === i ? ' team-list__row--dragging' : ''
-                      }`}
+                      }${team && team.owner_id === userId ? ' team-list__row--mine' : ''}`}
                       draggable={!!team}
                       onDragStart={() => team && setDragIndex(i)}
                       onDragEnter={() => handleDragEnter(i)}
@@ -932,9 +933,6 @@ export function LobbyRoomPage() {
                             <span className="team-list__chip team-list__chip--reserved">
                               Reserved
                             </span>
-                          )}
-                          {team.owner_id === userId && (
-                            <span className="team-list__you">you</span>
                           )}
                         </>
                       ) : (
@@ -1000,7 +998,9 @@ export function LobbyRoomPage() {
                 return (
                   <li
                     key={team.id}
-                    className={`team-list__row${editing ? ' team-list__row--editing' : ''}`}
+                    className={`team-list__row${editing ? ' team-list__row--editing' : ''}${
+                      team.owner_id === userId ? ' team-list__row--mine' : ''
+                    }`}
                   >
                     <span className="team-list__pos">{team.draft_position}</span>
                     <Avatar avatar={teamAvatar(team)} size={32} />
@@ -1034,9 +1034,6 @@ export function LobbyRoomPage() {
                             <span className="team-list__chip team-list__chip--owner">
                               {ownerUsername(team.owner_id)}
                             </span>
-                          )}
-                          {team.owner_id === userId && (
-                            <span className="team-list__you">you</span>
                           )}
                           {team.is_bot && <span className="team-list__chip muted">Bot</span>}
                           {team.is_standin && (
@@ -1098,9 +1095,6 @@ export function LobbyRoomPage() {
                             {ownerUsername(team.owner_id)}
                           </span>
                         )}
-                        {team.owner_id === userId && (
-                          <span className="team-list__you">you</span>
-                        )}
                         {rel === 'friends' && (
                           <span
                             className="team-list__chip team-list__chip--friend"
@@ -1153,7 +1147,7 @@ export function LobbyRoomPage() {
                               }
                               onClick={() => removeBot(team.id)}
                             >
-                              <CloseIcon fontSize="small" />
+                              <DeleteOutlinedIcon fontSize="small" />
                             </button>
                           )}
                         {!team.is_bot &&

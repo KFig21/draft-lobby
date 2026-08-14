@@ -609,6 +609,21 @@
       opacity: 0.7;
     }
 
+    // The viewer's own team — highlight the whole row (border + faded wash)
+    // instead of a "you" chip. Accent (self/friend hue) on dark; primary on
+    // light, matching the app's per-theme highlight convention.
+    &--mine {
+      :root[data-theme='dark'] & {
+        border-color: $accent;
+        background: color-mix(in srgb, $accent 10%, $bg-raised);
+      }
+
+      :root[data-theme='light'] & {
+        border-color: $primary;
+        background: color-mix(in srgb, $primary 8%, $bg-raised);
+      }
+    }
+
     &--draggable {
       cursor: grab;
     }
@@ -654,6 +669,13 @@
     &--owner {
       background: rgba($primary, 0.14);
       color: $primary-hover;
+
+      // Dark mode leans on $accent everywhere (own-team highlight, friend
+      // chips), so the primary-teal owner chip clashes — use accent here too.
+      :root[data-theme='dark'] & {
+        background: rgba($accent, 0.15);
+        color: $accent;
+      }
     }
 
     // An ownerless seat the commissioner drafts for in person — a distinct
@@ -762,16 +784,6 @@
     gap: $space * 1.5 - 2px;
     flex: 1 1 auto;
     min-width: 0;
-  }
-
-  &__you {
-    font-size: 0.7rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    background: $primary;
-    color: #fff;
-    padding: 2px 6px;
-    border-radius: 4px;
   }
 
   // Line 1 of an editing row — just the input, taking the rest of the row

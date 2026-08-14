@@ -6,6 +6,12 @@
   flex-shrink: 0;
   color: $primary-hover;
 
+  // Dark mode leans on $accent for highlights (own-team row, owner/friend
+  // chips), so the primary-teal shield clashes — match the accent there.
+  :root[data-theme='dark'] & {
+    color: $accent;
+  }
+
   &--sub {
     opacity: 0.6;
   }
