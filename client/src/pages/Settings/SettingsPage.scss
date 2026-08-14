@@ -139,6 +139,16 @@
     &:hover {
       color: $text;
     }
+
+    // Accent convention: mint on dark, teal primary on light. Re-declare the
+    // hover here so it still wins at this override's raised specificity.
+    :root[data-theme='light'] & {
+      color: $primary;
+
+      &:hover {
+        color: $text;
+      }
+    }
   }
 
   &__signout {
