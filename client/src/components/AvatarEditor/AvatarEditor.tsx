@@ -11,7 +11,7 @@ import CasinoIcon from '@mui/icons-material/Casino';
 import CloseIcon from '@mui/icons-material/Close';
 import PaletteIcon from '@mui/icons-material/Palette';
 import type { EmojiClickData, Theme } from 'emoji-picker-react';
-import { Suspense, lazy, useEffect, useState } from 'react';
+import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { Avatar } from '../Avatar/Avatar';
 import './AvatarEditor.scss';
 
@@ -52,6 +52,37 @@ export function AvatarEditor({ value, onChange }: Props) {
     return () => mq.removeEventListener('change', onChange);
   }, []);
 
+  // Mobile: fit as many fixed-size emoji tiles as the space beside the preview
+  // allows, in two neat rows — rather than cramming a fixed count and squishing.
+  // We measure the grid's width and pick the column count; the visible emoji
+  // count follows (＋ picker + N + shuffle die = cols × 2).
+  const gridRef = useRef<HTMLDivElement>(null);
+  const [mobileCols, setMobileCols] = useState(6);
+  useEffect(() => {
+    if (isDesktop) return;
+    const el = gridRef.current;
+    if (!el) return;
+    const CELL = 44;
+    const GAP = 4; // matches $space * 0.5
+    const measure = () => {
+      const w = el.clientWidth;
+      if (w > 0) {
+        // Cap at 9 so two rows never exceed the emoji pool (9 × 2 = 18 = 16 + ＋ + die).
+        setMobileCols(Math.max(3, Math.min(9, Math.floor((w + GAP) / (CELL + GAP)))));
+      }
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [isDesktop]);
+
+  // Desktop keeps the fixed 12 (two rows of 7); mobile fills two rows of the
+  // measured column count.
+  const emojiTiles = isDesktop
+    ? QUICK_EMOJI
+    : AVATAR_EMOJI_CHOICES.slice(0, mobileCols * 2 - 2);
+
   // Roll a fresh avatar — the same generators the per-section dice use, so the
   // button matches them: emoji at the 40% preset / 60% anything split, a random
   // vivid color, and a random shape. Re-roll on the rare exact match so the
@@ -85,7 +116,13 @@ export function AvatarEditor({ value, onChange }: Props) {
       {/* Emoji — picker (first) · quick picks · shuffle die (last) */}
       <div className="avatar-editor__row avatar-editor__row--emoji">
         <span className="avatar-editor__label">Emoji</span>
-        <div className="avatar-editor__grid">
+        <div
+          className="avatar-editor__grid"
+          ref={gridRef}
+          style={
+            isDesktop ? undefined : { gridTemplateColumns: `repeat(${mobileCols}, 1fr)` }
+          }
+        >
           <button
             type="button"
             className="avatar-editor__cell avatar-editor__cell--action"
@@ -95,13 +132,13 @@ export function AvatarEditor({ value, onChange }: Props) {
           >
             {pickerOpen ? <CloseIcon fontSize="small" /> : <AddIcon fontSize="small" />}
           </button>
-          {QUICK_EMOJI.map((e, i) => (
+          {emojiTiles.map((e) => (
             <button
               type="button"
               key={e}
               className={`avatar-editor__cell${
                 value.emoji === e ? ' avatar-editor__cell--active' : ''
-              }${i >= 10 ? ' avatar-editor__cell--extra' : ''}`}
+              }`}
               onClick={() => set({ emoji: e })}
             >
               <span className="avatar-editor__emoji">{e}</span>
