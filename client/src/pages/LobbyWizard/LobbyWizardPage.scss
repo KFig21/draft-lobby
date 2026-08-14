@@ -197,19 +197,25 @@
       bottom: $space * 2;
     }
 
-    .button {
+    // Full-width buttons on the standalone page. The embedded modal footer
+    // (below) keeps them content-sized so it matches the scoring-format
+    // modal's footer — one uniform "top border, primary on the right" look.
+    &:not(.wizard__submit-row--embedded) .button {
       flex: 1;
     }
 
     // Embedded (e.g. the "Set up a league" modal, opened from the lobby
     // wizard): there's no mobile bottom nav inside the modal to clear, so the
-    // standalone page's 64px sticky offset just left this floating with a
-    // gap over the modal's own content instead of flush at the bottom.
-    // Plain static flow (like the scoring-format modal's own footer) is the
-    // right behavior here — the modal body's own bottom padding is enough.
+    // standalone page's 64px sticky offset just left this floating with a gap
+    // over the modal's own content. Static flow + a top-border footer row
+    // (mirrors .scoring__footer) makes both wizard modals end the same way.
     &--embedded {
       position: static;
       bottom: auto;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: $space;
+      border-top: 1px solid $border;
     }
   }
 
