@@ -76,18 +76,24 @@ export function ProfileEditor() {
 
   return (
     <form className="profile-editor" onSubmit={handleSubmit}>
-      <AvatarEditor value={avatar} onChange={setAvatar} />
+      <section className="profile-editor__group">
+        <h3 className="profile-editor__subhead">Avatar</h3>
+        <AvatarEditor value={avatar} onChange={setAvatar} />
+      </section>
 
-      <label className="field">
-        <span>Username</span>
-        <input
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          minLength={USERNAME_MIN_LEN}
-          maxLength={USERNAME_MAX_LEN}
-          required
-        />
-      </label>
+      <section className="profile-editor__group">
+        <h3 className="profile-editor__subhead">Username</h3>
+        <label className="field">
+          <input
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            minLength={USERNAME_MIN_LEN}
+            maxLength={USERNAME_MAX_LEN}
+            aria-label="Username"
+            required
+          />
+        </label>
+      </section>
 
       <div className="profile-editor__actions">
         {status && (

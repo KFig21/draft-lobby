@@ -3,7 +3,27 @@
 .profile-editor {
   display: flex;
   flex-direction: column;
-  gap: $space * 2;
+  gap: $space * 2.5;
+
+  // Avatar / Username sub-sections within the Profile card.
+  &__group {
+    display: flex;
+    flex-direction: column;
+    gap: $space * 1.5;
+
+    // Divider between the two sub-sections.
+    & + & {
+      padding-top: $space * 2.5;
+      border-top: 1px solid $border;
+    }
+  }
+
+  &__subhead {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: $text;
+  }
 
   &__actions {
     display: flex;

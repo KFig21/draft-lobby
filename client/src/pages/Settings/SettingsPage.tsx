@@ -303,7 +303,7 @@ export function SettingsPage() {
       </section>
 
       {/* Profile */}
-      <section className="settings__section">
+      <section className="settings__section settings__section--profile">
         <h2>Profile</h2>
         <ProfileEditor />
       </section>

@@ -52,6 +52,14 @@
       font-size: 1.2rem;
       margin-bottom: $space * 1.5;
     }
+
+    // Sections whose body isn't a list of rows (e.g. Profile) miss the divider
+    // that a first row's border-top otherwise draws under the heading — give
+    // the heading its own underline so it matches every other section.
+    &--profile h2 {
+      padding-bottom: $space * 1.5;
+      border-bottom: 1px solid $border;
+    }
   }
 
   &__row {
