@@ -579,7 +579,11 @@ export function LeagueSettingsFields({ settings, onChange, nameField, editableGr
 
       {showScoringModal && (
         <Modal title="New scoring format" wide onClose={() => setShowScoringModal(false)}>
-          <ScoringFormatCreatorPage embedded onSaved={onScoringSaved} />
+          <ScoringFormatCreatorPage
+            embedded
+            onSaved={onScoringSaved}
+            onCancel={() => setShowScoringModal(false)}
+          />
         </Modal>
       )}
 

@@ -90,9 +90,12 @@ function convertRateFraming(
 interface Props {
   embedded?: boolean;
   onSaved?: (format: SavedScoringFormat) => void;
+  /** When embedded, shows a Cancel button in the footer (e.g. to close the
+   * modal) — mirrors the league wizard's footer. */
+  onCancel?: () => void;
 }
 
-export function ScoringFormatCreatorPage({ embedded = false, onSaved }: Props = {}) {
+export function ScoringFormatCreatorPage({ embedded = false, onSaved, onCancel }: Props = {}) {
   const navigate = useNavigate();
   const params = useParams<{ id?: string }>();
   const editId = embedded ? undefined : params.id;
@@ -417,6 +420,11 @@ export function ScoringFormatCreatorPage({ embedded = false, onSaved }: Props = 
         {error && <p className="scoring__error">{error}</p>}
 
         <div className="scoring__footer">
+          {embedded && onCancel && (
+            <button type="button" className="button scoring__cancel" onClick={onCancel}>
+              Cancel
+            </button>
+          )}
           <button className="button button--primary" disabled={saving}>
             {saving ? 'Saving…' : editId ? 'Save changes' : 'Save format'}
           </button>

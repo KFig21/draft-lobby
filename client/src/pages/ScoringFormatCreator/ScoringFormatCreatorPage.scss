@@ -315,6 +315,13 @@
     border-top: 1px solid $border;
   }
 
+  // Cancel sits far left so Save stays on the right (footer is flex-end),
+  // matching the league wizard's Cancel · Save footer. With no Cancel (the
+  // standalone page) the lone Save button is simply right-aligned.
+  &__cancel {
+    margin-right: auto;
+  }
+
   // Live count of enabled scoring categories — a summary caption above the
   // groups (moved out of the footer so it ends like the league wizard's).
   &__count {
