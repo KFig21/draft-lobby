@@ -310,7 +310,7 @@ export function SettingsPage() {
 
       {/* Leagues */}
       <section className="settings__section">
-        <h2>Leagues</h2>
+        <h2>League formats</h2>
         {leagues.map((l) => (
           <div className="settings__row" key={l.id}>
             <div className="settings__row-main">
@@ -336,7 +336,7 @@ export function SettingsPage() {
           </div>
         ))}
         <Link className="settings__setup" to="/settings/leagues/new">
-          Set up a league →
+          Set up a custom league format →
         </Link>
       </section>
 

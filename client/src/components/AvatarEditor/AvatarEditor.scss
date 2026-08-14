@@ -15,7 +15,8 @@
   row-gap: $space * 1.5;
   align-items: start;
 
-  // Desktop: preview becomes a sticky left rail spanning every control row.
+  // Desktop: preview becomes a sticky left rail (avatar + Randomize) spanning
+  // every control row. Randomize lives in the rail here, not as its own row.
   @include lg {
     grid-template-columns: 190px 1fr;
     grid-template-areas:
@@ -47,6 +48,8 @@
     }
   }
 
+  // Desktop: sits in the preview rail. Mobile: rendered by ProfileEditor next to
+  // the "Avatar" heading (reuses this same pill style).
   &__randomize {
     display: inline-flex;
     align-items: center;
@@ -231,16 +234,14 @@
       border-color: $text;
     }
 
-    // Custom-color picker (first) + shuffle die (last) — dashed action tiles
-    // matching the emoji grid's ends. The picker holds the native color input.
-    // Same 2px border + aspect-ratio as the color swatches so the circles are
-    // exactly the same size.
+    // Custom-color picker (first) + shuffle die (last) — borderless action tiles
+    // the same size as the color swatches. The picker holds the native color input.
     &--pick {
       position: relative;
       display: flex;
       align-items: center;
       justify-content: center;
-      border: 2px dashed $border;
+      border: 2px solid transparent;
       background: $bg;
       color: $text-muted;
       overflow: hidden;

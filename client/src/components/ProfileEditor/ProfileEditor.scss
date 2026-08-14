@@ -1,4 +1,5 @@
 @use 'variables' as *;
+@use 'mixins' as *;
 
 .profile-editor {
   display: flex;
@@ -23,6 +24,22 @@
     font-size: 1rem;
     font-weight: 700;
     color: $text;
+  }
+
+  // "Avatar" heading + its (mobile-only) Randomize button on one row.
+  &__subhead-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $space;
+  }
+
+  // Randomize next to the Avatar heading — mobile only; the desktop rail has its
+  // own copy inside the avatar preview.
+  &__roll {
+    @include lg {
+      display: none;
+    }
   }
 
   &__actions {

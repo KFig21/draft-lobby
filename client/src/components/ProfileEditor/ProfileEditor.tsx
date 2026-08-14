@@ -1,10 +1,12 @@
 import {
   avatarSchema,
   defaultAvatar,
+  rollAvatar,
   USERNAME_MAX_LEN,
   USERNAME_MIN_LEN,
   type Avatar as AvatarData,
 } from '@draft-lobby/shared';
+import CasinoIcon from '@mui/icons-material/Casino';
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../auth/AuthContext';
 import { supabase } from '../../supabase';
@@ -77,7 +79,18 @@ export function ProfileEditor() {
   return (
     <form className="profile-editor" onSubmit={handleSubmit}>
       <section className="profile-editor__group">
-        <h3 className="profile-editor__subhead">Avatar</h3>
+        <div className="profile-editor__subhead-row">
+          <h3 className="profile-editor__subhead">Avatar</h3>
+          {/* Mobile-only — desktop keeps Randomize in the avatar preview rail. */}
+          <button
+            type="button"
+            className="avatar-editor__randomize profile-editor__roll"
+            onClick={() => setAvatar(rollAvatar(avatar))}
+          >
+            <CasinoIcon fontSize="small" />
+            Randomize
+          </button>
+        </div>
         <AvatarEditor value={avatar} onChange={setAvatar} />
       </section>
 

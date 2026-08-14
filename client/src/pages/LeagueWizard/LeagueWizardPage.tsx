@@ -172,7 +172,7 @@ export function LeagueWizardPage({ embedded = false, onSaved, onCancel }: Props 
             <path d="m12 19-7-7 7-7" />
           </svg>
         </button>
-        <h1>{editId ? 'Edit league' : 'New league'}</h1>
+        <h1>{editId ? 'Edit league format' : 'New league format'}</h1>
       </header>
       {form}
     </main>

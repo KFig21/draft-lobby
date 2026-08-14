@@ -4,6 +4,7 @@ import {
   AVATAR_SHAPES,
   randomEmoji,
   randomVividColor,
+  rollAvatar,
   type Avatar as AvatarData,
 } from '@draft-lobby/shared';
 import AddIcon from '@mui/icons-material/Add';
@@ -32,9 +33,6 @@ const SHAPE_LABEL: Record<(typeof AVATAR_SHAPES)[number], string> = {
   rounded: 'Rounded',
   square: 'Square',
 };
-
-const sameAvatar = (a: AvatarData, b: AvatarData) =>
-  a.emoji === b.emoji && a.bgColor === b.bgColor && a.shape === b.shape;
 
 export function AvatarEditor({ value, onChange }: Props) {
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -83,34 +81,22 @@ export function AvatarEditor({ value, onChange }: Props) {
     ? QUICK_EMOJI
     : AVATAR_EMOJI_CHOICES.slice(0, mobileCols * 2 - 2);
 
-  // Roll a fresh avatar — the same generators the per-section dice use, so the
-  // button matches them: emoji at the 40% preset / 60% anything split, a random
-  // vivid color, and a random shape. Re-roll on the rare exact match so the
-  // button always visibly changes something.
-  const randomize = () => {
-    let next: AvatarData;
-    do {
-      next = {
-        emoji: randomEmoji(),
-        bgColor: randomVividColor(),
-        shape: AVATAR_SHAPES[Math.floor(Math.random() * AVATAR_SHAPES.length)],
-      };
-    } while (sameAvatar(next, value));
-    onChange(next);
-  };
-
   return (
     <div className="avatar-editor">
       <div className="avatar-editor__preview">
         <Avatar avatar={value} size={isDesktop ? 120 : 72} />
-        <button
-          type="button"
-          className="avatar-editor__randomize"
-          onClick={randomize}
-        >
-          <CasinoIcon fontSize="small" />
-          Randomize
-        </button>
+        {/* Desktop keeps Randomize in the rail; mobile shows it next to the
+            "Avatar" heading (rendered by ProfileEditor). */}
+        {isDesktop && (
+          <button
+            type="button"
+            className="avatar-editor__randomize"
+            onClick={() => onChange(rollAvatar(value))}
+          >
+            <CasinoIcon fontSize="small" />
+            Randomize
+          </button>
+        )}
       </div>
 
       {/* Emoji — picker (first) · quick picks · shuffle die (last) */}

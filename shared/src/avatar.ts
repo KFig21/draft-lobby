@@ -136,6 +136,25 @@ export function randomEmoji(exclude?: string): string {
   return emoji;
 }
 
+/**
+ * A fully random avatar for the "Randomize" button — a random emoji (40% preset
+ * / 60% anything), a random vivid color, and a random shape. Re-rolls on an
+ * exact match with `current` so it always visibly changes something.
+ */
+export function rollAvatar(current?: Avatar): Avatar {
+  const same = (a: Avatar, b: Avatar) =>
+    a.emoji === b.emoji && a.bgColor === b.bgColor && a.shape === b.shape;
+  let next: Avatar;
+  do {
+    next = {
+      emoji: randomEmoji(),
+      bgColor: randomVividColor(),
+      shape: AVATAR_SHAPES[Math.floor(Math.random() * AVATAR_SHAPES.length)],
+    };
+  } while (current && same(next, current));
+  return next;
+}
+
 /** Deterministic default avatar derived from a seed string (e.g. user id). */
 export function defaultAvatar(seed: string): Avatar {
   let hash = 0;
