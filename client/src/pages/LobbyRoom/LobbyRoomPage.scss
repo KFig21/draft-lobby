@@ -345,6 +345,7 @@
 // — their border then lines up with the transparent sections' rows, for one
 // consistent gutter. The full-bleed sticky header keeps spanning edge-to-edge.
 @media (max-width: #{$bp-lg - 1px}) {
+
   .room__overview,
   .room__invite {
     width: auto;
@@ -590,6 +591,19 @@
     border-radius: $radius-sm;
     padding: $space * 1.25 $space * 1.5;
 
+    // While renaming, line 1 is [pos][avatar][input][✓][✗] and the chips wrap
+    // onto line 2. Top-align so the avatar/number sit level with the input row
+    // instead of floating to the vertical middle of the two-line form.
+    &--editing {
+      align-items: flex-start;
+
+      // Nudge the small position number down to sit centered against the 32px
+      // avatar / input on line 1.
+      .team-list__pos {
+        padding-top: 7px;
+      }
+    }
+
     &--empty {
       border-style: dashed;
       opacity: 0.7;
@@ -760,16 +774,17 @@
     border-radius: 4px;
   }
 
+  // Line 1 of an editing row — just the input, taking the rest of the row
+  // width next to the number + avatar. Save/cancel live on line 2 (edit-meta).
   &__edit {
     flex: 1;
+    min-width: 0;
     display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: $space * 0.5;
 
     input {
       flex: 1;
       min-width: 0;
+      min-height: 32px; // match the avatar on line 1
       padding: $space * 0.5 $space;
       border: 1px solid $border;
       border-radius: $radius-sm;
@@ -780,15 +795,42 @@
     }
   }
 
-  // Owner chip + confirm/cancel — forced onto their own line below the input
-  // (flex-basis: 100% in a wrapping flex parent), so the input isn't
-  // squeezed down to nothing next to them on a narrow phone screen.
+  // Line 2 of an editing row — a full-width row child (flex-basis: 100% wraps it
+  // below line 1) so it sits flush-left under the number rather than indented
+  // under the input. Status chips + champion toggle on the left; the spacer
+  // pushes save/cancel to the right edge.
   &__edit-meta {
     flex-basis: 100%;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: $space * 0.5;
+  }
+
+  // Desktop: the main column is wide enough to keep the whole edit row on one
+  // line — [pos][avatar][input][chips][✓][✗] — so undo the mobile two-line wrap.
+  @media (min-width: $bp-lg) {
+    &__row--editing {
+      align-items: center;
+
+      // Line is single now, so the number centers normally again.
+      .team-list__pos {
+        padding-top: 0;
+      }
+    }
+
+    // The input no longer eats the whole row; it takes a comfortable fixed-ish
+    // width so the chips + save/cancel share the same line beside it.
+    &__edit {
+      flex: 0 1 180px;
+    }
+
+    // Flow inline after the input (auto basis instead of the 100% that forces a
+    // wrap); grow to fill the rest so the inner spacer can pin ✓/✗ to the right.
+    &__edit-meta {
+      flex: 1 1 auto;
+      flex-wrap: nowrap;
+    }
   }
 
   &__icon {

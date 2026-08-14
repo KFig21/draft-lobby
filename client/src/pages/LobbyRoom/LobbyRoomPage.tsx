@@ -998,29 +998,37 @@ export function LobbyRoomPage() {
                   ? members.find((m) => m.user_id === team.owner_id)?.role
                   : undefined;
                 return (
-                  <li key={team.id} className="team-list__row">
+                  <li
+                    key={team.id}
+                    className={`team-list__row${editing ? ' team-list__row--editing' : ''}`}
+                  >
                     <span className="team-list__pos">{team.draft_position}</span>
                     <Avatar avatar={teamAvatar(team)} size={32} />
                     {editing ? (
-                      <form
-                        className="team-list__edit"
-                        onSubmit={(e) => {
-                          e.preventDefault();
-                          void saveName(team.id);
-                        }}
-                      >
-                        <input
-                          autoFocus
-                          value={editName}
-                          maxLength={40}
-                          onChange={(e) => setEditName(e.target.value)}
-                        />
-                        {/* Own line below the input — keeps the input full-width
-                            and uncramped on mobile. The owner's username only
-                            needs to be visible here, while renaming, to help
-                            the commissioner tell whose team is whose; the
-                            you/Bot badges just carry over from the non-editing
-                            line so they don't blink out mid-rename. */}
+                      <>
+                        {/* Line 1: the input spans the full row width (Enter
+                            submits). The status chips + save/cancel sit on their
+                            own full-width line below (team-list__edit-meta). */}
+                        <form
+                          className="team-list__edit"
+                          onSubmit={(e) => {
+                            e.preventDefault();
+                            void saveName(team.id);
+                          }}
+                        >
+                          <input
+                            autoFocus
+                            value={editName}
+                            maxLength={40}
+                            onChange={(e) => setEditName(e.target.value)}
+                          />
+                        </form>
+                        {/* Line 2 — a full-width row child (flex-basis: 100%) so
+                            it sits flush-left under the number, not indented under
+                            the input. Chips on the left; save/cancel pushed right.
+                            The owner username helps the commissioner tell whose
+                            team is whose; the you/Bot badges carry over from the
+                            non-editing line so they don't blink out mid-rename. */}
                         <div className="team-list__edit-meta">
                           {!team.is_bot && ownerUsername(team.owner_id) && (
                             <span className="team-list__chip team-list__chip--owner">
@@ -1048,18 +1056,19 @@ export function LobbyRoomPage() {
                               onClick={() => toggleChampion(team.id, !team.is_prev_champion)}
                             >
                               <EmojiEventsOutlinedIcon fontSize="small" />
-                              Defending champion
+                              Champ
                             </button>
                           )}
                           <span className="team-list__spacer" />
                           <button
-                            type="submit"
+                            type="button"
                             className={`team-list__icon team-list__icon--save${
                               nameDirty ? ' is-dirty' : ''
                             }`}
                             aria-label={nameDirty ? 'Save changes' : 'Save team name'}
                             title={nameDirty ? 'You have unsaved changes' : undefined}
                             disabled={savingName || !editName.trim()}
+                            onClick={() => void saveName(team.id)}
                           >
                             <CheckIcon fontSize="small" />
                           </button>
@@ -1072,7 +1081,7 @@ export function LobbyRoomPage() {
                             <CloseIcon fontSize="small" />
                           </button>
                         </div>
-                      </form>
+                      </>
                     ) : (
                       <span className="team-list__name">{team.name}</span>
                     )}
