@@ -362,6 +362,8 @@ export function ScoringFormatCreatorPage({ embedded = false, onSaved }: Props = 
           </div>
         </div>
 
+        <p className="scoring__count">{enabledCount} categories enabled</p>
+
         {groups.map(([group, cats]) => {
           const open = openGroups.has(group);
           const nOn = enabledInGroup(cats);
@@ -415,7 +417,6 @@ export function ScoringFormatCreatorPage({ embedded = false, onSaved }: Props = 
         {error && <p className="scoring__error">{error}</p>}
 
         <div className="scoring__footer">
-          <span className="scoring__count">{enabledCount} categories</span>
           <button className="button button--primary" disabled={saving}>
             {saving ? 'Saving…' : editId ? 'Save changes' : 'Save format'}
           </button>
