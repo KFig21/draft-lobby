@@ -857,14 +857,42 @@
     color: $text-muted;
     cursor: pointer;
 
-    &:hover {
-      background: $bg-overlay;
-      color: $text;
+    // Hover feedback is real-cursor only — on touch it would stick after a tap.
+    @include hover-only {
+      &:hover {
+        background: $bg-overlay;
+        color: $text;
+      }
     }
 
     &:disabled {
       opacity: 0.5;
       cursor: not-allowed;
+    }
+  }
+
+  // The remove (trash) icon — turns red on hover so it clearly reads as the
+  // destructive action. Placed after &__icon so it wins the tied specificity.
+  &__icon--remove {
+    @include hover-only {
+      &:hover {
+        background: rgba($danger, 0.14);
+        color: $danger;
+      }
+    }
+  }
+
+  // The "yes, remove it" confirm checkmark — filled danger so the destructive
+  // step is unmistakable next to the plain Cancel (✗).
+  &__icon--danger {
+    background: $danger;
+    color: #fff;
+
+    @include hover-only {
+      &:hover {
+        background: $danger;
+        opacity: 0.88;
+      }
     }
   }
 
@@ -875,17 +903,47 @@
     background: $primary;
     color: #fff;
 
-    &:hover {
-      background: $primary-hover;
+    @include hover-only {
+      &:hover {
+        background: $primary-hover;
+      }
     }
+  }
+
+  // Inline "Remove?" confirmation shown in place of the row's action icons —
+  // a row-level child (sibling of &__trailing) so it can span the full row.
+  &__confirm {
+    display: flex;
+    align-items: center;
+    gap: $space * 0.5;
+
+    // Desktop: don't grow — the trailing's flex-grow pushes this to the right
+    // edge, sitting inline where the pencil/trash icons were.
+    flex: 0 0 auto;
+
+    // Mobile: sit on its own full-width line below the name/chips, centered.
+    @media (max-width: #{$bp-lg - 1px}) {
+      flex-basis: 100%;
+      justify-content: center;
+    }
+  }
+
+  &__confirm-text {
+    // Extra breathing room before the confirm/cancel buttons.
+    margin-right: $space * 0.5;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: $text-muted;
   }
 
   // Reveal the pencil on hover (still tappable on touch, which has no hover).
   &__edit-btn {
     opacity: 0.55;
 
-    &:hover {
-      opacity: 1;
+    @include hover-only {
+      &:hover {
+        opacity: 1;
+      }
     }
   }
 

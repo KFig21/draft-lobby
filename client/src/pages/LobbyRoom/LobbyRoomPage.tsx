@@ -82,6 +82,8 @@ export function LobbyRoomPage() {
   const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [savingName, setSavingName] = useState(false);
+  // Which bot/stand-in/reserved seat has its inline "Remove?" confirm showing.
+  const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
   const [friendships, setFriendships] = useState<FriendshipRow[]>([]);
   const [invitedIds, setInvitedIds] = useState<Set<string>>(new Set());
   const [inviteBusy, setInviteBusy] = useState<string | null>(null);
@@ -1121,35 +1123,37 @@ export function LobbyRoomPage() {
 
                         <span className="team-list__spacer" />
 
-                        {canEdit && (
-                          <button
-                            type="button"
-                            className="team-list__icon team-list__edit-btn"
-                            aria-label={`Rename ${team.name}`}
-                            onClick={() => startEditName(team.id, team.name)}
-                          >
-                            <EditOutlinedIcon fontSize="small" />
-                          </button>
-                        )}
-                        {(team.is_bot || team.is_standin || team.reserved_for_user_id) &&
-                          isCommish &&
-                          !draftLive && (
-                            <button
-                              type="button"
-                              className="team-list__icon"
-                              aria-label={`Remove ${team.name}`}
-                              title={
-                                team.reserved_for_user_id
-                                  ? 'Remove reserved seat'
-                                  : team.is_standin
-                                    ? 'Remove stand-in seat'
-                                    : 'Remove bot'
-                              }
-                              onClick={() => removeBot(team.id)}
-                            >
-                              <DeleteOutlinedIcon fontSize="small" />
-                            </button>
-                          )}
+                        {confirmRemoveId !== team.id && (
+                          <>
+                            {canEdit && (
+                              <button
+                                type="button"
+                                className="team-list__icon team-list__edit-btn"
+                                aria-label={`Rename ${team.name}`}
+                                onClick={() => startEditName(team.id, team.name)}
+                              >
+                                <EditOutlinedIcon fontSize="small" />
+                              </button>
+                            )}
+                            {(team.is_bot || team.is_standin || team.reserved_for_user_id) &&
+                              isCommish &&
+                              !draftLive && (
+                                <button
+                                  type="button"
+                                  className="team-list__icon team-list__icon--remove"
+                                  aria-label={`Remove ${team.name}`}
+                                  title={
+                                    team.reserved_for_user_id
+                                      ? 'Remove reserved seat'
+                                      : team.is_standin
+                                        ? 'Remove stand-in seat'
+                                        : 'Remove bot'
+                                  }
+                                  onClick={() => setConfirmRemoveId(team.id)}
+                                >
+                                  <DeleteOutlinedIcon fontSize="small" />
+                                </button>
+                              )}
                         {!team.is_bot &&
                           !team.is_standin &&
                           !team.reserved_for_user_id &&
@@ -1212,20 +1216,50 @@ export function LobbyRoomPage() {
                             Accept
                           </button>
                         )}
-                        {otherUserId && rel === undefined && (
-                          <button
-                            type="button"
-                            className="team-list__icon team-list__friend-add"
-                            aria-label={`Add ${team.name} as a friend`}
-                            title="Add friend"
-                            disabled={friendBusy === otherUserId}
-                            onClick={() =>
-                              friendAction('request', { userId: otherUserId }, otherUserId)
-                            }
-                          >
-                            <PersonAddAlt1Icon fontSize="small" />
-                          </button>
+                            {otherUserId && rel === undefined && (
+                              <button
+                                type="button"
+                                className="team-list__icon team-list__friend-add"
+                                aria-label={`Add ${team.name} as a friend`}
+                                title="Add friend"
+                                disabled={friendBusy === otherUserId}
+                                onClick={() =>
+                                  friendAction('request', { userId: otherUserId }, otherUserId)
+                                }
+                              >
+                                <PersonAddAlt1Icon fontSize="small" />
+                              </button>
+                            )}
+                          </>
                         )}
+                      </span>
+                    )}
+                    {!editing && confirmRemoveId === team.id && (
+                      // Inline "Remove?" confirm — a full-width row child so on
+                      // mobile it drops cleanly onto its own line below the name;
+                      // on desktop it sits inline at the right where the icons were.
+                      <span className="team-list__confirm">
+                        <span className="team-list__confirm-text">Remove?</span>
+                        <button
+                          type="button"
+                          className="team-list__icon team-list__icon--danger"
+                          aria-label={`Confirm removing ${team.name}`}
+                          disabled={botBusy}
+                          onClick={() => {
+                            void removeBot(team.id);
+                            setConfirmRemoveId(null);
+                          }}
+                        >
+                          <CheckIcon fontSize="small" />
+                        </button>
+                        <button
+                          type="button"
+                          className="team-list__icon"
+                          aria-label="Keep seat"
+                          onClick={() => setConfirmRemoveId(null)}
+                        >
+                          <CloseIcon fontSize="small" />
+                        </button>
                       </span>
                     )}
                   </li>
