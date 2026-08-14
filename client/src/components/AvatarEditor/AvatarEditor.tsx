@@ -62,7 +62,7 @@ export function AvatarEditor({ value, onChange }: Props) {
     if (isDesktop) return;
     const el = gridRef.current;
     if (!el) return;
-    const CELL = 44;
+    const CELL = 30; // tile-size target for the fit calc — smaller packs more columns
     const GAP = 4; // matches $space * 0.5
     const measure = () => {
       const w = el.clientWidth;

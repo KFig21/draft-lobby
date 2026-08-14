@@ -233,11 +233,14 @@
 
     // Custom-color picker (first) + shuffle die (last) — dashed action tiles
     // matching the emoji grid's ends. The picker holds the native color input.
+    // Same 2px border + aspect-ratio as the color swatches so the circles are
+    // exactly the same size.
     &--pick {
       position: relative;
-      display: grid;
-      place-items: center;
-      border: 1px dashed $border;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px dashed $border;
       background: $bg;
       color: $text-muted;
       overflow: hidden;
