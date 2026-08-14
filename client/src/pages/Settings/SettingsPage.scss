@@ -20,7 +20,10 @@
   &__header {
     max-width: none;
     // Cancel the container gutter so the header (and its bottom border) still
-    // spans edge to edge; its own padding keeps the title inset.
+    // spans edge to edge; its own padding keeps the title inset. width:auto
+    // (overriding the >* rule's 100%) lets the negative margins actually stretch
+    // it the full width — with a fixed 100% width the right edge fell short.
+    width: auto;
     margin-inline: -($space * 2);
     position: sticky;
     top: 0;
