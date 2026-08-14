@@ -29,6 +29,8 @@ interface Props {
   onShowPoolMarksChange: (show: boolean) => void;
   teamColors: boolean;
   onTeamColorsChange: (enabled: boolean) => void;
+  tvMode: boolean;
+  onTvModeChange: (enabled: boolean) => void;
   toastPrefs: ToastPrefs;
   onToastsEnabledChange: (enabled: boolean) => void;
   onToastCategoryChange: (category: ToastCategory, enabled: boolean) => void;
@@ -60,6 +62,8 @@ export function DraftUserSettingsModal({
   onShowPoolMarksChange,
   teamColors,
   onTeamColorsChange,
+  tvMode,
+  onTvModeChange,
   toastPrefs,
   onToastsEnabledChange,
   onToastCategoryChange,
@@ -164,6 +168,20 @@ export function DraftUserSettingsModal({
             />
           </div>
           <TeamColorPreview player={samplePlayer} />
+          <div className="draft-user-settings__row">
+            <div className="draft-user-settings__row-main">
+              <span className="draft-user-settings__row-name">TV mode</span>
+              <span className="muted">
+                In full screen, scale up pop-ups and shorten names so the board
+                reads from across the room
+              </span>
+            </div>
+            <ToggleSwitch
+              label="Toggle TV mode"
+              checked={tvMode}
+              onChange={onTvModeChange}
+            />
+          </div>
         </section>
 
         <section className="draft-user-settings__section">

@@ -23,6 +23,15 @@
   flex-direction: column;
   gap: $space * 2;
 
+  // TV mode: scale the pick-confirm up so it reads from the couch. Capped +
+  // scrollable in case a long name/stat pushes it tall. See Modal.scss.
+  :root.is-tv & {
+    zoom: var(--tv-zoom, 1.35);
+    max-height: calc(90vh / var(--tv-zoom, 1.35));
+    max-width: calc(100% / var(--tv-zoom, 1.35));
+    overflow-y: auto;
+  }
+
   h2 {
     font-size: 1.2rem;
   }

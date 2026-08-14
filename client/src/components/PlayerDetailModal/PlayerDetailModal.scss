@@ -19,6 +19,14 @@
   border-radius: $radius;
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
 
+  // TV mode: scale up (chart + stats table scale with it), capping to the
+  // viewport after the zoom so it still fits and scrolls. See Modal.scss.
+  :root.is-tv & {
+    zoom: var(--tv-zoom, 1.35);
+    max-height: calc(90dvh / var(--tv-zoom, 1.35));
+    max-width: calc(94vw / var(--tv-zoom, 1.35));
+  }
+
   &__backdrop {
     position: fixed;
     inset: 0;

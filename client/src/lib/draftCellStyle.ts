@@ -115,3 +115,22 @@ export function getDraftBoardLayout(): DraftBoardLayout {
 export function setDraftBoardLayout(layout: DraftBoardLayout): void {
   localStorage.setItem(BOARD_LAYOUT_STORAGE_KEY, layout);
 }
+
+/** "TV mode": while the board is fullscreen, scale up every pop-up (menus,
+ * player/pick modals, the fullscreen Menu) and shorten bold-cell names to
+ * "F. Lastname" so the board reads from across the room. Per-device preference,
+ * same pattern as the toggles above — but defaults to OFF (only useful on a TV),
+ * so it's read as `=== '1'`. */
+const TV_MODE_STORAGE_KEY = 'draftTvMode';
+
+export function getTvMode(): boolean {
+  try {
+    return localStorage.getItem(TV_MODE_STORAGE_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+export function setTvMode(on: boolean): void {
+  localStorage.setItem(TV_MODE_STORAGE_KEY, on ? '1' : '0');
+}

@@ -1,5 +1,19 @@
 @use 'variables' as *;
 
+// "TV mode" (see DraftBoardPage): while the board is fullscreen, `is-tv` is set
+// on <html> and every pop-up is scaled up with `zoom` so it reads from across
+// the room. One knob here tunes the factor for all of them. `zoom` (not
+// transform: scale) so the box reflows and inner scroll areas keep working.
+:root.is-tv {
+  --tv-zoom: 1.35;
+  // The Players and Chat tabs of the fullscreen Menu pack the most (and
+  // smallest) text, so they get a bump beyond the shared factor. Players has a
+  // wide stats table, so it gets a smaller bump than Chat — enough to read, but
+  // not so much the columns overflow into a horizontal scroll.
+  --tv-zoom-players: 1.45;
+  --tv-zoom-chat: 1.6;
+}
+
 .dialog-overlay {
   position: fixed;
   inset: 0;
@@ -22,6 +36,16 @@
 
   &--wide {
     width: min(720px, 100%);
+  }
+
+  // TV mode: enlarge the whole card. Cap both dimensions to the viewport
+  // *after* the zoom (divide by the factor) so the bigger box still fits and
+  // stays scrollable rather than spilling off-screen. Covers every Modal —
+  // the fullscreen Menu, Your settings, confirmations, etc.
+  :root.is-tv & {
+    zoom: var(--tv-zoom, 1.35);
+    max-height: calc(90vh / var(--tv-zoom, 1.35));
+    max-width: calc(100% / var(--tv-zoom, 1.35));
   }
 
   &__header {

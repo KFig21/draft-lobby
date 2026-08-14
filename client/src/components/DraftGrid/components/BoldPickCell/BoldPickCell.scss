@@ -198,6 +198,20 @@ td.bold-pick-cell {
   font-size: calc(1.1rem * var(--fs-scale) * var(--name-scale, 1));
 }
 
+// True TV mode: names are abbreviated ("D. Montgomery"), so keep them on ONE
+// line and truncate with an ellipsis rather than wrapping to a ragged 2nd line
+// (which stood out badly against the mostly single-line names around it).
+:root.is-tv .bold-pick-cell__name {
+  display: block;
+  -webkit-line-clamp: none;
+  line-clamp: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  text-align: center;
+}
+
 .draft-grid--fill {
   .bold-pick-cell__react-flag {
     font-size: calc(0.6rem * var(--fs-scale));

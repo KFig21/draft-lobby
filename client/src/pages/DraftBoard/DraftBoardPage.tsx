@@ -135,12 +135,14 @@ import {
   getShowCellReactions,
   getShowPickProjection,
   getShowPoolMarks,
+  getTvMode,
   setDraftBoardLayout,
   setDraftCellStyle,
   setShowByeClashes,
   setShowCellReactions,
   setShowPickProjection,
   setShowPoolMarks,
+  setTvMode,
   type DraftBoardLayout,
   type DraftCellStyle,
 } from '../../lib/draftCellStyle';
@@ -267,6 +269,7 @@ export function DraftBoardPage() {
   const [boardLayout, setBoardLayoutState] = useState<DraftBoardLayout>(() => getDraftBoardLayout());
   const [cardStyle, setCardStyleState] = useState<PlayerCardStyle>(() => getPlayerCardStyle());
   const [teamColors, setTeamColorsState] = useState(() => getTeamColorsEnabled());
+  const [tvMode, setTvModeState] = useState(() => getTvMode());
   const [toastPrefs, setToastPrefsState] = useState(() => getToastPrefs());
   const [showUserSettings, setShowUserSettings] = useState(false);
   const [showRules, setShowRules] = useState(false);
@@ -302,6 +305,10 @@ export function DraftBoardPage() {
   function updateTeamColors(enabled: boolean) {
     setTeamColorsEnabled(enabled);
     setTeamColorsState(enabled);
+  }
+  function updateTvMode(on: boolean) {
+    setTvMode(on);
+    setTvModeState(on);
   }
   function updateToastsEnabled(enabled: boolean) {
     setToastsEnabled(enabled);
@@ -507,6 +514,18 @@ export function DraftBoardPage() {
       if (document.fullscreenElement) void document.exitFullscreen?.();
     };
   }, []);
+
+  // "TV mode" only takes visual effect in full screen (the point is reading a
+  // TV from across the room). When active, flag the fullscreened element so the
+  // pop-up scaling styles (:root.is-tv …) apply — modals portal to <body>, a
+  // descendant of documentElement, so the class reaches them too.
+  const tvActive = tvMode && isFullscreen;
+  useEffect(() => {
+    document.documentElement.classList.toggle('is-tv', tvActive);
+    return () => {
+      document.documentElement.classList.remove('is-tv');
+    };
+  }, [tvActive]);
 
   function toggleFullscreen() {
     // The whole document, not just this page's root div — anything rendered
@@ -3230,6 +3249,7 @@ export function DraftBoardPage() {
         onPickClick={setPickModal}
         commentsByPick={showCellReactions ? commentsByPick : undefined}
         cellStyle={cellStyle}
+        tvMode={tvActive}
         fill={isFullscreen}
         fillRowHeight={fsRowHeight}
         onMyClockCellClick={openPlayersPool}
@@ -4521,6 +4541,8 @@ export function DraftBoardPage() {
           onShowPoolMarksChange={updateShowPoolMarks}
           teamColors={teamColors}
           onTeamColorsChange={updateTeamColors}
+          tvMode={tvMode}
+          onTvModeChange={updateTvMode}
           toastPrefs={toastPrefs}
           onToastsEnabledChange={updateToastsEnabled}
           onToastCategoryChange={updateToastCategory}

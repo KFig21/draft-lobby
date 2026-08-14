@@ -630,6 +630,12 @@
     border-radius: $radius-sm;
     background: $bg-raised;
     box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5);
+
+    // TV mode: enlarge the +time dropdown (stays anchored top-right, grows
+    // bigger down/left). See Modal.scss for the shared knob.
+    :root.is-tv & {
+      zoom: var(--tv-zoom, 1.35);
+    }
   }
 
   &__addtime-item {
@@ -835,6 +841,13 @@
     border-radius: $radius;
     box-shadow: 0 12px 30px -8px rgba(0, 0, 0, 0.55);
     animation: draft-tools-in 120ms ease;
+
+    // TV mode: enlarge the Menu dropdown (Export / Auto-draft / Draft settings
+    // / League rules / Your settings) so it reads from the couch. Stays
+    // anchored top-right and grows down/left. See Modal.scss for the knob.
+    :root.is-tv & {
+      zoom: var(--tv-zoom, 1.35);
+    }
   }
 
   &__tools-item {
@@ -2699,13 +2712,32 @@
   transition: width 220ms ease;
 
   &.is-players {
-    width: min(1040px, 100%);
+    // +20px over the natural table width so the widest position (WR) clears its
+    // last column instead of leaving a sliver of horizontal scroll, especially
+    // zoomed up in TV mode.
+    width: min(1060px, 100%);
   }
 
   // Simple layout: one width for every tab (no per-tab stats table to make
   // room for), narrower than the detailed default so the panels don't sprawl.
   &.is-simple {
     width: min(600px, 100%);
+  }
+
+  // TV mode: the base .dialog rule (Modal.scss) already zooms this to
+  // --tv-zoom; the Players and Chat tabs are the densest/smallest text, so
+  // give them a larger factor. Players stays smaller than Chat so its wide
+  // stats table fits without a horizontal scroll. Caps stay in sync.
+  :root.is-tv &.is-players {
+    zoom: var(--tv-zoom-players, 1.45);
+    max-height: calc(90vh / var(--tv-zoom-players, 1.45));
+    max-width: calc(100% / var(--tv-zoom-players, 1.45));
+  }
+
+  :root.is-tv &.is-chat {
+    zoom: var(--tv-zoom-chat, 1.6);
+    max-height: calc(90vh / var(--tv-zoom-chat, 1.6));
+    max-width: calc(100% / var(--tv-zoom-chat, 1.6));
   }
 
   @media (prefers-reduced-motion: reduce) {

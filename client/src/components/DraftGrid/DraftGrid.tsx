@@ -42,6 +42,9 @@ interface Props {
    * per-lobby. 'bold' fills the whole cell with the position color and shows
    * just the player's name, big — meant to be readable from across a room. */
   cellStyle?: DraftCellStyle;
+  /** TV mode active (fullscreen + the pref on) — abbreviates the bold cell's
+   * name to "F. Lastname" so it reads big from across the room. */
+  tvMode?: boolean;
   /** Fullscreen: row height (px) computed to fill the available height. */
   fillRowHeight?: number | null;
   /** The viewer's own on-the-clock cell was clicked — switches to the
@@ -97,6 +100,7 @@ export function DraftGrid({
   commentsByPick,
   fill = false,
   cellStyle = 'default',
+  tvMode = false,
   fillRowHeight,
   onMyClockCellClick,
   onCommishClockCellClick,
@@ -211,6 +215,7 @@ export function DraftGrid({
                           key={team.id}
                           pick={pick}
                           player={player}
+                          tvMode={tvMode}
                           entry={reactionsByPick?.get(pick.id)}
                           hasComment={(commentsByPick?.get(pick.id)?.length ?? 0) > 0}
                           onReact={onReactPick}

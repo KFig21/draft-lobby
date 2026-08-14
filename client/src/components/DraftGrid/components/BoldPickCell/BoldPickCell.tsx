@@ -1,6 +1,7 @@
 import { POSITION_COLORS, type Position } from '@draft-lobby/shared';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlined';
 import LockIcon from '@mui/icons-material/Lock';
+import { abbreviatePlayerName } from '../../../../lib/format';
 import type { PickRow, PlayerRow } from '../../../../lib/types';
 import type { ReactionEntry } from '../PickCell/PickCell';
 // Same reasoning as PickCell.tsx's identical import: this component also
@@ -36,6 +37,7 @@ function nameScale(name: string): number {
 export function BoldPickCell({
   pick,
   player,
+  tvMode,
   entry,
   hasComment,
   onReact,
@@ -45,6 +47,9 @@ export function BoldPickCell({
 }: {
   pick: PickRow;
   player: PlayerRow;
+  /** TV mode: shorten to "F. Lastname" so the name reads big from across the
+   * room (full names are meant for up close). */
+  tvMode?: boolean;
   entry?: ReactionEntry;
   hasComment?: boolean;
   onReact?: (pickId: string, emoji: string) => void;
@@ -55,6 +60,11 @@ export function BoldPickCell({
 }) {
   const active = entry ? Object.keys(entry.counts) : [];
   const posColor = POSITION_COLORS[player.position as Position];
+  // Abbreviated names ("C. McCaffrey") are short and uniform, so they rarely
+  // need the length-based shrink the full names do.
+  const displayName = tvMode
+    ? abbreviatePlayerName(player.name, player.position)
+    : player.name;
 
   return (
     <td
@@ -68,9 +78,9 @@ export function BoldPickCell({
     >
       <span
         className="bold-pick-cell__name"
-        style={{ ['--name-scale' as string]: nameScale(player.name) }}
+        style={{ ['--name-scale' as string]: nameScale(displayName) }}
       >
-        {player.name}
+        {displayName}
       </span>
 
       {/* Same indicators as the default style, but badged into the bottom-right

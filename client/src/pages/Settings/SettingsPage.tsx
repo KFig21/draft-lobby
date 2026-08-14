@@ -31,6 +31,8 @@ import {
   setShowPickProjection,
   getShowPoolMarks,
   setShowPoolMarks,
+  getTvMode,
+  setTvMode,
   type DraftBoardLayout,
   type DraftCellStyle,
 } from '../../lib/draftCellStyle';
@@ -83,6 +85,7 @@ export function SettingsPage() {
   const [defaultScoring, setDefaultScoringState] = useState(() => getDefaultScoringChoice());
   const [cardStyle, setCardStyleState] = useState<PlayerCardStyle>(() => getPlayerCardStyle());
   const [teamColors, setTeamColorsState] = useState(() => getTeamColorsEnabled());
+  const [tvMode, setTvModeState] = useState(() => getTvMode());
   // One shared sample player for both the Cell-style and Team-colors previews
   // below, so they show the same classic player (picked once per mount).
   const [samplePlayer] = useState(randomSamplePlayer);
@@ -90,6 +93,10 @@ export function SettingsPage() {
   function updateTeamColors(enabled: boolean) {
     setTeamColorsEnabled(enabled);
     setTeamColorsState(enabled);
+  }
+  function updateTvMode(on: boolean) {
+    setTvMode(on);
+    setTvModeState(on);
   }
 
   function updateCellStyle(style: DraftCellStyle) {
@@ -271,6 +278,16 @@ export function SettingsPage() {
             checked={showPickProjection}
             onChange={updateShowPickProjection}
           />
+        </div>
+        <div className="settings__row">
+          <div className="settings__row-main">
+            <span className="settings__row-name">TV mode</span>
+            <span className="muted">
+              In full screen, scale up pop-ups and shorten names so the board
+              reads from across the room
+            </span>
+          </div>
+          <ToggleSwitch label="Toggle TV mode" checked={tvMode} onChange={updateTvMode} />
         </div>
       </section>
 
