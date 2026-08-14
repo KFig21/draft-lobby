@@ -11,7 +11,6 @@ import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import EmojiEventsOutlinedIcon from '@mui/icons-material/EmojiEventsOutlined';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
-import InfoOutlineIcon from '@mui/icons-material/InfoOutlined';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import { useMemo, useState } from 'react';
 import { mostCommonGrade } from '../../lib/draftGrade';
@@ -27,6 +26,7 @@ import type {
 } from '../../lib/types';
 import { Avatar } from '../Avatar/Avatar';
 import { GradeBadge } from '../GradeBadge/GradeBadge';
+import { InfoButton } from '../InfoButton/InfoButton';
 import { Modal } from '../Modal/Modal';
 import './PowerRankingsPanel.scss';
 
@@ -119,15 +119,11 @@ export function PowerRankingsPanel({
           <div className="power-rankings__title">
             <div className="power-rankings__title-main">
               <h2>Power Rankings</h2>
-            <button
-              type="button"
+            <InfoButton
               className="power-rankings__help"
               onClick={() => setShowHelp(true)}
-              aria-label="How grades work"
-              title="How grades work"
-            >
-              <InfoOutlineIcon fontSize="inherit" />
-            </button>
+              label="How grades work"
+            />
             </div>
             {onExportGrades && (
               <button type="button" className="power-rankings__export" onClick={onExportGrades}>

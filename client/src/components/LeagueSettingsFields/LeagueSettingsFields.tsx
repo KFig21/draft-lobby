@@ -27,12 +27,12 @@ import {
   type SettingsGroup,
 } from '@draft-lobby/shared';
 import AddIcon from '@mui/icons-material/Add';
-import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import RemoveIcon from '@mui/icons-material/Remove';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { formatPickClock, formatSeconds } from '../../lib/format';
 import { supabase } from '../../supabase';
+import { InfoButton } from '../InfoButton/InfoButton';
 import { ScoringRulesModal } from '../LeagueRulesModal/ScoringRulesModal';
 import { Modal } from '../Modal/Modal';
 import { ToggleSwitch } from '../ToggleSwitch/ToggleSwitch';
@@ -286,16 +286,13 @@ export function LeagueSettingsFields({ settings, onChange, nameField, editableGr
       {/* Scoring */}
       <section className="wizard__section">
         <div className="wizard__section-head">
-          <h2>Scoring format</h2>
-          <button
-            type="button"
-            className="wizard__info-btn"
-            onClick={() => setShowScoringInfo(true)}
-            aria-label="View scoring details"
-            title="View scoring details"
-          >
-            <InfoOutlinedIcon fontSize="small" />
-          </button>
+          <div className="wizard__section-title">
+            <h2>Scoring format</h2>
+            <InfoButton
+              onClick={() => setShowScoringInfo(true)}
+              label="View scoring details"
+            />
+          </div>
         </div>
         <SettingsGroupFieldset editable={canEdit('scoring')}>
           <select

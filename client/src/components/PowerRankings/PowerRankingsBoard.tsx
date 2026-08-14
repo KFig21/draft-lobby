@@ -13,7 +13,6 @@ import {
 import EditNoteIcon from '@mui/icons-material/EditNote';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
-import InfoOutlineIcon from '@mui/icons-material/InfoOutlined';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import ThumbDownAltIcon from '@mui/icons-material/ThumbDownAlt';
 import ThumbUpAltIcon from '@mui/icons-material/ThumbUpAlt';
@@ -33,6 +32,7 @@ import type {
 } from '../../lib/types';
 import { Avatar } from '../Avatar/Avatar';
 import { GradeBadge } from '../GradeBadge/GradeBadge';
+import { InfoButton } from '../InfoButton/InfoButton';
 import { Modal } from '../Modal/Modal';
 import { LeagueSummaryPane } from './LeagueSummaryPane';
 import { ProjPoints, ordinal, posLabel, rankGradeColor, timeAgo } from './prHelpers';
@@ -297,15 +297,12 @@ export function PowerRankingsBoard({
           <div className="prb__header-title">
             <TrendingUpIcon className="prb__header-icon" fontSize="inherit" />
             <h2>Power Rankings</h2>
-            <button
-              type="button"
+            <InfoButton
               className="prb__help"
+              size={16}
               onClick={() => setShowHelp(true)}
-              aria-label="How grades work"
-              title="How grades work"
-            >
-              <InfoOutlineIcon fontSize="inherit" />
-            </button>
+              label="How grades work"
+            />
           </div>
           {onExportGrades && (
             <button type="button" className="prb__share" onClick={onExportGrades}>
@@ -534,15 +531,12 @@ export function PowerRankingsBoard({
           <div className="prb__header-title">
             <EditNoteIcon className="prb__header-icon" fontSize="inherit" />
             <h2>Peer grades</h2>
-            <button
-              type="button"
+            <InfoButton
               className="prb__help"
+              size={16}
               onClick={() => setShowPeerHelp(true)}
-              aria-label="How peer grades work"
-              title="How peer grades work"
-            >
-              <InfoOutlineIcon fontSize="inherit" />
-            </button>
+              label="How peer grades work"
+            />
           </div>
         </div>
         <div className="prb__scroll prb-feed">

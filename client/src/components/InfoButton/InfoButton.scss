@@ -1,0 +1,36 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+// Small borderless info (ⓘ) icon next to a section heading. The icon size is
+// driven by this element's font-size (the SVG inherits it), so a call site can
+// override it with an inline font-size (see the `size` prop).
+.info-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: $text-muted;
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 120ms ease;
+
+  svg {
+    font-size: inherit;
+  }
+
+  // Accent convention: mint on dark, teal on light. Hover-only so it never
+  // sticks after a tap on touch.
+  @include hover-only {
+    &:hover {
+      color: $accent;
+
+      :root[data-theme='light'] & {
+        color: $primary;
+      }
+    }
+  }
+}

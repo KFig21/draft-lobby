@@ -36,6 +36,7 @@ import type {
 } from '../../lib/types';
 import { Avatar } from '../Avatar/Avatar';
 import { GradeBadge } from '../GradeBadge/GradeBadge';
+import { InfoButton } from '../InfoButton/InfoButton';
 import { Modal } from '../Modal/Modal';
 import { LeagueSummaryPane } from './LeagueSummaryPane';
 import { ProjPoints, ordinal, posLabel, rankGradeColor, timeAgo } from './prHelpers';
@@ -267,14 +268,12 @@ export function PowerRankingsMobile({
           <div className="prm__title">
             <TrendingUpIcon className="prm__title-icon" fontSize="inherit" />
             <h2>Power Rankings</h2>
-            <button
-              type="button"
+            <InfoButton
               className="prm__help"
+              size={16}
               onClick={() => setShowHelp(true)}
-              aria-label="How grades work"
-            >
-              <InfoOutlineIcon fontSize="inherit" />
-            </button>
+              label="How grades work"
+            />
           </div>
         </div>
 

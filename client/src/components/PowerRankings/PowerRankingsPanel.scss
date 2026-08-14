@@ -64,27 +64,9 @@
   // "How grades work" — opens the explainer modal. Icon-only round button so
   // it never forces an awkward wrap on narrow screens; pushed flush right of
   // the title row once there's room for that.
+  // Visual styling lives in the shared .info-button component; here we only
+  // nudge it flush right of the title row once there's room.
   &__help {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    border-radius: 50%;
-    border: none;
-    background: $bg-raised;
-    color: $text-muted;
-    cursor: pointer;
-
-    svg {
-      font-size: 1.15rem;
-    }
-
-    @include hover-only {
-      &:hover {
-        color: $primary;
-      }
-    }
-
     @include md {
       margin-left: auto;
     }

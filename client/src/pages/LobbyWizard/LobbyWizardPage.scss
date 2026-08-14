@@ -5,7 +5,7 @@
   padding: 0 0 $space * 3;
   display: flex;
   flex-direction: column;
-  gap: $space * 3;
+  gap: $space * 2;
 
   // Centre the form body; the header (below) spans the full container width.
   // Scoped to the form so inline-rendered modal overlays aren't constrained.
@@ -66,10 +66,10 @@
   &__form {
     display: flex;
     flex-direction: column;
-    gap: $space * 3;
+    gap: $space * 2;
 
     @media (max-width: #{$bp-md - 1px}) {
-      gap: $space * 2;
+      gap: $space * 1.5;
     }
 
     // Embedded in the "Set up a league" modal: .dialog__body already pads the
@@ -83,14 +83,13 @@
   &__section {
     display: flex;
     flex-direction: column;
-    gap: $space * 2;
+    gap: $space * 1.5;
     @include card-surface;
-    padding: $space * 3;
+    padding: $space * 2.5;
 
-    // Phone: the roomy 24px card padding + inner gaps read as inflated on a
-    // small screen — pull the padding and control spacing in a notch.
+    // Phone: the card padding + inner gaps read as inflated on a small screen —
+    // pull the padding in a further notch.
     @media (max-width: #{$bp-md - 1px}) {
-      gap: $space * 1.5;
       padding: $space * 2;
     }
 
@@ -115,13 +114,21 @@
     flex-wrap: wrap;
   }
 
+  // Groups a section heading with its little info icon so they sit together on
+  // the left (rather than the icon being pushed to the far right of the head).
+  &__section-title {
+    display: flex;
+    align-items: center;
+    gap: $space * 0.75;
+  }
+
   // Groups a section's controls so the settings editor can disable a whole
   // group (structural / scoring / behavioral) at once via <fieldset disabled>.
   // Reset native fieldset chrome and behave like the flex column it replaces.
   &__fieldset {
     display: flex;
     flex-direction: column;
-    gap: $space * 2;
+    gap: $space * 1.5;
     min-width: 0; // fieldsets default to min-width: min-content, breaks flex
     margin: 0;
     padding: 0;
@@ -167,34 +174,6 @@
     }
   }
 
-  // Round icon button next to a section heading (e.g. "Scoring format" details).
-  &__info-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    flex-shrink: 0;
-    border: 1px solid $border;
-    border-radius: 50%;
-    background: $bg;
-    color: $text-muted;
-    cursor: pointer;
-    transition:
-      color 120ms ease,
-      border-color 120ms ease;
-
-    &:hover {
-      color: $accent;
-      border-color: $accent;
-
-      // Accent convention: mint on dark, teal primary on light.
-      :root[data-theme='light'] & {
-        color: $primary;
-        border-color: $primary;
-      }
-    }
-  }
 
   &__toggle-row {
     display: flex;
