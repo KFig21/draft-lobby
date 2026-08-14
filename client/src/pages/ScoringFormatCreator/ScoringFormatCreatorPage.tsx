@@ -311,6 +311,27 @@ export function ScoringFormatCreatorPage({ embedded = false, onSaved, onCancel }
     <div className="scoring">
       {!embedded && (
         <header className="scoring__page-header">
+          <button
+            type="button"
+            className="scoring__back"
+            onClick={() => navigate(-1)}
+            aria-label="Back"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              width="20"
+              height="20"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M19 12H5" />
+              <path d="m12 19-7-7 7-7" />
+            </svg>
+          </button>
           <h1>{editId ? 'Edit scoring format' : 'New scoring format'}</h1>
         </header>
       )}

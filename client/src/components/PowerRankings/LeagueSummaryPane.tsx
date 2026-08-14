@@ -3,7 +3,7 @@ import BoltIcon from '@mui/icons-material/Bolt';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import ReplayIcon from '@mui/icons-material/Replay';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import { useState, type CSSProperties } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import type { LeagueGrade } from '../../lib/draftGradeExport';
 import { Avatar } from '../Avatar/Avatar';
 import { GradeBadge } from '../GradeBadge/GradeBadge';
@@ -17,10 +17,13 @@ import './LeagueSummaryPane.scss';
 export function LeagueSummaryPane({
   model,
   compact = false,
+  myTeamId = null,
 }: {
   model: LeagueGrade;
   /** Narrow layouts (mobile) shorten the projection labels so they never wrap. */
   compact?: boolean;
+  /** The viewer's own team, if any — highlighted in the comparison + heat map. */
+  myTeamId?: string | null;
 }) {
   const podium = [model.teams[1], model.teams[0], model.teams[2]]; // 2 · 1 · 3
   // teamCards come in rank order (highest projection first); reverse for the
@@ -90,6 +93,18 @@ export function LeagueSummaryPane({
   // League comparison filter: click slots to keep only those segments and re-sort
   // the teams by that combined total; the rows animate to their new positions. No
   // selection = every slot, power-rank order.
+  // Which bye-week bar's tooltip is open (tap to reveal the teams on bye that
+  // week — the native `title` only surfaces on desktop hover). Tapping the same
+  // bar again, or anywhere else, closes it.
+  const [openBye, setOpenBye] = useState<number | null>(null);
+  useEffect(() => {
+    if (openBye == null) return;
+    const close = () => setOpenBye(null);
+    // Defer so the opening tap doesn't immediately re-close it.
+    window.addEventListener('pointerdown', close);
+    return () => window.removeEventListener('pointerdown', close);
+  }, [openBye]);
+
   const [slotFilter, setSlotFilter] = useState<Set<RosterSlot>>(new Set());
   const toggleSlot = (s: RosterSlot) =>
     setSlotFilter((prev) => {
@@ -195,23 +210,47 @@ export function LeagueSummaryPane({
           <div className="prb-sum__dist-lab prb-sum__dist-lab--bye">WORST BYE WEEKS</div>
           <div className="prb-sum__byebars">
             {model.byeClashes.map((b) => (
-              <div
+              <button
                 key={b.week}
-                className="prb-sum__byecol"
+                type="button"
+                className={`prb-sum__byecol${openBye === b.week ? ' is-open' : ''}`}
                 title={b.teams.map((t) => t.team.name).join(', ')}
+                aria-label={`Week ${b.week}: ${b.count} on bye — ${b.teams
+                  .map((t) => t.team.name)
+                  .join(', ')}`}
+                onPointerDown={(e) => {
+                  // Beat the window listener that closes any open tooltip.
+                  e.stopPropagation();
+                  setOpenBye((cur) => (cur === b.week ? null : b.week));
+                }}
+                onClick={(e) => {
+                  // Keyboard activation (Enter/Space) fires click with detail 0
+                  // and no pointerdown — toggle here so it works too.
+                  if (e.detail === 0) setOpenBye((cur) => (cur === b.week ? null : b.week));
+                }}
               >
-                <div className="prb-sum__byeavs">
+                {openBye === b.week && (
+                  <span className="prb-sum__byetip" role="tooltip">
+                    {b.teams.map((t) => (
+                      <span key={t.team.id} className="prb-sum__byetip-row">
+                        <Avatar avatar={t.avatar} size={16} />
+                        {t.team.name}
+                      </span>
+                    ))}
+                  </span>
+                )}
+                <span className="prb-sum__byeavs">
                   {b.teams.map((t) => (
                     <span key={t.team.id} className="prb-sum__byeav">
                       <Avatar avatar={t.avatar} size={22} />
                     </span>
                   ))}
-                </div>
+                </span>
                 <span className="prb-sum__byebar" style={{ height: `${10 + b.count * 15}px` }}>
                   <span className="prb-sum__byen">{b.count}</span>
                 </span>
                 <span className="prb-sum__byewk">Wk {b.week}</span>
-              </div>
+              </button>
             ))}
           </div>
         </div>
@@ -273,7 +312,11 @@ export function LeagueSummaryPane({
               >
                 <span className="prb-sum__cmp-team" title={t.team.name}>
                   <Avatar avatar={t.avatar} size={18} />
-                  <span className="prb-sum__cmp-name">{t.team.name}</span>
+                  <span
+                    className={`prb-sum__cmp-name${t.team.id === myTeamId ? ' is-mine' : ''}`}
+                  >
+                    {t.team.name}
+                  </span>
                 </span>
                 <span className="prb-sum__cmp-bar">
                   {activeSlots.map((slot) => {
@@ -322,7 +365,11 @@ export function LeagueSummaryPane({
                       <td className="prb-sum__heat-team" title={t.team.name}>
                         <span className="prb-sum__heat-teamin">
                           <Avatar avatar={t.avatar} size={16} />
-                          <span className="prb-sum__heat-name">{t.team.name}</span>
+                          <span
+                            className={`prb-sum__heat-name${t.team.id === myTeamId ? ' is-mine' : ''}`}
+                          >
+                            {t.team.name}
+                          </span>
                         </span>
                       </td>
                       {t.cells.map((c) => (

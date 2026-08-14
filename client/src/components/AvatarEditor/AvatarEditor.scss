@@ -1,16 +1,47 @@
 @use 'variables' as *;
+@use 'mixins' as *;
 
 .avatar-editor {
-  display: flex;
-  flex-direction: column;
-  gap: $space;
+  // Mobile: preview sits beside the emoji grid; Background + Shape span full
+  // width below. The picker (when open) spans full width at the bottom.
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas:
+    'preview emoji'
+    'bg bg'
+    'shape shape'
+    'picker picker';
+  column-gap: $space * 1.5;
+  row-gap: $space * 1.5;
+  align-items: start;
+
+  // Desktop: preview becomes a sticky left rail spanning every control row.
+  @include lg {
+    grid-template-columns: 190px 1fr;
+    grid-template-areas:
+      'preview emoji'
+      'preview bg'
+      'preview shape'
+      'picker picker';
+    column-gap: $space * 3;
+    row-gap: 0;
+  }
 
   &__preview {
+    grid-area: preview;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: $space;
-    padding: $space 0 $space * 1.5;
+    gap: $space * 0.75;
+
+    @include lg {
+      padding: $space * 2 $space;
+      // Fill the full height of the control rows beside it and center the
+      // (larger) avatar + Randomize within that space, 12px apart.
+      align-self: stretch;
+      justify-content: center;
+      gap: $space * 1.5;
+    }
   }
 
   &__randomize {
@@ -25,7 +56,9 @@
     font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
-    transition: border-color 0.12s ease, color 0.12s ease;
+    transition:
+      border-color 0.12s ease,
+      color 0.12s ease;
 
     svg {
       font-size: 1.05rem;
@@ -43,20 +76,61 @@
     }
   }
 
+  // One control group. Stacked (label above) on mobile; a label / control row
+  // on desktop so the eye scans straight down the labels.
+  &__row {
+    display: flex;
+    flex-direction: column;
+    gap: $space * 0.75;
+    min-width: 0;
+
+    @include lg {
+      display: grid;
+      grid-template-columns: 50px 1fr;
+      gap: $space * 1.5;
+      align-items: start;
+      padding: $space 0;
+      border-bottom: 1px solid $border;
+    }
+
+    &--emoji {
+      grid-area: emoji;
+    }
+    &--bg {
+      grid-area: bg;
+    }
+    &--shape {
+      grid-area: shape;
+
+      @include lg {
+        border-bottom: none;
+      }
+    }
+  }
+
   &__label {
-    margin-top: $space;
     font-size: 0.85rem;
     font-weight: 700;
     color: $text-muted;
+
+    @include lg {
+      padding-top: $space * 0.5; // align with the first row of controls
+    }
   }
 
+  // Emoji quick-picks — exactly two rows (6 columns). Fixed 44px cells on
+  // desktop; on mobile the columns flex down to share the space beside the
+  // preview so it never overflows.
+  // Mobile keeps two tidy rows of 6 (10 emoji + ＋ + die); desktop shows two
+  // extra emoji in two rows of 7.
   &__grid {
     display: grid;
-    grid-template-columns: repeat(8, 1fr);
-    gap: $space * 0.75;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: $space * 0.5;
 
-    @media (max-width: $bp-md) {
-      grid-template-columns: repeat(6, 1fr);
+    @include lg {
+      grid-template-columns: repeat(7, 44px);
+      justify-content: start;
     }
   }
 
@@ -80,19 +154,43 @@
       background: $bg-overlay;
     }
 
-    &--more {
-      font-size: 1.25rem;
+    // Two desktop-only quick-picks — hidden on mobile so it stays two rows of 6.
+    &--extra {
+      display: none;
+
+      @include lg {
+        display: flex;
+      }
+    }
+
+    // The "＋ picker" (first) and "shuffle die" (last) tiles — dashed to read as
+    // actions, not emoji choices.
+    &--action {
+      border-style: dashed;
       color: $text-muted;
+
+      svg {
+        font-size: 1.2rem;
+      }
+
+      &:hover {
+        border-color: $accent;
+        color: $text;
+      }
+
+      :root[data-theme='light'] &:hover {
+        border-color: $primary;
+      }
     }
   }
 
   &__emoji {
-    font-size: 1.25rem;
+    font-size: 1.2rem;
     line-height: 1;
   }
 
   &__picker {
-    margin-top: $space;
+    grid-area: picker;
 
     // The library ships its own theming; just round the container.
     .EmojiPickerReact {
@@ -111,16 +209,22 @@
     }
   }
 
+  // Colors — a single row spanning the full width. Swatches share the row and
+  // grow to fill it (＋ picker flush left, die flush right), capped so they
+  // never balloon on a very wide layout.
   &__colors {
     display: flex;
+    flex-wrap: nowrap;
     align-items: center;
-    gap: $space;
-    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: $space * 0.5;
   }
 
   &__swatch {
-    width: 28px;
-    height: 28px;
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: 44px;
+    aspect-ratio: 1;
     border-radius: 50%;
     border: 2px solid transparent;
     cursor: pointer;
@@ -128,28 +232,58 @@
     &--active {
       border-color: $text;
     }
+
+    // Custom-color picker (first) + shuffle die (last) — dashed action tiles
+    // matching the emoji grid's ends. The picker holds the native color input.
+    &--pick {
+      position: relative;
+      display: grid;
+      place-items: center;
+      border: 1px dashed $border;
+      background: $bg;
+      color: $text-muted;
+      overflow: hidden;
+
+      svg {
+        font-size: 0.9rem;
+      }
+
+      &:hover {
+        border-color: $accent;
+        color: $text;
+      }
+
+      :root[data-theme='light'] &:hover {
+        border-color: $primary;
+      }
+    }
   }
 
+  // Native color input laid transparently over the picker tile so the tile's
+  // palette icon is what shows.
   &__native {
-    width: 28px;
-    height: 28px;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
     padding: 0;
     border: none;
     background: none;
+    opacity: 0;
     cursor: pointer;
   }
 
   &__shapes {
     display: flex;
-    gap: $space;
+    gap: $space * 0.75;
   }
 
   &__shape {
     display: flex;
-    flex-direction: column;
     align-items: center;
-    gap: $space * 0.5;
-    padding: $space;
+    justify-content: center;
+    gap: $space * 0.75;
+    padding: $space * 0.75;
     border: 1px solid $border;
     border-radius: $radius-sm;
     background: $bg;
@@ -161,6 +295,25 @@
     &--active {
       border-color: $accent;
       color: $text;
+    }
+  }
+
+  // A plain swatch in the chosen background color — the shape is the message
+  // here; the live preview above already carries the emoji. Radii mirror the
+  // Avatar component's SHAPE_RADIUS.
+  &__shape-swatch {
+    width: 26px;
+    height: 26px;
+    flex: none;
+
+    &--circle {
+      border-radius: 50%;
+    }
+    &--rounded {
+      border-radius: 30%;
+    }
+    &--square {
+      border-radius: 18%;
     }
   }
 }

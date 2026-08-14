@@ -2,7 +2,9 @@
 @use 'mixins' as *;
 
 .settings {
-  padding: 0 0 $space * 3;
+  // Side gutter so the section cards don't sit flush against the screen edges
+  // on narrow screens (absorbed by the centered max-width on wide ones).
+  padding: 0 $space * 2 $space * 3;
   display: flex;
   flex-direction: column;
   gap: $space * 3;
@@ -17,6 +19,9 @@
   // Pinned page header with a full-width bottom border.
   &__header {
     max-width: none;
+    // Cancel the container gutter so the header (and its bottom border) still
+    // spans edge to edge; its own padding keeps the title inset.
+    margin-inline: -($space * 2);
     position: sticky;
     top: 0;
     z-index: 10;

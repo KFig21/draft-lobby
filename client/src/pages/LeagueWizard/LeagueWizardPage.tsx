@@ -151,6 +151,27 @@ export function LeagueWizardPage({ embedded = false, onSaved, onCancel }: Props 
   return (
     <main className="wizard">
       <header className="wizard__header">
+        <button
+          type="button"
+          className="wizard__back"
+          onClick={() => navigate(-1)}
+          aria-label="Back"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            width="20"
+            height="20"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M19 12H5" />
+            <path d="m12 19-7-7 7-7" />
+          </svg>
+        </button>
         <h1>{editId ? 'Edit league' : 'New league'}</h1>
       </header>
       {form}

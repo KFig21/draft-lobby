@@ -290,6 +290,57 @@ $bstrong: color-mix(in srgb, #{$text} 22%, transparent);
     flex-direction: column;
     align-items: center;
     gap: 5px;
+    // Reset native <button> chrome — it's a bar, styled entirely below.
+    position: relative;
+    border: 0;
+    background: none;
+    padding: 0;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  // Tap tooltip: the teams on bye that week, floated above the bar.
+  &__byetip {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    z-index: 5;
+    transform: translateX(-50%);
+    margin-bottom: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 7px 9px;
+    border-radius: $radius-sm;
+    background: $bg-overlay;
+    border: 1px solid $border;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+    white-space: nowrap;
+    // Let the finger-down that opened it pass through to the button, and keep
+    // the tooltip from eating the outside-tap that should close it.
+    pointer-events: none;
+
+    // Little pointer notch centered under the tooltip.
+    &::after {
+      content: '';
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 5px solid transparent;
+      border-top-color: $bg-overlay;
+    }
+  }
+
+  &__byetip-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    color: $text;
   }
 
   &__byeavs {
@@ -456,6 +507,16 @@ $bstrong: color-mix(in srgb, #{$text} 22%, transparent);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+
+    // The viewer's own team — bold + accent (mint on dark, teal $primary on light).
+    &.is-mine {
+      font-weight: 800;
+      color: $accent;
+
+      :root[data-theme='light'] & {
+        color: $primary;
+      }
+    }
   }
 
   &__cmp-bar {
@@ -550,6 +611,16 @@ $bstrong: color-mix(in srgb, #{$text} 22%, transparent);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+
+    // The viewer's own team — bold + accent (mint on dark, teal $primary on light).
+    &.is-mine {
+      font-weight: 800;
+      color: $accent;
+
+      :root[data-theme='light'] & {
+        color: $primary;
+      }
+    }
   }
 
   &__heat-cell {

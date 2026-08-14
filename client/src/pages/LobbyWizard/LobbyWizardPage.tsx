@@ -151,16 +151,7 @@ export function LobbyWizardPage() {
 
       <form className="wizard__form" onSubmit={handleSubmit}>
         <section className="wizard__section">
-          <div className="wizard__section-head">
-            <h2>Start from</h2>
-            <button
-              type="button"
-              className="wizard__link"
-              onClick={() => setShowLeagueModal(true)}
-            >
-              + Set up a league
-            </button>
-          </div>
+          <h2>Start from</h2>
           <label className="field">
             <span>
               Preset <em className="muted">(a starting point — tweak anything below)</em>
@@ -184,6 +175,13 @@ export function LobbyWizardPage() {
               </optgroup>
             </select>
           </label>
+          <button
+            type="button"
+            className="wizard__link"
+            onClick={() => setShowLeagueModal(true)}
+          >
+            + Set up a league
+          </button>
         </section>
 
         {/* Fully editable league parameters, seeded from the preset above. */}

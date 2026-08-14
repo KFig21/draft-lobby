@@ -40,6 +40,29 @@
     }
   }
 
+  // Back arrow in the page header — returns to the previous page (Settings).
+  // Borderless; on hover it picks up the subtle hint background used by the
+  // rest of the app's hover targets.
+  &__back {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+    border: none;
+    border-radius: $radius-sm;
+    background: none;
+    color: $text;
+    line-height: 1;
+    cursor: pointer;
+    transition: background-color 120ms ease;
+
+    &:hover {
+      background: $bg-hover;
+    }
+  }
+
   &__form {
     display: flex;
     flex-direction: column;

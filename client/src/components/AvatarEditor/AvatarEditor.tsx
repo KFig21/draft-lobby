@@ -2,17 +2,25 @@ import {
   AVATAR_BG_COLORS,
   AVATAR_EMOJI_CHOICES,
   AVATAR_SHAPES,
-  randomAvatar,
+  randomEmoji,
+  randomVividColor,
   type Avatar as AvatarData,
 } from '@draft-lobby/shared';
+import AddIcon from '@mui/icons-material/Add';
 import CasinoIcon from '@mui/icons-material/Casino';
+import CloseIcon from '@mui/icons-material/Close';
+import PaletteIcon from '@mui/icons-material/Palette';
 import type { EmojiClickData, Theme } from 'emoji-picker-react';
-import { Suspense, lazy, useState } from 'react';
+import { Suspense, lazy, useEffect, useState } from 'react';
 import { Avatar } from '../Avatar/Avatar';
 import './AvatarEditor.scss';
 
 // Keep the ~600 kB emoji dataset out of the main bundle — only Settings uses it.
 const EmojiPicker = lazy(() => import('emoji-picker-react'));
+
+// Quick-pick tiles kept to two tidy rows (＋ picker + 12 + shuffle die = 14 =
+// 7×2). The full emoji library is a tap away behind the picker.
+const QUICK_EMOJI = AVATAR_EMOJI_CHOICES.slice(0, 12);
 
 interface Props {
   value: AvatarData;
@@ -32,14 +40,28 @@ export function AvatarEditor({ value, onChange }: Props) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const set = (patch: Partial<AvatarData>) => onChange({ ...value, ...patch });
 
-  // Roll a fresh emoji + background + shape. randomAvatar() covers emoji/color
-  // but always uses a circle, so pick the shape too; re-roll on the rare exact
-  // match so the button always visibly changes something.
+  // Desktop (≥1100px, mirrors $bp-lg) shows a larger preview. Same matchMedia
+  // pattern the lobby room uses to switch its two-pane layout.
+  const [isDesktop, setIsDesktop] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(min-width: 1100px)').matches,
+  );
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1100px)');
+    const onChange = () => setIsDesktop(mq.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+
+  // Roll a fresh avatar — the same generators the per-section dice use, so the
+  // button matches them: emoji at the 40% preset / 60% anything split, a random
+  // vivid color, and a random shape. Re-roll on the rare exact match so the
+  // button always visibly changes something.
   const randomize = () => {
     let next: AvatarData;
     do {
       next = {
-        ...randomAvatar(),
+        emoji: randomEmoji(),
+        bgColor: randomVividColor(),
         shape: AVATAR_SHAPES[Math.floor(Math.random() * AVATAR_SHAPES.length)],
       };
     } while (sameAvatar(next, value));
@@ -49,7 +71,7 @@ export function AvatarEditor({ value, onChange }: Props) {
   return (
     <div className="avatar-editor">
       <div className="avatar-editor__preview">
-        <Avatar avatar={value} size={96} />
+        <Avatar avatar={value} size={isDesktop ? 120 : 72} />
         <button
           type="button"
           className="avatar-editor__randomize"
@@ -60,29 +82,105 @@ export function AvatarEditor({ value, onChange }: Props) {
         </button>
       </div>
 
-      {/* Emoji — quick picks + full picker */}
-      <span className="avatar-editor__label">Emoji</span>
-      <div className="avatar-editor__grid">
-        {AVATAR_EMOJI_CHOICES.map((e) => (
+      {/* Emoji — picker (first) · quick picks · shuffle die (last) */}
+      <div className="avatar-editor__row avatar-editor__row--emoji">
+        <span className="avatar-editor__label">Emoji</span>
+        <div className="avatar-editor__grid">
           <button
             type="button"
-            key={e}
-            className={`avatar-editor__cell${
-              value.emoji === e ? ' avatar-editor__cell--active' : ''
-            }`}
-            onClick={() => set({ emoji: e })}
+            className="avatar-editor__cell avatar-editor__cell--action"
+            onClick={() => setPickerOpen((o) => !o)}
+            aria-expanded={pickerOpen}
+            aria-label={pickerOpen ? 'Close emoji picker' : 'More emoji'}
           >
-            <span className="avatar-editor__emoji">{e}</span>
+            {pickerOpen ? <CloseIcon fontSize="small" /> : <AddIcon fontSize="small" />}
           </button>
-        ))}
-        <button
-          type="button"
-          className="avatar-editor__cell avatar-editor__cell--more"
-          onClick={() => setPickerOpen((o) => !o)}
-          aria-expanded={pickerOpen}
-        >
-          {pickerOpen ? '×' : '＋'}
-        </button>
+          {QUICK_EMOJI.map((e, i) => (
+            <button
+              type="button"
+              key={e}
+              className={`avatar-editor__cell${
+                value.emoji === e ? ' avatar-editor__cell--active' : ''
+              }${i >= 10 ? ' avatar-editor__cell--extra' : ''}`}
+              onClick={() => set({ emoji: e })}
+            >
+              <span className="avatar-editor__emoji">{e}</span>
+            </button>
+          ))}
+          <button
+            type="button"
+            className="avatar-editor__cell avatar-editor__cell--action"
+            onClick={() => set({ emoji: randomEmoji(value.emoji) })}
+            aria-label="Random emoji"
+          >
+            <CasinoIcon fontSize="small" />
+          </button>
+        </div>
+      </div>
+
+      {/* Color — custom picker (first) · swatches · shuffle die (last) */}
+      <div className="avatar-editor__row avatar-editor__row--bg">
+        <span className="avatar-editor__label">Color</span>
+        <div className="avatar-editor__colors">
+          <label
+            className="avatar-editor__swatch avatar-editor__swatch--pick"
+            title="Custom color"
+          >
+            <PaletteIcon fontSize="small" />
+            <input
+              type="color"
+              className="avatar-editor__native"
+              value={value.bgColor}
+              onChange={(e) => set({ bgColor: e.target.value })}
+              aria-label="Custom color"
+            />
+          </label>
+          {AVATAR_BG_COLORS.map((c) => (
+            <button
+              type="button"
+              key={c}
+              className={`avatar-editor__swatch${
+                value.bgColor.toLowerCase() === c.toLowerCase()
+                  ? ' avatar-editor__swatch--active'
+                  : ''
+              }`}
+              style={{ background: c }}
+              onClick={() => set({ bgColor: c })}
+              aria-label={c}
+            />
+          ))}
+          <button
+            type="button"
+            className="avatar-editor__swatch avatar-editor__swatch--pick"
+            onClick={() => set({ bgColor: randomVividColor(value.bgColor) })}
+            aria-label="Random color"
+          >
+            <CasinoIcon fontSize="small" />
+          </button>
+        </div>
+      </div>
+
+      {/* Shape — a plain swatch in the chosen color (the preview shows the emoji) */}
+      <div className="avatar-editor__row avatar-editor__row--shape">
+        <span className="avatar-editor__label">Shape</span>
+        <div className="avatar-editor__shapes">
+          {AVATAR_SHAPES.map((shape) => (
+            <button
+              type="button"
+              key={shape}
+              className={`avatar-editor__shape${
+                value.shape === shape ? ' avatar-editor__shape--active' : ''
+              }`}
+              onClick={() => set({ shape })}
+            >
+              <span
+                className={`avatar-editor__shape-swatch avatar-editor__shape-swatch--${shape}`}
+                style={{ background: value.bgColor }}
+              />
+              {SHAPE_LABEL[shape]}
+            </button>
+          ))}
+        </div>
       </div>
 
       {pickerOpen && (
@@ -102,50 +200,6 @@ export function AvatarEditor({ value, onChange }: Props) {
           </Suspense>
         </div>
       )}
-
-      {/* Background */}
-      <span className="avatar-editor__label">Background</span>
-      <div className="avatar-editor__colors">
-        {AVATAR_BG_COLORS.map((c) => (
-          <button
-            type="button"
-            key={c}
-            className={`avatar-editor__swatch${
-              value.bgColor.toLowerCase() === c.toLowerCase()
-                ? ' avatar-editor__swatch--active'
-                : ''
-            }`}
-            style={{ background: c }}
-            onClick={() => set({ bgColor: c })}
-            aria-label={c}
-          />
-        ))}
-        <input
-          type="color"
-          className="avatar-editor__native"
-          value={value.bgColor}
-          onChange={(e) => set({ bgColor: e.target.value })}
-          aria-label="Custom color"
-        />
-      </div>
-
-      {/* Shape */}
-      <span className="avatar-editor__label">Shape</span>
-      <div className="avatar-editor__shapes">
-        {AVATAR_SHAPES.map((shape) => (
-          <button
-            type="button"
-            key={shape}
-            className={`avatar-editor__shape${
-              value.shape === shape ? ' avatar-editor__shape--active' : ''
-            }`}
-            onClick={() => set({ shape })}
-          >
-            <Avatar avatar={{ ...value, shape }} size={36} />
-            {SHAPE_LABEL[shape]}
-          </button>
-        ))}
-      </div>
     </div>
   );
 }

@@ -571,7 +571,7 @@ function renderTeam(model: LeagueGrade, card: TeamGradeCard, scale: number): HTM
     if (v) {
       text(ctx, v.player.name, x + 11, hlY + 30, '600 12.5', TEXT, 'left', 'alphabetic', colW - 22);
       const rds = sign === '+' ? `+${Math.max(0, v.valueRounds)}` : `${Math.min(0, v.valueRounds)}`;
-      text(ctx, `R${v.round} · ADP R${v.adpRound} · ${rds} rds`, x + 11, hlY + 43, '500 10', MUTED, 'left', 'alphabetic', colW - 22);
+      text(ctx, `R${v.round} · Rank R${v.rankRound} · ${rds} rds`, x + 11, hlY + 43, '500 10', MUTED, 'left', 'alphabetic', colW - 22);
     } else {
       text(ctx, '—', x + 11, hlY + 32, '600 13', MUTED);
     }

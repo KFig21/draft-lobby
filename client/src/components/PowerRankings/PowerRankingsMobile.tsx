@@ -302,7 +302,7 @@ export function PowerRankingsMobile({
         <div className="prm__scroll">
           {view === 'league' ? (
             <div className="prm__pad">
-              <LeagueSummaryPane model={leagueGrade} compact />
+              <LeagueSummaryPane model={leagueGrade} compact myTeamId={myTeamId} />
             </div>
           ) : (
             standings

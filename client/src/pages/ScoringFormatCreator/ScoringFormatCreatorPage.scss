@@ -4,6 +4,14 @@
 .scoring {
   display: flex;
   flex-direction: column;
+  // Bottom breathing room on the standalone page so the footer/Save button
+  // doesn't sit flush against the viewport edge. The embedded (modal) render
+  // relies on .dialog__body's own padding, so drop it there.
+  padding-bottom: $space * 3;
+
+  .dialog__body & {
+    padding-bottom: 0;
+  }
 
   // Centre the form body; the header (below) spans the full container width.
   // Scoped to the form so the embedded (in-modal) render isn't reconstrained.
@@ -32,6 +40,7 @@
     z-index: 10;
     display: flex;
     align-items: center;
+    gap: $space;
     min-height: 56px;
     padding: $space $space * 3;
     background: $bg-raised;
@@ -39,6 +48,29 @@
 
     h1 {
       font-size: 1.3rem;
+    }
+  }
+
+  // Back arrow in the page header — returns to the previous page (Settings).
+  // Borderless; on hover it picks up the subtle hint background used by the
+  // rest of the app's hover targets.
+  &__back {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+    border: none;
+    border-radius: $radius-sm;
+    background: none;
+    color: $text;
+    line-height: 1;
+    cursor: pointer;
+    transition: background-color 120ms ease;
+
+    &:hover {
+      background: $bg-hover;
     }
   }
 

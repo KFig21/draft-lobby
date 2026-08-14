@@ -519,7 +519,7 @@ export function PowerRankingsBoard({
           )}
           </div>
           ) : (
-            <LeagueSummaryPane model={leagueGrade} />
+            <LeagueSummaryPane model={leagueGrade} myTeamId={myTeamId} />
           )}
         </div>
       </div>

@@ -19,13 +19,14 @@ import type {
   TeamRow,
 } from './types';
 
-/** A pick measured against the player's ADP — positive rounds = a value/steal. */
+/** A pick measured against the player's league value rank — positive rounds = a value/steal. */
 export interface PickValue {
   player: PlayerRow;
   round: number;
-  adpRound: number;
-  /** round − adpRound: how many rounds later than ADP the player was taken
-   * (+ = a value/steal, − = a reach). */
+  /** The round the player's league value rank maps to (rank ÷ team count). */
+  rankRound: number;
+  /** round − rankRound: how many rounds later than the player's league value
+   * rank they were taken (+ = a value/steal, − = a reach). */
   valueRounds: number;
 }
 
@@ -104,7 +105,9 @@ function ownerLabelFor(team: TeamRow, members: MemberRow[]): string {
   return username ? `@${username}` : 'Open seat';
 }
 
-/** Best value pick + biggest reach among a team's own picks, measured vs ADP.
+/** Best value pick + biggest reach among a team's own picks, measured against
+ * the player's league-aware VOR value rank (not generic ADP) — so "steal" and
+ * "reach" reflect what a player is worth in THIS league's scoring + roster.
  * Keepers are excluded — they weren't a draft-day decision at that slot. */
 function pickValues(
   picks: PickRow[],
@@ -118,16 +121,16 @@ function pickValues(
     if (pick.is_keeper) continue;
     if (teamId && pick.team_id !== teamId) continue;
     const player = playersById.get(pick.player_id);
-    if (!player || player.adp == null) continue;
-    // + = the actual pick number is LATER than ADP → drafted at a discount
-    // (a value/steal); − = taken EARLIER than ADP (a reach).
-    const raw = pick.overall - player.adp;
-    const adpRound = Math.max(1, Math.ceil(player.adp / teamCount));
+    if (!player || player.value_rank == null) continue;
+    // + = the actual pick number is LATER than the player's value rank → taken
+    // at a discount (a value/steal); − = taken EARLIER than their rank (a reach).
+    const raw = pick.overall - player.value_rank;
+    const rankRound = Math.max(1, Math.ceil(player.value_rank / teamCount));
     const entry: PickValue & { team_id: string; raw: number } = {
       player,
       round: pick.round,
-      adpRound,
-      valueRounds: pick.round - adpRound, // + rounds later than ADP = value
+      rankRound,
+      valueRounds: pick.round - rankRound, // + rounds later than their rank = value
       team_id: pick.team_id,
       raw,
     };
@@ -135,7 +138,7 @@ function pickValues(
     if (!reach || raw < reach.raw) reach = entry; // biggest reach
   }
   const strip = (e: typeof best) =>
-    e ? { player: e.player, round: e.round, adpRound: e.adpRound, valueRounds: e.valueRounds, team_id: e.team_id } : null;
+    e ? { player: e.player, round: e.round, rankRound: e.rankRound, valueRounds: e.valueRounds, team_id: e.team_id } : null;
   return { best: strip(best), reach: strip(reach) };
 }
 
@@ -203,7 +206,7 @@ export function buildLeagueGrade(opts: {
   const withTeam = (e: (PickValue & { team_id: string }) | null) => {
     if (!e) return null;
     const team = teamById.get(e.team_id);
-    return team ? { player: e.player, round: e.round, adpRound: e.adpRound, valueRounds: e.valueRounds, team } : null;
+    return team ? { player: e.player, round: e.round, rankRound: e.rankRound, valueRounds: e.valueRounds, team } : null;
   };
 
   const letters = ['A', 'B', 'C', 'D', 'F'];
