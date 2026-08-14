@@ -35,6 +35,11 @@
 
     svg {
       color: $accent;
+
+      // Accent convention: mint on dark, teal primary on light.
+      :root[data-theme='light'] & {
+        color: $primary;
+      }
     }
   }
 
