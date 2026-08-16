@@ -444,11 +444,33 @@
   // Same story inside each stepper: the shared .lineup__stepper's 12px gap is
   // too wide for two steppers on a phone row. Scoped override (higher
   // specificity than .lineup__stepper) so the lineup section is untouched.
+  // Also shrink the buttons + count a notch on mobile for extra breathing
+  // room; both restore to full size at md+.
   &__stepper.lineup__stepper {
     gap: $space * 0.5;
 
     @include md {
       gap: $space * 1.5;
+    }
+
+    .lineup__step {
+      width: 28px;
+      height: 28px;
+      font-size: 1rem;
+
+      @include md {
+        width: 32px;
+        height: 32px;
+        font-size: 1.1rem;
+      }
+    }
+
+    .lineup__count {
+      font-size: 0.9rem;
+
+      @include md {
+        font-size: 1rem;
+      }
     }
   }
 
@@ -491,8 +513,12 @@
   // don't shift between numeric and "No max" states, and keep it on one line
   // (it was wrapping to "No / max").
   &__max {
-    min-width: 3.5rem;
+    min-width: 2.75rem;
     white-space: nowrap;
+
+    @include md {
+      min-width: 3.5rem;
+    }
   }
 
   &__note {
