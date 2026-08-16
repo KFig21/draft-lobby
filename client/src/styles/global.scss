@@ -4,6 +4,13 @@
 
 // ── Theme surfaces (flip at runtime via <html data-theme>) ──────────
 :root {
+  // Tell the UA which scheme native controls live in, so their built-in bits
+  // (the <select> chevron, date pickers, autofill, native scrollbars) render
+  // legibly. Without this, iOS Safari draws a dark select arrow on our dark
+  // surfaces. Default is dark (matching the palette below); the light theme
+  // flips it. Kept in sync with data-theme, not the OS preference.
+  color-scheme: dark;
+
   --bg: #12141d;
   --bg-raised: #1b1e2b;
   --bg-overlay: #232738;
@@ -32,6 +39,8 @@
 }
 
 :root[data-theme='light'] {
+  color-scheme: light;
+
   --bg: #f4f5f8;
   --bg-raised: #ffffff;
   --bg-overlay: #e9ebf1;
