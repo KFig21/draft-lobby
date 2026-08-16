@@ -75,12 +75,9 @@
     color: color-mix(in srgb, var(--pos) 60%, black);
   }
 
-  // On hover the reactions popover takes over, so drop the flags.
-  @media (hover: hover) {
-    .draft-grid__cell--pick:hover & {
-      display: none;
-    }
-  }
+  // Kept visible on hover (matching the default cell): the reactions popover
+  // only appears when a pick actually has reactions, so hiding these here left
+  // a comment-only pick showing nothing at all on hover.
 
   // Shift left when a keeper lock also sits in this corner.
   .draft-grid__cell--keeper & {
