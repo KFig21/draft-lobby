@@ -910,14 +910,16 @@
   }
 
   // Fullscreen "Menu" modal body — the same sidebar tab bar + panel-body
-  // pieces, given their own bounded flex column so the active panel scrolls
-  // internally (queue/filters, or the tab bar itself) instead of the whole
-  // modal growing past a sane height.
+  // pieces. It fills the dialog body (a bounded flex column — see
+  // .draft__fs-menu-dialog) so the active panel is the ONLY thing that scrolls
+  // and the tab strip stays pinned. A fixed height here used to overflow the
+  // dialog once TV-mode zoom shrank its max-height, which let the body scroll
+  // the tabs out of view (e.g. Chat auto-scrolling to the bottom).
   &__fs-sidebar {
     display: flex;
     flex-direction: column;
-    height: min(75vh, 680px);
-    margin: -$space * 2.5;
+    flex: 1;
+    min-height: 0;
 
     // The tab strip is desktop-only (display: none) at the base breakpoint
     // since mobile normally switches tabs via the bottom nav instead — but
@@ -2709,13 +2711,45 @@
 // stylesheet order.
 .dialog.draft__fs-menu-dialog {
   width: min(640px, 100%);
+  // Definite height so .draft__fs-sidebar (flex:1) fills it and only the active
+  // panel scrolls — the tab strip stays pinned. (Was a fixed height on the
+  // sidebar itself, which overflowed the dialog once TV-mode zoom shrank its
+  // max-height, letting the body scroll the tabs away on reopen.)
+  height: min(75vh, 680px);
   transition: width 220ms ease;
 
+  // The sidebar bleeds edge-to-edge and owns its own scrolling; the body just
+  // frames it (no padding, no scroll of its own).
+  .dialog__body {
+    flex: 1;
+    min-height: 0;
+    padding: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
   &.is-players {
-    // +20px over the natural table width so the widest position (WR) clears its
-    // last column instead of leaving a sliver of horizontal scroll, especially
-    // zoomed up in TV mode.
     width: min(1060px, 100%);
+  }
+
+  // The Players stat table (widest for WR/RB) otherwise runs a few px past the
+  // modal — and `zoom` scales the table + modal together, so widening the modal
+  // doesn't help (and above ~1.4x the modal hits its viewport cap). Trim the
+  // cell padding instead so the table itself is narrower and fits, even zoomed
+  // up in TV mode. Scoped to the fullscreen Menu so the desktop dashboard /
+  // sidebar pool table keeps its roomier spacing.
+  .pool-table {
+    th,
+    td {
+      padding-left: 4px;
+      padding-right: 4px;
+    }
+
+    // Keep the leading marks + rank columns tight too.
+    .pool-table__marks {
+      width: 46px;
+    }
   }
 
   // Simple layout: one width for every tab (no per-tab stats table to make
@@ -2738,6 +2772,15 @@
     zoom: var(--tv-zoom-chat, 1.6);
     max-height: calc(90vh / var(--tv-zoom-chat, 1.6));
     max-width: calc(100% / var(--tv-zoom-chat, 1.6));
+  }
+
+  // TV mode: each tab zooms by a different factor, so the fixed 75vh/680px
+  // height rendered to a different on-screen size per tab (Roster, at the lower
+  // base zoom, came out shorter than Players/Chat). Make the height large enough
+  // that the per-tab max-height (calc(90vh / <its zoom>)) is always the binding
+  // constraint — every tab then renders at the same ~90vh regardless of zoom.
+  :root.is-tv & {
+    height: 90vh;
   }
 
   @media (prefers-reduced-motion: reduce) {
