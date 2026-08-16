@@ -375,6 +375,10 @@ textarea {
   max-width: 100%;
 
   &__opt {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
     padding: $space * 0.75 $space * 2;
     border: none;
     border-radius: 999px;

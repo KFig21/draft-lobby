@@ -5,6 +5,10 @@ import {
   rosterSize,
   type LobbySettings,
 } from '@draft-lobby/shared';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import PublicOutlinedIcon from '@mui/icons-material/PublicOutlined';
+import SmartToyOutlinedIcon from '@mui/icons-material/SmartToyOutlined';
+import SportsFootballIcon from '@mui/icons-material/SportsFootball';
 import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -208,7 +212,7 @@ export function LobbyWizardPage() {
                 }`}
                 onClick={() => setSettings((s) => ({ ...s, visibility: 'PRIVATE' }))}
               >
-                🔒 Private
+                <LockOutlinedIcon sx={{ fontSize: 18 }} /> Private
               </button>
               <button
                 type="button"
@@ -217,7 +221,7 @@ export function LobbyWizardPage() {
                 }`}
                 onClick={() => setSettings((s) => ({ ...s, visibility: 'OPEN' }))}
               >
-                🌐 Open
+                <PublicOutlinedIcon sx={{ fontSize: 18 }} /> Open
               </button>
             </div>
             <em className="muted">
@@ -236,7 +240,7 @@ export function LobbyWizardPage() {
                 }`}
                 onClick={() => setSettings((s) => ({ ...s, draftMode: 'LIVE' }))}
               >
-                🏈 Live
+                <SportsFootballIcon sx={{ fontSize: 18 }} /> Live
               </button>
               <button
                 type="button"
@@ -245,7 +249,7 @@ export function LobbyWizardPage() {
                 }`}
                 onClick={() => setSettings((s) => ({ ...s, draftMode: 'MOCK' }))}
               >
-                🤖 Mock
+                <SmartToyOutlinedIcon sx={{ fontSize: 18 }} /> Mock
               </button>
             </div>
             <em className="muted">
