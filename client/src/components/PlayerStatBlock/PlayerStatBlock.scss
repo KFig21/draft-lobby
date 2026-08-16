@@ -122,31 +122,100 @@
     color: $text-muted;
   }
 
-  &__weekly-btn {
-    display: inline-flex;
+  // ── Weekly sparkline card: the stats-section entry point (mini fantasy-pts-
+  // by-week chart on the left, label on the right; taps open the deep modal) ──
+  &__spark {
+    margin-top: $space * 2;
+    width: 100%;
+    display: flex;
     align-items: center;
-    gap: 5px;
-    padding: 4px 10px;
+    gap: $space * 1.5;
+    padding: $space * 1.1 $space * 1.5;
+    // Neutral card, matching the two key cards above it (not a colored panel).
     border: 1px solid $border;
-    border-radius: 8px;
-    background: none;
-    color: $text;
+    border-radius: $radius-sm;
+    // Solid fill matching the modal surface it sits on.
+    background: $bg-raised;
+    color: inherit;
     font: inherit;
-    font-size: 0.76rem;
-    font-weight: 700;
+    text-align: left;
     cursor: pointer;
+    transition: border-color 0.15s ease;
+
+    &.is-loading {
+      cursor: default;
+    }
 
     @include hover-only {
-      &:hover {
-        border-color: color-mix(in srgb, $accent 55%, $border);
-        color: $accent;
+      &:not(.is-loading):hover {
+        border-color: color-mix(in srgb, $accent 75%, $border);
+
+        .player-stat-block__spark-arrow {
+          transform: translate(2px, -2px);
+        }
 
         :root[data-theme='light'] & {
-          border-color: color-mix(in srgb, $primary 55%, $border);
-          color: $primary;
+          border-color: color-mix(in srgb, $primary 75%, $border);
         }
       }
     }
+  }
+
+  &__spark-bars {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 46px;
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+  }
+
+  &__spark-bar {
+    flex: 1 1 0;
+    min-width: 2px;
+    border-radius: 2px 2px 0 0;
+    background: $accent;
+
+    :root[data-theme='light'] & {
+      background: $primary;
+    }
+
+    // Skeleton bars read as a quiet placeholder, not real data.
+    .player-stat-block__spark.is-loading & {
+      background: color-mix(in srgb, #{$text-muted} 40%, transparent);
+    }
+  }
+
+  &__spark-meta {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  &__spark-title {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 0.9rem;
+    font-weight: 800;
+    color: $text;
+  }
+
+  &__spark-arrow {
+    color: $accent;
+    transition: transform 0.15s ease;
+
+    :root[data-theme='light'] & {
+      color: $primary;
+    }
+  }
+
+  &__spark-sub {
+    margin-top: 2px;
+    font-size: 0.72rem;
+    color: $text-muted;
   }
 
   // ── Comparison table: last-yr vs projected, grouped by pass/rush/rec ──
@@ -171,31 +240,7 @@
       font-weight: 600;
     }
 
-    // Column headers are the quietest label tier (smallest, muted).
-    thead th {
-      padding-bottom: 6px;
-      font-size: 0.6rem;
-      font-weight: 800;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      color: $text-muted;
-      text-align: right;
-    }
-
-    thead th:first-child {
-      text-align: left;
-    }
-
-    // The projected column reads as the forward-looking one.
-    thead th:last-child {
-      color: $accent;
-
-      :root[data-theme='light'] & {
-        color: $primary;
-      }
-    }
-
-    tbody tr:not(.player-stat-block__cmp-group) + tr:not(.player-stat-block__cmp-group) td {
+    tbody tr:not(.player-stat-block__cmp-group)+tr:not(.player-stat-block__cmp-group) td {
       border-top: 1px solid color-mix(in srgb, #{$border} 65%, transparent);
     }
   }
@@ -205,12 +250,39 @@
   // sections.
   &__cmp-group td {
     padding: ($space * 1.4) 4px 5px;
+  }
+
+  // The section name (first cell).
+  &__cmp-group td:first-child {
     color: $text;
     font-size: 0.78rem;
     font-weight: 800;
     letter-spacing: 0.03em;
     text-transform: uppercase;
-    text-align: left !important;
+    text-align: left;
+  }
+
+  // The 2025 / Proj column labels, repeated on every section-header row so they
+  // sit directly above their columns. Quiet label tier (small, muted).
+  &__cmp-group td.player-stat-block__cmp-group-lbl {
+    font-size: 0.6rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: $text-muted;
+    text-align: right;
+    // Bottom-align with the taller section name beside them.
+    vertical-align: bottom;
+  }
+
+  // The projected column reads as the forward-looking one. Matched specificity
+  // (td.<base>) so it wins over the muted base-label color, not just ties it.
+  &__cmp-group td.player-stat-block__cmp-group-lbl--proj {
+    color: $accent;
+
+    :root[data-theme='light'] & {
+      color: $primary;
+    }
   }
 
   &__cmp-group:not(:first-child) td {
@@ -231,6 +303,7 @@
     &--good {
       color: $accent;
     }
+
     &--bad {
       color: $danger;
     }
@@ -278,11 +351,6 @@
     padding: $space * 1.25 $space * 1.5;
     border: 1px solid $border;
     border-radius: $radius-sm;
-    background: linear-gradient(180deg, color-mix(in srgb, #{$accent} 7%, transparent), transparent);
-
-    :root[data-theme='light'] & {
-      background: linear-gradient(180deg, color-mix(in srgb, #{$primary} 6%, transparent), transparent);
-    }
   }
 
   &__keycard-label {
@@ -298,6 +366,10 @@
     display: flex;
     align-items: baseline;
     gap: 7px;
+    // Shared line-height so the points number and the position rank sit on the
+    // same baseline across the two cards (they're separate flex rows, so a
+    // common line box is what keeps them aligned).
+    line-height: 1.3;
 
     // The fantasy-points ProjNum inside reads as the hero number.
     .player-stat-block__proj {
@@ -306,10 +378,10 @@
   }
 
   &__keycard-rank {
-    font-size: 1.7rem;
+    // Matches the points number's size so both hero values align on one line.
+    font-size: 1.85rem;
     font-weight: 800;
     letter-spacing: -0.01em;
-    line-height: 1;
   }
 
   &__keycard-now {
@@ -330,11 +402,13 @@
     margin-top: auto;
     padding-top: 8px;
     border-top: 1px solid color-mix(in srgb, #{$border} 65%, transparent);
+    // Stacked (year·value on top, delta pill below) so both cards read the
+    // same regardless of value width — a space-between row wrapped the wide
+    // fantasy-points delta to a second line in one card but not the other.
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 5px $space;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
     font-size: 0.78rem;
     font-variant-numeric: tabular-nums;
   }
@@ -365,6 +439,7 @@
       background: color-mix(in srgb, $accent 16%, transparent);
       color: $accent;
     }
+
     &--bad {
       background: color-mix(in srgb, $danger 16%, transparent);
       color: $danger;

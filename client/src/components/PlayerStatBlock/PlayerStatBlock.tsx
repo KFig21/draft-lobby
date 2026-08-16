@@ -6,8 +6,9 @@ import {
 } from '@draft-lobby/shared';
 import { useState, type ReactNode } from 'react';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
-import ShowChartIcon from '@mui/icons-material/ShowChart';
+import NorthEastIcon from '@mui/icons-material/NorthEast';
 import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined';
+import { usePlayerWeekPoints } from '../../hooks/usePlayerWeekPoints';
 import { INJURY_ABBR, INJURY_SEVERITY } from '../../lib/injuryStatus';
 import { getTeamColors, getTeamColorsEnabled } from '../../lib/nflTeamColors';
 import { POS_STAT_COLS, fmtStat } from '../../lib/positionStats';
@@ -207,6 +208,75 @@ function KeyCard({
   );
 }
 
+// A little skeleton silhouette while the weekly points load — keeps the card's
+// height stable so nothing jumps when the real bars arrive.
+const SPARK_SKELETON = [40, 55, 34, 70, 46, 62, 30, 66, 50, 42, 58, 38, 64, 48, 54, 44];
+
+/** The stats-section entry point: a mini fantasy-points-by-week sparkline that
+ * doubles as the "open the weekly breakdown" button (replacing the old plain
+ * section header + text button). Falls back to a plain "Stats" header when the
+ * player has no weekly data (rookies, most K/DEF). */
+function WeeklySparkCard({
+  player,
+  season,
+  scoring,
+  onOpen,
+}: {
+  player: PlayerRow;
+  season: number;
+  scoring: ScoringRules;
+  onOpen: () => void;
+}) {
+  const { points, loading } = usePlayerWeekPoints(player.id, player.position, season, scoring, true);
+  const games = points.length;
+  const max = games ? Math.max(...points.map((p) => p.pts), 1) : 1;
+
+  if (!loading && games === 0) {
+    return (
+      <div className="player-stat-block__stats-head">
+        <span className="player-stat-block__section-label">Stats</span>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      className={`player-stat-block__spark${loading ? ' is-loading' : ''}`}
+      onClick={onOpen}
+      disabled={loading}
+      aria-label={`${player.name} fantasy points by week — open the weekly breakdown`}
+    >
+      <span className="player-stat-block__spark-bars" aria-hidden>
+        {loading
+          ? SPARK_SKELETON.map((h, i) => (
+              <span
+                key={i}
+                className="player-stat-block__spark-bar"
+                style={{ height: `${h}%` }}
+              />
+            ))
+          : points.map((p) => (
+              <span
+                key={p.week}
+                className="player-stat-block__spark-bar"
+                style={{ height: `${Math.max(8, (p.pts / max) * 100)}%` }}
+              />
+            ))}
+      </span>
+      <span className="player-stat-block__spark-meta">
+        <span className="player-stat-block__spark-title">
+          Fantasy pts / week
+          <NorthEastIcon className="player-stat-block__spark-arrow" sx={{ fontSize: 15 }} />
+        </span>
+        <span className="player-stat-block__spark-sub">
+          {loading ? 'Loading weekly…' : `${season} season`}
+        </span>
+      </span>
+    </button>
+  );
+}
+
 /** The two headline comparison cards (fantasy points + position rank) above a
  * grouped last-yr vs projected stats table — shared between PickModal and
  * PlayerDetailModal. */
@@ -270,29 +340,24 @@ export function PlayerStatGrid({ player, weekStats }: Props) {
         />
       </div>
 
-      {/* ── Stats (renamed from "Metrics"): grouped last-yr vs proj ── */}
-      <div className="player-stat-block__stats-head">
-        <span className="player-stat-block__section-label">Stats</span>
-        {weekStats && (
-          <button
-            type="button"
-            className="player-stat-block__weekly-btn"
-            onClick={() => setShowWeek(true)}
-          >
-            <ShowChartIcon sx={{ fontSize: 15 }} /> Weekly breakdown
-          </button>
-        )}
-      </div>
+      {/* ── Stats: a fantasy-pts-by-week sparkline that opens the weekly
+          breakdown (or a plain header when there's no weekly data). The
+          2025/Proj column labels ride on each section-header row below. ── */}
+      {weekStats ? (
+        <WeeklySparkCard
+          player={player}
+          season={weekStats.season}
+          scoring={weekStats.scoring}
+          onOpen={() => setShowWeek(true)}
+        />
+      ) : (
+        <div className="player-stat-block__stats-head">
+          <span className="player-stat-block__section-label">Stats</span>
+        </div>
+      )}
 
       {hasTable ? (
         <table className="player-stat-block__cmp">
-          <thead>
-            <tr>
-              <th aria-label="Stat"></th>
-              <th>{prevLabel}</th>
-              <th>Proj</th>
-            </tr>
-          </thead>
           <tbody>
             {(() => {
               let group = '';
@@ -303,7 +368,11 @@ export function PlayerStatGrid({ player, weekStats }: Props) {
                   group = g;
                   rows.push(
                     <tr key={`g-${g}`} className="player-stat-block__cmp-group">
-                      <td colSpan={3}>{g}</td>
+                      <td>{g}</td>
+                      <td className="player-stat-block__cmp-group-lbl">{prevLabel}</td>
+                      <td className="player-stat-block__cmp-group-lbl player-stat-block__cmp-group-lbl--proj">
+                        Proj
+                      </td>
                     </tr>,
                   );
                 }
