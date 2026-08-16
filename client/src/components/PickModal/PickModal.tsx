@@ -21,7 +21,6 @@ import { avatarForTeam } from '../../lib/teamAvatar';
 import { useModalClose } from '../../lib/useModalClose';
 import type { MemberRow, PickRow, PlayerRow, TeamRow } from '../../lib/types';
 import { Avatar } from '../Avatar/Avatar';
-import { ByeClashes } from '../ByeClashes/ByeClashes';
 import { ChampionBadge } from '../ChampionBadge/ChampionBadge';
 import type { ReactionEntry } from '../DraftGrid/DraftGrid';
 import { MentionInput } from '../MentionInput/MentionInput';
@@ -138,6 +137,15 @@ export function PickModal({
   // already open, instead of stacking multiple palettes at once.
   const [openPalette, setOpenPalette] = useState<string | null>(null);
   const commentInputRef = useRef<HTMLInputElement>(null);
+  // The main "＋ React" palette (the pick's own reactions, not a comment's).
+  const [reactPaletteOpen, setReactPaletteOpen] = useState(false);
+  const reactAddRef = useRef<HTMLDivElement>(null);
+  useClickOutside(reactAddRef, () => setReactPaletteOpen(false), reactPaletteOpen);
+  // Only the reactions that actually have a count — the full palette lives
+  // behind the "＋ React" button now, instead of a 30-emoji wall.
+  const activeReactions = sortReactionEmojis(entry?.counts).filter(
+    (e) => (entry?.counts[e] ?? 0) > 0,
+  );
 
   const memberUsernames = useMemo(
     () => members.map((m) => m.profiles?.username).filter((u): u is string => !!u),
@@ -188,6 +196,7 @@ export function PickModal({
           <PlayerHeader
             player={player}
             isKeeper={pick.is_keeper}
+            byeClashCounts={byeClashCounts}
             action={
               onFavorite ? (
                 <button
@@ -210,25 +219,25 @@ export function PickModal({
                 <Avatar avatar={avatarForTeam(team, members)} size={18} />
               </ProfileLink>
             )}
-            <span>
+            <span className="pick-modal__drafted-txt">
               <ProfileLink userId={team?.owner_id}>
                 <strong>{team?.name ?? 'A team'}</strong>
               </ProfileLink>
               {team?.owner_id && championUserIds?.has(team.owner_id) && <ChampionBadge size={13} />}{' '}
-              · Pick {pick.overall} · Round {formatRoundPick(pick.round, pickInRound, teamCount)}
-              {pick.is_auto_pick && <span className="pick-modal__auto"> · auto</span>}
+              drafted · <strong>{formatRoundPick(pick.round, pickInRound, teamCount)}</strong> (pick{' '}
+              {pick.overall}){pick.is_auto_pick && <span className="pick-modal__auto"> · auto</span>}
             </span>
+            {isCommish && onRollbackTo && (
+              <button
+                type="button"
+                className="pick-modal__rollback"
+                onClick={onRollbackTo}
+                title="Roll the draft back to this pick"
+              >
+                <UndoIcon fontSize="small" /> Roll back
+              </button>
+            )}
           </div>
-
-          {isCommish && onRollbackTo && (
-            <button
-              type="button"
-              className="pick-modal__rollback"
-              onClick={onRollbackTo}
-            >
-              <UndoIcon fontSize="small" /> Roll back to this pick
-            </button>
-          )}
         </div>
 
         {/* Stats + reactions + comments — the only part of the modal that
@@ -236,11 +245,21 @@ export function PickModal({
         <div className="pick-modal__scroll">
           <PlayerStatGrid player={player} weekStats={weekStats} />
 
-          <ByeClashes flush byeWeek={player.bye_week} counts={byeClashCounts} />
-
-          <div className="pick-modal__section-header">
-            <div className="pick-modal__section-label">Reactions</div>
-            {entry && Object.keys(entry.counts).length > 0 && (
+          <div className="pick-modal__reactions">
+            <span className="pick-modal__section-label">Reactions</span>
+            {activeReactions.map((emoji) => (
+              <ReactionChip
+                key={emoji}
+                className="pick-modal__react"
+                emoji={emoji}
+                count={entry?.counts[emoji] ?? 0}
+                mine={entry?.mine.has(emoji) ?? false}
+                reactors={reactors?.[emoji] ?? []}
+                disabled={reactionsLocked}
+                onReact={() => onReact(emoji)}
+              />
+            ))}
+            {activeReactions.length > 0 && (
               <button
                 type="button"
                 className="pick-modal__react-viewall"
@@ -251,25 +270,36 @@ export function PickModal({
                 <PeopleAltOutlinedIcon sx={{ fontSize: 16 }} />
               </button>
             )}
-          </div>
-          <div className="pick-modal__reactions">
-            {sortReactionEmojis(entry?.counts).map((emoji) => {
-              const count = entry?.counts[emoji] ?? 0;
-              const mine = entry?.mine.has(emoji) ?? false;
-              const names = reactors?.[emoji] ?? [];
-              return (
-                <ReactionChip
-                  key={emoji}
-                  className="pick-modal__react"
-                  emoji={emoji}
-                  count={count}
-                  mine={mine}
-                  reactors={names}
-                  disabled={reactionsLocked}
-                  onReact={() => onReact(emoji)}
-                />
-              );
-            })}
+            {/* The full palette lives behind this button now, so it doesn't
+                dominate the modal as an always-open 30-emoji wall. */}
+            {!reactionsLocked && (
+              <div className="pick-modal__react-add" ref={reactAddRef}>
+                <button
+                  type="button"
+                  className="pick-modal__react-add-btn"
+                  aria-label="Add a reaction"
+                  onClick={() => setReactPaletteOpen((o) => !o)}
+                >
+                  <AddReactionOutlinedIcon sx={{ fontSize: 16 }} /> React
+                </button>
+                {reactPaletteOpen && (
+                  <div className="pick-modal__react-palette">
+                    {sortReactionEmojis(entry?.counts).map((e) => (
+                      <button
+                        key={e}
+                        type="button"
+                        onClick={() => {
+                          onReact(e);
+                          setReactPaletteOpen(false);
+                        }}
+                      >
+                        {e}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           {reactionsLocked && (
             <span className="bot-badge bot-badge--warn pick-modal__locked-badge">

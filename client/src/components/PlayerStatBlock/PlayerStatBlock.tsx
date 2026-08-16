@@ -1,12 +1,16 @@
-import { POSITION_COLORS, type Position, type ScoringRules } from '@draft-lobby/shared';
-import { useState, type KeyboardEvent, type ReactNode } from 'react';
+import {
+  POSITION_COLORS,
+  POSITIONS,
+  type Position,
+  type ScoringRules,
+} from '@draft-lobby/shared';
+import { useState, type ReactNode } from 'react';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
-import OpenInFullIcon from '@mui/icons-material/OpenInFull';
-import TrendingDownIcon from '@mui/icons-material/TrendingDown';
-import TrendingFlatIcon from '@mui/icons-material/TrendingFlat';
-import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import ShowChartIcon from '@mui/icons-material/ShowChart';
+import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined';
 import { INJURY_ABBR, INJURY_SEVERITY } from '../../lib/injuryStatus';
 import { getTeamColors, getTeamColorsEnabled } from '../../lib/nflTeamColors';
+import { POS_STAT_COLS, fmtStat } from '../../lib/positionStats';
 import type { PlayerRow } from '../../lib/types';
 import { PlayerWeekStatsModal } from '../PlayerWeekStatsModal/PlayerWeekStatsModal';
 import './PlayerStatBlock.scss';
@@ -31,15 +35,32 @@ interface HeaderProps extends Props {
   /** Optional control rendered inline right after the name (e.g. a queue
    * bookmark toggle in PlayerDetailModal). */
   action?: ReactNode;
+  /** Per-position count of the viewer's own drafted players sharing this
+   * player's bye week — rendered as a compact chip on the meta line. */
+  byeClashCounts?: Partial<Record<Position, number>>;
+}
+
+/** Compact summary of any bye-week clashes for the header chip. */
+function byeClashSummary(
+  byeWeek: number | null,
+  counts?: Partial<Record<Position, number>>,
+): { total: number; text: string; severe: boolean } | null {
+  if (byeWeek == null || !counts) return null;
+  const entries = POSITIONS.map((p) => [p, counts[p] ?? 0] as const).filter(([, c]) => c > 0);
+  if (entries.length === 0) return null;
+  const total = entries.reduce((sum, [, c]) => sum + c, 0);
+  const text = entries.map(([p, c]) => `${c} ${p === 'DEF' ? 'D/ST' : p}`).join(' · ');
+  return { total, text, severe: total >= 3 };
 }
 
 /** Position badge + name/team/bye/injury — shared between PickModal and
  * PlayerDetailModal. PickModal renders its pick-specific info (drafted by,
  * round/pick, rollback) between this and <PlayerStatGrid>; PlayerDetailModal
  * renders them back-to-back since there's no pick yet to describe. */
-export function PlayerHeader({ player, isKeeper, action }: HeaderProps) {
+export function PlayerHeader({ player, isKeeper, action, byeClashCounts }: HeaderProps) {
   const pos = player.position as Position;
   const injury = INJURY_ABBR[player.injury_status];
+  const clash = byeClashSummary(player.bye_week, byeClashCounts);
   // Team-colored abbreviation pill — only when the user has the setting on and
   // the team is one we have a color pair for (else fall back to plain text).
   const teamColors = getTeamColorsEnabled() ? getTeamColors(player.nfl_team) : null;
@@ -51,11 +72,6 @@ export function PlayerHeader({ player, isKeeper, action }: HeaderProps) {
       <div className="player-stat-block__title">
         <h3>
           {player.name}
-          {isKeeper && (
-            <span className="player-stat-block__keeper-badge">
-              <LockOutlinedIcon sx={{ fontSize: 13 }} /> Keeper
-            </span>
-          )}
           {action}
         </h3>
         <div className="player-stat-block__subtitle">
@@ -75,6 +91,25 @@ export function PlayerHeader({ player, isKeeper, action }: HeaderProps) {
               {player.bye_week ? ` · Bye ${player.bye_week}` : ''}
             </span>
           )}
+          {/* Keeper sits on the meta line (with the bye) rather than beside the
+              name — a small gold chip, only for kept players. */}
+          {isKeeper && (
+            <span className="player-stat-block__keeper-badge">
+              <LockOutlinedIcon sx={{ fontSize: 12 }} /> Keeper
+            </span>
+          )}
+          {clash && (
+            <span
+              className={`player-stat-block__clash${
+                clash.severe ? ' player-stat-block__clash--danger' : ''
+              }`}
+              title={`Your roster already has ${clash.total} player${
+                clash.total === 1 ? '' : 's'
+              } on bye week ${player.bye_week}`}
+            >
+              <WarningAmberOutlinedIcon sx={{ fontSize: 12 }} /> Bye clash · {clash.text}
+            </span>
+          )}
           {injury && (
             <span
               className={`injury-badge injury-badge--${INJURY_SEVERITY[player.injury_status] ?? 'danger'}`}
@@ -89,26 +124,8 @@ export function PlayerHeader({ player, isKeeper, action }: HeaderProps) {
   );
 }
 
-/** Up = projected to rank better than last year (lower number), down = worse,
- * flat = unchanged. Needs both ranks — most rookies/new-to-the-league
- * players only have one or the other. */
-function RankTrend({ proj, prev }: { proj: number | null; prev: number | null }) {
-  if (proj == null || prev == null) return null;
-  const variant = proj < prev ? 'up' : proj > prev ? 'down' : 'flat';
-  const Icon = variant === 'up' ? TrendingUpIcon : variant === 'down' ? TrendingDownIcon : TrendingFlatIcon;
-  // Fixed-size wrapper with the svg forced to fill it — sidesteps relying on
-  // overriding MUI's own font-size-driven icon sizing (which wasn't taking
-  // reliably and let the default ~24px icon loom over the small stat value).
-  return (
-    <span className={`player-stat-block__trend player-stat-block__trend--${variant}`}>
-      <Icon />
-    </span>
-  );
-}
-
 /** A points total, Futura-italic with a smaller decimal — the app's projected-
- * points treatment (see .prb-proj / grade cards), used here for both the
- * Projected and Last-year totals. */
+ * points treatment (see .prb-proj / grade cards). */
 function ProjNum({ value }: { value: number }) {
   const [int, dec] = value.toFixed(1).split('.');
   return (
@@ -119,100 +136,214 @@ function ProjNum({ value }: { value: number }) {
   );
 }
 
-/** The ADP/proj-rank/last-year-rank row + projected/last-year totals (each
- * with a compact stat line) — shared between PickModal and PlayerDetailModal.
- * "ADP" here is the league-value draft order (points over positional
- * replacement), not a generic market ADP. */
+// These stats are better when they go DOWN (fewer is better); everything else
+// is better when it goes up. Drives the green/red on the trend arrow.
+const LOWER_IS_BETTER = new Set(['interception', 'fumble', 'fumbles', 'fumblesLost']);
+
+/** Group a per-position stat key into its section header. POS_STAT_COLS is
+ * already ordered by group, so tracking the label as we iterate is enough. */
+function statGroup(key: string): string {
+  if (key.startsWith('passing') || key === 'interception') return 'Passing';
+  if (key.startsWith('rushing')) return 'Rushing';
+  if (key.startsWith('receiving') || key === 'reception') return 'Receiving';
+  return 'Other';
+}
+
+/** Drop the leading Pass/Rush/Rec word (the group header carries it) and spell
+ * out the terse "Yd". */
+function shortStatLabel(label: string): string {
+  const s = label.replace(/^(Pass|Rush|Rec)\s+/, '');
+  return s === 'Yd' ? 'Yards' : s;
+}
+
+/** ▲/▼ colored by whether the change is an improvement. `null` when either
+ * side is missing or the value is unchanged. */
+function StatTrend({ statKey, proj, prev }: { statKey: string; proj?: number; prev?: number }) {
+  if (proj == null || prev == null || Math.round(proj) === Math.round(prev)) return null;
+  const up = proj > prev;
+  const better = LOWER_IS_BETTER.has(statKey) ? !up : up;
+  return (
+    <span
+      className={`player-stat-block__tr player-stat-block__tr--${better ? 'good' : 'bad'}`}
+      aria-hidden
+    >
+      {up ? '▲' : '▼'}
+    </span>
+  );
+}
+
+/** One headline comparison card (fantasy points or position rank). */
+function KeyCard({
+  label,
+  now,
+  prevLabel,
+  delta,
+}: {
+  label: string;
+  now: ReactNode;
+  prevLabel: ReactNode;
+  delta: { value: number; text: string } | null;
+}) {
+  return (
+    <div className="player-stat-block__keycard">
+      <span className="player-stat-block__keycard-label">{label}</span>
+      <div className="player-stat-block__keycard-big">
+        {now}
+        <span className="player-stat-block__keycard-now">proj</span>
+      </div>
+      <div className="player-stat-block__keycard-prev">
+        <span className="player-stat-block__keycard-yr">{prevLabel}</span>
+        {delta && (
+          <span
+            className={`player-stat-block__delta player-stat-block__delta--${
+              delta.value >= 0 ? 'good' : 'bad'
+            }`}
+          >
+            {delta.value >= 0 ? '▲' : '▼'} {delta.text}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** The two headline comparison cards (fantasy points + position rank) above a
+ * grouped last-yr vs projected stats table — shared between PickModal and
+ * PlayerDetailModal. */
 export function PlayerStatGrid({ player, weekStats }: Props) {
-  const hasPrev = player.prev_points != null || player.prev_rank != null;
   const [showWeek, setShowWeek] = useState(false);
+  const pos = player.position as Position;
+  const cols = POS_STAT_COLS[pos];
+  const hasTable = !!cols && (!!player.proj_stats || !!player.prev_stats);
+  const hasPrev = player.prev_points != null || player.prev_rank != null;
+
+  // The completed season is the "last year" line; label it with the actual
+  // year when we know it (weekStats carries the season), else stay generic.
+  const prevLabel = weekStats ? String(weekStats.season) : 'Last yr';
+
+  const fpDelta =
+    player.proj_points != null && player.prev_points != null
+      ? player.proj_points - player.prev_points
+      : null;
+  // Positive = projected to rank this many spots better than last year.
+  const rankDelta =
+    player.proj_rank != null && player.prev_rank != null
+      ? player.prev_rank - player.proj_rank
+      : null;
 
   return (
     <>
-      <div className="player-stat-block__row">
-        <div className="player-stat-block__stat">
-          <span className="player-stat-block__stat-label">ADP</span>
-          <span
-            className="player-stat-block__stat-value"
-            title={
-              player.value != null
-                ? `${player.value > 0 ? '+' : ''}${player.value.toFixed(1)} pts over replacement`
-                : undefined
-            }
-          >
-            {player.value_rank != null ? player.value_rank.toFixed(1) : '—'}
-          </span>
-        </div>
-        <div className="player-stat-block__stat">
-          <span className="player-stat-block__stat-label">Proj rank</span>
-          <span className="player-stat-block__stat-value">
-            {player.proj_rank != null ? `#${player.proj_rank}` : '—'}
-            <RankTrend proj={player.proj_rank} prev={player.prev_rank} />
-          </span>
-        </div>
-        <div className="player-stat-block__stat">
-          <span className="player-stat-block__stat-label">Last yr rank</span>
-          <span className="player-stat-block__stat-value">
-            {player.prev_rank != null ? `#${player.prev_rank}` : '—'}
-          </span>
-        </div>
+      {/* ── Headline numbers, up top ── */}
+      <div className="player-stat-block__keys">
+        <KeyCard
+          label="Fantasy points"
+          now={player.proj_points != null ? <ProjNum value={player.proj_points} /> : '—'}
+          prevLabel={
+            <>
+              {prevLabel} ·{' '}
+              <b>{player.prev_points != null ? player.prev_points.toFixed(1) : '—'}</b>
+            </>
+          }
+          delta={
+            fpDelta != null && Math.abs(fpDelta) >= 0.05
+              ? { value: fpDelta, text: `${fpDelta >= 0 ? '+' : ''}${fpDelta.toFixed(1)}` }
+              : null
+          }
+        />
+        <KeyCard
+          label="Position rank"
+          now={
+            <span className="player-stat-block__keycard-rank">
+              {player.proj_rank != null ? `${pos} ${player.proj_rank}` : '—'}
+            </span>
+          }
+          prevLabel={
+            <>
+              {prevLabel} · <b>{player.prev_rank != null ? `${pos} ${player.prev_rank}` : '—'}</b>
+            </>
+          }
+          delta={
+            rankDelta != null && rankDelta !== 0
+              ? { value: rankDelta, text: `${Math.abs(rankDelta)}` }
+              : null
+          }
+        />
       </div>
 
-      <div className="player-stat-block__totals">
-        <div className="player-stat-block__total player-stat-block__total--projected">
-          <div className="player-stat-block__total-head">
-            <span className="player-stat-block__stat-label">Projected</span>
-            <span className="player-stat-block__stat-value">
-              {player.proj_points != null ? <ProjNum value={player.proj_points} /> : '—'}
-            </span>
-          </div>
-          {player.proj_stat_line && (
-            <span className="player-stat-block__stat-line">{player.proj_stat_line}</span>
-          )}
-        </div>
-        {/* When week-by-week data is available the whole "Last year" card is the
-            open-expanded-stats affordance — the expand icon just signals it. */}
-        <div
-          className={`player-stat-block__total player-stat-block__total--prev${
-            weekStats ? ' player-stat-block__total--expandable' : ''
-          }`}
-          {...(weekStats
-            ? {
-                role: 'button',
-                tabIndex: 0,
-                onClick: () => setShowWeek(true),
-                onKeyDown: (e: KeyboardEvent) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    setShowWeek(true);
-                  }
-                },
-                'aria-label': 'Open week-by-week stats',
-                title: 'Week-by-week stats',
-              }
-            : {})}
-        >
-          <div className="player-stat-block__total-head">
-            <span className="player-stat-block__stat-label">
-              Last year
-              {weekStats && (
-                <OpenInFullIcon className="player-stat-block__deep-icon" sx={{ fontSize: 13 }} />
-              )}
-            </span>
-            <span className="player-stat-block__stat-value">
-              {player.prev_points != null ? <ProjNum value={player.prev_points} /> : '—'}
-            </span>
-          </div>
-          {player.prev_stat_line && (
-            <span className="player-stat-block__stat-line">{player.prev_stat_line}</span>
-          )}
-        </div>
+      {/* ── Stats (renamed from "Metrics"): grouped last-yr vs proj ── */}
+      <div className="player-stat-block__stats-head">
+        <span className="player-stat-block__section-label">Stats</span>
+        {weekStats && (
+          <button
+            type="button"
+            className="player-stat-block__weekly-btn"
+            onClick={() => setShowWeek(true)}
+          >
+            <ShowChartIcon sx={{ fontSize: 15 }} /> Weekly breakdown
+          </button>
+        )}
       </div>
+
+      {hasTable ? (
+        <table className="player-stat-block__cmp">
+          <thead>
+            <tr>
+              <th aria-label="Stat"></th>
+              <th>{prevLabel}</th>
+              <th>Proj</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(() => {
+              let group = '';
+              const rows: ReactNode[] = [];
+              for (const c of cols!) {
+                const g = statGroup(c.key);
+                if (g !== group) {
+                  group = g;
+                  rows.push(
+                    <tr key={`g-${g}`} className="player-stat-block__cmp-group">
+                      <td colSpan={3}>{g}</td>
+                    </tr>,
+                  );
+                }
+                const pv = player.prev_stats?.[c.key];
+                const jv = player.proj_stats?.[c.key];
+                rows.push(
+                  <tr key={c.key}>
+                    <td>{shortStatLabel(c.label)}</td>
+                    <td>{fmtStat(pv)}</td>
+                    <td className="player-stat-block__cmp-proj">
+                      {fmtStat(jv)}
+                      <StatTrend statKey={c.key} proj={jv} prev={pv} />
+                    </td>
+                  </tr>,
+                );
+              }
+              return rows;
+            })()}
+          </tbody>
+        </table>
+      ) : (
+        // K/DEF or before structured stats load — the pre-formatted lines.
+        <div className="player-stat-block__lines">
+          {player.prev_stat_line && (
+            <div className="player-stat-block__line-row">
+              <span className="player-stat-block__stat-label">{prevLabel}</span>
+              <span>{player.prev_stat_line}</span>
+            </div>
+          )}
+          {player.proj_stat_line && (
+            <div className="player-stat-block__line-row">
+              <span className="player-stat-block__stat-label">Proj</span>
+              <span>{player.proj_stat_line}</span>
+            </div>
+          )}
+        </div>
+      )}
 
       {!hasPrev && (
-        <p className="player-stat-block__note muted">
-          Full prior-season stats aren’t loaded yet.
-        </p>
+        <p className="player-stat-block__note muted">Full prior-season stats aren’t loaded yet.</p>
       )}
 
       {showWeek && weekStats && (

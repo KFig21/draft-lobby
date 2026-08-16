@@ -127,19 +127,26 @@
     }
   }
 
+  // The "who drafted / round.pick / auto" text — takes the row so Roll back
+  // sits at the far right.
+  &__drafted-txt {
+    flex: 1;
+    min-width: 0;
+  }
+
   &__auto {
     color: $text-muted;
   }
 
-  // Commissioner-only: dangerous action, styled distinctly from the rest of
-  // the modal's chrome so it doesn't read as a routine button.
+  // Commissioner-only: a dangerous action, so red — but now a quiet inline link
+  // at the end of the drafted row rather than its own full-width button.
   &__rollback {
+    flex-shrink: 0;
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    margin-top: $space;
-    padding: $space * 0.5 $space;
-    border: 1px solid rgba($danger, 0.4);
+    padding: $space * 0.4 $space * 0.75;
+    border: none;
     border-radius: $radius-sm;
     background: none;
     color: $danger;
@@ -149,7 +156,6 @@
 
     &:hover {
       background: rgba($danger, 0.12);
-      border-color: $danger;
     }
   }
 
@@ -195,10 +201,87 @@
     }
   }
 
+  // Reactions row: the label + any existing reaction chips + the "＋ React"
+  // button, all inline. Carries the divider that separates the player-info
+  // block above from the social block below.
   &__reactions {
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     gap: $space * 0.5;
+    margin-top: $space * 2;
+    padding-top: $space * 2;
+    border-top: 1px solid $border;
+
+    .pick-modal__section-label {
+      margin: 0 $space * 0.25 0 0;
+    }
+
+    .pick-modal__react-viewall {
+      width: 22px;
+      height: 22px;
+      flex-shrink: 0;
+    }
+  }
+
+  // "＋ React" — opens the full emoji palette (which used to sit open as a
+  // 30-emoji wall). Dashed to read as an action, not an existing reaction.
+  &__react-add {
+    position: relative;
+  }
+
+  &__react-add-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: $space * 0.5 $space * 0.9;
+    border: 1px dashed $border;
+    border-radius: 999px;
+    background: none;
+    color: $text-muted;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+
+    @media (hover: hover) {
+      &:hover {
+        color: $text;
+        border-color: color-mix(in srgb, #{$text} 30%, #{$border});
+      }
+    }
+  }
+
+  &__react-palette {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    z-index: 10;
+    display: flex;
+    flex-wrap: wrap;
+    width: 236px;
+    gap: 2px;
+    margin-bottom: 4px;
+    padding: 5px;
+    border: 1px solid $border;
+    border-radius: $radius;
+    background: $bg-overlay;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+
+    button {
+      width: 30px;
+      height: 30px;
+      border: none;
+      border-radius: 50%;
+      background: none;
+      font-size: 1.05rem;
+      cursor: pointer;
+
+      @media (hover: hover) {
+        &:hover {
+          background: $bg-hover;
+        }
+      }
+    }
   }
 
   &__locked-badge {

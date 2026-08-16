@@ -1,4 +1,5 @@
 @use 'variables' as *;
+@use 'mixins' as *;
 
 .player-stat-block {
   &__head {
@@ -16,14 +17,14 @@
     // but not dependent on matching the title block's height exactly (that
     // was fragile: aspect-ratio doesn't reliably win out over the badge's
     // own text content when stretched inside a flex row).
-    width: 64px;
-    height: 64px;
+    width: 60px;
+    height: 60px;
     border-radius: $radius-sm;
     // Position badges fill with a bright brand color (see POSITION_COLORS) —
     // dark text reads far better on those than white.
     color: #05231a;
     font-weight: 800;
-    font-size: 1.4rem;
+    font-size: 1.35rem;
   }
 
   &__title {
@@ -31,11 +32,11 @@
     display: flex;
     flex-direction: column;
     justify-content: center;
-    gap: 3px;
+    gap: 4px;
 
-    // Flex row so the name and any inline action (favorite star, keeper badge)
-    // share a common center line — an inline star was riding high above the
-    // name's optical center otherwise.
+    // Flex row so the name and any inline action (favorite star, queue) share a
+    // common center line — an inline star was riding high above the name's
+    // optical center otherwise.
     h3 {
       display: flex;
       align-items: center;
@@ -50,24 +51,10 @@
     }
   }
 
-  &__keeper-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 2px;
-    padding: 2px 7px;
-    border-radius: 4px;
-    background: color-mix(in srgb, $keeper 16%, transparent);
-    color: $keeper;
-    font-size: 0.62rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.02em;
-    vertical-align: middle;
-  }
-
   &__subtitle {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 6px;
   }
 
@@ -84,25 +71,191 @@
     letter-spacing: 0.03em;
   }
 
-  &__row {
+  // Gold keeper chip on the meta line — only for kept players.
+  &__keeper-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: color-mix(in srgb, $keeper 18%, transparent);
+    color: $keeper;
+    font-size: 0.68rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  // Compact bye-week-clash chip on the meta line (replaces the old full-width
+  // section). Amber by default; red once 3+ of your players stack the bye.
+  &__clash {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: color-mix(in srgb, $warning 16%, transparent);
+    color: $warning;
+    font-size: 0.68rem;
+    font-weight: 800;
+
+    &--danger {
+      background: color-mix(in srgb, $danger 16%, transparent);
+      color: $danger;
+    }
+  }
+
+  // ── Stats section header + weekly-breakdown entry ──
+  &__stats-head {
     margin-top: $space * 2;
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     gap: $space;
   }
 
-  &__stat {
+  &__section-label {
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: $text-muted;
+  }
+
+  &__weekly-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border: 1px solid $border;
+    border-radius: 8px;
+    background: none;
+    color: $text;
+    font: inherit;
+    font-size: 0.76rem;
+    font-weight: 700;
+    cursor: pointer;
+
+    @include hover-only {
+      &:hover {
+        border-color: color-mix(in srgb, $accent 55%, $border);
+        color: $accent;
+
+        :root[data-theme='light'] & {
+          border-color: color-mix(in srgb, $primary 55%, $border);
+          color: $primary;
+        }
+      }
+    }
+  }
+
+  // ── Comparison table: last-yr vs projected, grouped by pass/rush/rec ──
+  &__cmp {
+    margin-top: $space;
+    width: 100%;
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+
+    // Data cells read a notch smaller than the group headers below, so the
+    // section headers clearly out-rank the rows.
+    th,
+    td {
+      padding: 5px 4px;
+      text-align: right;
+      font-size: 0.8rem;
+    }
+
+    td:first-child {
+      text-align: left;
+      color: $text-muted;
+      font-weight: 600;
+    }
+
+    // Column headers are the quietest label tier (smallest, muted).
+    thead th {
+      padding-bottom: 6px;
+      font-size: 0.6rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: $text-muted;
+      text-align: right;
+    }
+
+    thead th:first-child {
+      text-align: left;
+    }
+
+    // The projected column reads as the forward-looking one.
+    thead th:last-child {
+      color: $accent;
+
+      :root[data-theme='light'] & {
+        color: $primary;
+      }
+    }
+
+    tbody tr:not(.player-stat-block__cmp-group) + tr:not(.player-stat-block__cmp-group) td {
+      border-top: 1px solid color-mix(in srgb, #{$border} 65%, transparent);
+    }
+  }
+
+  // Group subheader row (Passing / Rushing / Receiving) — bigger + stronger than
+  // the data rows so it clearly reads as a section header, with a rule between
+  // sections.
+  &__cmp-group td {
+    padding: ($space * 1.4) 4px 5px;
+    color: $text;
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    text-align: left !important;
+  }
+
+  &__cmp-group:not(:first-child) td {
+    border-top: 1px solid $border;
+  }
+
+  &__cmp-proj {
+    font-weight: 800;
+    color: $text;
+  }
+
+  // Trend arrow next to a projected stat — green when the change is an
+  // improvement, red when it's worse (e.g. more INTs).
+  &__tr {
+    margin-left: 4px;
+    font-size: 0.72em;
+
+    &--good {
+      color: $accent;
+    }
+    &--bad {
+      color: $danger;
+    }
+  }
+
+  // Fallback stat lines (K / DEF, or before structured stats load).
+  &__lines {
+    margin-top: $space;
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    padding: $space;
-    background: $bg;
-    border: 1px solid $border;
-    border-radius: $radius-sm;
-    text-align: center;
+    gap: 5px;
+  }
+
+  &__line-row {
+    display: flex;
+    align-items: baseline;
+    gap: $space;
+    font-size: 0.85rem;
+    color: $text-muted;
+    font-variant-numeric: tabular-nums;
   }
 
   &__stat-label {
+    flex-shrink: 0;
+    min-width: 3.4rem;
     font-size: 0.62rem;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -110,24 +263,112 @@
     font-weight: 700;
   }
 
-  // Expand-to-week-by-week icon, inline after the "Last year" label. Muted by
-  // default; the whole card (--expandable, below) is the click target, so the
-  // icon lights up on card hover rather than being its own button.
-  &__deep-icon {
-    margin-left: 5px;
-    vertical-align: -2px;
-    color: $text-muted;
-    transition: color 0.12s ease;
+  // ── Headline numbers container (fantasy pts + position rank), up top ──
+  &__keys {
+    margin-top: $space * 2;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: $space;
+    align-items: stretch; // both cards match the taller one's height
   }
 
-  &__stat-value {
+  &__keycard {
+    display: flex;
+    flex-direction: column;
+    padding: $space * 1.25 $space * 1.5;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: linear-gradient(180deg, color-mix(in srgb, #{$accent} 7%, transparent), transparent);
+
+    :root[data-theme='light'] & {
+      background: linear-gradient(180deg, color-mix(in srgb, #{$primary} 6%, transparent), transparent);
+    }
+  }
+
+  &__keycard-label {
+    font-size: 0.64rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: $text-muted;
+  }
+
+  &__keycard-big {
+    margin-top: 4px;
+    display: flex;
+    align-items: baseline;
+    gap: 7px;
+
+    // The fantasy-points ProjNum inside reads as the hero number.
+    .player-stat-block__proj {
+      font-size: 1.85rem;
+    }
+  }
+
+  &__keycard-rank {
+    font-size: 1.7rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    line-height: 1;
+  }
+
+  &__keycard-now {
+    font-size: 0.6rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: $accent;
+
+    :root[data-theme='light'] & {
+      color: $primary;
+    }
+  }
+
+  &__keycard-prev {
+    // Pinned to the bottom of the card so both cards' prev rows line up even
+    // when the projection numbers differ in height (equal card heights above).
+    margin-top: auto;
+    padding-top: 8px;
+    border-top: 1px solid color-mix(in srgb, #{$border} 65%, transparent);
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 5px $space;
+    font-size: 0.78rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__keycard-yr {
+    color: $text-muted;
+    font-weight: 600;
+    white-space: nowrap;
+
+    b {
+      color: $text;
+      font-weight: 800;
+    }
+  }
+
+  &__delta {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
     gap: 3px;
-    font-size: 1.05rem;
+    padding: 2px 7px;
+    border-radius: 999px;
+    font-size: 0.74rem;
     font-weight: 800;
     font-variant-numeric: tabular-nums;
+
+    &--good {
+      background: color-mix(in srgb, $accent 16%, transparent);
+      color: $accent;
+    }
+    &--bad {
+      background: color-mix(in srgb, $danger 16%, transparent);
+      color: $danger;
+    }
   }
 
   // Projected points: Futura-italic with a smaller decimal — the projected-
@@ -140,102 +381,6 @@
 
   &__proj-dec {
     font-size: 0.77em;
-  }
-
-  // Fixed-size wrapper (not just an overridden icon class) — the svg is
-  // forced to fill it via width/height: 100%, which sidesteps MUI's own
-  // font-size-driven icon sizing entirely instead of trying to out-specify
-  // it. That override wasn't reliably taking, leaving the default ~24px
-  // icon looming over the ~13px stat-value text next to it.
-  &__trend {
-    display: inline-flex;
-    flex-shrink: 0;
-    width: 14px;
-    height: 14px;
-
-    svg {
-      width: 100%;
-      height: 100%;
-    }
-
-    &--up {
-      color: $accent;
-    }
-    &--down {
-      color: $danger;
-    }
-    &--flat {
-      color: $text-muted;
-    }
-  }
-
-  &__totals {
-    margin-top: $space;
-    display: flex;
-    flex-direction: column;
-    gap: $space;
-  }
-
-  &__total {
-    padding: $space $space * 1.25;
-    background: $bg;
-    border: 1px solid $border;
-    border-left: 3px solid $border;
-    border-radius: $radius-sm;
-
-    // Projected (forward-looking) gets the brand teal; Last year (already
-    // happened) stays neutral — same left-border-stripe convention as the
-    // draft chat's pick/reaction/reply/grade items.
-    &--projected {
-      border-left-color: $primary;
-    }
-
-    // "Last year" card when week-by-week data is available — the whole card
-    // opens the expanded stats modal, so it reads as interactive.
-    &--expandable {
-      cursor: pointer;
-      transition: border-color 0.12s ease;
-
-      &:hover {
-        border-color: color-mix(in srgb, #{$accent} 45%, #{$border});
-
-        .player-stat-block__deep-icon {
-          color: $accent;
-        }
-
-        :root[data-theme='light'] & {
-          border-color: color-mix(in srgb, #{$primary} 45%, #{$border});
-
-          .player-stat-block__deep-icon {
-            color: $primary;
-          }
-        }
-      }
-
-      &:focus-visible {
-        outline: 2px solid $accent;
-        outline-offset: 2px;
-      }
-    }
-  }
-
-  &__total-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-
-    .player-stat-block__stat-value {
-      justify-content: flex-end;
-      font-size: 1.15rem;
-    }
-  }
-
-  &__stat-line {
-    display: block;
-    margin-top: 2px;
-    color: $text-muted;
-    font-size: 0.8rem;
-    font-variant-numeric: tabular-nums;
   }
 
   &__note {

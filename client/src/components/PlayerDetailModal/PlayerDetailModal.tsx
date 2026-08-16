@@ -6,7 +6,6 @@ import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import { useModalClose } from '../../lib/useModalClose';
 import type { PlayerRow } from '../../lib/types';
-import { ByeClashes } from '../ByeClashes/ByeClashes';
 import { HoldButton } from '../HoldButton/HoldButton';
 import {
   PlayerHeader,
@@ -109,10 +108,8 @@ export function PlayerDetailModal({
           <CloseIcon fontSize="small" />
         </button>
 
-        <PlayerHeader player={player} action={headerAction} />
+        <PlayerHeader player={player} action={headerAction} byeClashCounts={byeClashCounts} />
         <PlayerStatGrid player={player} weekStats={weekStats} />
-
-        <ByeClashes byeWeek={player.bye_week} counts={byeClashCounts} />
 
         {onPick && (
           <>
