@@ -431,7 +431,25 @@
     display: grid;
     grid-template-columns: 1fr auto auto;
     align-items: center;
-    gap: $space * 1.5;
+    // Tight on mobile so the position label + both steppers fit the row
+    // without overflowing (the Max "+" was being clipped off-screen); roomier
+    // once there's width at md+.
+    gap: $space * 0.5;
+
+    @include md {
+      gap: $space * 1.5;
+    }
+  }
+
+  // Same story inside each stepper: the shared .lineup__stepper's 12px gap is
+  // too wide for two steppers on a phone row. Scoped override (higher
+  // specificity than .lineup__stepper) so the lineup section is untouched.
+  &__stepper.lineup__stepper {
+    gap: $space * 0.5;
+
+    @include md {
+      gap: $space * 1.5;
+    }
   }
 
   &__head {
@@ -470,9 +488,11 @@
   }
 
   // "No max" is wider than a bare number — give the count room so the steppers
-  // don't shift between numeric and "No max" states.
+  // don't shift between numeric and "No max" states, and keep it on one line
+  // (it was wrapping to "No / max").
   &__max {
     min-width: 3.5rem;
+    white-space: nowrap;
   }
 
   &__note {
