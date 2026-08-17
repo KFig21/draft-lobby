@@ -130,6 +130,7 @@ import { byeClashCountsForWeek, byeClashLookup } from '../../lib/byeClashes';
 import {
   getDraftBoardLayout,
   getDraftCellStyle,
+  getHostMode,
   getShowByeClashes,
   getShowCellReactions,
   getShowPickProjection,
@@ -137,6 +138,7 @@ import {
   getTvMode,
   setDraftBoardLayout,
   setDraftCellStyle,
+  setHostMode,
   setShowByeClashes,
   setShowCellReactions,
   setShowPickProjection,
@@ -269,6 +271,7 @@ export function DraftBoardPage() {
   const [cardStyle, setCardStyleState] = useState<PlayerCardStyle>(() => getPlayerCardStyle());
   const [teamColors, setTeamColorsState] = useState(() => getTeamColorsEnabled());
   const [tvMode, setTvModeState] = useState(() => getTvMode());
+  const [hostMode, setHostModeState] = useState(() => getHostMode());
   const [toastPrefs, setToastPrefsState] = useState(() => getToastPrefs());
   const [showUserSettings, setShowUserSettings] = useState(false);
   const [showRules, setShowRules] = useState(false);
@@ -308,6 +311,10 @@ export function DraftBoardPage() {
   function updateTvMode(on: boolean) {
     setTvMode(on);
     setTvModeState(on);
+  }
+  function updateHostMode(on: boolean) {
+    setHostMode(on);
+    setHostModeState(on);
   }
   function updateToastsEnabled(enabled: boolean) {
     setToastsEnabled(enabled);
@@ -2263,6 +2270,16 @@ export function DraftBoardPage() {
         )
       : null;
 
+  // Hosting mode ("Your settings" → Hosting, desktop-only): colour the whole top
+  // bar with whoever's on-the-clock pick timer — green highlight, amber/red
+  // urgency, last-5s flash — so a screen shared with a room shows the countdown
+  // to everyone, not just the person picking. Off, the bar reacts only to your
+  // own turn as before. (The countdown fill already shows for all viewers.)
+  const hostBarColors = hostMode && !isComplete && !isStaging && !!onClockTeam;
+  const topbarHighlight = hostBarColors || myTurnHighlight;
+  const topbarUrgency = hostBarColors ? onClockCellUrgency : myTurnUrgency;
+  const topbarFlashing = hostBarColors ? onClockCellFlashing : myTurnFlashing;
+
   // From a read-only keeper view modal's edit pencil: close it and open the
   // Keeper Manager scoped straight to this team.
   function openKeeperEditor(teamId: string) {
@@ -3372,9 +3389,9 @@ export function DraftBoardPage() {
         ref={topbarRef}
         className={`draft__topbar${isFullscreen ? ' draft__topbar--fill' : ''}${
           topbarCompact ? ' draft__topbar--compact' : ''
-        }${myTurnHighlight ? ' draft__topbar--myturn' : ''}${
-          myTurnUrgency ? ` draft__topbar--${myTurnUrgency}` : ''
-        }${myTurnFlashing ? ' draft__topbar--flash' : ''}`}
+        }${topbarHighlight ? ' draft__topbar--myturn' : ''}${
+          topbarUrgency ? ` draft__topbar--${topbarUrgency}` : ''
+        }${topbarFlashing ? ' draft__topbar--flash' : ''}`}
       >
         {onClockCellElapsedPct != null && (
           <span
@@ -3471,15 +3488,18 @@ export function DraftBoardPage() {
                       />
                     </span>
                     {onClockTeam.name}
-                    {isMyTurn && !isPaused && (
-                      <span className="draft__yourturn">Your pick</span>
-                    )}
+                    {/* No "Your pick" badge — the bar turning green already
+                        signals it's your turn. */}
                     {!isMyTurn && iAmSkipped && !isPaused && (
                       <span className="draft__yourturn draft__yourturn--skipped">
                         You can still pick{myNextRound ? ` · R${myNextRound}` : ''}
                       </span>
                     )}
-                    {isPaused && <span className="draft__paused-pill">Paused</span>}
+                    {isPaused && (
+                      <span className="draft__paused-pill" title="Paused" aria-label="Paused">
+                        <PauseIcon fontSize="inherit" />
+                      </span>
+                    )}
                   </button>
                 ) : (
                   <span className="draft__onclock-team">
@@ -3489,7 +3509,11 @@ export function DraftBoardPage() {
                         You can still pick{myNextRound ? ` · R${myNextRound}` : ''}
                       </span>
                     )}
-                    {isPaused && <span className="draft__paused-pill">Paused</span>}
+                    {isPaused && (
+                      <span className="draft__paused-pill" title="Paused" aria-label="Paused">
+                        <PauseIcon fontSize="inherit" />
+                      </span>
+                    )}
                   </span>
                 )}
                 {onClockTeam && (
@@ -4563,6 +4587,8 @@ export function DraftBoardPage() {
           onTeamColorsChange={updateTeamColors}
           tvMode={tvMode}
           onTvModeChange={updateTvMode}
+          hostMode={hostMode}
+          onHostModeChange={updateHostMode}
           toastPrefs={toastPrefs}
           onToastsEnabledChange={updateToastsEnabled}
           onToastCategoryChange={updateToastCategory}

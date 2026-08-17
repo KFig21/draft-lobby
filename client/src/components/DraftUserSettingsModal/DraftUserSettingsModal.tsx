@@ -31,6 +31,8 @@ interface Props {
   onTeamColorsChange: (enabled: boolean) => void;
   tvMode: boolean;
   onTvModeChange: (enabled: boolean) => void;
+  hostMode: boolean;
+  onHostModeChange: (enabled: boolean) => void;
   toastPrefs: ToastPrefs;
   onToastsEnabledChange: (enabled: boolean) => void;
   onToastCategoryChange: (category: ToastCategory, enabled: boolean) => void;
@@ -64,6 +66,8 @@ export function DraftUserSettingsModal({
   onTeamColorsChange,
   tvMode,
   onTvModeChange,
+  hostMode,
+  onHostModeChange,
   toastPrefs,
   onToastsEnabledChange,
   onToastCategoryChange,
@@ -168,6 +172,12 @@ export function DraftUserSettingsModal({
             />
           </div>
           <TeamColorPreview player={samplePlayer} />
+        </section>
+
+        {/* Hosting — for the one screen shared with a room (a TV/laptop the
+            whole draft watches). Hidden on mobile/tablet, where it's moot. */}
+        <section className="draft-user-settings__section draft-user-settings__section--desktop">
+          <h3>Hosting</h3>
           <div className="draft-user-settings__row">
             <div className="draft-user-settings__row-main">
               <span className="draft-user-settings__row-name">TV mode</span>
@@ -180,6 +190,22 @@ export function DraftUserSettingsModal({
               label="Toggle TV mode"
               checked={tvMode}
               onChange={onTvModeChange}
+            />
+          </div>
+          <div className="draft-user-settings__row">
+            <div className="draft-user-settings__row-main">
+              <span className="draft-user-settings__row-name">Top bar pick timer</span>
+              <span className="muted">
+                Colour the whole top bar with whoever's on the clock — green while
+                there's time, then amber and red with a flash as the pick clock
+                runs down — so the whole room sees the countdown, not just the
+                person picking
+              </span>
+            </div>
+            <ToggleSwitch
+              label="Toggle top bar pick timer colors"
+              checked={hostMode}
+              onChange={onHostModeChange}
             />
           </div>
         </section>

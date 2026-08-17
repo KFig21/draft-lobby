@@ -134,3 +134,21 @@ export function getTvMode(): boolean {
 export function setTvMode(on: boolean): void {
   localStorage.setItem(TV_MODE_STORAGE_KEY, on ? '1' : '0');
 }
+
+/** "Hosting" mode — colour the whole top bar with whoever's on-the-clock pick
+ * timer (green → amber → red + flash), not just when it's your own turn, so a
+ * shared screen in a room shows the countdown to everyone present. A per-device
+ * display preference for a host/TV screen; default OFF, so read as `=== '1'`. */
+const HOST_MODE_STORAGE_KEY = 'draftHostMode';
+
+export function getHostMode(): boolean {
+  try {
+    return localStorage.getItem(HOST_MODE_STORAGE_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+export function setHostMode(on: boolean): void {
+  localStorage.setItem(HOST_MODE_STORAGE_KEY, on ? '1' : '0');
+}

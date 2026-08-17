@@ -1,4 +1,5 @@
 @use 'variables' as *;
+@use 'mixins' as *;
 
 // Standalone re-implementation of SettingsPage.scss's row/toggle-category
 // look, not a shared import — this renders from a different lazy-loaded
@@ -13,6 +14,16 @@
     h3 {
       font-size: 1.05rem;
       margin-bottom: $space * 0.5;
+    }
+  }
+
+  // Hosting is only meaningful on a big shared screen — hide it on mobile/tablet
+  // (below the desktop breakpoint).
+  &__section--desktop {
+    display: none;
+
+    @include lg {
+      display: block;
     }
   }
 
