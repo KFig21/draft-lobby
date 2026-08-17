@@ -13,24 +13,48 @@
   }
 }
 
-// A newly-made pick flips into its cell (card-flip entrance) instead of
-// popping in — DraftGrid tags the freshly-arrived pick's cell for one play.
-// Same face throughout (this is an entrance, not a two-sided flip), so no
-// backface handling needed; the slight overshoot past 0deg gives it weight.
-@keyframes draft-grid-pick-flip {
+// A newly-made pick is announced, then the cell turns over to show it. The
+// freshly-arrived cell renders as a two-faced flip card (.draft-grid__flip):
+// the front is the announcement (the on-the-clock cell's "On the clock" fades
+// out and "THE PICK IS IN" slides in from the left), the back is the pick.
+// After a beat the card flips a full 180deg around the horizontal axis, landing
+// on the pick. DraftGrid drops the flip wrapper once it settles, leaving the
+// plain cell. The delay holds the flat announcement; the rotation is the flip.
+@keyframes draft-grid-flip {
 
-  0% {
-    transform: perspective(700px) rotateX(-90deg);
-    filter: brightness(1.6);
+  from {
+    transform: rotateX(0);
   }
 
-  60% {
-    transform: perspective(700px) rotateX(7deg);
-    filter: brightness(1);
+  to {
+    transform: rotateX(180deg);
+  }
+}
+
+// Front-face step 1 — the old "On the clock" label fades away.
+@keyframes draft-grid-announce-out {
+
+  from {
+    opacity: 1;
   }
 
-  100% {
-    transform: perspective(700px) rotateX(0);
+  to {
+    opacity: 0;
+  }
+}
+
+// Front-face step 2 — "THE PICK IS IN" slides in from the left. translateY keeps
+// it vertically centred (the face centres its text with a -50% Y offset).
+@keyframes draft-grid-announce-in {
+
+  from {
+    opacity: 0;
+    transform: translate(-120%, -50%);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(0, -50%);
   }
 }
 
@@ -244,6 +268,127 @@
     pointer-events: none;
   }
 
+  // Two-faced flip card that covers a just-made pick's cell (see @keyframes
+  // above). Fills the cell; rotates around the horizontal centre in the 3D
+  // perspective its host cell (&--flip) sets up. The delay is the announcement
+  // hold; the rotation is the flip. Tunables: --flip-hold (how long the
+  // announcement sits before turning) and --flip-turn (how slow the flip is).
+  &__flip {
+    --flip-hold: 1.9s;
+    --flip-turn: 1.6s;
+    position: absolute;
+    inset: 0;
+    z-index: 6; // above cell content, below the sticky header/round bands
+    transform-style: preserve-3d;
+    transform-origin: center center;
+    pointer-events: none;
+    animation: draft-grid-flip var(--flip-turn) cubic-bezier(0.5, 0, 0.2, 1)
+      var(--flip-hold) both;
+
+    // Reduced motion: no turn — just land on the pick (front face hidden).
+    @media (prefers-reduced-motion: reduce) {
+      animation: none;
+      transform: rotateX(180deg);
+
+      .draft-grid__flip-front {
+        display: none;
+      }
+    }
+  }
+
+  // The two sides of the card. Each fills the whole cell (the host td cleared
+  // its own padding/border, so inset:0 reaches the cell edges); only the face
+  // toward the viewer is drawn (backface-visibility), so the flip lands cleanly
+  // on the back. Rounded + clipped to the cell shape.
+  &__flip-face {
+    position: absolute;
+    inset: 0;
+    border-radius: $radius-sm;
+    overflow: hidden;
+    backface-visibility: hidden;
+  }
+
+  // Front — a replica of the on-the-clock cell (accent frame, cell background)
+  // so the hand-off from the live cell is seamless: it opens already looking
+  // like the cell that was there, then its label crossfades to "THE PICK IS
+  // IN". Holds both labels, absolutely centred and stacked over the same spot.
+  &__flip-front {
+    background: $bg;
+    box-shadow: inset 0 0 0 2px $accent;
+  }
+
+  // Back — the pick. Pre-rotated a half turn so it faces the viewer once the
+  // card completes its flip; its fill is painted inline (per cell style) and it
+  // carries the same 1px frame the settled cell has, so the hand-off when the
+  // card is dropped is seamless too. Padding/alignment per variant below.
+  &__flip-back {
+    transform: rotateX(180deg);
+    box-shadow: inset 0 0 0 1px $border;
+
+    &--bold {
+      display: grid;
+      place-items: center;
+      padding: $space * 0.5;
+      text-align: center;
+    }
+
+    &--default,
+    &--clean {
+      padding: $space * 0.75;
+    }
+  }
+
+  // "On the clock" — the on-clock label itself (timer icon stacked over the
+  // words, same as the live cell), which simply fades out. Centred in the face.
+  &__flip-onclock {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25em;
+    font-weight: 700;
+    font-size: 0.65rem;
+    line-height: 1.02;
+    color: #fff;
+    animation: draft-grid-announce-out 0.35s ease both;
+
+    :root[data-theme='light'] & {
+      color: #05231a;
+    }
+  }
+
+  // "THE PICK IS IN" — bold italic Futura (same geometric stack the canvas
+  // exports use), uppercased; slides in from the left just as the other fades.
+  &__flip-pickin {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    padding: 0 4px;
+    transform: translate(-120%, -50%);
+    // Impact — tall, condensed and heavy, so the words fill the cell's height
+    // (and read from across a room). Haettenschweiler / Arial Narrow Bold are
+    // the condensed fallbacks where Impact isn't installed.
+    font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+    font-style: italic;
+    font-weight: 700;
+    font-size: 0.95rem;
+    line-height: 0.98;
+    letter-spacing: 0.02em;
+    text-align: center;
+    text-transform: uppercase;
+    color: #fff;
+    animation: draft-grid-announce-in 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) 0.4s both;
+
+    :root[data-theme='light'] & {
+      color: #05231a;
+    }
+  }
+
   // Snake-draft direction arrow beneath the round number — matches the round
   // number colour (faded), turns green on the live round.
   &__round-dir {
@@ -300,19 +445,28 @@
       outline-offset: -2px;
     }
 
-    // Just drafted — flips into place, hinging around its horizontal centre
-    // like a split-flap board turning the pick over. Lifted above its
-    // neighbours for the duration so the rotate reads as a card turning rather
-    // than clipping behind the next row. Removed once the flip settles
-    // (DraftGrid drops the class), so nothing here lingers on the board.
+    // Just drafted — hosts the two-faced flip card (below) while it announces
+    // and turns over. Establishes the 3D perspective the flip rotates in, and
+    // lifts above its neighbours so the turning card can't clip behind the next
+    // row. Its own fill/border/padding go invisible for the duration so the
+    // card is the whole cell edge-to-edge (no cell peeking around it); the
+    // faces draw the fill + frame instead. DraftGrid drops the class once the
+    // sequence settles, restoring the plain cell. (bold/default clear their
+    // inline fill in TSX; the clean --pick fill is overridden just below.)
     &--flip {
-      transform-origin: center;
-      animation: draft-grid-pick-flip 2.4s cubic-bezier(0.2, 0.75, 0.25, 0.75) both;
       z-index: 5;
+      perspective: 900px;
+      overflow: visible;
+      padding: 0;
+      border-color: transparent;
+      background: transparent;
+    }
 
-      @media (prefers-reduced-motion: reduce) {
-        animation: none;
-      }
+    // Clean style sets its fill via .draft-grid__cell--pick (two classes), so
+    // it needs a more-specific override to go transparent while flipping —
+    // three classes beats its two regardless of stylesheet emit order.
+    &#{&}--pick#{&}--flip {
+      background: transparent;
     }
 
     // Whichever cell is on the clock — visible to every viewer, not just

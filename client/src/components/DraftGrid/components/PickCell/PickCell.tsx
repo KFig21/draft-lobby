@@ -5,6 +5,7 @@ import type { CSSProperties } from 'react';
 import { abbreviatePlayerName, formatRoundPick } from '../../../../lib/format';
 import type { PickRow, PlayerRow } from '../../../../lib/types';
 import type { Reactor } from '../../../ReactorsModal/ReactorsModal';
+import { CellFlip } from '../PickReveal';
 // The base .draft-grid__cell box (size/border/padding) lives in DraftGrid.scss
 // — import it directly rather than counting on DraftGrid.tsx already being
 // loaded: this component also renders on its own (Settings' cell-style
@@ -54,6 +55,25 @@ export function PickCell({
   const pickInRound = pick.overall - (pick.round - 1) * teamCount;
   const posColor = POSITION_COLORS[player.position as Position];
 
+  const info = (
+    <div className="draft-grid__pick">
+      <span className="draft-grid__player">
+        {abbreviatePlayerName(player.name, player.position)}
+      </span>
+      <span className="draft-grid__meta">
+        {/* Colour comes from CSS via the cell's --pos custom property (set on
+            the <td> below), so light mode can darken it for contrast against
+            the stronger light-mode wash — see PickCell.scss. */}
+        <span className="draft-grid__pos">{player.position}</span>
+        {` · ${player.nfl_team}`}
+        {player.bye_week != null ? ` · Bye ${player.bye_week}` : ''}
+      </span>
+      <span className="draft-grid__pickround">
+        {formatRoundPick(pick.round, pickInRound, teamCount)}
+      </span>
+    </div>
+  );
+
   return (
     <td
       className={`draft-grid__cell draft-grid__cell--pick${
@@ -64,22 +84,16 @@ export function PickCell({
       onMouseLeave={onLeave}
       onClick={() => onClick?.(pick)}
     >
-      <div className="draft-grid__pick">
-        <span className="draft-grid__player">
-          {abbreviatePlayerName(player.name, player.position)}
-        </span>
-        <span className="draft-grid__meta">
-          {/* Colour comes from CSS via the cell's --pos custom property (set on
-              the <td> below), so light mode can darken it for contrast against
-              the stronger light-mode wash — see PickCell.scss. */}
-          <span className="draft-grid__pos">{player.position}</span>
-          {` · ${player.nfl_team}`}
-          {player.bye_week != null ? ` · Bye ${player.bye_week}` : ''}
-        </span>
-        <span className="draft-grid__pickround">
-          {formatRoundPick(pick.round, pickInRound, teamCount)}
-        </span>
-      </div>
+      {flipping ? (
+        <CellFlip
+          variant="clean"
+          backBg={`color-mix(in srgb, ${posColor} 24%, var(--cell-bg))`}
+        >
+          {info}
+        </CellFlip>
+      ) : (
+        info
+      )}
 
       {/* Keeper lock — its own always-visible corner element (never gives way to
           the hover reactions popover). */}

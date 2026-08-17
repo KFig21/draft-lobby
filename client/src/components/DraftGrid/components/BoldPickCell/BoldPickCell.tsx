@@ -4,6 +4,7 @@ import LockIcon from '@mui/icons-material/Lock';
 import { abbreviatePlayerName } from '../../../../lib/format';
 import type { PickRow, PlayerRow } from '../../../../lib/types';
 import type { ReactionEntry } from '../PickCell/PickCell';
+import { CellFlip } from '../PickReveal';
 // Same reasoning as PickCell.tsx's identical import: this component also
 // renders standalone in Settings' cell-style picker, a separate lazy-loaded
 // route that would otherwise never load DraftGrid.scss's base .draft-grid__cell.
@@ -69,22 +70,32 @@ export function BoldPickCell({
     ? abbreviatePlayerName(player.name, player.position)
     : player.name;
 
+  const name = (
+    <span
+      className="bold-pick-cell__name"
+      style={{ ['--name-scale' as string]: nameScale(displayName) }}
+    >
+      {displayName}
+    </span>
+  );
+
   return (
     <td
       className={`draft-grid__cell bold-pick-cell${
         pick.is_keeper ? ' draft-grid__cell--keeper' : ''
       }${flipping ? ' draft-grid__cell--flip' : ''}`}
-      style={{ background: posColor }}
+      style={{ background: flipping ? 'transparent' : posColor }}
       onClick={() => onClick?.(pick)}
       onMouseEnter={onEnter}
       onMouseLeave={onLeave}
     >
-      <span
-        className="bold-pick-cell__name"
-        style={{ ['--name-scale' as string]: nameScale(displayName) }}
-      >
-        {displayName}
-      </span>
+      {flipping ? (
+        <CellFlip variant="bold" backBg={posColor}>
+          {name}
+        </CellFlip>
+      ) : (
+        name
+      )}
 
       {/* Same indicators as the default style, but badged into the bottom-right
           corner (like a notification dot) rather than inline — there's no

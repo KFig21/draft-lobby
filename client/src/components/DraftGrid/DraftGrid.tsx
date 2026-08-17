@@ -151,7 +151,7 @@ export function DraftGrid({
         for (const id of ids) next.delete(id);
         return next;
       });
-    }, 2600);
+    }, 3700);
     flipTimers.current.push(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [picks]);

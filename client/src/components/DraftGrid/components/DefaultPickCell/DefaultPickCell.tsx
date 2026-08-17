@@ -4,6 +4,7 @@ import LockIcon from '@mui/icons-material/Lock';
 import { abbreviatePlayerName, formatRoundPick } from '../../../../lib/format';
 import type { PickRow, PlayerRow } from '../../../../lib/types';
 import type { ReactionEntry } from '../PickCell/PickCell';
+import { CellFlip } from '../PickReveal';
 // Same reasoning as PickCell.tsx's identical import: this component also
 // renders standalone in Settings' cell-style picker, a separate lazy-loaded
 // route that would otherwise never load DraftGrid.scss's base .draft-grid__cell.
@@ -54,39 +55,49 @@ export function DefaultPickCell({
   const posColor = POSITION_COLORS[player.position as Position];
   const pickInRound = pick.overall - (pick.round - 1) * teamCount;
 
+  const info = (
+    <div className="default-pick-cell__info">
+      <span className="default-pick-cell__name">
+        {abbreviatePlayerName(player.name, player.position)}
+      </span>
+      <span className="default-pick-cell__meta">
+        {player.position}
+        <span className="default-pick-cell__dot" aria-hidden>
+          ·
+        </span>
+        {player.nfl_team}
+        {player.bye_week != null && (
+          <>
+            <span className="default-pick-cell__dot" aria-hidden>
+              ·
+            </span>
+            Bye {player.bye_week}
+          </>
+        )}
+      </span>
+      <span className="default-pick-cell__round">
+        {formatRoundPick(pick.round, pickInRound, teamCount)}
+      </span>
+    </div>
+  );
+
   return (
     <td
       className={`draft-grid__cell default-pick-cell${
         pick.is_keeper ? ' draft-grid__cell--keeper' : ''
       }${flipping ? ' draft-grid__cell--flip' : ''}`}
-      style={{ background: posColor }}
+      style={{ background: flipping ? 'transparent' : posColor }}
       onClick={() => onClick?.(pick)}
       onMouseEnter={onEnter}
       onMouseLeave={onLeave}
     >
-      <div className="default-pick-cell__info">
-        <span className="default-pick-cell__name">
-          {abbreviatePlayerName(player.name, player.position)}
-        </span>
-        <span className="default-pick-cell__meta">
-          {player.position}
-          <span className="default-pick-cell__dot" aria-hidden>
-            ·
-          </span>
-          {player.nfl_team}
-          {player.bye_week != null && (
-            <>
-              <span className="default-pick-cell__dot" aria-hidden>
-                ·
-              </span>
-              Bye {player.bye_week}
-            </>
-          )}
-        </span>
-        <span className="default-pick-cell__round">
-          {formatRoundPick(pick.round, pickInRound, teamCount)}
-        </span>
-      </div>
+      {flipping ? (
+        <CellFlip variant="default" backBg={posColor}>
+          {info}
+        </CellFlip>
+      ) : (
+        info
+      )}
 
       {/* Same corner-badge treatment as Big screen (see BoldPickCell.tsx). */}
       {(pick.is_keeper || active.length > 0 || hasComment) && (
