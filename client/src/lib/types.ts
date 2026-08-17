@@ -209,4 +209,7 @@ export interface PlayerWeekStatRow {
   stats: Record<string, number> | null;
   pts_ppr: number | null;
   pos_rank_ppr: number | null;
+  /** A synthesized bye-week row (no stats/points) — lets the deep-stats modal
+   * show a real bye vs. a DNP (a week with no row at all). */
+  is_bye: boolean;
 }

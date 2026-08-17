@@ -45,7 +45,7 @@ export function usePlayerWeekPoints(
     (async () => {
       const { data, error: err } = await supabase
         .from('player_week_stats')
-        .select('player_id, position, season, week, opp, stats, pts_ppr, pos_rank_ppr')
+        .select('player_id, position, season, week, opp, stats, pts_ppr, pos_rank_ppr, is_bye')
         .eq('season', season)
         .eq('player_id', playerId)
         .order('week', { ascending: true });
@@ -66,15 +66,17 @@ export function usePlayerWeekPoints(
   }, [playerId, season, enabled]);
 
   // Points are derived (not stored) so a scoring change re-scores instantly —
-  // cheap over ~18 rows. Each returned row is a week the player recorded, so the
-  // count doubles as games played.
-  const points: WeekPoint[] = (rows ?? []).map((r) => ({
-    week: r.week,
-    pts:
-      r.stats && Object.keys(r.stats).length > 0
-        ? computeFantasyPoints(r.stats, scoring, position)
-        : (r.pts_ppr ?? 0),
-  }));
+  // cheap over ~18 rows. Bye rows carry no game, so drop them: each remaining
+  // row is a week the player recorded, and the count doubles as games played.
+  const points: WeekPoint[] = (rows ?? [])
+    .filter((r) => !r.is_bye)
+    .map((r) => ({
+      week: r.week,
+      pts:
+        r.stats && Object.keys(r.stats).length > 0
+          ? computeFantasyPoints(r.stats, scoring, position)
+          : (r.pts_ppr ?? 0),
+    }));
 
   return { points, loading, error };
 }

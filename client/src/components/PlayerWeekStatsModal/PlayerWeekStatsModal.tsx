@@ -150,6 +150,12 @@ export function PlayerWeekStatsModal({ player, season, scoring, onClose }: Props
     const byWeek = new Map<number, number[]>();
     const subjectRows = new Map<number, PlayerWeekStatRow>();
     for (const r of rows) {
+      // Bye rows carry no game — keep them for the subject (so the table can
+      // label the week BYE) but never score/rank them as a 0-point outing.
+      if (r.is_bye) {
+        if (r.player_id === player.id) subjectRows.set(r.week, r);
+        continue;
+      }
       const pts = pointsForRow(r, rules, player.position);
       let pm = byPlayer.get(r.player_id);
       if (!pm) {
@@ -518,7 +524,9 @@ export function PlayerWeekStatsModal({ player, season, scoring, onClose }: Props
                           <td className="opp">{row?.opp ?? '—'}</td>
                           {isBye ? (
                             <td colSpan={cols.length} className="byecell">
-                              {w === player.bye_week ? 'BYE' : 'DNP'}
+                              {/* A synthesized is_bye row = the team's real bye;
+                                  no row at all (row undefined) = a DNP. */}
+                              {row?.is_bye ? 'BYE' : 'DNP'}
                             </td>
                           ) : (
                             cols.map((c) => {

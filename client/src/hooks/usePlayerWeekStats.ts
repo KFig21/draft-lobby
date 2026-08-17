@@ -40,7 +40,7 @@ export function usePlayerWeekStats(
       for (let from = 0; ; from += PAGE) {
         const { data, error: err } = await supabase
           .from('player_week_stats')
-          .select('player_id, position, season, week, opp, stats, pts_ppr, pos_rank_ppr')
+          .select('player_id, position, season, week, opp, stats, pts_ppr, pos_rank_ppr, is_bye')
           .eq('season', season)
           .eq('position', position)
           .order('player_id', { ascending: true })

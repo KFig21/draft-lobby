@@ -275,7 +275,25 @@ function parseCsvLine(line: string): string[] {
 // (Sleeper's stats feed carries no team/opponent at all). Regular season only.
 // (We join by name rather than GSIS id because Sleeper's gsis_id is null for
 // most current skill players.)
-async function fetchWeeklyOpponents(season: number): Promise<Map<string, string> | null> {
+//
+// The same feed also yields each team's schedule, which we distill into two
+// extras: every team's real bye week (the one week 1–18 it didn't play) and the
+// team(s) each player appeared for. Together these let the importer synthesize
+// an explicit bye row per player (below), so the deep-stats modal can tell a
+// true bye from an in-season DNP instead of guessing.
+interface WeeklySchedule {
+  /** `${normName}|${pos}|${week}` → opponent (with "@" for away). */
+  opponents: Map<string, string>;
+  /** team abbreviation → its bye week (only when exactly one week is missing). */
+  teamBye: Map<string, number>;
+  /** `${normName}|${pos}` → the set of teams it played for (>1 = traded). */
+  playerTeams: Map<string, Set<string>>;
+}
+
+// nflverse abbreviates the Rams "LA"; the rest of the app uses "LAR".
+const fixTeam = (t: string): string => (t === 'LA' ? 'LAR' : t);
+
+async function fetchWeeklyOpponents(season: number): Promise<WeeklySchedule | null> {
   try {
     const url = `https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_week_${season}.csv`;
     const res = await fetch(url);
@@ -291,7 +309,9 @@ async function fetchWeeklyOpponents(season: number): Promise<Map<string, string>
     const iGame = header.indexOf('game_id');
     if (iNm < 0 || iPos < 0 || iWk < 0 || iOpp < 0)
       throw new Error('nflverse weekly: missing expected columns');
-    const map = new Map<string, string>();
+    const opponents = new Map<string, string>();
+    const teamWeeks = new Map<string, Set<number>>(); // team → weeks it played
+    const playerTeams = new Map<string, Set<string>>();
     for (let i = 1; i < lines.length; i++) {
       if (!lines[i]) continue;
       const c = parseCsvLine(lines[i]);
@@ -299,20 +319,40 @@ async function fetchWeeklyOpponents(season: number): Promise<Map<string, string>
       const name = c[iNm];
       const pos = c[iPos];
       const wk = Number(c[iWk]);
+      if (!name || !pos || !Number.isFinite(wk)) continue;
+      const team = c[iTeam] ? fixTeam(c[iTeam].trim()) : '';
+
+      // Schedule bookkeeping (independent of whether opp parses) — a valid
+      // team+week means that team played that week, and this player was on it.
+      if (team) {
+        (teamWeeks.get(team) ?? teamWeeks.set(team, new Set()).get(team)!).add(wk);
+        const pkey = `${normalize(name)}|${pos}`;
+        (playerTeams.get(pkey) ?? playerTeams.set(pkey, new Set()).get(pkey)!).add(team);
+      }
+
       let opp = c[iOpp]?.trim();
-      if (!name || !pos || !opp || !Number.isFinite(wk)) continue;
+      if (!opp) continue;
       // Away game? game_id is `{season}_{week}_{AWAY}_{HOME}`; prefix "@" (ESPN
       // style) when the player's team is the away side.
-      const team = c[iTeam];
       const parts = (c[iGame] ?? '').split('_');
-      const away = parts.length >= 4 && team && parts[2] === team;
-      // nflverse abbreviates the Rams "LA"; the rest of the app uses "LAR".
-      if (opp === 'LA') opp = 'LAR';
-      map.set(`${normalize(name)}|${pos}|${wk}`, `${away ? '@' : ''}${opp}`);
+      const away = parts.length >= 4 && c[iTeam] && parts[2] === c[iTeam];
+      opp = fixTeam(opp);
+      opponents.set(`${normalize(name)}|${pos}|${wk}`, `${away ? '@' : ''}${opp}`);
     }
-    return map;
+
+    // Each team's bye = the single week in 1–18 it didn't play. Skip any team
+    // where that isn't cleanly one week (bad/partial data) — better a DNP than a
+    // wrong bye.
+    const teamBye = new Map<string, number>();
+    for (const [team, weeks] of teamWeeks) {
+      const missing: number[] = [];
+      for (let w = 1; w <= 18; w++) if (!weeks.has(w)) missing.push(w);
+      if (missing.length === 1) teamBye.set(team, missing[0]);
+    }
+
+    return { opponents, teamBye, playerTeams };
   } catch (err) {
-    console.warn(`⚠️  nflverse weekly opponents (${season}) unavailable:`, String(err));
+    console.warn(`⚠️  nflverse weekly schedule (${season}) unavailable:`, String(err));
     return null;
   }
 }
@@ -616,6 +656,8 @@ async function main() {
   // season-scoped rows below. See docs/phase2-player-seasons.md.
   console.log('Loading existing players to match by normalized name…');
   const existingByKey = new Map<string, string>(); // normKey -> id
+  const nameById = new Map<string, string>(); // id -> current raw name
+  const exactOwner = new Map<string, string>(); // `${name}|${pos}` -> id
   {
     // Prefer an existing row that's actually in the current pool (has a season
     // row) when stale duplicates still linger in the table, so we update the
@@ -640,6 +682,8 @@ async function main() {
       if (error) throw new Error(error.message);
       const batch = (data ?? []) as { id: string; name: string; position: string }[];
       for (const r of batch) {
+        nameById.set(r.id, r.name);
+        exactOwner.set(`${r.name}|${r.position}`, r.id);
         const k = `${normalize(r.name)}|${r.position}`;
         const cur = existingByKey.get(k);
         if (!cur || (!poolIds.has(cur) && poolIds.has(r.id))) existingByKey.set(k, r.id);
@@ -650,12 +694,23 @@ async function main() {
 
   console.log(`Upserting ${pool.length} players…`);
   const idByKey = new Map<string, string>();
-  // Assign every row an id up front: reuse the matched existing row's id (so a
-  // renamed player updates in place) or mint a fresh one, then upsert on id.
-  const playerRows = pool.map((p) => ({
-    ...p,
-    id: existingByKey.get(`${normalize(p.name)}|${p.position}`) ?? randomUUID(),
-  }));
+  // Assign every row an id up front, then upsert on id. Reuse the matched
+  // existing row's id (so a rename updates in place) or mint a fresh one. But
+  // only actually rename the matched row when the feed's name isn't already
+  // held by a DIFFERENT row: an unmergeable suffix-variant duplicate can still
+  // linger (e.g. an old "Kenneth Walker" row kept alive by picks while the
+  // canonical row is "Kenneth Walker III"), and renaming into it would trip the
+  // (name, position) unique constraint. In that case keep the matched row's
+  // existing name — fresh stats are written to it either way.
+  const playerRows = pool.map((p) => {
+    const key = `${normalize(p.name)}|${p.position}`;
+    const matchedId = existingByKey.get(key);
+    if (!matchedId) return { ...p, id: randomUUID() };
+    const occupant = exactOwner.get(`${p.name}|${p.position}`);
+    const wouldCollide = occupant != null && occupant !== matchedId;
+    const name = wouldCollide ? (nameById.get(matchedId) ?? p.name) : p.name;
+    return { ...p, id: matchedId, name };
+  });
   for (let i = 0; i < playerRows.length; i += 500) {
     const chunk = playerRows.slice(i, i + 500);
     const { data, error } = await supabase
@@ -737,8 +792,11 @@ async function main() {
   // (player_id, season, week). D/ST is skipped (Sleeper keys DST differently);
   // K carries only pts_ppr/pos_rank_ppr (no mapped raw line).
   // Trade-correct per-week opponents (nflverse), joined by GSIS id below.
-  const opponents = await fetchWeeklyOpponents(prevSeason);
+  const schedule = await fetchWeeklyOpponents(prevSeason);
   const weekRows: Record<string, unknown>[] = [];
+  // Track which weeks each player actually played, so the bye synthesis below
+  // never collides with a real game row (e.g. a mid-season trade).
+  const playedWeeks = new Map<string, Set<number>>(); // playerId → weeks
   for (let week = 1; week <= 18; week++) {
     const wk = await fetchWeeklyStats(prevSeason, week);
     if (!wk) continue;
@@ -750,21 +808,58 @@ async function main() {
       if (!playerId || !sleeperId) continue;
       const s = wk[sleeperId];
       if (!s || s.pts_ppr == null) continue; // absent = bye / DNP that week
+      (playedWeeks.get(playerId) ?? playedWeeks.set(playerId, new Set()).get(playerId)!).add(week);
       weekRows.push({
         player_id: playerId,
         position: p.position,
         season: prevSeason,
         week,
-        opp: opponents?.get(`${key}|${week}`) ?? null,
+        opp: schedule?.opponents.get(`${key}|${week}`) ?? null,
         stats: toStatLine(p.position, s),
         pts_ppr: Math.round((s.pts_ppr ?? 0) * 10) / 10,
         pos_rank_ppr: s.pos_rank_ppr ?? null,
+        is_bye: false,
       });
     }
   }
-  if (opponents) {
+
+  // Synthesize an explicit bye row per skill player from their team's schedule,
+  // so the modal can distinguish a true bye from a DNP. Only for players who
+  // actually logged a game (they're the ones the modal surfaces) and weren't
+  // traded that season (a single team → an unambiguous bye). is_bye is set on
+  // every row (played too) to keep the upsert batch's columns homogeneous.
+  let byeRows = 0;
+  if (schedule) {
+    for (const p of pool) {
+      if (!SKILL_POS.has(p.position)) continue;
+      const key = `${normalize(p.name)}|${p.position}`;
+      const playerId = idByKey.get(key);
+      if (!playerId) continue;
+      const played = playedWeeks.get(playerId);
+      if (!played || played.size === 0) continue; // only players with weekly data
+      const teams = schedule.playerTeams.get(key);
+      if (!teams || teams.size !== 1) continue; // unknown or traded → leave as DNP
+      const bye = schedule.teamBye.get([...teams][0]);
+      if (bye == null || played.has(bye)) continue;
+      weekRows.push({
+        player_id: playerId,
+        position: p.position,
+        season: prevSeason,
+        week: bye,
+        opp: null,
+        stats: null,
+        pts_ppr: null,
+        pos_rank_ppr: null,
+        is_bye: true,
+      });
+      byeRows++;
+    }
+  }
+  if (schedule) {
     const withOpp = weekRows.filter((r) => r.opp).length;
-    console.log(`  matched opponents for ${withOpp}/${weekRows.length} weekly rows`);
+    console.log(
+      `  matched opponents for ${withOpp} weekly rows; synthesized ${byeRows} bye rows`,
+    );
   }
   console.log(`Upserting ${weekRows.length} weekly stat rows (${prevSeason})…`);
   for (let i = 0; i < weekRows.length; i += 500) {

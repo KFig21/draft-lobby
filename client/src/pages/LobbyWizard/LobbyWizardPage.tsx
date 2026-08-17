@@ -40,6 +40,8 @@ function baseLeague(
 }
 const BUILT_IN_LEAGUES: SavedLeague[] = [
   baseLeague('10-team PPR', 10, 'PPR'),
+  baseLeague('10-team Half-PPR', 10, 'HALF_PPR'),
+  baseLeague('10-team Standard', 10, 'STANDARD'),
   baseLeague('12-team PPR', 12, 'PPR'),
   baseLeague('12-team Half-PPR', 12, 'HALF_PPR'),
   baseLeague('12-team Standard', 12, 'STANDARD'),
