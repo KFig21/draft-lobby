@@ -444,6 +444,13 @@
       background: color-mix(in srgb, $danger 16%, transparent);
       color: $danger;
     }
+
+    // Unchanged vs last year — a quiet neutral pill that keeps both key cards
+    // the same height when one metric didn't move.
+    &--even {
+      background: color-mix(in srgb, $text-muted 16%, transparent);
+      color: $text-muted;
+    }
   }
 
   // Projected points: Futura-italic with a smaller decimal — the projected-

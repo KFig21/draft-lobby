@@ -18,6 +18,7 @@ import {
 } from 'react';
 import { createPortal } from 'react-dom';
 import { usePlayerWeekStats } from '../../hooks/usePlayerWeekStats';
+import { getTeamColors, getTeamColorsEnabled } from '../../lib/nflTeamColors';
 import { useModalClose } from '../../lib/useModalClose';
 import type { PlayerRow, PlayerWeekStatRow } from '../../lib/types';
 import './PlayerWeekStatsModal.scss';
@@ -132,6 +133,9 @@ export function PlayerWeekStatsModal({ player, season, scoring, onClose }: Props
   const { rows, loading, error } = usePlayerWeekStats(player.position, season, true);
   const pos = player.position as Position;
   const posColor = POSITION_COLORS[pos];
+  // Team-colored abbreviation pill — only when the user's setting is on and we
+  // have a color pair for the team (mirrors the player/pick modal header).
+  const teamColors = getTeamColorsEnabled() ? getTeamColors(player.nfl_team) : null;
 
   // Everything is scored under the passed rules (the league's, always).
   const leaguePreset = matchPreset(scoring);
@@ -361,7 +365,17 @@ export function PlayerWeekStatsModal({ player, season, scoring, onClose }: Props
           <div className="pws__id">
             <h3>{player.name}</h3>
             <div className="pws__sub">
-              {posLabel} · {player.nfl_team}
+              {posLabel} ·{' '}
+              {teamColors ? (
+                <span
+                  className="pws__team"
+                  style={{ background: teamColors.bg, color: teamColors.text }}
+                >
+                  {player.nfl_team}
+                </span>
+              ) : (
+                player.nfl_team
+              )}
               {player.bye_week ? ` · Bye ${player.bye_week}` : ''}
             </div>
           </div>

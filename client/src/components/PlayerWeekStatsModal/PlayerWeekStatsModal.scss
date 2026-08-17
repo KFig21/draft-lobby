@@ -73,6 +73,20 @@
     margin-top: 2px;
   }
 
+  // Team-colored abbreviation pill (bg + text via inline style), matching the
+  // player/pick modal header. Only rendered when the team-colors setting is on.
+  &__team {
+    display: inline-flex;
+    align-items: center;
+    vertical-align: middle;
+    padding: 1px 6px;
+    border-radius: $radius-sm;
+    font-size: 10.5px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
   &__season {
     margin-left: auto;
     font-size: 10px;

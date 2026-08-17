@@ -173,6 +173,11 @@ function StatTrend({ statKey, proj, prev }: { statKey: string; proj?: number; pr
   );
 }
 
+// A card's change vs last year: a signed delta, the string 'even' when the
+// value is unchanged (prior data exists — so both cards still show a pill and
+// stay the same height), or null when there's no prior season to compare.
+type KeyDelta = { value: number; text: string } | 'even' | null;
+
 /** One headline comparison card (fantasy points or position rank). */
 function KeyCard({
   label,
@@ -183,7 +188,7 @@ function KeyCard({
   label: string;
   now: ReactNode;
   prevLabel: ReactNode;
-  delta: { value: number; text: string } | null;
+  delta: KeyDelta;
 }) {
   return (
     <div className="player-stat-block__keycard">
@@ -194,7 +199,9 @@ function KeyCard({
       </div>
       <div className="player-stat-block__keycard-prev">
         <span className="player-stat-block__keycard-yr">{prevLabel}</span>
-        {delta && (
+        {delta === 'even' ? (
+          <span className="player-stat-block__delta player-stat-block__delta--even">–</span>
+        ) : delta ? (
           <span
             className={`player-stat-block__delta player-stat-block__delta--${
               delta.value >= 0 ? 'good' : 'bad'
@@ -202,7 +209,7 @@ function KeyCard({
           >
             {delta.value >= 0 ? '▲' : '▼'} {delta.text}
           </span>
-        )}
+        ) : null}
       </div>
     </div>
   );
@@ -315,8 +322,10 @@ export function PlayerStatGrid({ player, weekStats }: Props) {
             </>
           }
           delta={
-            fpDelta != null && Math.abs(fpDelta) >= 0.05
-              ? { value: fpDelta, text: `${fpDelta >= 0 ? '+' : ''}${fpDelta.toFixed(1)}` }
+            player.proj_points != null && player.prev_points != null
+              ? fpDelta && Math.abs(fpDelta) >= 0.05
+                ? { value: fpDelta, text: `${fpDelta >= 0 ? '+' : ''}${fpDelta.toFixed(1)}` }
+                : 'even'
               : null
           }
         />
@@ -333,8 +342,10 @@ export function PlayerStatGrid({ player, weekStats }: Props) {
             </>
           }
           delta={
-            rankDelta != null && rankDelta !== 0
-              ? { value: rankDelta, text: `${Math.abs(rankDelta)}` }
+            player.proj_rank != null && player.prev_rank != null
+              ? rankDelta && rankDelta !== 0
+                ? { value: rankDelta, text: `${Math.abs(rankDelta)}` }
+                : 'even'
               : null
           }
         />
@@ -369,10 +380,10 @@ export function PlayerStatGrid({ player, weekStats }: Props) {
                   rows.push(
                     <tr key={`g-${g}`} className="player-stat-block__cmp-group">
                       <td>{g}</td>
-                      <td className="player-stat-block__cmp-group-lbl">{prevLabel}</td>
                       <td className="player-stat-block__cmp-group-lbl player-stat-block__cmp-group-lbl--proj">
                         Proj
                       </td>
+                      <td className="player-stat-block__cmp-group-lbl">{prevLabel}</td>
                     </tr>,
                   );
                 }
@@ -381,11 +392,11 @@ export function PlayerStatGrid({ player, weekStats }: Props) {
                 rows.push(
                   <tr key={c.key}>
                     <td>{shortStatLabel(c.label)}</td>
-                    <td>{fmtStat(pv)}</td>
                     <td className="player-stat-block__cmp-proj">
                       {fmtStat(jv)}
                       <StatTrend statKey={c.key} proj={jv} prev={pv} />
                     </td>
+                    <td>{fmtStat(pv)}</td>
                   </tr>,
                 );
               }
@@ -396,16 +407,16 @@ export function PlayerStatGrid({ player, weekStats }: Props) {
       ) : (
         // K/DEF or before structured stats load — the pre-formatted lines.
         <div className="player-stat-block__lines">
-          {player.prev_stat_line && (
-            <div className="player-stat-block__line-row">
-              <span className="player-stat-block__stat-label">{prevLabel}</span>
-              <span>{player.prev_stat_line}</span>
-            </div>
-          )}
           {player.proj_stat_line && (
             <div className="player-stat-block__line-row">
               <span className="player-stat-block__stat-label">Proj</span>
               <span>{player.proj_stat_line}</span>
+            </div>
+          )}
+          {player.prev_stat_line && (
+            <div className="player-stat-block__line-row">
+              <span className="player-stat-block__stat-label">{prevLabel}</span>
+              <span>{player.prev_stat_line}</span>
             </div>
           )}
         </div>
