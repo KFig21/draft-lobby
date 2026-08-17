@@ -1002,6 +1002,37 @@
     }
   }
 
+  // Active drafting: the readout and the clock split the centre into two equal
+  // columns, with the readout pushed to the *end* of its half and the clock to
+  // the *start* of its half. Equal columns keep the boundary between them
+  // pinned dead-centre, so a short team name growing to a long one only extends
+  // the readout leftward — the clock never shifts. (Complete/staging have no
+  // clock, so &__center stays the plain centred flex above.)
+  &__center--split {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    // gap sits at the centre line; keep it symmetric so both halves read equal.
+    gap: $space * 2;
+
+    @include lg {
+      gap: $space * 3;
+    }
+
+    .draft__status {
+      justify-self: end;
+    }
+
+    .draft__clock-wrap {
+      justify-self: start;
+    }
+  }
+
+  &__clock-wrap {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+  }
+
   &__status {
     display: flex;
     flex-direction: column;

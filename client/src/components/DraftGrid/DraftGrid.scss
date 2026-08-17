@@ -318,12 +318,13 @@
   }
 
   // Back — the pick. Pre-rotated a half turn so it faces the viewer once the
-  // card completes its flip; its fill is painted inline (per cell style) and it
-  // carries the same 1px frame the settled cell has, so the hand-off when the
-  // card is dropped is seamless too. Padding/alignment per variant below.
+  // card completes its flip; its fill is painted inline (per cell style). No
+  // frame of its own — the settled cell underneath supplies the border once the
+  // card is dropped, so the 1px outline only appears when the flip completes
+  // (a border on the face here read as a stray outline mid-flip, most visible in
+  // the clean style). Padding/alignment per variant below.
   &__flip-back {
     transform: rotateX(180deg);
-    box-shadow: inset 0 0 0 1px $border;
 
     &--bold {
       display: grid;
@@ -383,6 +384,12 @@
     text-transform: uppercase;
     color: #fff;
     animation: draft-grid-announce-in 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) 0.4s both;
+
+    // Fullscreen ("TV mode"): grow with the board's measured --fs-scale, same as
+    // the cell names, so the announcement reads big from across the room.
+    .draft-grid--fill & {
+      font-size: calc(1.15rem * var(--fs-scale));
+    }
 
     :root[data-theme='light'] & {
       color: #05231a;
@@ -468,11 +475,13 @@
       background: transparent;
     }
 
-    // Clean style sets its fill via .draft-grid__cell--pick (two classes), so
-    // it needs a more-specific override to go transparent while flipping —
-    // three classes beats its two regardless of stylesheet emit order.
+    // Clean style sets its fill AND a position-tinted border via
+    // .draft-grid__cell--pick (two classes), both of which outrank &--flip's
+    // single class — so hide them with a three-class override, else the tinted
+    // border shows as a stray frame around the card the whole flip.
     &#{&}--pick#{&}--flip {
       background: transparent;
+      border-color: transparent;
     }
 
     // Whichever cell is on the clock — visible to every viewer, not just

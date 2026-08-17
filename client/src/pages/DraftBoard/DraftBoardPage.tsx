@@ -3421,7 +3421,11 @@ export function DraftBoardPage() {
             </div>
           )}
         </div>
-        <div className="draft__center">
+        <div
+          className={`draft__center${
+            !isComplete && !isStaging ? ' draft__center--split' : ''
+          }`}
+        >
           <div className="draft__status">
             {isComplete ? (
               <strong className="draft__complete">
@@ -3502,11 +3506,13 @@ export function DraftBoardPage() {
             )}
           </div>
           {!isComplete && !isStaging && (
-            <PickClock
-              deadline={lobby.pick_deadline}
-              frozenMs={lobby.pick_deadline_remaining_ms}
-              unlimited={clockUnlimited}
-            />
+            <div className="draft__clock-wrap">
+              <PickClock
+                deadline={lobby.pick_deadline}
+                frozenMs={lobby.pick_deadline_remaining_ms}
+                unlimited={clockUnlimited}
+              />
+            </div>
           )}
         </div>
         <div className="draft__right">
