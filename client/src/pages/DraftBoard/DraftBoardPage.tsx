@@ -69,7 +69,6 @@ import UndoIcon from '@mui/icons-material/Undo';
 import type { SvgIconComponent } from '@mui/icons-material';
 import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
-  Link,
   Navigate,
   useLocation,
   useNavigate,
@@ -2671,7 +2670,10 @@ export function DraftBoardPage() {
               <input
                 className="pool__search"
                 type="search"
-                placeholder="Search players…"
+                // TV mode zooms the pool up, overflowing the longer label — keep
+                // it to "Search" there so it doesn't clip to "Search play".
+                placeholder={tvActive ? 'Search' : 'Search players…'}
+                aria-label="Search players"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -3382,22 +3384,8 @@ export function DraftBoardPage() {
           />
         )}
         <div className="draft__left">
-          <div className="draft__nav-links">
-            <button
-              type="button"
-              className="draft__home-btn"
-              onClick={() => navigate('/home')}
-            >
-              <HomeIcon fontSize="small" />
-              <span className="draft__btn-label">Home</span>
-            </button>
-            {isMember && (
-              <Link to={`/lobby/${id}`} className="draft__room-btn">
-                <MeetingRoomIcon fontSize="small" />
-                <span className="draft__btn-label">Room</span>
-              </Link>
-            )}
-          </div>
+          {/* Home + Room moved into the Tools (☰) drawer on desktop/fullscreen
+              to declutter the top bar; mobile reaches them via its own nav. */}
           {isComplete && (
             <div className="draft__viewtoggle" role="group" aria-label="Center view">
               <button
@@ -3565,6 +3553,32 @@ export function DraftBoardPage() {
             </button>
             {showTools && (
               <div className="draft__tools-menu" role="menu">
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="draft__tools-item"
+                  onClick={() => {
+                    setShowTools(false);
+                    navigate('/home');
+                  }}
+                >
+                  <HomeIcon fontSize="small" />
+                  <span className="draft__tools-item-label">Home</span>
+                </button>
+                {isMember && (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="draft__tools-item"
+                    onClick={() => {
+                      setShowTools(false);
+                      navigate(`/lobby/${id}`);
+                    }}
+                  >
+                    <MeetingRoomIcon fontSize="small" />
+                    <span className="draft__tools-item-label">Room</span>
+                  </button>
+                )}
                 {myTeam && !myTeam.is_bot && !isComplete && (
                   <button
                     type="button"
