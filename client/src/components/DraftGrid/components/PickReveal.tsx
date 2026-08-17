@@ -29,7 +29,13 @@ export function CellFlip({
           <TimerOutlinedIcon className="draft-grid__onclock-icon" />
           On the clock
         </span>
-        <span className="draft-grid__flip-pickin">The pick is in</span>
+        {/* Each half is kept non-breaking, so the line either fits as one
+            ("THE PICK IS IN") or breaks only between them ("THE PICK" / "IS
+            IN") — never mid-phrase. */}
+        <span className="draft-grid__flip-pickin">
+          <span className="draft-grid__flip-word">The pick</span>{' '}
+          <span className="draft-grid__flip-word">is in</span>
+        </span>
       </div>
       <div
         className={`draft-grid__flip-face draft-grid__flip-back draft-grid__flip-back--${variant}`}

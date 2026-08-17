@@ -389,6 +389,12 @@
     }
   }
 
+  // Keeps "The pick" and "is in" each on one line, so the phrase only ever
+  // breaks between the two halves — never mid-phrase.
+  &__flip-word {
+    white-space: nowrap;
+  }
+
   // Snake-draft direction arrow beneath the round number — matches the round
   // number colour (faded), turns green on the live round.
   &__round-dir {
@@ -688,18 +694,16 @@
   // actually beats it. Same tied-specificity trap seen elsewhere in the app.
   @media (max-width: #{$bp-md - 1px}) {
     &__onclock-label {
-      // Icon inline with the text (row) so "On the clock" wraps beside it on
-      // two lines instead of the icon stacking on its own row above the text —
-      // shorter overall, and lets the icon be bigger without re-stretching.
-      flex-direction: row;
-      flex-wrap: wrap;
-      gap: 0 0.2em;
+      // Icon always stacked above "On the clock" (matching the pick-flip's own
+      // announcement front). A tight gap + line-height keeps the two-line label
+      // from stretching the cell past its row's normal height.
+      flex-direction: column;
+      gap: 0.1em;
       line-height: 1;
-      justify-content: center;
     }
 
     &__onclock-label &__onclock-icon {
-      font-size: 1.6em;
+      font-size: 1.3em;
     }
   }
 
