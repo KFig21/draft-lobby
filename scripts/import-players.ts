@@ -20,6 +20,7 @@
  */
 import { createClient } from '@supabase/supabase-js';
 import { config } from 'dotenv';
+import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -599,20 +600,67 @@ async function main() {
 
   // 4) Upsert (never delete+reinsert) — picks.player_id has no cascade, so
   // generating a new id for a player who's already been drafted somewhere
-  // would silently orphan that pick's history. Matching on (name, position)
-  // keeps existing ids stable across re-runs and just refreshes their stats.
+  // would silently orphan that pick's history.
+  //
+  // We match existing rows by NORMALIZED name (suffix/punctuation-insensitive),
+  // NOT the raw (name, position) unique key. When a feed renames a player across
+  // runs — "Kenneth Walker" → "Kenneth Walker III", "Theo Wease" → "Theo Wease
+  // Jr." — a raw-name upsert inserts a SECOND row that the reconcile can't evict
+  // (both normalize to the same kept key), which is the "two Kenneth Walkers"
+  // duplicate bug. Reusing the existing id and letting the name UPDATE in place
+  // keeps exactly one stable row per real player.
   //
   // The flat columns are still written (they back the read path until Phase 2's
   // read-path deploy switches over and a later cleanup migration drops them),
   // and .select() hands back each player's stable id so we can also write the
   // season-scoped rows below. See docs/phase2-player-seasons.md.
+  console.log('Loading existing players to match by normalized name…');
+  const existingByKey = new Map<string, string>(); // normKey -> id
+  {
+    // Prefer an existing row that's actually in the current pool (has a season
+    // row) when stale duplicates still linger in the table, so we update the
+    // canonical row rather than resurrect a leftover.
+    const poolIds = new Set<string>();
+    for (let from = 0; ; from += 1000) {
+      const { data, error } = await supabase
+        .from('player_seasons')
+        .select('player_id')
+        .eq('season', SEASON)
+        .range(from, from + 999);
+      if (error) throw new Error(error.message);
+      const batch = (data ?? []) as { player_id: string }[];
+      for (const r of batch) poolIds.add(r.player_id);
+      if (batch.length < 1000) break;
+    }
+    for (let from = 0; ; from += 1000) {
+      const { data, error } = await supabase
+        .from('players')
+        .select('id, name, position')
+        .range(from, from + 999);
+      if (error) throw new Error(error.message);
+      const batch = (data ?? []) as { id: string; name: string; position: string }[];
+      for (const r of batch) {
+        const k = `${normalize(r.name)}|${r.position}`;
+        const cur = existingByKey.get(k);
+        if (!cur || (!poolIds.has(cur) && poolIds.has(r.id))) existingByKey.set(k, r.id);
+      }
+      if (batch.length < 1000) break;
+    }
+  }
+
   console.log(`Upserting ${pool.length} players…`);
   const idByKey = new Map<string, string>();
-  for (let i = 0; i < pool.length; i += 500) {
-    const chunk = pool.slice(i, i + 500);
+  // Assign every row an id up front: reuse the matched existing row's id (so a
+  // renamed player updates in place) or mint a fresh one, then upsert on id.
+  const playerRows = pool.map((p) => ({
+    ...p,
+    id: existingByKey.get(`${normalize(p.name)}|${p.position}`) ?? randomUUID(),
+  }));
+  for (let i = 0; i < playerRows.length; i += 500) {
+    const chunk = playerRows.slice(i, i + 500);
     const { data, error } = await supabase
       .from('players')
-      .upsert(chunk, { onConflict: 'name,position' })
+      .upsert(chunk, { onConflict: 'id' })
       .select('id, name, position');
     if (error) throw new Error(error.message);
     for (const row of data ?? []) {
