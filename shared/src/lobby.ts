@@ -405,6 +405,17 @@ export function canDeleteLobby(status: LobbyStatus): boolean {
   return status === 'SETUP' || status === 'SCHEDULED' || status === 'STAGING';
 }
 
+/**
+ * Whether a commissioner may restart the draft — wiping every drafted pick and
+ * returning the lobby to STAGING (open room, pre-first-pick) so rules and
+ * keepers can be changed and the draft re-run. In-progress only: a COMPLETE
+ * draft keeps its board (use Copy Draft to spin off a fresh one). Single gate
+ * for the client (to show the action) and the server (to enforce it).
+ */
+export function canRestartDraft(status: LobbyStatus): boolean {
+  return status === 'DRAFTING' || status === 'PAUSED';
+}
+
 /** Which setting groups a commissioner may edit at a given lobby status. */
 export function settingsEditableGroups(status: LobbyStatus): Set<SettingsGroup> {
   switch (status) {

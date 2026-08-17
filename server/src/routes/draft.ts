@@ -1602,6 +1602,75 @@ draftRouter.post('/:id/simulate', async (req: AuthedRequest, res: Response) => {
 });
 
 /**
+ * POST /api/lobbies/:id/restart — commissioner wipes the drafted picks and
+ * returns the lobby to STAGING (open room, pre-first-pick) so rules/keepers can
+ * be changed and the draft re-run from scratch. Keeper picks (is_keeper) are
+ * kept — they belong to the staging phase, not the draft — and keepers are
+ * re-opened for editing. In-progress only (DRAFTING/PAUSED); a COMPLETE draft
+ * keeps its board. Everything transitions live via the lobby/picks realtime the
+ * board already subscribes to. Guarded by a "RESTART" confirmation on the client.
+ */
+draftRouter.post('/:id/restart', async (req: AuthedRequest, res: Response) => {
+  const lobbyId = req.params.id;
+  const userId = req.user!.id;
+
+  const role = await getRole(lobbyId, userId);
+  if (!isCommish(role)) {
+    res.status(403).json({ error: 'Only the commissioner can restart the draft' });
+    return;
+  }
+
+  const { data: lobby } = await supabaseAdmin
+    .from('lobbies')
+    .select('status')
+    .eq('id', lobbyId)
+    .maybeSingle();
+  if (!lobby) {
+    res.status(404).json({ error: 'Lobby not found' });
+    return;
+  }
+  if (lobby.status !== 'DRAFTING' && lobby.status !== 'PAUSED') {
+    res.status(409).json({ error: 'Only an in-progress draft can be restarted' });
+    return;
+  }
+
+  // Wipe the drafted picks; keep keeper picks (placed during staging).
+  const { error: delErr } = await supabaseAdmin
+    .from('picks')
+    .delete()
+    .eq('lobby_id', lobbyId)
+    .eq('is_keeper', false);
+  if (delErr) {
+    res.status(500).json({ error: delErr.message });
+    return;
+  }
+
+  // Hand every team its timeout allowance back.
+  await supabaseAdmin.from('teams').update({ timeouts: 0 }).eq('lobby_id', lobbyId);
+
+  // Back to the open draft room, before the first pick, keepers re-opened.
+  const { error: updErr } = await supabaseAdmin
+    .from('lobbies')
+    .update({
+      status: 'STAGING',
+      current_overall: 1,
+      pick_deadline: null,
+      pick_deadline_remaining_ms: null,
+      started_at: null,
+      completed_at: null,
+      keepers_locked: false,
+    })
+    .eq('id', lobbyId);
+  if (updErr) {
+    res.status(500).json({ error: updErr.message });
+    return;
+  }
+
+  await postSystemMessage(lobbyId, userId, '🔄 The commissioner restarted the draft');
+  res.json({ ok: true });
+});
+
+/**
  * POST /api/lobbies/:id/autopick-skipped — commissioner auto-picks every
  * skipped team's outstanding slot (the open slots behind the frontier). The
  * manual backstop for an abandoned team when the timeout allowance is

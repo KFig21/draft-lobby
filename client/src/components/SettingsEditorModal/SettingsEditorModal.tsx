@@ -1,4 +1,5 @@
 import {
+  canRestartDraft,
   lobbySettingsSchema,
   normalizeTiers,
   rosterSize,
@@ -64,6 +65,29 @@ export function SettingsEditorModal({
       setSimError(err instanceof Error ? err.message : 'Could not simulate the draft');
     } finally {
       setSimBusy(false);
+    }
+  }
+
+  // Restart: wipe the drafted picks and drop back to STAGING. In-progress only,
+  // gated by typing RESTART.
+  const canRestart = canRestartDraft(status);
+  const [restartConfirm, setRestartConfirm] = useState('');
+  const [restartBusy, setRestartBusy] = useState(false);
+  const [restartError, setRestartError] = useState<string | null>(null);
+
+  async function restart() {
+    if (restartConfirm !== 'RESTART') return;
+    setRestartBusy(true);
+    setRestartError(null);
+    try {
+      await api(`/lobbies/${lobbyId}/restart`, { method: 'POST' });
+      // Status → STAGING and the picks clearing both arrive via realtime, which
+      // drops every client back to the open draft room; just close the editor.
+      onClose();
+    } catch (err) {
+      setRestartError(err instanceof Error ? err.message : 'Could not restart the draft');
+    } finally {
+      setRestartBusy(false);
     }
   }
 
@@ -177,6 +201,38 @@ export function SettingsEditorModal({
               </button>
             </div>
             {simError && <p className="settings-editor__error">{simError}</p>}
+          </section>
+        )}
+
+        {canRestart && (
+          <section className="settings-editor__simulate">
+            <h3 className="settings-editor__simulate-title">Restart draft</h3>
+            <p className="muted settings-editor__simulate-note">
+              Clears every pick and returns the draft to the open room (before the first pick), so
+              you can change rules or keepers and run it again. Keeper picks are kept. This can’t be
+              undone. Type <strong>RESTART</strong> to confirm.
+            </p>
+            <div className="settings-editor__simulate-row">
+              <input
+                className="settings-editor__simulate-input"
+                value={restartConfirm}
+                onChange={(e) => setRestartConfirm(e.target.value)}
+                placeholder="RESTART"
+                aria-label="Type RESTART to confirm"
+                autoComplete="off"
+                spellCheck={false}
+                disabled={restartBusy}
+              />
+              <button
+                type="button"
+                className="button button--danger"
+                onClick={restart}
+                disabled={restartBusy || restartConfirm !== 'RESTART'}
+              >
+                {restartBusy ? 'Restarting…' : 'Restart draft'}
+              </button>
+            </div>
+            {restartError && <p className="settings-editor__error">{restartError}</p>}
           </section>
         )}
       </div>
