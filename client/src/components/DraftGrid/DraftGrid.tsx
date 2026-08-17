@@ -2,7 +2,7 @@ import type { DraftType } from '@draft-lobby/shared';
 import SkipNextIcon from '@mui/icons-material/SkipNext';
 import TimerOutlinedIcon from '@mui/icons-material/TimerOutlined';
 import TouchAppIcon from '@mui/icons-material/TouchApp';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { DraftCellStyle } from '../../lib/draftCellStyle';
 import { formatRoundPick } from '../../lib/format';
 import { avatarForTeam } from '../../lib/teamAvatar';
@@ -119,6 +119,46 @@ export function DraftGrid({
   // Cross-highlight the hovered pick's round cell + team header (desktop).
   const [hover, setHover] = useState<{ round: number; teamId: string } | null>(null);
 
+  // Card-flip entrance for a just-made pick. When a draft pick (never a keeper,
+  // which are pre-placed before the draft) newly appears, tag its cell so it
+  // flips in instead of popping. `committed` holds the pick ids we've already
+  // shown — seeded on the first render so an already-populated board (joining a
+  // draft mid-way) never flips its whole history in at once. Freshly-arrived
+  // ids are computed during render (so the flip class is on the cell's first
+  // paint — no pre-flip flash) and held in `settling` for the animation's
+  // length, then dropped so nothing lingers.
+  const committed = useRef<Set<string> | null>(null);
+  const [settling, setSettling] = useState<Set<string>>(() => new Set());
+  const flipTimers = useRef<number[]>([]);
+
+  const liveIds = new Set(picks.filter((p) => !p.is_keeper).map((p) => p.id));
+  const freshIds =
+    committed.current === null
+      ? new Set<string>()
+      : new Set([...liveIds].filter((id) => !committed.current!.has(id)));
+  const flipIds = freshIds.size || settling.size ? new Set([...freshIds, ...settling]) : null;
+
+  useEffect(() => {
+    committed.current = liveIds;
+    if (freshIds.size === 0) return;
+    const ids = [...freshIds];
+    setSettling((prev) => new Set([...prev, ...ids]));
+    // Standalone (not effect-cleanup) timers so a second pick landing before
+    // the first settles can't cancel the first's removal.
+    const t = window.setTimeout(() => {
+      setSettling((prev) => {
+        const next = new Set(prev);
+        for (const id of ids) next.delete(id);
+        return next;
+      });
+    }, 2600);
+    flipTimers.current.push(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [picks]);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => () => flipTimers.current.forEach(clearTimeout), []);
+
   return (
     <div className="grid-scroll">
       <table
@@ -216,6 +256,7 @@ export function DraftGrid({
                           pick={pick}
                           player={player}
                           tvMode={tvMode}
+                          flipping={flipIds?.has(pick.id)}
                           entry={reactionsByPick?.get(pick.id)}
                           hasComment={(commentsByPick?.get(pick.id)?.length ?? 0) > 0}
                           onReact={onReactPick}
@@ -236,6 +277,7 @@ export function DraftGrid({
                           pick={pick}
                           player={player}
                           teamCount={teams.length}
+                          flipping={flipIds?.has(pick.id)}
                           entry={reactionsByPick?.get(pick.id)}
                           hasComment={(commentsByPick?.get(pick.id)?.length ?? 0) > 0}
                           onReact={onReactPick}
@@ -256,6 +298,7 @@ export function DraftGrid({
                         pick={pick}
                         player={player}
                         teamCount={teams.length}
+                        flipping={flipIds?.has(pick.id)}
                         entry={reactionsByPick?.get(pick.id)}
                         hasComment={(commentsByPick?.get(pick.id)?.length ?? 0) > 0}
                         onReact={onReactPick}

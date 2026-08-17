@@ -29,6 +29,7 @@ export function PickCell({
   pick,
   player,
   teamCount,
+  flipping,
   entry,
   hasComment,
   onReact,
@@ -40,6 +41,8 @@ export function PickCell({
   player: PlayerRow;
   /** Team count — derives the "round.pick" line (e.g. "5.02"). */
   teamCount: number;
+  /** Just drafted — play the one-shot card-flip entrance (see DraftGrid.scss). */
+  flipping?: boolean;
   entry: ReactionEntry | undefined;
   hasComment: boolean;
   onReact?: (pickId: string, emoji: string) => void;
@@ -55,7 +58,7 @@ export function PickCell({
     <td
       className={`draft-grid__cell draft-grid__cell--pick${
         pick.is_keeper ? ' draft-grid__cell--keeper' : ''
-      }`}
+      }${flipping ? ' draft-grid__cell--flip' : ''}`}
       style={{ ['--pos']: posColor } as CSSProperties}
       onMouseEnter={onEnter}
       onMouseLeave={onLeave}

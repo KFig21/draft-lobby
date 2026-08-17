@@ -13,6 +13,27 @@
   }
 }
 
+// A newly-made pick flips into its cell (card-flip entrance) instead of
+// popping in — DraftGrid tags the freshly-arrived pick's cell for one play.
+// Same face throughout (this is an entrance, not a two-sided flip), so no
+// backface handling needed; the slight overshoot past 0deg gives it weight.
+@keyframes draft-grid-pick-flip {
+
+  0% {
+    transform: perspective(700px) rotateX(-90deg);
+    filter: brightness(1.6);
+  }
+
+  60% {
+    transform: perspective(700px) rotateX(7deg);
+    filter: brightness(1);
+  }
+
+  100% {
+    transform: perspective(700px) rotateX(0);
+  }
+}
+
 .grid-scroll {
   // Own the scroll so the sticky header row / round column freeze against it.
   height: 100%;
@@ -277,6 +298,21 @@
     &--keeper {
       outline: 2px solid $keeper;
       outline-offset: -2px;
+    }
+
+    // Just drafted — flips into place, hinging around its horizontal centre
+    // like a split-flap board turning the pick over. Lifted above its
+    // neighbours for the duration so the rotate reads as a card turning rather
+    // than clipping behind the next row. Removed once the flip settles
+    // (DraftGrid drops the class), so nothing here lingers on the board.
+    &--flip {
+      transform-origin: center;
+      animation: draft-grid-pick-flip 2.4s cubic-bezier(0.2, 0.75, 0.25, 0.75) both;
+      z-index: 5;
+
+      @media (prefers-reduced-motion: reduce) {
+        animation: none;
+      }
     }
 
     // Whichever cell is on the clock — visible to every viewer, not just

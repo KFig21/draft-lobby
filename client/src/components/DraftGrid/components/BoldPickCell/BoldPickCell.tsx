@@ -38,6 +38,7 @@ export function BoldPickCell({
   pick,
   player,
   tvMode,
+  flipping,
   entry,
   hasComment,
   onReact,
@@ -50,6 +51,8 @@ export function BoldPickCell({
   /** TV mode: shorten to "F. Lastname" so the name reads big from across the
    * room (full names are meant for up close). */
   tvMode?: boolean;
+  /** Just drafted — play the one-shot card-flip entrance (see DraftGrid.scss). */
+  flipping?: boolean;
   entry?: ReactionEntry;
   hasComment?: boolean;
   onReact?: (pickId: string, emoji: string) => void;
@@ -70,7 +73,7 @@ export function BoldPickCell({
     <td
       className={`draft-grid__cell bold-pick-cell${
         pick.is_keeper ? ' draft-grid__cell--keeper' : ''
-      }`}
+      }${flipping ? ' draft-grid__cell--flip' : ''}`}
       style={{ background: posColor }}
       onClick={() => onClick?.(pick)}
       onMouseEnter={onEnter}

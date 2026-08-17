@@ -27,6 +27,7 @@ export function DefaultPickCell({
   pick,
   player,
   teamCount,
+  flipping,
   entry,
   hasComment,
   onReact,
@@ -39,6 +40,8 @@ export function DefaultPickCell({
   /** Number of teams in the draft — derives the "round.pick" line (e.g.
    * "5.02" for the 2nd pick of round 5 in a 10+ team draft). */
   teamCount: number;
+  /** Just drafted — play the one-shot card-flip entrance (see DraftGrid.scss). */
+  flipping?: boolean;
   entry?: ReactionEntry;
   hasComment?: boolean;
   onReact?: (pickId: string, emoji: string) => void;
@@ -55,7 +58,7 @@ export function DefaultPickCell({
     <td
       className={`draft-grid__cell default-pick-cell${
         pick.is_keeper ? ' draft-grid__cell--keeper' : ''
-      }`}
+      }${flipping ? ' draft-grid__cell--flip' : ''}`}
       style={{ background: posColor }}
       onClick={() => onClick?.(pick)}
       onMouseEnter={onEnter}
