@@ -224,8 +224,8 @@
     align-items: center;
     gap: $space * 0.5;
     margin-top: $space * 2;
-    padding-top: $space * 2;
-    border-top: 1px solid $border;
+    // padding-top: $space * 2;
+    // border-top: 1px solid $border;
 
     .pick-modal__section-label {
       margin: 0 $space * 0.25 0 0;
