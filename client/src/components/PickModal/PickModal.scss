@@ -1,15 +1,22 @@
 @use 'variables' as *;
 
 .pick-modal {
+  // Concentric "iOS" rounding: a 24px window, a 6px gutter, and the two framed
+  // components (pick metadata + comment box) rounded to 18px (24 − 6) —
+  // everything else lays flat on the window.
+  $pm-gutter: $space * 0.75;
+
   position: relative;
   display: flex;
   flex-direction: column;
+  gap: $pm-gutter;
   width: min(440px, 94vw);
   max-height: 90dvh;
   overflow: hidden;
+  padding: $pm-gutter;
   background: $bg-raised;
   border: 1px solid $border;
-  border-radius: $radius;
+  border-radius: 24px;
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
 
   // TV mode: scale the whole modal up, capping both dimensions to the viewport
@@ -27,30 +34,39 @@
     color: $primary-hover;
   }
 
-  // Player data + pick data — fixed, never scrolls.
+  // Pick metadata — the player header + "drafted / pick / auto / Roll back" —
+  // framed as one rounded card (18px, concentric with the 24px window). Fixed,
+  // never scrolls.
   &__top {
     flex-shrink: 0;
-    padding: $space * 3 $space * 3 $space * 2;
-    border-bottom: 1px solid $border;
+    padding: $space * 2;
+    background: $bg;
+    border: 1px solid $border;
+    border-radius: 18px;
   }
 
-  // Stats + reactions + comments — the only part of the modal that scrolls.
-  // Capped by the card's own max-height (see below) so a long comment thread
-  // grows a scrollbar here instead of stretching the whole modal on mobile.
-  // No top padding — PlayerStatGrid's own margin-top provides the gap below
-  // the divider, same convention the rest of this modal already uses.
+  // Stats + reactions + comments — lays flat on the window (no card), and is the
+  // only part that scrolls. Nudged right (negative margin) with asymmetric
+  // padding so the scrollbar rides in the gutter rather than over the content,
+  // and the flat content lines up with the framed cards.
   &__scroll {
     flex: 1;
     min-height: 90px;
     overflow-y: auto;
-    padding: 0 $space * 3 $space * 1.5;
+    padding: 0 12px 0 10px;
+    margin-right: -2px;
   }
 
-  // Compose box — fixed at the bottom, outside the scrolling comments.
+  // Comment box — the other framed component; fixed at the bottom. Its card look
+  // lives on the form itself (below), so this is just the pinned wrapper.
   &__compose-area {
     flex-shrink: 0;
-    padding: $space * 1.5 $space * 3;
-    border-top: 1px solid $border;
+  }
+
+  // The flat content starts right under the metadata card — the window gutter is
+  // the whole gap, so drop the stat grid's own leading margin.
+  .player-stat-block__keys {
+    margin-top: 0;
   }
 
   &__backdrop {
@@ -68,15 +84,15 @@
 
   &__close {
     position: absolute;
-    top: $space * 1.5;
-    right: $space * 1.5;
+    top: $space * 2.25;
+    right: $space * 2.25;
     display: grid;
     place-items: center;
     width: 32px;
     height: 32px;
     border: none;
     border-radius: $radius-sm;
-    background: $bg-overlay;
+    background: none;
     color: $text-muted;
     cursor: pointer;
 
@@ -111,15 +127,13 @@
     }
   }
 
+  // A plain meta line inside the pick-metadata card (no longer its own box) —
+  // sits just below the player header.
   &__drafted {
     display: flex;
     align-items: center;
     gap: $space * 0.75;
     margin-top: $space * 1.5;
-    padding: $space $space * 1.5;
-    background: $bg;
-    border: 1px solid $border;
-    border-radius: $radius-sm;
     font-size: 0.9rem;
 
     .avatar {
@@ -412,10 +426,10 @@
   &__comment {
     display: flex;
     gap: $space;
-    padding: $space $space * 1.25;
+    padding: $space *1.25 $space * 1.25;
     margin-bottom: $space;
     border: 1px solid $border;
-    border-radius: $radius-sm;
+    border-radius: 18px;
     background: $bg;
 
     &:last-child {
@@ -605,22 +619,32 @@
     }
   }
 
+  // The comment box, framed as one rounded card (18px, concentric with the
+  // window): a borderless input filling it, with the send button tucked inside.
   &__comment-form {
     display: flex;
-    gap: $space;
+    align-items: center;
+    gap: $space * 0.5;
+    padding: $space * 0.5 $space * 0.5 $space * 0.5 $space * 1.25;
+    background: $bg;
+    border: 1px solid $border;
+    border-radius: 18px;
+
+    &:focus-within {
+      border-color: $primary;
+    }
 
     input {
       flex: 1;
       min-width: 0;
-      padding: $space;
-      border: 1px solid $border;
-      border-radius: $radius-sm;
-      background: $bg;
+      padding: $space * 0.5 0;
+      border: none;
+      background: none;
       color: $text;
       font-size: 0.9rem;
 
       &:focus {
-        border-color: $primary;
+        outline: none;
       }
     }
   }
@@ -628,13 +652,26 @@
   &__send {
     display: grid;
     place-items: center;
-    width: 40px;
+    width: 36px;
+    height: 36px;
     flex-shrink: 0;
     border: none;
-    border-radius: $radius-sm;
-    background: $primary;
-    color: #fff;
+    border-radius: 14px;
+    background: none;
+    color: $primary;
     cursor: pointer;
+    transition: transform .2s ease;
+
+    &:hover:not(:disabled) {
+      color: $primary-hover;
+    }
+
+    &:focus-visible {
+      outline: none;
+      border: none;
+      color: $primary-hover;
+      transform: scale(1.2);
+    }
 
     &:disabled {
       opacity: 0.5;
@@ -642,15 +679,11 @@
     }
   }
 
-  &__sent {
-    margin-top: $space;
-    color: $accent;
-    font-size: 0.82rem;
-    font-weight: 700;
-  }
-
+  // Error under the comment box — inset to line up with the input text and kept
+  // off the window's rounded bottom corner.
   &__error {
-    margin-top: $space;
+    margin: $space * 0.75 0 $space * 0.25;
+    padding: 0 $space * 1.5;
     color: $danger;
     font-size: 0.82rem;
   }

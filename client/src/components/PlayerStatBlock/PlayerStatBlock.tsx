@@ -292,7 +292,6 @@ export function PlayerStatGrid({ player, weekStats }: Props) {
   const pos = player.position as Position;
   const cols = POS_STAT_COLS[pos];
   const hasTable = !!cols && (!!player.proj_stats || !!player.prev_stats);
-  const hasPrev = player.prev_points != null || player.prev_rank != null;
 
   // The completed season is the "last year" line; label it with the actual
   // year when we know it (weekStats carries the season), else stay generic.
@@ -420,10 +419,6 @@ export function PlayerStatGrid({ player, weekStats }: Props) {
             </div>
           )}
         </div>
-      )}
-
-      {!hasPrev && (
-        <p className="player-stat-block__note muted">Full prior-season stats aren’t loaded yet.</p>
       )}
 
       {showWeek && weekStats && (

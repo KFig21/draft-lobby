@@ -108,11 +108,19 @@ export function PlayerDetailModal({
           <CloseIcon fontSize="small" />
         </button>
 
-        <PlayerHeader player={player} action={headerAction} byeClashCounts={byeClashCounts} />
-        <PlayerStatGrid player={player} weekStats={weekStats} />
+        {/* Player metadata — framed as one rounded card (concentric with the
+            window), like PickModal's pinned header. */}
+        <div className="player-detail__top">
+          <PlayerHeader player={player} action={headerAction} byeClashCounts={byeClashCounts} />
+        </div>
+
+        {/* Stats lay flat on the window and are the only part that scrolls. */}
+        <div className="player-detail__scroll">
+          <PlayerStatGrid player={player} weekStats={weekStats} />
+        </div>
 
         {onPick && (
-          <>
+          <div className="player-detail__footer">
             <div className="player-detail__actions">
               {onHoldPick ? (
                 <HoldButton
@@ -138,7 +146,7 @@ export function PlayerDetailModal({
               )}
             </div>
             {blockedReason && <p className="player-detail__block-note">{blockedReason}</p>}
-          </>
+          </div>
         )}
       </div>
     </div>

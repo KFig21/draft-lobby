@@ -128,7 +128,6 @@ export function PickModal({
   const pickInRound = pick.overall - (pick.round - 1) * teamCount;
   const [comment, setComment] = useState('');
   const [posting, setPosting] = useState(false);
-  const [sent, setSent] = useState(false);
   // Set when the "who reacted" icon is clicked — shows the full reactions modal.
   const [reactorsModal, setReactorsModal] = useState<Record<string, Reactor[]> | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -168,7 +167,6 @@ export function PickModal({
         body: { pickId: pick.id, body },
       });
       setComment('');
-      setSent(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to comment');
     } finally {
@@ -362,7 +360,6 @@ export function PickModal({
                 value={comment}
                 onChange={(v) => {
                   setComment(v);
-                  setSent(false);
                 }}
                 members={members}
                 placeholder="Say something about this pick…"
@@ -378,7 +375,6 @@ export function PickModal({
               </button>
             </form>
           )}
-          {sent && <p className="pick-modal__sent">Posted to chat ↗</p>}
           {error && <p className="pick-modal__error">{error}</p>}
         </div>
       </div>
