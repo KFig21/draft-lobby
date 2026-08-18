@@ -2324,7 +2324,7 @@ export function DraftBoardPage() {
               disabled={commishBusy}
             >
               <LockOutlinedIcon fontSize="small" />
-              <span className="draft__btn-label">Keepers</span>
+              <span className="draft__btn-label">Edit Keepers</span>
             </button>
           )}
           {lobby?.settings.keepersEnabled && (

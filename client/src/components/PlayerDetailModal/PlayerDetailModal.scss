@@ -1,8 +1,8 @@
 @use 'variables' as *;
 
 // Same concentric-rounded shell as .pick-modal (PickModal.scss) — the player
-// metadata is one framed 16px card, the stats lay flat on the 24px window, and
-// (when draftable) the Draft button is pinned below.
+// metadata is one framed $radius-card card, the stats lay flat on the
+// $radius-window window, and (when draftable) the Draft button is pinned below.
 .player-detail {
   $pd-gutter: $space;
 
@@ -16,7 +16,7 @@
   padding: $pd-gutter;
   background: $bg-raised;
   border: 1px solid $border;
-  border-radius: 24px;
+  border-radius: $radius-window;
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
 
   // TV mode: scale up (chart + stats table scale with it), capping to the
@@ -27,14 +27,14 @@
     max-width: calc(94vw / var(--tv-zoom, 1.35));
   }
 
-  // Player metadata — framed rounded card (16px, concentric with the window).
+  // Player metadata — framed rounded card ($radius-card, concentric with the window).
   &__top {
     position: relative; // anchors the close button in the card's corner
     flex-shrink: 0;
     padding: $space * 2;
     background: $bg;
     border: 1px solid $border;
-    border-radius: 16px;
+    border-radius: $radius-card;
   }
 
   // Stats lay flat and are the only part that scrolls; same negative-margin +

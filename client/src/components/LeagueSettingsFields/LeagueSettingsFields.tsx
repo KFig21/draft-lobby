@@ -34,7 +34,6 @@ import { formatPickClock, formatSeconds } from '../../lib/format';
 import { supabase } from '../../supabase';
 import { InfoButton } from '../InfoButton/InfoButton';
 import { ScoringRulesModal } from '../LeagueRulesModal/ScoringRulesModal';
-import { Modal } from '../Modal/Modal';
 import { ToggleSwitch } from '../ToggleSwitch/ToggleSwitch';
 import {
   ScoringFormatCreatorPage,
@@ -575,13 +574,11 @@ export function LeagueSettingsFields({ settings, onChange, nameField, editableGr
       </section>
 
       {showScoringModal && (
-        <Modal title="New scoring format" wide onClose={() => setShowScoringModal(false)}>
-          <ScoringFormatCreatorPage
-            embedded
-            onSaved={onScoringSaved}
-            onCancel={() => setShowScoringModal(false)}
-          />
-        </Modal>
+        <ScoringFormatCreatorPage
+          embedded
+          onSaved={onScoringSaved}
+          onCancel={() => setShowScoringModal(false)}
+        />
       )}
 
       {showScoringInfo && (

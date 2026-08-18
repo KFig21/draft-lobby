@@ -15,7 +15,6 @@ import {
   LeagueSettingsFields,
   normalizeTiers,
 } from '../../components/LeagueSettingsFields/LeagueSettingsFields';
-import { Modal } from '../../components/Modal/Modal';
 import { api } from '../../lib/api';
 import { supabase } from '../../supabase';
 import { LeagueWizardPage, type SavedLeague } from '../LeagueWizard/LeagueWizardPage';
@@ -372,17 +371,11 @@ export function LobbyWizardPage() {
       </form>
 
       {showLeagueModal && (
-        <Modal
-          title="Set up a league"
-          wide
-          onClose={() => setShowLeagueModal(false)}
-        >
-          <LeagueWizardPage
-            embedded
-            onSaved={onLeagueCreated}
-            onCancel={() => setShowLeagueModal(false)}
-          />
-        </Modal>
+        <LeagueWizardPage
+          embedded
+          onSaved={onLeagueCreated}
+          onCancel={() => setShowLeagueModal(false)}
+        />
       )}
     </main>
   );

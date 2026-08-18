@@ -202,6 +202,7 @@
     font-size: 0.9rem;
   }
 
+  // Standalone-page Save row only (embedded renders Save in the Modal footer).
   &__submit-row {
     position: sticky;
     // Clear the fixed mobile bottom nav; smaller offset on desktop.
@@ -213,26 +214,20 @@
       bottom: $space * 2;
     }
 
-    // Full-width buttons on the standalone page. The embedded modal footer
-    // (below) keeps them content-sized so it matches the scoring-format
-    // modal's footer — one uniform "top border, primary on the right" look.
-    &:not(.wizard__submit-row--embedded) .button {
+    // Full-width Save button on the standalone page.
+    .button {
       flex: 1;
     }
+  }
 
-    // Embedded (e.g. the "Set up a league" modal, opened from the lobby
-    // wizard): there's no mobile bottom nav inside the modal to clear, so the
-    // standalone page's 64px sticky offset just left this floating with a gap
-    // over the modal's own content. Static flow + a top-border footer row
-    // (mirrors .scoring__footer) makes both wizard modals end the same way.
-    &--embedded {
-      position: static;
-      bottom: auto;
-      align-items: center;
-      justify-content: space-between;
-      padding-top: $space;
-      border-top: 1px solid $border;
-    }
+  // Cancel · Save row inside the embedded "Set up a league" modal's footer.
+  // The Modal footer card supplies the border/padding/background; this just
+  // lays the two buttons out (Cancel left, Save right).
+  &__modal-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $space;
   }
 
   &__template select {

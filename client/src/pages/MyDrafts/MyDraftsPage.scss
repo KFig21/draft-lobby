@@ -63,8 +63,10 @@
     color: $text;
     cursor: pointer;
 
-    &:hover:not(:disabled) {
-      background: $bg-overlay;
+    @media (hover: hover) {
+      &:hover:not(:disabled) {
+        background: $bg-overlay;
+      }
     }
 
     &:disabled {
@@ -83,8 +85,10 @@
     font-weight: 700;
     cursor: pointer;
 
-    &:hover {
-      color: $text;
+    @media (hover: hover) {
+      &:hover {
+        color: $text;
+      }
     }
   }
 
@@ -133,8 +137,10 @@
     overflow: hidden;
     transition: border-color 120ms ease;
 
-    &:hover {
-      border-color: $primary;
+    @media (hover: hover) {
+      &:hover {
+        border-color: $primary;
+      }
     }
   }
 
@@ -149,6 +155,7 @@
     gap: $space * 1.5;
     padding: $space * 1.5;
     color: inherit;
+    -webkit-tap-highlight-color: transparent;
   }
 
   // Actions get their own column, divided from the content. Three fixed slots
@@ -177,16 +184,19 @@
     background: none;
     color: $text-muted;
     cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
 
-    &:hover {
-      background: $bg-overlay;
-      color: $text;
-    }
+    @media (hover: hover) {
+      &:hover {
+        background: $bg-overlay;
+        color: $text;
+      }
 
-    // Delete — reads danger on hover so it's clearly the destructive action.
-    &--danger:hover {
-      background: color-mix(in srgb, $danger 12%, transparent);
-      color: $danger;
+      // Delete — reads danger on hover so it's clearly the destructive action.
+      &--danger:hover {
+        background: color-mix(in srgb, $danger 12%, transparent);
+        color: $danger;
+      }
     }
   }
 

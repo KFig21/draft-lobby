@@ -48,6 +48,15 @@ $radius: 10px;
 $radius-sm: 6px;
 $space: 8px;
 
+// Modal "concentric" rounding — a rounded window with framed inner cards inset
+// by one $space gutter on all sides. Card radius = window − gutter keeps the
+// corners concentric, so nudging $radius-window carries the inner cards with
+// it. $radius-card-tight rounds controls nested one level deeper (e.g. a button
+// inside a framed card).
+$radius-window: 24px;
+$radius-card: $radius-window - $space; // 16px
+$radius-card-tight: 12px;
+
 // Breakpoints (mobile-first)
 // md: tablet-portrait and up gets the sidebar nav + roomier content.
 // lg: the "landscape-tablet / desktop" tier where two-pane layouts turn on —

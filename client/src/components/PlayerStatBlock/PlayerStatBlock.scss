@@ -133,7 +133,7 @@
     padding: $space * 1.1 $space * 1.5;
     // Neutral card, matching the two key cards above it (not a colored panel).
     border: 1px solid $border;
-    border-radius: 12px;
+    border-radius: $radius-card-tight;
     // Solid fill matching the modal surface it sits on.
     background: $bg-raised;
     color: inherit;
@@ -350,7 +350,7 @@
     flex-direction: column;
     padding: $space * 1.25 $space * 1.5;
     border: 1px solid $border;
-    border-radius: 16px;
+    border-radius: $radius-card;
   }
 
   &__keycard-label {

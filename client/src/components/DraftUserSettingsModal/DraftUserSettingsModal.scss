@@ -10,7 +10,12 @@
   flex-direction: column;
   gap: $space * 2.5;
 
+  // Each section is its own bordered card (matching the Settings page) so the
+  // groups read as distinct blocks instead of one long stack of rows.
   &__section {
+    @include card-surface;
+    padding: $space * 1.5 $space * 2;
+
     h3 {
       font-size: 1.05rem;
       margin-bottom: $space * 0.5;

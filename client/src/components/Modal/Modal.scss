@@ -29,9 +29,9 @@
   flex-direction: column;
   width: min(520px, 100%);
   max-height: 90vh;
-  background: $bg-raised;
+  background: $bg;
   border: 1px solid $border;
-  border-radius: $radius;
+  border-radius: $radius-window;
   overflow: hidden;
 
   &--wide {
@@ -54,7 +54,10 @@
     justify-content: space-between;
     gap: $space;
     padding: $space * 2 $space * 2.5;
-    border-bottom: 1px solid $border;
+    border: 1px solid $border;
+    border-radius: $radius-card;
+    margin: $space;
+    background-color: $bg-raised;
 
     h2 {
       font-size: 1.2rem;
@@ -99,7 +102,18 @@
     // column so it — and only it — scrolls, keeping header + footer pinned.
     min-height: 0;
     overflow-y: auto;
-    padding: $space * 2.5;
+    margin: -$space 0 0 0;
+    padding: $space * 1.5 $space * 2.5 $space * 2.5 $space * 2.5;
+
+    // When a footer follows, mirror the header's -8px top pull at the bottom so
+    // the footer card butts up against the scroll body the same way the header
+    // does — otherwise the body's own 8px bottom margin leaves a flat "shelf"
+    // gap above the footer. Only when a footer exists: with none, the body is
+    // the last child and a negative bottom margin would tuck content under the
+    // window's rounded bottom.
+    &:has(~ .dialog__footer) {
+      margin-bottom: -$space;
+    }
   }
 
   // Fixed action bar below the scroll area (opt-in via the Modal `footer`
@@ -107,7 +121,9 @@
   &__footer {
     flex-shrink: 0;
     padding: $space * 1.5 $space * 2.5;
-    border-top: 1px solid $border;
+    border: 1px solid $border;
+    border-radius: $radius-card;
+    margin: $space;
     background: $bg-raised;
 
     // With a Back button (Modal `onBack`): Back pinned left, the modal's own
@@ -118,7 +134,7 @@
       align-items: center;
       gap: $space;
 
-      > *:not(.dialog__back-btn) {
+      >*:not(.dialog__back-btn) {
         flex: 1;
         min-width: 0;
       }

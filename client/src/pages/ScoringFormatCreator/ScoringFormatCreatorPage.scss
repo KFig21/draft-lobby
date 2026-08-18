@@ -339,6 +339,7 @@
     font-size: 0.85rem;
   }
 
+  // Standalone-page Save row only (embedded renders Save in the Modal footer).
   &__footer {
     display: flex;
     align-items: center;
@@ -347,9 +348,17 @@
     border-top: 1px solid $border;
   }
 
-  // Cancel sits far left so Save stays on the right (footer is flex-end),
-  // matching the league wizard's Cancel · Save footer. With no Cancel (the
-  // standalone page) the lone Save button is simply right-aligned.
+  // Cancel · Save row inside the embedded modal's footer. The Modal footer card
+  // supplies the border/padding/background; this just lays the two buttons out.
+  &__modal-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: $space;
+  }
+
+  // Cancel sits far left so Save stays on the right (row is flex-end),
+  // matching the league wizard's Cancel · Save footer.
   &__cancel {
     margin-right: auto;
   }

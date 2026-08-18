@@ -987,7 +987,7 @@
         display: none;
       }
 
-      > * {
+      >* {
         flex-shrink: 0;
       }
     }
@@ -2234,6 +2234,8 @@
     justify-content: flex-start;
     padding: $space * 1.5;
     text-align: left;
+    border-radius: 12px;
+    ;
 
     span {
       display: flex;
@@ -2844,6 +2846,7 @@
   // up in TV mode. Scoped to the fullscreen Menu so the desktop dashboard /
   // sidebar pool table keeps its roomier spacing.
   .pool-table {
+
     th,
     td {
       padding-left: 4px;

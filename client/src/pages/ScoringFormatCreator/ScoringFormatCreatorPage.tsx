@@ -10,8 +10,13 @@ import {
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
+import { Modal } from '../../components/Modal/Modal';
 import { supabase } from '../../supabase';
 import './ScoringFormatCreatorPage.scss';
+
+// Associates the footer's Save button (rendered as a Modal footer sibling,
+// outside the <form>) with the form via the HTML `form` attribute.
+const EMBEDDED_FORM_ID = 'scoring-format-form';
 
 // Per-category editor state — the intuitive framing shown in the UI.
 type Field = {
@@ -307,7 +312,7 @@ export function ScoringFormatCreatorPage({ embedded = false, onSaved, onCancel }
     );
   };
 
-  return (
+  const body = (
     <div className="scoring">
       {!embedded && (
         <header className="scoring__page-header">
@@ -335,7 +340,11 @@ export function ScoringFormatCreatorPage({ embedded = false, onSaved, onCancel }
           <h1>{editId ? 'Edit scoring format' : 'New scoring format'}</h1>
         </header>
       )}
-      <form className="scoring__form" onSubmit={save}>
+      <form
+        id={embedded ? EMBEDDED_FORM_ID : undefined}
+        className="scoring__form"
+        onSubmit={save}
+      >
         <div className="scoring__meta">
           <label className="scoring__preset-label" htmlFor="scoring-name">
             Scoring format name
@@ -440,17 +449,48 @@ export function ScoringFormatCreatorPage({ embedded = false, onSaved, onCancel }
 
         {error && <p className="scoring__error">{error}</p>}
 
-        <div className="scoring__footer">
-          {embedded && onCancel && (
-            <button type="button" className="button scoring__cancel" onClick={onCancel}>
-              Cancel
+        {/* Standalone page: Save lives in a footer row at the end of the form.
+            Embedded, it moves to the Modal footer (below) so it reads like
+            every other modal. */}
+        {!embedded && (
+          <div className="scoring__footer">
+            <button className="button button--primary" disabled={saving}>
+              {saving ? 'Saving…' : editId ? 'Save changes' : 'Save format'}
             </button>
-          )}
-          <button className="button button--primary" disabled={saving}>
-            {saving ? 'Saving…' : editId ? 'Save changes' : 'Save format'}
-          </button>
-        </div>
+          </div>
+        )}
       </form>
     </div>
   );
+
+  if (embedded) {
+    return (
+      <Modal
+        title="New scoring format"
+        wide
+        onClose={() => onCancel?.()}
+        footer={
+          <div className="scoring__modal-actions">
+            {onCancel && (
+              <button type="button" className="button scoring__cancel" onClick={onCancel}>
+                Cancel
+              </button>
+            )}
+            <button
+              type="submit"
+              form={EMBEDDED_FORM_ID}
+              className="button button--primary"
+              disabled={saving}
+            >
+              {saving ? 'Saving…' : 'Save format'}
+            </button>
+          </div>
+        }
+      >
+        {body}
+      </Modal>
+    );
+  }
+
+  return body;
 }

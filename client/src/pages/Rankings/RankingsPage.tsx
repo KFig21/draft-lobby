@@ -18,7 +18,6 @@ import StarBorderIcon from '@mui/icons-material/StarBorder';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import { useEffect, useMemo, useState } from 'react';
 import { Loader } from '../../components/Loader/Loader';
-import { Modal } from '../../components/Modal/Modal';
 import { PlayerDetailModal } from '../../components/PlayerDetailModal/PlayerDetailModal';
 import { ScoringRulesModal } from '../../components/LeagueRulesModal/ScoringRulesModal';
 import { usePlayers } from '../../hooks/usePlayers';
@@ -515,13 +514,11 @@ export function RankingsPage() {
       )}
 
       {showScoringModal && (
-        <Modal title="New scoring format" wide onClose={() => setShowScoringModal(false)}>
-          <ScoringFormatCreatorPage
-            embedded
-            onSaved={onScoringSaved}
-            onCancel={() => setShowScoringModal(false)}
-          />
-        </Modal>
+        <ScoringFormatCreatorPage
+          embedded
+          onSaved={onScoringSaved}
+          onCancel={() => setShowScoringModal(false)}
+        />
       )}
 
       {showRulesModal && (

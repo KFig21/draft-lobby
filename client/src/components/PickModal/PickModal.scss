@@ -1,9 +1,9 @@
 @use 'variables' as *;
 
 .pick-modal {
-  // Concentric "iOS" rounding: a 24px window, an 8px gutter, and the two framed
-  // components (pick metadata + comment box) rounded to 16px (24 − 8) —
-  // everything else lays flat on the window.
+  // Concentric "iOS" rounding: a $radius-window window, a $pm-gutter gutter, and
+  // the two framed components (pick metadata + comment box) rounded to
+  // $radius-card (window − gutter) — everything else lays flat on the window.
   $pm-gutter: $space;
 
   position: relative;
@@ -16,7 +16,7 @@
   padding: $pm-gutter;
   background: $bg-raised;
   border: 1px solid $border;
-  border-radius: 24px;
+  border-radius: $radius-window;
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
 
   // TV mode: scale the whole modal up, capping both dimensions to the viewport
@@ -35,15 +35,15 @@
   }
 
   // Pick metadata — the player header + "drafted / pick / auto / Roll back" —
-  // framed as one rounded card (16px, concentric with the 24px window). Fixed,
-  // never scrolls.
+  // framed as one rounded card ($radius-card, concentric with the window).
+  // Fixed, never scrolls.
   &__top {
     position: relative; // anchors the close button in the card's corner
     flex-shrink: 0;
     padding: $space * 2;
     background: $bg;
     border: 1px solid $border;
-    border-radius: 16px;
+    border-radius: $radius-card;
     z-index: 2;
   }
 
@@ -436,7 +436,7 @@
     padding: $space *1.25 $space * 1.25;
     margin-bottom: $space;
     border: 1px solid $border;
-    border-radius: 16px;
+    border-radius: $radius-card;
     background: $bg;
 
     &:last-child {
@@ -635,7 +635,7 @@
     padding: $space * 0.5 $space * 0.5 $space * 0.5 $space * 1.25;
     background: $bg;
     border: 1px solid $border;
-    border-radius: 16px;
+    border-radius: $radius-card;
 
     &:focus-within {
       border-color: $primary;
@@ -663,7 +663,7 @@
     height: 36px;
     flex-shrink: 0;
     border: none;
-    border-radius: 12px;
+    border-radius: $radius-card-tight;
     background: none;
     color: $primary;
     cursor: pointer;

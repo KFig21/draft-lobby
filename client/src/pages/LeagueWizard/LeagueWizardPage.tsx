@@ -13,9 +13,14 @@ import {
   LeagueSettingsFields,
   normalizeTiers,
 } from '../../components/LeagueSettingsFields/LeagueSettingsFields';
+import { Modal } from '../../components/Modal/Modal';
 import { getDefaultScoringChoice } from '../../lib/defaultScoring';
 import { supabase } from '../../supabase';
 import '../LobbyWizard/LobbyWizardPage.scss';
+
+// Associates the footer's Save button (rendered as a Modal footer sibling,
+// outside the <form>) with the form via the HTML `form` attribute.
+const EMBEDDED_FORM_ID = 'league-wizard-form';
 
 export interface SavedLeague {
   id: string;
@@ -111,7 +116,11 @@ export function LeagueWizardPage({ embedded = false, onSaved, onCancel }: Props 
   }
 
   const form = (
-    <form className="wizard__form" onSubmit={handleSubmit}>
+    <form
+      id={embedded ? EMBEDDED_FORM_ID : undefined}
+      className="wizard__form"
+      onSubmit={handleSubmit}
+    >
       <LeagueSettingsFields
         settings={settings}
         onChange={setSettings}
@@ -131,22 +140,46 @@ export function LeagueWizardPage({ embedded = false, onSaved, onCancel }: Props 
 
       {error && <p className="wizard__error">{error}</p>}
 
-      <div
-        className={`wizard__submit-row${embedded ? ' wizard__submit-row--embedded' : ''}`}
-      >
-        {embedded && onCancel && (
-          <button type="button" className="button" onClick={onCancel}>
-            Cancel
+      {/* Standalone page: Save lives in a sticky submit row. Embedded, it moves
+          to the Modal footer (below) so it reads like every other modal. */}
+      {!embedded && (
+        <div className="wizard__submit-row">
+          <button className="button button--primary" disabled={saving}>
+            {saving ? 'Saving…' : editId ? 'Save changes' : 'Save league'}
           </button>
-        )}
-        <button className="button button--primary" disabled={saving}>
-          {saving ? 'Saving…' : editId ? 'Save changes' : 'Save league'}
-        </button>
-      </div>
+        </div>
+      )}
     </form>
   );
 
-  if (embedded) return form;
+  if (embedded) {
+    return (
+      <Modal
+        title="Set up a league"
+        wide
+        onClose={() => onCancel?.()}
+        footer={
+          <div className="wizard__modal-actions">
+            {onCancel && (
+              <button type="button" className="button" onClick={onCancel}>
+                Cancel
+              </button>
+            )}
+            <button
+              type="submit"
+              form={EMBEDDED_FORM_ID}
+              className="button button--primary"
+              disabled={saving}
+            >
+              {saving ? 'Saving…' : 'Save league'}
+            </button>
+          </div>
+        }
+      >
+        {form}
+      </Modal>
+    );
+  }
 
   return (
     <main className="wizard">
