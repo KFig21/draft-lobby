@@ -46,7 +46,7 @@
     &--available {
       color: $primary;
 
-      :root[data-theme='dark'] & {
+      :root:not([data-theme='light']) & {
         color: $accent;
       }
     }
@@ -69,7 +69,7 @@
     cursor: pointer;
     font-size: 0.85rem;
 
-    :root[data-theme='dark'] & {
+    :root:not([data-theme='light']) & {
       color: $accent;
     }
 

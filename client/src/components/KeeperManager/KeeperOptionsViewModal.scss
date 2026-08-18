@@ -197,7 +197,7 @@
       color: $primary;
       background: $bg-overlay;
 
-      :root[data-theme='dark'] & {
+      :root:not([data-theme='light']) & {
         color: $accent;
       }
     }

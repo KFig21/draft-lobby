@@ -752,7 +752,7 @@ export function DraftChat({
                 <div className="chat__emoji-picker">
                   <Suspense fallback={<p className="muted">Loading emoji…</p>}>
                     <EmojiPicker
-                      theme={theme as Theme}
+                      theme={(theme === 'light' ? 'light' : 'dark') as Theme}
                       lazyLoadEmojis
                       width={320}
                       height={360}

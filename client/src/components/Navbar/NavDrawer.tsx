@@ -9,6 +9,7 @@ import NotificationsNoneOutlinedIcon from '@mui/icons-material/NotificationsNone
 import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import SportsFootballIcon from '@mui/icons-material/SportsFootball';
+import BedtimeIcon from '@mui/icons-material/Bedtime';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import type { SvgIconComponent } from '@mui/icons-material';
@@ -70,7 +71,12 @@ interface LiveDraft {
 export function NavDrawer({ open, onClose, extraItems, extraContent }: NavDrawerProps) {
   const { session, profile } = useAuth();
   const { unreadCount } = useNotifications();
-  const { theme, toggle } = useTheme();
+  const { theme, cycle } = useTheme();
+  const themeMeta = {
+    dark: { Icon: DarkModeIcon, label: 'Dark mode' },
+    night: { Icon: BedtimeIcon, label: 'Night mode' },
+    light: { Icon: LightModeIcon, label: 'Light mode' },
+  }[theme];
   const userId = session?.user.id;
   const username =
     profile?.username ??
@@ -205,14 +211,10 @@ export function NavDrawer({ open, onClose, extraItems, extraContent }: NavDrawer
         <button
           type="button"
           className="navbar-drawer__link navbar-drawer__theme"
-          onClick={toggle}
+          onClick={cycle}
         >
-          {theme === 'dark' ? (
-            <LightModeIcon fontSize="small" />
-          ) : (
-            <DarkModeIcon fontSize="small" />
-          )}
-          {theme === 'dark' ? 'Light mode' : 'Dark mode'}
+          <themeMeta.Icon fontSize="small" />
+          {themeMeta.label}
         </button>
       </div>
     </div>

@@ -21,7 +21,7 @@
       strong {
         color: $primary;
 
-        :root[data-theme='dark'] & {
+        :root:not([data-theme='light']) & {
           color: $accent;
         }
       }
@@ -57,7 +57,7 @@
     background: $primary;
     color: #fff;
 
-    :root[data-theme='dark'] & {
+    :root:not([data-theme='light']) & {
       background: $accent;
       color: #05231a;
     }

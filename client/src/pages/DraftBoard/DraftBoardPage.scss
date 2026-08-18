@@ -184,12 +184,12 @@
       // black in both themes (not tinted to match), so no need to
       // re-declare per urgency stage below. Light mode already matches
       // &__topbar-fill's own default, so only dark needs overriding here —
-      // and it needs the :root[data-theme='dark'] prefix to outrank that
+      // and it needs the :root:not([data-theme='light']) prefix to outrank that
       // same-specificity default rather than relying on which one happens
       // to come later in the file (the exact bug that bit the hover-border
       // and vertical-align fixes earlier: equal-specificity selectors let
       // source order silently decide the winner).
-      :root[data-theme='dark'] & .draft__topbar-fill {
+      :root:not([data-theme='light']) & .draft__topbar-fill {
         background: rgba(0, 0, 0, 0.1);
       }
     }
@@ -358,7 +358,7 @@
       .draft__complete {
         font-size: clamp(1.15rem, 2.2vw, 1.8rem);
 
-        :root[data-theme='dark'] & {
+        :root:not([data-theme='light']) & {
           color: $accent;
         }
 
@@ -420,7 +420,7 @@
     transition: width 1s linear;
     pointer-events: none;
 
-    :root[data-theme='dark'] & {
+    :root:not([data-theme='light']) & {
       background: rgba(255, 255, 255, 0.1);
     }
 
@@ -1297,7 +1297,7 @@
       color: $primary;
     }
 
-    :root[data-theme='dark'] & {
+    :root:not([data-theme='light']) & {
       color: $accent;
     }
   }
@@ -1374,7 +1374,7 @@
       color: $primary;
     }
 
-    :root[data-theme='dark'] & {
+    :root:not([data-theme='light']) & {
       background: rgba($accent, 0.14);
       color: $accent;
     }
@@ -1412,7 +1412,7 @@
       }
     }
 
-    :root[data-theme='dark'] & {
+    :root:not([data-theme='light']) & {
       background: $accent;
       color: black;
 
@@ -1442,7 +1442,7 @@
       }
     }
 
-    :root[data-theme='dark'] & {
+    :root:not([data-theme='light']) & {
       background: none;
       border: 1px solid $accent;
       color: $accent;
@@ -3368,7 +3368,7 @@
       }
     }
 
-    :root[data-theme='dark'] & {
+    :root:not([data-theme='light']) & {
       color: $accent;
 
       &::before,

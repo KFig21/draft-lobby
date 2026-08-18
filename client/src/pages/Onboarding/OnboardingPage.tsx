@@ -117,7 +117,7 @@ const TOUR: TourStep[] = [
 
 export function OnboardingPage() {
   const { session, profile, refreshProfile } = useAuth();
-  const { theme, toggle } = useTheme();
+  const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
   const userId = session?.user.id;
 
@@ -303,14 +303,21 @@ export function OnboardingPage() {
                 <button
                   type="button"
                   className={`segmented__opt${theme === 'dark' ? ' segmented__opt--on' : ''}`}
-                  onClick={() => theme !== 'dark' && toggle()}
+                  onClick={() => setTheme('dark')}
                 >
                   🌙 Dark
                 </button>
                 <button
                   type="button"
+                  className={`segmented__opt${theme === 'night' ? ' segmented__opt--on' : ''}`}
+                  onClick={() => setTheme('night')}
+                >
+                  🌑 Night
+                </button>
+                <button
+                  type="button"
                   className={`segmented__opt${theme === 'light' ? ' segmented__opt--on' : ''}`}
-                  onClick={() => theme !== 'light' && toggle()}
+                  onClick={() => setTheme('light')}
                 >
                   ☀️ Light
                 </button>

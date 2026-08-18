@@ -324,7 +324,7 @@
       color: $primary;
     }
 
-    :root[data-theme='dark'] & {
+    :root:not([data-theme='light']) & {
       color: $accent;
     }
 

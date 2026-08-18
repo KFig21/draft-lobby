@@ -22,7 +22,7 @@
     // Base (appearance/size/no-white circle, $primary dot) is the global
     // input[type='radio'] style; light mode uses that as-is. Dark mode swaps
     // the checked color to accent so it matches the selected label below.
-    :root[data-theme='dark'] & input[type='radio']:checked {
+    :root:not([data-theme='light']) & input[type='radio']:checked {
       border-color: $accent;
 
       &::before {
@@ -42,7 +42,7 @@
         color: $primary;
       }
 
-      :root[data-theme='dark'] & {
+      :root:not([data-theme='light']) & {
         color: $accent;
       }
     }

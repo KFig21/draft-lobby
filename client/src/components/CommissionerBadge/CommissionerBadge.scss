@@ -8,7 +8,7 @@
 
   // Dark mode leans on $accent for highlights (own-team row, owner/friend
   // chips), so the primary-teal shield clashes — match the accent there.
-  :root[data-theme='dark'] & {
+  :root:not([data-theme='light']) & {
     color: $accent;
   }
 

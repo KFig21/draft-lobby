@@ -653,7 +653,7 @@
     // `.draft-grid__cell--danger &` rule above so it wins regardless of
     // source order (see the light-mode override just above for the same
     // trick), and the icon picks it up for free via currentColor.
-    :root[data-theme='dark'] .draft-grid__cell--danger & {
+    :root:not([data-theme='light']) .draft-grid__cell--danger & {
       color: #fff;
     }
   }

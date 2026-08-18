@@ -78,7 +78,7 @@
 
     &.is-done {
       color: $primary;
-      :root[data-theme='dark'] & { color: $accent; }
+      :root:not([data-theme='light']) & { color: $accent; }
     }
   }
 
@@ -127,7 +127,7 @@
     &.is-current {
       border-color: $primary;
       box-shadow: 0 0 0 1px $primary;
-      :root[data-theme='dark'] & {
+      :root:not([data-theme='light']) & {
         border-color: $accent;
         box-shadow: 0 0 0 1px $accent;
       }
@@ -204,14 +204,14 @@
     background: color-mix(in srgb, $primary 8%, transparent);
     font-size: 0.9rem;
 
-    :root[data-theme='dark'] & {
+    :root:not([data-theme='light']) & {
       border-color: color-mix(in srgb, $accent 35%, transparent);
       background: color-mix(in srgb, $accent 10%, transparent);
     }
 
     > svg {
       color: $primary;
-      :root[data-theme='dark'] & { color: $accent; }
+      :root:not([data-theme='light']) & { color: $accent; }
     }
   }
 
@@ -252,7 +252,7 @@
     &.is-active {
       color: $primary;
       border-bottom-color: $primary;
-      :root[data-theme='dark'] & {
+      :root:not([data-theme='light']) & {
         color: $accent;
         border-bottom-color: $accent;
       }
@@ -269,7 +269,7 @@
     background: color-mix(in srgb, $primary 16%, transparent);
     color: $primary;
 
-    :root[data-theme='dark'] & {
+    :root:not([data-theme='light']) & {
       background: color-mix(in srgb, $accent 18%, transparent);
       color: $accent;
     }
@@ -403,7 +403,7 @@
     cursor: pointer;
     text-decoration: underline;
 
-    :root[data-theme='dark'] & { color: $accent; }
+    :root:not([data-theme='light']) & { color: $accent; }
   }
 
   &__bm-row {
@@ -431,7 +431,7 @@
     &:active { cursor: grabbing; }
     svg { font-size: 1rem; }
 
-    :root[data-theme='dark'] & {
+    :root:not([data-theme='light']) & {
       background: $accent;
       color: #08150f;
     }

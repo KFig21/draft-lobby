@@ -58,6 +58,21 @@
   --warning: #c9862b;
 }
 
+// Night: the dark palette on a true-black (OLED-friendly) base instead of the
+// deep navy. Only the surface tokens change; text, accents and status colors
+// inherit the dark :root above, and every `:root:not([data-theme='light'])`
+// override applies here too — so night is dark, just blacker.
+:root[data-theme='night'] {
+  color-scheme: dark;
+
+  --bg: #000000;
+  --bg-raised: #0e0f12;
+  --bg-overlay: #16171b;
+  --bg-hover: #202127;
+  --border: #292a31;
+  --cell-bg: #000000;
+}
+
 // ── Scrollbars (theme-aware via the CSS vars above) ──────────────────
 * {
   scrollbar-width: thin;
@@ -543,7 +558,7 @@ textarea {
       color: $primary-hover;
     }
 
-    :root[data-theme='dark'] & {
+    :root:not([data-theme='light']) & {
       background: rgba($accent, 0.25);
       color: $accent;
     }

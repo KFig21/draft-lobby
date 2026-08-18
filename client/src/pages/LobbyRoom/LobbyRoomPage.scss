@@ -168,7 +168,7 @@
     // modal's own icon class (always primary). Here in the lobby we want it to
     // follow the room's section-icon treatment instead: primary in light mode,
     // muted in dark — matching &__h2-icon, distinct from the modal.
-    :root[data-theme='dark'] & .rules-modal__h-icon {
+    :root:not([data-theme='light']) & .rules-modal__h-icon {
       color: $text-muted;
     }
   }
@@ -203,7 +203,7 @@
       color: $primary;
     }
 
-    :root[data-theme='dark'] & {
+    :root:not([data-theme='light']) & {
       color: $text-muted;
     }
   }
@@ -613,7 +613,7 @@
     // instead of a "you" chip. Accent (self/friend hue) on dark; primary on
     // light, matching the app's per-theme highlight convention.
     &--mine {
-      :root[data-theme='dark'] & {
+      :root:not([data-theme='light']) & {
         border-color: $accent;
         background: color-mix(in srgb, $accent 10%, $bg-raised);
       }
@@ -672,7 +672,7 @@
 
       // Dark mode leans on $accent everywhere (own-team highlight, friend
       // chips), so the primary-teal owner chip clashes — use accent here too.
-      :root[data-theme='dark'] & {
+      :root:not([data-theme='light']) & {
         background: rgba($accent, 0.15);
         color: $accent;
       }

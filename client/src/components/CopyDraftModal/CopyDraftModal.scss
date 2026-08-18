@@ -118,7 +118,7 @@
       background: $primary;
       color: #fff;
 
-      :root[data-theme='dark'] & {
+      :root:not([data-theme='light']) & {
         background: $accent;
         color: #05201b;
       }
@@ -155,7 +155,7 @@
       cursor: pointer;
       flex-shrink: 0;
 
-      :root[data-theme='dark'] & {
+      :root:not([data-theme='light']) & {
         accent-color: $accent;
       }
     }

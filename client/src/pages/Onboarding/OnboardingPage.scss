@@ -39,7 +39,7 @@
     &.is-done {
       background: $primary;
 
-      :root[data-theme='dark'] & {
+      :root:not([data-theme='light']) & {
         background: $accent;
       }
     }
@@ -98,7 +98,7 @@
     &--available {
       color: $primary;
 
-      :root[data-theme='dark'] & {
+      :root:not([data-theme='light']) & {
         color: $accent;
       }
     }
@@ -176,7 +176,7 @@
     color: $primary;
     background: color-mix(in srgb, $primary 12%, transparent);
 
-    :root[data-theme='dark'] & {
+    :root:not([data-theme='light']) & {
       color: $accent;
       background: color-mix(in srgb, $accent 14%, transparent);
     }
@@ -233,7 +233,7 @@
     border-radius: $radius-sm;
     background: color-mix(in srgb, $primary 8%, transparent);
 
-    :root[data-theme='dark'] & {
+    :root:not([data-theme='light']) & {
       border-color: color-mix(in srgb, $accent 35%, transparent);
       background: color-mix(in srgb, $accent 10%, transparent);
     }
@@ -244,7 +244,7 @@
     margin-top: 2px;
     color: $primary;
 
-    :root[data-theme='dark'] & {
+    :root:not([data-theme='light']) & {
       color: $accent;
     }
   }
@@ -269,7 +269,7 @@
     text-transform: uppercase;
     color: $primary;
 
-    :root[data-theme='dark'] & {
+    :root:not([data-theme='light']) & {
       color: $accent;
     }
   }

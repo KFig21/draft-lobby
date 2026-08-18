@@ -184,7 +184,9 @@ export function SettingsPage() {
         <div className="settings__row">
           <div className="settings__row-main">
             <span className="settings__row-name">Theme</span>
-            <span className="muted">{theme === 'dark' ? 'Dark' : 'Light'}</span>
+            <span className="muted">
+              {theme === 'night' ? 'Night' : theme === 'light' ? 'Light' : 'Dark'}
+            </span>
           </div>
           <ThemeToggle className="settings__icon" />
         </div>
