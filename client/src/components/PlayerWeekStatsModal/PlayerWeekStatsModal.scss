@@ -120,6 +120,13 @@
   &__body {
     min-height: 0;
     overflow-y: auto;
+    // Disable scroll anchoring: the sticky summary collapses/expands as it
+    // pins, and with anchoring on, the browser adjusts scrollTop to compensate
+    // for that height change — which fights an upward scroll and re-triggers the
+    // stuck IntersectionObserver, making the summary flicker between states on
+    // the way back up. Off, scrollTop stays put and the 0.24s transitions just
+    // slide the content smoothly in both directions.
+    overflow-anchor: none;
     // No top padding — the summary pins flush under the header when stuck. The
     // initial top gap is restored via the first child's margin (which scrolls
     // away). Side + bottom padding stay.
