@@ -346,6 +346,14 @@ export function DraftGrid({
                         canRollbackHere ? ' draft-grid__cell--rollbackable' : ''
                       }${commishClockAction ? ' draft-grid__cell--onclock-actionable' : ''}`}
                       onClick={cellAction}
+                      // Cross-highlight this empty slot's team header + round
+                      // cell too, the same as hovering a filled pick.
+                      onMouseEnter={() => setHover({ round, teamId: team.id })}
+                      onMouseLeave={() =>
+                        setHover((h) =>
+                          h && h.round === round && h.teamId === team.id ? null : h,
+                        )
+                      }
                       title={
                         commishClockAction
                           ? `Pick for ${team.name}`

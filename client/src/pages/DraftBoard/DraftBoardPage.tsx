@@ -1885,7 +1885,13 @@ export function DraftBoardPage() {
   const iAmSkipped = !isStaging && myOpen.some((o) => o !== myFrontierOverall);
   // I can pick if I own ANY open slot (on the clock OR skipped), or I'm a commish.
   const iOwnAnOpenSlot = !isStaging && myOpen.length > 0;
-  const canPick = !isStaging && !isComplete && !isPaused && (iOwnAnOpenSlot || isCommish);
+  // While paused only the commissioner may pick (to fill the current pick or a
+  // skipped slot by hand); everyone else is frozen out until it resumes.
+  const canPick =
+    !isStaging &&
+    !isComplete &&
+    (iOwnAnOpenSlot || isCommish) &&
+    (!isPaused || isCommish);
   // My earliest open slot's round — what a pick will fill next.
   const myNextOverall = myOpen.length ? myOpen[0] : null;
   const myNextRound = myNextOverall
@@ -3716,7 +3722,7 @@ export function DraftBoardPage() {
         <div className="draft__paused-banner">
           <span>
             The draft is paused
-            {isCommish ? '.' : ' by the commissioner.'}
+            {isCommish ? ' — you can still make picks.' : ' by the commissioner.'}
           </span>
           {lobby.paused_at && <PausedDuration since={lobby.paused_at} />}
         </div>

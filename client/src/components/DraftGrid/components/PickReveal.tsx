@@ -3,7 +3,8 @@ import type { ReactNode } from 'react';
 
 // The two-faced flip that turns a just-made pick's cell over. The front is the
 // announcement — a replica of the on-the-clock label (timer icon + "On the
-// clock") that fades out as "THE PICK IS IN" slides in from the left — and after
+// clock") that slides off to the right as "THE PICK IS IN" slides in from the
+// left — and after
 // a beat the whole card flips a full 180deg around the horizontal axis to land
 // on the back: the pick itself. Front and back are backface-hidden faces of one
 // preserve-3d card. While it plays, the host <td> hides its own border/fill (see

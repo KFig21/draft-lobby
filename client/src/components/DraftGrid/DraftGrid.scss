@@ -15,8 +15,9 @@
 
 // A newly-made pick is announced, then the cell turns over to show it. The
 // freshly-arrived cell renders as a two-faced flip card (.draft-grid__flip):
-// the front is the announcement (the on-the-clock cell's "On the clock" fades
-// out and "THE PICK IS IN" slides in from the left), the back is the pick.
+// the front is the announcement (the on-the-clock cell's "On the clock" slides
+// off to the right as "THE PICK IS IN" slides in from the left), the back is
+// the pick.
 // After a beat the card flips a full 180deg around the horizontal axis, landing
 // on the pick. DraftGrid drops the flip wrapper once it settles, leaving the
 // plain cell. The delay holds the flat announcement; the rotation is the flip.
@@ -31,15 +32,20 @@
   }
 }
 
-// Front-face step 1 — the old "On the clock" label fades away.
+// Front-face step 1 — the old "On the clock" label slides off to the right
+// (fading as it goes) while "THE PICK IS IN" slides in from the left, so the two
+// cross over. translateY keeps it vertically centred (the face centres its text
+// with a -50% Y offset).
 @keyframes draft-grid-announce-out {
 
   from {
     opacity: 1;
+    transform: translate(0, -50%);
   }
 
   to {
     opacity: 0;
+    transform: translate(120%, -50%);
   }
 }
 
@@ -266,6 +272,20 @@
     opacity: 0.5;
     font-variant-numeric: tabular-nums;
     pointer-events: none;
+
+    // Hovering an empty slot lifts its round.pick coordinate to full strength in
+    // the accent (mint on dark, primary teal on light) — matching the team +
+    // round cross-highlight that fires at the same time.
+    @media (hover: hover) {
+      .draft-grid__cell:hover & {
+        color: $accent;
+        opacity: 1;
+      }
+
+      :root[data-theme='light'] .draft-grid__cell:hover & {
+        color: $primary;
+      }
+    }
   }
 
   // Two-faced flip card that covers a just-made pick's cell (see @keyframes
@@ -340,13 +360,14 @@
   }
 
   // "On the clock" — the on-clock label itself (timer icon stacked over the
-  // words, same as the live cell), which simply fades out. Centred in the face.
+  // words, same as the live cell), which slides off to the right. Centred in the
+  // face; the slide (translateX) is layered on the -50% Y centring.
   &__flip-onclock {
     position: absolute;
     top: 50%;
     left: 0;
     right: 0;
-    transform: translateY(-50%);
+    transform: translate(0, -50%);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -355,7 +376,9 @@
     font-size: 0.65rem;
     line-height: 1.02;
     color: #fff;
-    animation: draft-grid-announce-out 0.35s ease both;
+    // Accelerate out (ease-in) as it exits right, mirroring the incoming label's
+    // decelerating arrival — they cross in the middle.
+    animation: draft-grid-announce-out 0.5s cubic-bezier(0.4, 0, 1, 1) both;
 
     :root[data-theme='light'] & {
       color: #05231a;
@@ -383,7 +406,9 @@
     text-align: center;
     text-transform: uppercase;
     color: #fff;
-    animation: draft-grid-announce-in 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) 0.4s both;
+    // Starts partway through the on-clock label's exit so the two cross over —
+    // one sliding out right as this slides in from the left.
+    animation: draft-grid-announce-in 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) 0.15s both;
 
     // Fullscreen ("TV mode"): grow with the board's measured --fs-scale, same as
     // the cell names, so the announcement reads big from across the room.

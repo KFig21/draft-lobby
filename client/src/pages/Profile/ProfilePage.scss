@@ -93,10 +93,19 @@
   }
 
   &__label {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
     font-size: 0.72rem;
     font-weight: 700;
     color: $text-muted;
     text-align: center;
+  }
+
+  // Slightly larger than the label text so the glyph reads clearly at this size.
+  &__icon {
+    font-size: 1.15rem;
+    flex-shrink: 0;
   }
 }
 

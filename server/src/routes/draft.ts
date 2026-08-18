@@ -1299,11 +1299,17 @@ draftRouter.post('/:id/pick', async (req: AuthedRequest, res: Response) => {
     res.status(404).json({ error: 'Lobby not found' });
     return;
   }
-  // PAUSED (and any non-active status) blocks all picking, skipped teams included.
-  if (lobby.status !== 'DRAFTING') {
+  const role = await getRole(lobbyId, userId);
+  const commish = isCommish(role);
+  // DRAFTING is the normal picking state. The commissioner may ALSO pick while
+  // PAUSED — filling the current pick (or a skipped slot) by hand without
+  // unfreezing the clock. Every other status, and every non-commish caller while
+  // paused, is blocked.
+  if (lobby.status !== 'DRAFTING' && !(lobby.status === 'PAUSED' && commish)) {
     res.status(409).json({ error: 'Draft is not active' });
     return;
   }
+  const paused = lobby.status === 'PAUSED';
 
   const settings = lobby.settings as LobbySettings;
   const frontier = lobby.current_overall as number;
@@ -1311,9 +1317,6 @@ draftRouter.post('/:id/pick', async (req: AuthedRequest, res: Response) => {
   // In end-game the frontier parks past the last slot (totalPicks + 1); clamp
   // so openSlots never walks past the board.
   const frontierClamped = Math.min(frontier, totalPicks);
-
-  const role = await getRole(lobbyId, userId);
-  const commish = isCommish(role);
 
   const { data: teamRows } = await supabaseAdmin
     .from('teams')
@@ -1446,6 +1449,21 @@ draftRouter.post('/:id/pick', async (req: AuthedRequest, res: Response) => {
       res.status(500).json({ error: result.message ?? 'Pick failed' });
     }
     return;
+  }
+
+  // A commissioner filling the CURRENT (frontier) pick while paused advanced the
+  // clock inside applyPick, which set a fresh live pick_deadline — but the draft
+  // is still frozen. Re-freeze: clear that deadline and the previous team's
+  // stored remainder so resume() computes a clean, full clock for the team now
+  // on the clock. A behind-frontier (skipped) pick never moves the clock, so
+  // there's nothing to fix; a pick that completed the draft already went
+  // COMPLETE. Guarded on status so a concurrent resume isn't clobbered.
+  if (paused && !result.complete && targetOverall === frontier) {
+    await supabaseAdmin
+      .from('lobbies')
+      .update({ pick_deadline: null, pick_deadline_remaining_ms: null })
+      .eq('id', lobbyId)
+      .eq('status', 'PAUSED');
   }
 
   res.json({ ok: true, overall: targetOverall, round, complete: result.complete });

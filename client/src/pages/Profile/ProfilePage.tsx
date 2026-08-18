@@ -8,8 +8,13 @@ import {
   type Position,
 } from '@draft-lobby/shared';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlined';
+import CheckCircleOutlinedIcon from '@mui/icons-material/CheckCircleOutlined';
 import EmojiEventsOutlinedIcon from '@mui/icons-material/EmojiEventsOutlined';
+import LayersOutlinedIcon from '@mui/icons-material/LayersOutlined';
+import SmartToyOutlinedIcon from '@mui/icons-material/SmartToyOutlined';
 import SportsFootballIcon from '@mui/icons-material/SportsFootball';
+import SportsFootballOutlinedIcon from '@mui/icons-material/SportsFootballOutlined';
+import TouchAppOutlinedIcon from '@mui/icons-material/TouchAppOutlined';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { Avatar } from '../../components/Avatar/Avatar';
@@ -335,23 +340,38 @@ function ProfileStatsBlock({ stats }: { stats: ProfileStats }) {
       <div className="profile-stats">
         <div className="profile-stat">
           <span className="profile-stat__value">{stats.totalDrafts}</span>
-          <span className="profile-stat__label">Drafts</span>
+          <span className="profile-stat__label">
+            <LayersOutlinedIcon className="profile-stat__icon" fontSize="inherit" />
+            Drafts
+          </span>
         </div>
         <div className="profile-stat">
           <span className="profile-stat__value">{stats.liveDrafts}</span>
-          <span className="profile-stat__label">🏈 Live</span>
+          <span className="profile-stat__label">
+            <SportsFootballOutlinedIcon className="profile-stat__icon" fontSize="inherit" />
+            Live
+          </span>
         </div>
         <div className="profile-stat">
           <span className="profile-stat__value">{stats.mockDrafts}</span>
-          <span className="profile-stat__label">🤖 Mock</span>
+          <span className="profile-stat__label">
+            <SmartToyOutlinedIcon className="profile-stat__icon" fontSize="inherit" />
+            Mock
+          </span>
         </div>
         <div className="profile-stat">
           <span className="profile-stat__value">{stats.completedDrafts}</span>
-          <span className="profile-stat__label">Completed</span>
+          <span className="profile-stat__label">
+            <CheckCircleOutlinedIcon className="profile-stat__icon" fontSize="inherit" />
+            Completed
+          </span>
         </div>
         <div className="profile-stat">
           <span className="profile-stat__value">{stats.totalPicks}</span>
-          <span className="profile-stat__label">Picks made</span>
+          <span className="profile-stat__label">
+            <TouchAppOutlinedIcon className="profile-stat__icon" fontSize="inherit" />
+            Picks made
+          </span>
         </div>
       </div>
 
