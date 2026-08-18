@@ -1494,6 +1494,32 @@
       zoom: var(--mobile-board-zoom, 1);
     }
 
+    // Equal-width team columns, same as fullscreen fill and the desktop
+    // dashboard — the base auto layout let a long team name stretch its column
+    // ~2x its neighbours. table-layout: fixed shares the width evenly; the
+    // corner/round column stays pinned narrow so the teams split the rest. Fills
+    // a wide screen, and scrolls horizontally once the per-team floor no longer
+    // fits (the common case on a phone). Excludes fullscreen fill, which has its
+    // own equal-column sizing (a tighter floor) in DraftGrid.scss.
+    .draft-grid:not(.draft-grid--fill) {
+      width: 100%;
+      table-layout: fixed;
+      min-width: calc(30px + var(--fs-cols, 12) * 120px);
+
+      .draft-grid__corner {
+        width: 30px;
+      }
+
+      .draft-grid__team {
+        width: auto;
+        max-width: none;
+      }
+
+      .draft-grid__cell {
+        width: auto;
+      }
+    }
+
     // The Power Rankings board owns its own panel padding and draws full-height
     // dividers between its columns, so drop the board padding that would inset
     // it and keep those borders from reaching the edges.
