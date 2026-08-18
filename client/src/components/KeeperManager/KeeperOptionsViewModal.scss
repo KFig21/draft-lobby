@@ -4,20 +4,69 @@
 // OwnerKeepersModal/KeeperManagerModal, but sized for a grid of teams rather
 // than one team's picker (see &--single for the roster-tab, one-team case).
 .keeper-view {
+  // Concentric "iOS" rounding (see Modal.scss): a $radius-window window; the
+  // header + filter footer are framed $radius-card cards inset by a $space
+  // margin, and the flat grid body is pulled -$space to butt flush against them.
   position: relative;
   display: flex;
   flex-direction: column;
   width: min(880px, 94vw);
   max-height: 90dvh;
-  overflow-y: auto;
-  padding: $space * 3;
+  overflow: hidden;
   background: $bg-raised;
   border: 1px solid $border;
-  border-radius: $radius;
+  border-radius: $radius-window;
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
 
   &--single {
     width: min(420px, 94vw);
+  }
+
+  // Framed title bar — title on the left, the commissioner "Select keepers"
+  // toggle (when offered) and the close button on the right.
+  &__header {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: $space;
+    margin: $space;
+    padding: $space * 1.25 $space * 1.5;
+    background: $bg;
+    border: 1px solid $border;
+    border-radius: $radius-card;
+  }
+
+  // Everything between header and footer scrolls; lays flat on the window. The
+  // -$space top cancels the header's $space bottom margin so they butt flush;
+  // $space sides align with the framed cards; $space bottom is the gutter for
+  // the no-footer (single) case (overridden flush when a footer follows).
+  &__body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: $space;
+    margin: -$space $space $space;
+    padding: $space * 1 $space * 1.5;
+
+    &:has(~ .keeper-view__footer) {
+      margin-bottom: -$space;
+    }
+  }
+
+  // Framed bar pinned below the scroll area — the position filters (multi view)
+  // or the commissioner "Select keepers" toggle (single view). Flex-centered so
+  // its contents sit centered in the bar.
+  &__footer {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    margin: $space;
+    padding: $space $space * 1.25;
+    background: $bg;
+    border: 1px solid $border;
+    border-radius: $radius-card;
   }
 
   &__backdrop {
@@ -36,17 +85,18 @@
     background: rgba(0, 0, 0, 0.6);
   }
 
+  // Close button — sits at the far right of the framed header; no background
+  // (matches the shared Modal's close).
   &__close {
-    position: absolute;
-    top: $space * 1.5;
-    right: $space * 1.5;
+    flex-shrink: 0;
+    margin-left: auto;
     display: grid;
     place-items: center;
     width: 32px;
     height: 32px;
     border: none;
     border-radius: $radius-sm;
-    background: $bg-overlay;
+    background: none;
     color: $text-muted;
     cursor: pointer;
 
@@ -55,17 +105,19 @@
     }
   }
 
+  // Natural width so the "Select keepers" toggle sits right beside it (the
+  // close button's margin-left:auto pushes itself to the far right).
   &__title {
+    min-width: 0;
     display: flex;
     align-items: center;
     gap: $space * 0.6;
-    margin: 0 0 $space * 0.5;
-    padding-right: $space * 3;
+    margin: 0;
     font-size: 1.2rem;
   }
 
   &__intro {
-    margin: 0 0 $space;
+    margin: 0;
     color: $text-muted;
     font-size: 0.88rem;
   }
@@ -78,7 +130,6 @@
     flex-wrap: wrap;
     align-items: center;
     gap: $space * 0.5;
-    margin-bottom: $space * 1.5;
   }
 
   &__pill {
@@ -274,16 +325,10 @@
     }
   }
 
-  // Commissioner "Select keepers" toggle bar under the title.
-  &__selectbar {
-    display: flex;
-    align-items: center;
-    gap: $space;
-    flex-wrap: wrap;
-    margin-bottom: $space;
-  }
-
+  // Commissioner "Select keepers" toggle — lives in the header, right of the
+  // title (before the close button).
   &__selecttoggle {
+    flex-shrink: 0;
     display: inline-flex;
     align-items: center;
     gap: $space * 0.6;

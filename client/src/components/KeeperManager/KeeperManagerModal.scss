@@ -4,16 +4,18 @@
 // $keeper (variables.scss) is shared with the board's keeper cell outline so the
 // modal and the cells it creates read as the same feature.
 .keeper-modal {
+  // Concentric "iOS" rounding (see Modal.scss): a $radius-window window; the
+  // title is a framed $radius-card header inset by a $space margin, and the
+  // body is pulled -$space at the top to butt flush against it.
   position: relative;
   display: flex;
   flex-direction: column;
   width: min(560px, 94vw);
   max-height: 90dvh;
-  overflow-y: auto;
-  padding: $space * 3;
+  overflow: hidden;
   background: $bg-raised;
   border: 1px solid $border;
-  border-radius: $radius;
+  border-radius: $radius-window;
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
 
   &__backdrop {
@@ -26,17 +28,39 @@
     background: rgba(0, 0, 0, 0.6);
   }
 
+  &__header {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: $space;
+    margin: $space;
+    padding: $space * 1.25 $space * 1.5;
+    background: $bg;
+    border: 1px solid $border;
+    border-radius: $radius-card;
+  }
+
+  // Everything below the title scrolls, laying flat on the window. -$space top
+  // butts it flush against the header; $space sides + bottom keep the gutter
+  // (there's no footer here).
+  &__body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    margin: -$space $space 0 $space;
+    padding: $space * 1 $space * 1.5 $space * 2;
+  }
+
   &__close {
-    position: absolute;
-    top: $space * 1.5;
-    right: $space * 1.5;
+    flex-shrink: 0;
+    margin-left: auto;
     display: grid;
     place-items: center;
     width: 32px;
     height: 32px;
     border: none;
     border-radius: $radius-sm;
-    background: $bg-overlay;
+    background: none;
     color: $text-muted;
     cursor: pointer;
 
@@ -48,10 +72,12 @@
   }
 
   &__title {
+    flex: 1;
+    min-width: 0;
     display: flex;
     align-items: center;
     gap: $space * 0.5;
-    margin: 0 0 $space * 0.5;
+    margin: 0;
     font-size: 1.2rem;
   }
 
@@ -770,11 +796,17 @@
   }
 
   // Add-keeper form: team + player + round + button, wrapping on narrow widths.
+  // Manual "Add one" form — framed as a single input card so the Team / Player
+  // / Round fields + Add button read as one cohesive panel rather than loose
+  // controls on the flat body.
   &__form {
     display: flex;
     flex-wrap: wrap;
     align-items: flex-end;
     gap: $space;
+    padding: $space * 1.25;
+    border: 1px solid $border;
+    border-radius: $radius-card;
   }
 
   &__field {
@@ -901,7 +933,9 @@
     }
   }
 
+  // Full-width row of its own inside the framed form card.
   &__add {
+    flex: 1 1 100%;
     white-space: nowrap;
   }
 

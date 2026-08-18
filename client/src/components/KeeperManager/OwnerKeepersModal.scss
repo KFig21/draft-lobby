@@ -1,16 +1,19 @@
 @use 'variables' as *;
 
 .owner-keepers {
+  // Concentric "iOS" rounding (see Modal.scss): a $radius-window window; the
+  // title is a framed $radius-card header and the Done button a framed footer,
+  // each inset by a $space margin; the option list is pulled -$space top and
+  // bottom to butt flush against them.
   position: relative;
   display: flex;
   flex-direction: column;
   width: min(460px, 94vw);
   max-height: 90dvh;
-  overflow-y: auto;
-  padding: $space * 3;
+  overflow: hidden;
   background: $bg-raised;
   border: 1px solid $border;
-  border-radius: $radius;
+  border-radius: $radius-window;
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
 
   &__backdrop {
@@ -23,17 +26,51 @@
     background: rgba(0, 0, 0, 0.6);
   }
 
+  &__header {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: $space;
+    margin: $space;
+    padding: $space * 1.25 $space * 1.5;
+    background: $bg;
+    border: 1px solid $border;
+    border-radius: $radius-card;
+  }
+
+  // The option list scrolls, laying flat on the window and pulled -$space top
+  // and bottom so it butts flush against the framed header and footer.
+  &__body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: $space;
+    margin: -$space $space;
+    padding: $space * 1 $space * 1.5;
+  }
+
+  &__footer {
+    flex-shrink: 0;
+    display: flex;
+    margin: $space;
+    padding: $space $space * 1.25;
+    background: $bg;
+    border: 1px solid $border;
+    border-radius: $radius-card;
+  }
+
   &__close {
-    position: absolute;
-    top: $space * 1.5;
-    right: $space * 1.5;
+    flex-shrink: 0;
+    margin-left: auto;
     display: grid;
     place-items: center;
     width: 32px;
     height: 32px;
     border: none;
     border-radius: $radius-sm;
-    background: $bg-overlay;
+    background: none;
     color: $text-muted;
     cursor: pointer;
 
@@ -43,28 +80,29 @@
   }
 
   &__title {
+    flex: 1;
+    min-width: 0;
     display: flex;
     align-items: center;
     gap: $space * 0.5;
-    margin: 0 0 $space * 0.5;
+    margin: 0;
     font-size: 1.2rem;
   }
 
   &__intro {
-    margin: 0 0 $space;
+    margin: 0;
     color: $text-muted;
     font-size: 0.88rem;
   }
 
   &__status {
-    margin-bottom: $space;
     font-size: 0.8rem;
     font-weight: 800;
     color: $keeper;
   }
 
   &__error {
-    margin: 0 0 $space;
+    margin: 0;
     color: $danger;
     font-size: 0.85rem;
   }
@@ -73,7 +111,7 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    margin: 0 0 $space;
+    margin: 0;
     padding: $space * 0.75 $space;
     border: 1px solid color-mix(in srgb, $keeper 45%, transparent);
     border-radius: $radius-sm;
@@ -199,6 +237,6 @@
   }
 
   &__done {
-    margin-top: $space * 2;
+    flex: 1;
   }
 }

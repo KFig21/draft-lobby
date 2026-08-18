@@ -516,13 +516,16 @@ export function KeeperManagerModal({
         aria-modal="true"
         aria-label="Manage keepers"
       >
-        <button className="keeper-modal__close" aria-label="Close" onClick={requestClose}>
-          <CloseIcon fontSize="small" />
-        </button>
+        <header className="keeper-modal__header">
+          <h2 className="keeper-modal__title">
+            <LockOutlinedIcon fontSize="small" /> Edit keepers
+          </h2>
+          <button className="keeper-modal__close" aria-label="Close" onClick={requestClose}>
+            <CloseIcon fontSize="small" />
+          </button>
+        </header>
 
-        <h2 className="keeper-modal__title">
-          <LockOutlinedIcon fontSize="small" /> Keepers
-        </h2>
+        <div className="keeper-modal__body">
         <p className="keeper-modal__intro">
           Each keeper costs a team its pick in a chosen round, and appears on the board right away.
         </p>
@@ -996,6 +999,7 @@ export function KeeperManagerModal({
             </div>
           </>
         )}
+        </div>
       </div>
     </div>
   );

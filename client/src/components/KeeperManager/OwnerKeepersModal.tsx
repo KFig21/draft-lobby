@@ -101,34 +101,37 @@ export function OwnerKeepersModal({ lobbyId, team, options, players, locked, onC
         aria-modal="true"
         aria-label="Choose your keepers"
       >
-        <button className="owner-keepers__close" aria-label="Close" onClick={requestClose}>
-          <CloseIcon fontSize="small" />
-        </button>
+        <header className="owner-keepers__header">
+          <h2 className="owner-keepers__title">
+            <LockOutlinedIcon fontSize="small" /> Choose your keepers
+          </h2>
+          <button className="owner-keepers__close" aria-label="Close" onClick={requestClose}>
+            <CloseIcon fontSize="small" />
+          </button>
+        </header>
 
-        <h2 className="owner-keepers__title">
-          <LockOutlinedIcon fontSize="small" /> Choose your keepers
-        </h2>
-        <p className="owner-keepers__intro">
-          Keep up to <strong>{team.keeper_count}</strong> from last year. Each costs your pick in
-          the round shown — or keep no one and draft every round.
-        </p>
-
-        <div className="owner-keepers__status">
-          <span>
-            {chosen} of {team.keeper_count} kept
-          </span>
-        </div>
-
-        {locked && (
-          <p className="owner-keepers__locked">
-            <LockOutlinedIcon fontSize="inherit" /> The commissioner has locked keeper selections
-            — ask them if something needs to change.
+        <div className="owner-keepers__body">
+          <p className="owner-keepers__intro">
+            Keep up to <strong>{team.keeper_count}</strong> from last year. Each costs your pick in
+            the round shown — or keep no one and draft every round.
           </p>
-        )}
 
-        {error && <p className="owner-keepers__error">{error}</p>}
+          <div className="owner-keepers__status">
+            <span>
+              {chosen} of {team.keeper_count} kept
+            </span>
+          </div>
 
-        <div className="owner-keepers__list">
+          {locked && (
+            <p className="owner-keepers__locked">
+              <LockOutlinedIcon fontSize="inherit" /> The commissioner has locked keeper selections
+              — ask them if something needs to change.
+            </p>
+          )}
+
+          {error && <p className="owner-keepers__error">{error}</p>}
+
+          <div className="owner-keepers__list">
           {sorted.length === 0 ? (
             <p className="owner-keepers__empty">You have no keeper options.</p>
           ) : (
@@ -177,14 +180,17 @@ export function OwnerKeepersModal({ lobbyId, team, options, players, locked, onC
                   </span>
                   <span className="owner-keepers__round">Round {o.round}</span>
                 </button>
-              );
-            })
-          )}
+                );
+              })
+            )}
+          </div>
         </div>
 
-        <button className="button button--primary owner-keepers__done" onClick={requestClose}>
-          Done
-        </button>
+        <footer className="owner-keepers__footer">
+          <button className="button button--primary owner-keepers__done" onClick={requestClose}>
+            Done
+          </button>
+        </footer>
       </div>
     </div>
   );

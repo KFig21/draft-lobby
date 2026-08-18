@@ -170,29 +170,25 @@ export function KeeperOptionsViewModal({
         aria-modal="true"
         aria-label={single ? `${shownTeams[0]?.name ?? 'Team'}'s keepers` : 'All keeper candidates'}
       >
-        <button className="keeper-view__close" aria-label="Close" onClick={requestClose}>
-          <CloseIcon fontSize="small" />
-        </button>
-
-        <h2 className="keeper-view__title">
-          {single && shownTeams[0] && (
-            <Avatar avatar={avatarForTeam(shownTeams[0], members)} size={22} />
-          )}
-          {single ? `${shownTeams[0]?.name ?? 'Team'}’s keepers` : 'Keeper candidates'}
-          {single && onEditTeam && shownTeams[0] && (
-            <button
-              type="button"
-              className="keeper-view__edit-btn"
-              onClick={() => onEditTeam(shownTeams[0].id)}
-              aria-label={`Edit ${shownTeams[0].name}'s keepers`}
-              title="Edit this team's keepers"
-            >
-              <EditOutlinedIcon fontSize="inherit" />
-            </button>
-          )}
-        </h2>
-        {selectable && (
-          <div className="keeper-view__selectbar">
+        <header className="keeper-view__header">
+          <h2 className="keeper-view__title">
+            {single && shownTeams[0] && (
+              <Avatar avatar={avatarForTeam(shownTeams[0], members)} size={22} />
+            )}
+            {single ? `${shownTeams[0]?.name ?? 'Team'}’s keepers` : 'Keeper candidates'}
+            {single && onEditTeam && shownTeams[0] && (
+              <button
+                type="button"
+                className="keeper-view__edit-btn"
+                onClick={() => onEditTeam(shownTeams[0].id)}
+                aria-label={`Edit ${shownTeams[0].name}'s keepers`}
+                title="Edit this team's keepers"
+              >
+                <EditOutlinedIcon fontSize="inherit" />
+              </button>
+            )}
+          </h2>
+          {!single && selectable && (
             <label className="keeper-view__selecttoggle">
               <ToggleSwitch
                 label="Select keepers"
@@ -204,45 +200,26 @@ export function KeeperOptionsViewModal({
               />
               <span>Select keepers</span>
             </label>
-            {selectMode && (
-              <span className="keeper-view__selecthint">
-                Click a candidate to keep or unkeep it for its team.
-              </span>
-            )}
-            {selectError && <span className="keeper-view__selecterror">{selectError}</span>}
-          </div>
-        )}
-        {!single && (
-          <>
+          )}
+          <button className="keeper-view__close" aria-label="Close" onClick={requestClose}>
+            <CloseIcon fontSize="small" />
+          </button>
+        </header>
+
+        <div className="keeper-view__body">
+          {!single && (
             <p className="keeper-view__intro">
               Every team’s offered keepers — highlighted ones are locked in.
             </p>
-            <div className="keeper-view__posfilter">
-              {POSITIONS.filter((pos) => draftable.has(pos)).map((pos) => (
-                <button
-                  key={pos}
-                  type="button"
-                  className={`keeper-view__pill${posFilter.has(pos) ? ' is-active' : ''}`}
-                  style={posFilter.has(pos) ? { background: POSITION_COLORS[pos] } : undefined}
-                  onClick={() => togglePos(pos)}
-                >
-                  {pos}
-                </button>
-              ))}
-              {posFilter.size > 0 && (
-                <button
-                  type="button"
-                  className="keeper-view__pill-clear"
-                  onClick={() => setPosFilter(new Set())}
-                >
-                  Clear
-                </button>
-              )}
-            </div>
-          </>
-        )}
+          )}
+          {selectable && selectMode && (
+            <p className="keeper-view__selecthint">
+              Click a candidate to keep or unkeep it for its team.
+            </p>
+          )}
+          {selectError && <p className="keeper-view__selecterror">{selectError}</p>}
 
-        <div className={`keeper-view__grid${single ? ' keeper-view__grid--single' : ''}`}>
+          <div className={`keeper-view__grid${single ? ' keeper-view__grid--single' : ''}`}>
           {shownTeams.map((t) => {
             const allOpts = optionsByTeam.get(t.id) ?? [];
             const opts =
@@ -368,7 +345,53 @@ export function KeeperOptionsViewModal({
               </div>
             );
           })}
+          </div>
         </div>
+
+        {!single && (
+          <footer className="keeper-view__footer">
+            <div className="keeper-view__posfilter">
+              {POSITIONS.filter((pos) => draftable.has(pos)).map((pos) => (
+                <button
+                  key={pos}
+                  type="button"
+                  className={`keeper-view__pill${posFilter.has(pos) ? ' is-active' : ''}`}
+                  style={posFilter.has(pos) ? { background: POSITION_COLORS[pos] } : undefined}
+                  onClick={() => togglePos(pos)}
+                >
+                  {pos}
+                </button>
+              ))}
+              {posFilter.size > 0 && (
+                <button
+                  type="button"
+                  className="keeper-view__pill-clear"
+                  onClick={() => setPosFilter(new Set())}
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+          </footer>
+        )}
+
+        {/* Single-team (roster tab) view: the commissioner's "Select keepers"
+            toggle lives in a footer here rather than the header. */}
+        {single && selectable && (
+          <footer className="keeper-view__footer">
+            <label className="keeper-view__selecttoggle">
+              <ToggleSwitch
+                label="Select keepers"
+                checked={selectMode}
+                onChange={(v) => {
+                  setSelectMode(v);
+                  setSelectError(null);
+                }}
+              />
+              <span>Select keepers</span>
+            </label>
+          </footer>
+        )}
       </div>
     </div>
   );
