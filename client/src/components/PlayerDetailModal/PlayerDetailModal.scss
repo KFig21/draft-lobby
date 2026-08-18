@@ -1,10 +1,10 @@
 @use 'variables' as *;
 
 // Same concentric-rounded shell as .pick-modal (PickModal.scss) — the player
-// metadata is one framed 18px card, the stats lay flat on the 24px window, and
+// metadata is one framed 16px card, the stats lay flat on the 24px window, and
 // (when draftable) the Draft button is pinned below.
 .player-detail {
-  $pd-gutter: $space * 0.75;
+  $pd-gutter: $space;
 
   position: relative;
   display: flex;
@@ -27,13 +27,13 @@
     max-width: calc(94vw / var(--tv-zoom, 1.35));
   }
 
-  // Player metadata — framed rounded card (18px, concentric with the window).
+  // Player metadata — framed rounded card (16px, concentric with the window).
   &__top {
     flex-shrink: 0;
     padding: $space * 2;
     background: $bg;
     border: 1px solid $border;
-    border-radius: 18px;
+    border-radius: 16px;
   }
 
   // Stats lay flat and are the only part that scrolls; same negative-margin +

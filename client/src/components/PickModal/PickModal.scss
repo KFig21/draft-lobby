@@ -1,10 +1,10 @@
 @use 'variables' as *;
 
 .pick-modal {
-  // Concentric "iOS" rounding: a 24px window, a 6px gutter, and the two framed
-  // components (pick metadata + comment box) rounded to 18px (24 − 6) —
+  // Concentric "iOS" rounding: a 24px window, an 8px gutter, and the two framed
+  // components (pick metadata + comment box) rounded to 16px (24 − 8) —
   // everything else lays flat on the window.
-  $pm-gutter: $space * 0.75;
+  $pm-gutter: $space;
 
   position: relative;
   display: flex;
@@ -35,14 +35,14 @@
   }
 
   // Pick metadata — the player header + "drafted / pick / auto / Roll back" —
-  // framed as one rounded card (18px, concentric with the 24px window). Fixed,
+  // framed as one rounded card (16px, concentric with the 24px window). Fixed,
   // never scrolls.
   &__top {
     flex-shrink: 0;
     padding: $space * 2;
     background: $bg;
     border: 1px solid $border;
-    border-radius: 18px;
+    border-radius: 16px;
   }
 
   // Stats + reactions + comments — lays flat on the window (no card), and is the
@@ -429,7 +429,7 @@
     padding: $space *1.25 $space * 1.25;
     margin-bottom: $space;
     border: 1px solid $border;
-    border-radius: 18px;
+    border-radius: 16px;
     background: $bg;
 
     &:last-child {
@@ -628,7 +628,7 @@
     padding: $space * 0.5 $space * 0.5 $space * 0.5 $space * 1.25;
     background: $bg;
     border: 1px solid $border;
-    border-radius: 18px;
+    border-radius: 16px;
 
     &:focus-within {
       border-color: $primary;
@@ -656,7 +656,7 @@
     height: 36px;
     flex-shrink: 0;
     border: none;
-    border-radius: 14px;
+    border-radius: 12px;
     background: none;
     color: $primary;
     cursor: pointer;
