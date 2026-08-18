@@ -185,12 +185,11 @@ export function PickModal({
         role="dialog"
         aria-label={`${player.name} pick details`}
       >
-        <button className="pick-modal__close" aria-label="Close" onClick={requestClose}>
-          <CloseIcon fontSize="small" />
-        </button>
-
         {/* Player data + pick data stay pinned; everything else scrolls. */}
         <div className="pick-modal__top">
+          <button className="pick-modal__close" aria-label="Close" onClick={requestClose}>
+            <CloseIcon fontSize="small" />
+          </button>
           <PlayerHeader
             player={player}
             isKeeper={pick.is_keeper}

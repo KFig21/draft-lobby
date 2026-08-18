@@ -104,13 +104,12 @@ export function PlayerDetailModal({
         role="dialog"
         aria-label={`${player.name} details`}
       >
-        <button className="player-detail__close" aria-label="Close" onClick={requestClose}>
-          <CloseIcon fontSize="small" />
-        </button>
-
         {/* Player metadata — framed as one rounded card (concentric with the
             window), like PickModal's pinned header. */}
         <div className="player-detail__top">
+          <button className="player-detail__close" aria-label="Close" onClick={requestClose}>
+            <CloseIcon fontSize="small" />
+          </button>
           <PlayerHeader player={player} action={headerAction} byeClashCounts={byeClashCounts} />
         </div>
 

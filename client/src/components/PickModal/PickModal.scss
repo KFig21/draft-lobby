@@ -38,6 +38,7 @@
   // framed as one rounded card (16px, concentric with the 24px window). Fixed,
   // never scrolls.
   &__top {
+    position: relative; // anchors the close button in the card's corner
     flex-shrink: 0;
     padding: $space * 2;
     background: $bg;
@@ -87,8 +88,11 @@
 
   &__close {
     position: absolute;
-    top: $space * 2.25;
-    right: $space * 2.25;
+    top: $space * 1;
+    right: $space * 1;
+    // Above the metadata card (&__top, z-index: 2) — otherwise the card, which
+    // overlaps this corner, paints over the button and hides it.
+    z-index: 3;
     display: grid;
     place-items: center;
     width: 32px;

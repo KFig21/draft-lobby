@@ -29,6 +29,7 @@
 
   // Player metadata — framed rounded card (16px, concentric with the window).
   &__top {
+    position: relative; // anchors the close button in the card's corner
     flex-shrink: 0;
     padding: $space * 2;
     background: $bg;
@@ -72,10 +73,11 @@
     background: rgba(0, 0, 0, 0.6);
   }
 
+  // Sits in the metadata card's top-right corner (a child of &__top now).
   &__close {
     position: absolute;
-    top: $space * 2.25;
-    right: $space * 2.25;
+    top: $space * 2;
+    right: $space * 2;
     display: grid;
     place-items: center;
     width: 32px;
