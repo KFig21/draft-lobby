@@ -350,17 +350,10 @@ export function PlayerStatGrid({ player, weekStats }: Props) {
         />
       </div>
 
-      {/* ── Stats: a fantasy-pts-by-week sparkline that opens the weekly
-          breakdown (or a plain header when there's no weekly data). The
-          2025/Proj column labels ride on each section-header row below. ── */}
-      {weekStats ? (
-        <WeeklySparkCard
-          player={player}
-          season={weekStats.season}
-          scoring={weekStats.scoring}
-          onOpen={() => setShowWeek(true)}
-        />
-      ) : (
+      {/* ── Stats table. The 2025/Proj column labels ride on each section-header
+          row. A plain "Stats" header sits above only when there's no weekly
+          sparkline to introduce it (see below). ── */}
+      {!weekStats && (
         <div className="player-stat-block__stats-head">
           <span className="player-stat-block__section-label">Stats</span>
         </div>
@@ -419,6 +412,17 @@ export function PlayerStatGrid({ player, weekStats }: Props) {
             </div>
           )}
         </div>
+      )}
+
+      {/* ── Prior-season weekly points: a sparkline that opens the full
+          week-by-week breakdown, now sitting below the stats table. ── */}
+      {weekStats && (
+        <WeeklySparkCard
+          player={player}
+          season={weekStats.season}
+          scoring={weekStats.scoring}
+          onOpen={() => setShowWeek(true)}
+        />
       )}
 
       {showWeek && weekStats && (
