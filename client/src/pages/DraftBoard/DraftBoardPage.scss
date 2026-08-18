@@ -477,7 +477,11 @@
 
     @include hover-only {
       &:hover {
-        opacity: 0.8;
+        color: $accent;
+      }
+
+      :root[data-theme='light'] &:hover {
+        color: $primary;
       }
     }
 

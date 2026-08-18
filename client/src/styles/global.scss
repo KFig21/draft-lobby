@@ -65,12 +65,12 @@
 :root[data-theme='night'] {
   color-scheme: dark;
 
-  --bg: #000000;
-  --bg-raised: #0e0f12;
+  --bg: #070707;
+  --bg-raised: #111114;
   --bg-overlay: #16171b;
   --bg-hover: #202127;
   --border: #292a31;
-  --cell-bg: #000000;
+  --cell-bg: #070707;
 }
 
 // ── Scrollbars (theme-aware via the CSS vars above) ──────────────────
