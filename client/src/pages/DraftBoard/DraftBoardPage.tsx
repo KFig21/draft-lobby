@@ -69,6 +69,7 @@ import UndoIcon from '@mui/icons-material/Undo';
 import type { SvgIconComponent } from '@mui/icons-material';
 import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
+  Link,
   Navigate,
   useLocation,
   useNavigate,
@@ -3401,8 +3402,12 @@ export function DraftBoardPage() {
           />
         )}
         <div className="draft__left">
-          {/* Home + Room moved into the Tools (☰) drawer on desktop/fullscreen
-              to declutter the top bar; mobile reaches them via its own nav. */}
+          {/* Brand logo, top-left — links home. Desktop/fullscreen only (mobile
+              reaches home via its own nav). Home + Room live in the Tools (☰)
+              drawer. */}
+          <Link to="/home" className="draft__brand" title="Draft Lobby — home" aria-label="Home">
+            <SportsFootballIcon fontSize="small" />
+          </Link>
           {isComplete && (
             <div className="draft__viewtoggle" role="group" aria-label="Center view">
               <button

@@ -117,6 +117,11 @@ type Item =
       comment: string;
     };
 
+// How long a just-made pick is withheld from the feed so its "TEAM drafted
+// Player" line doesn't spoil the board's flip reveal before it lands. Roughly
+// the board flip's hold + turn (see --flip-hold/--flip-turn in DraftGrid.scss).
+const PICK_REVEAL_DELAY_MS = 3700;
+
 export function DraftChat({
   lobbyId,
   status,
@@ -157,6 +162,37 @@ export function DraftChat({
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Withhold a just-drafted pick from the feed for a beat so its line doesn't
+  // beat the board's flip reveal. Only genuinely fresh picks (a recent
+  // picked_at we haven't processed yet) are held — the backlog present on load,
+  // and old picks, show immediately. Matches the board flip's timing.
+  const [heldPickIds, setHeldPickIds] = useState<Set<string>>(new Set());
+  const processedPickIds = useRef<Set<string>>(new Set());
+  const revealTimers = useRef<number[]>([]);
+  useEffect(() => () => revealTimers.current.forEach(clearTimeout), []);
+  useEffect(() => {
+    const now = Date.now();
+    const toHold: string[] = [];
+    for (const p of picks) {
+      if (processedPickIds.current.has(p.id)) continue;
+      processedPickIds.current.add(p.id);
+      const age = now - new Date(p.picked_at).getTime();
+      if (age >= PICK_REVEAL_DELAY_MS) continue; // backlog / already revealed
+      toHold.push(p.id);
+      const remaining = Math.max(300, PICK_REVEAL_DELAY_MS - Math.max(0, age));
+      revealTimers.current.push(
+        window.setTimeout(() => {
+          setHeldPickIds((prev) => {
+            const next = new Set(prev);
+            next.delete(p.id);
+            return next;
+          });
+        }, remaining),
+      );
+    }
+    if (toHold.length) setHeldPickIds((prev) => new Set([...prev, ...toHold]));
+  }, [picks]);
   const composeRef = useRef<HTMLInputElement>(null);
   const emojiRef = useRef<HTMLDivElement>(null);
   const atBottomRef = useRef(true);
@@ -272,7 +308,10 @@ export function DraftChat({
             },
       );
     }
-    for (const p of picks) out.push({ type: 'pick', id: p.id, at: p.picked_at, pick: p });
+    for (const p of picks) {
+      if (heldPickIds.has(p.id)) continue; // withheld until its reveal lands
+      out.push({ type: 'pick', id: p.id, at: p.picked_at, pick: p });
+    }
     // A small "so-and-so reacted to that pick" line — like a reply, but for
     // reactions on picks specifically (not messages/comments).
     for (const r of reactions) {
@@ -301,7 +340,7 @@ export function DraftChat({
     }
     out.sort((a, b) => a.at.localeCompare(b.at));
     return out;
-  }, [messages, picks, reactions, grades]);
+  }, [messages, picks, reactions, grades, heldPickIds]);
 
   const [highlightId, setHighlightId] = useState<string | null>(null);
   // Set when the "who reacted" icon is clicked — shows the full reactions modal.

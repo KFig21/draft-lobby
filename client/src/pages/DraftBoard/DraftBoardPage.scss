@@ -458,6 +458,42 @@
     }
   }
 
+  // Brand logo (football mark), pinned to the far left; links home. Desktop and
+  // fullscreen only — mobile reaches home via its own nav. Inherits the bar's
+  // text colour so it stays legible in every state (incl. the green my-turn /
+  // hosting bar, where the bar text goes dark).
+  &__brand {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    color: inherit;
+    padding: $space * 0.35;
+    border-radius: $radius-sm;
+
+    svg {
+      display: block;
+      font-size: 1.5rem;
+    }
+
+    @include hover-only {
+      &:hover {
+        opacity: 0.8;
+      }
+    }
+
+    @include lg {
+      display: inline-flex;
+    }
+  }
+
+  &__topbar--fill &__brand {
+    display: inline-flex;
+
+    svg {
+      font-size: clamp(1.4rem, 2.4vw, 2.2rem);
+    }
+  }
+
   // Home + Room: traditional buttons, pinned to the far left. Desktop-only —
   // mobile reaches both via the "Menu" drawer.
   &__nav-links {
@@ -632,9 +668,10 @@
     box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5);
 
     // TV mode: enlarge the +time dropdown (stays anchored top-right, grows
-    // bigger down/left). See Modal.scss for the shared knob.
+    // bigger down/left). The preset options are small targets, so push past the
+    // shared --tv-zoom knob (see Modal.scss) so they read big from the room.
     :root.is-tv & {
-      zoom: var(--tv-zoom, 1.35);
+      zoom: calc(var(--tv-zoom, 1.35) * 1.45);
     }
   }
 
