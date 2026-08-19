@@ -14,10 +14,17 @@
   max-height: 90dvh;
   overflow: hidden;
   padding: $pd-gutter;
-  background: $bg-raised;
+  // Dark modes invert the surface stack (flat window / raised cards); light mode
+  // keeps the original raised window with flat cards, which reads better there.
+  // Mirrors PickModal so the two modals match.
+  background: $bg;
   border: 1px solid $border;
   border-radius: $radius-window;
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
+
+  :root[data-theme='light'] & {
+    background: $bg-raised;
+  }
 
   // TV mode: scale up (chart + stats table scale with it), capping to the
   // viewport after the zoom so it still fits and scrolls. See Modal.scss.
@@ -32,9 +39,13 @@
     position: relative; // anchors the close button in the card's corner
     flex-shrink: 0;
     padding: $space * 2;
-    background: $bg;
+    background: $bg-raised;
     border: 1px solid $border;
     border-radius: $radius-card;
+
+    :root[data-theme='light'] & {
+      background: $bg;
+    }
   }
 
   // Stats lay flat and are the only part that scrolls; same negative-margin +
