@@ -228,6 +228,11 @@
     align-items: center;
     justify-content: space-between;
     gap: $space;
+
+    .button {
+      padding: 10px 24px;
+      border-radius: 10px;
+    }
   }
 
   &__template select {

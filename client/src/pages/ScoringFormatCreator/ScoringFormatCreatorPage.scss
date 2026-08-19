@@ -355,6 +355,11 @@
     align-items: center;
     justify-content: flex-end;
     gap: $space;
+
+    .button {
+      padding: 10px 24px;
+      border-radius: 10px;
+    }
   }
 
   // Cancel sits far left so Save stays on the right (row is flex-end),
