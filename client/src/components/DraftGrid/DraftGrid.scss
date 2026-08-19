@@ -64,24 +64,41 @@
   }
 }
 
-// A cell first going on the clock (the hand-off from the previous pick's flip):
-// a one-shot accent ring that blooms out and fades, so the cell lights up rather
-// than snapping into the on-clock styling. Ends fully transparent so no resting
-// ring is left (the cell's own 2px border stays; a permanent second ring read as
-// a double-border artifact — see &--onclock).
+// A cell first going on the clock (the hand-off from the previous pick's flip).
+// The whole on-clock look arrives together here — the accent frame colours in
+// (from the plain empty-cell border) as a one-shot ring blooms out and fades —
+// so nothing snaps into place. Runs with `backwards` fill after a delay: during
+// the wait it holds the `from` (plain) look, and once it finishes it reverts to
+// the cell's static on-clock styling (so the later warning/danger border
+// transitions still work, and no resting bloom ring is left behind).
 @keyframes draft-grid-onclock-in {
 
   from {
+    border-color: $border;
     box-shadow: 0 0 0 0 rgba($accent, 0.55);
   }
 
   to {
+    border-color: $accent;
     box-shadow: 0 0 0 7px rgba($accent, 0);
   }
 }
 
-// The label riding in with it — fades and settles from a hair below + smaller,
-// so "On the clock" doesn't just pop in at full size.
+// The label + countdown wash riding in with it — a plain fade so they don't
+// pop in while the frame is still colouring.
+@keyframes draft-grid-onclock-fade-in {
+
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+// The label additionally settles from a hair below + smaller, so "On the clock"
+// doesn't just appear at full size.
 @keyframes draft-grid-onclock-label-in {
 
   from {
@@ -552,11 +569,14 @@
       text-align: center;
       vertical-align: middle;
       overflow: hidden;
-      // One-shot bloom as the cell gains this class (a team goes on the clock);
-      // the label fades in alongside it (see &__onclock-label below). Held off
-      // 0.7s so it waits for the previous pick's "THE PICK IS IN" to finish
-      // sliding in (announce-in ends ~0.65s) rather than competing with it.
-      animation: draft-grid-onclock-in 0.5s ease-out 0.7s both;
+      // Frame colours + blooms in as the cell gains this class (a team goes on
+      // the clock); the fill wash and label fade in alongside it (below). Held
+      // off 0.7s — with `backwards` fill the cell looks like a plain empty cell
+      // until then — so the whole on-clock look waits for the previous pick's
+      // "THE PICK IS IN" to finish sliding in (~0.65s) instead of appearing over
+      // it. `backwards` (not `both`) so the static border-color below takes over
+      // afterwards and the warning/danger transitions still apply.
+      animation: draft-grid-onclock-in 0.5s ease-out 0.7s backwards;
 
       &.draft-grid__cell--warning {
         border-color: $warning;
@@ -674,6 +694,13 @@
     transition:
       width 1s linear,
       background 300ms ease;
+    // Fades in on the same 0.7s hold as the cell frame, so the wash doesn't
+    // show before "THE PICK IS IN" is done.
+    animation: draft-grid-onclock-fade-in 0.45s ease-out 0.7s backwards;
+
+    @media (prefers-reduced-motion: reduce) {
+      animation: none;
+    }
 
     .draft-grid__cell--warning & {
       background: color-mix(in srgb, $warning 45%, transparent);
