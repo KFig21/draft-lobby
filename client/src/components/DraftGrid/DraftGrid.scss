@@ -129,7 +129,8 @@
   }
 }
 
-// Step 2 — "SKIPPED" grows from nothing, holds, then slides off to the right.
+// Step 2 — "SKIPPED" grows from nothing, holds (a beat longer now), then slides
+// off to the right.
 @keyframes draft-grid-skip-word {
 
   0% {
@@ -137,12 +138,12 @@
     transform: translate(0, -50%) scale(0);
   }
 
-  22% {
+  17% {
     opacity: 1;
     transform: translate(0, -50%) scale(1);
   }
 
-  62% {
+  72% {
     opacity: 1;
     transform: translate(0, -50%) scale(1);
   }
@@ -158,7 +159,7 @@
 @keyframes draft-grid-skip-final {
 
   0%,
-  62% {
+  72% {
     opacity: 0;
     transform: translate(-120%, -50%);
   }
@@ -578,9 +579,10 @@
     animation: draft-grid-skip-onclock 0.45s cubic-bezier(0.4, 0, 1, 1) both;
   }
 
-  // "SKIPPED" — big impact announcement in the skipped amber, growing in then
-  // sliding off (same geometric/condensed stack the pick flip's "THE PICK IS IN"
-  // uses). em side-padding keeps it clear of the cell edges as it scales.
+  // "SKIPPED" — big impact announcement, growing in then sliding off (same
+  // geometric/condensed stack the pick flip's "THE PICK IS IN" uses). Normal
+  // text colour (white on dark, near-black on light). em side-padding keeps it
+  // clear of the cell edges as it scales.
   &__skip-word {
     position: absolute;
     top: 50%;
@@ -597,8 +599,12 @@
     text-align: center;
     text-transform: uppercase;
     white-space: nowrap;
-    color: $warning;
-    animation: draft-grid-skip-word 1.6s ease 0.3s both;
+    color: #fff;
+    animation: draft-grid-skip-word 2.1s ease 0.3s both;
+
+    :root[data-theme='light'] & {
+      color: #05231a;
+    }
 
     // Fullscreen: grow with the board's measured --fs-scale, same as the flip's
     // announcement, so it reads big from across the room.
@@ -618,7 +624,7 @@
     align-items: center;
     justify-content: center;
     transform: translate(0, -50%);
-    animation: draft-grid-skip-final 1.6s ease 0.3s both;
+    animation: draft-grid-skip-final 2.1s ease 0.3s both;
   }
 
   // Reduced motion: no announcement — just show the resting label in place.

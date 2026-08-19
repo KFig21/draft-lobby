@@ -1888,9 +1888,6 @@ export function DraftBoardPage() {
   const resultsLocked =
     !!endedAt && clockNow >= new Date(endedAt).getTime() + DRAFT_RESULTS_LOCK_MS;
   const isMyTurn = !isStaging && !!onClockTeam && onClockTeam.owner_id === userId;
-  // I own an open slot behind the frontier — I was skipped but can still pick.
-  const myFrontierOverall = onClockTeam?.owner_id === userId ? derived!.overall : null;
-  const iAmSkipped = !isStaging && myOpen.some((o) => o !== myFrontierOverall);
   // I can pick if I own ANY open slot (on the clock OR skipped), or I'm a commish.
   const iOwnAnOpenSlot = !isStaging && myOpen.length > 0;
   // While paused only the commissioner may pick (to fill the current pick or a
@@ -1900,11 +1897,6 @@ export function DraftBoardPage() {
     !isComplete &&
     (iOwnAnOpenSlot || isCommish) &&
     (!isPaused || isCommish);
-  // My earliest open slot's round — what a pick will fill next.
-  const myNextOverall = myOpen.length ? myOpen[0] : null;
-  const myNextRound = myNextOverall
-    ? Math.floor((myNextOverall - 1) / lobby.settings.teamCount) + 1
-    : null;
   // Every open slot I own, as { overall, round } — when I owe more than one
   // (skipped and up again, e.g. the snake turn), the LockInModal offers a
   // button per slot so I choose which round/pick this player fills.
@@ -3549,11 +3541,6 @@ export function DraftBoardPage() {
                     {onClockTeam.name}
                     {/* No "Your pick" badge — the bar turning green already
                         signals it's your turn. */}
-                    {!isMyTurn && iAmSkipped && !isPaused && (
-                      <span className="draft__yourturn draft__yourturn--skipped">
-                        You can still pick{myNextRound ? ` · R${myNextRound}` : ''}
-                      </span>
-                    )}
                     {isPaused && (
                       <span className="draft__paused-pill" title="Paused" aria-label="Paused">
                         <PauseIcon fontSize="inherit" />
@@ -3563,11 +3550,6 @@ export function DraftBoardPage() {
                 ) : (
                   <span className="draft__onclock-team">
                     {skipped.length > 0 ? 'Waiting on skipped picks' : 'Waiting…'}
-                    {!isMyTurn && iAmSkipped && !isPaused && (
-                      <span className="draft__yourturn draft__yourturn--skipped">
-                        You can still pick{myNextRound ? ` · R${myNextRound}` : ''}
-                      </span>
-                    )}
                     {isPaused && (
                       <span className="draft__paused-pill" title="Paused" aria-label="Paused">
                         <PauseIcon fontSize="inherit" />

@@ -17,7 +17,7 @@ import './DraftGrid.scss';
 
 // How long the skip announcement plays before its wrapper is dropped, leaving
 // the plain skipped cell (keep in sync with the skip keyframes in DraftGrid.scss).
-const SKIP_ANIM_MS = 2000;
+const SKIP_ANIM_MS = 2500;
 
 export type { ReactionEntry };
 
