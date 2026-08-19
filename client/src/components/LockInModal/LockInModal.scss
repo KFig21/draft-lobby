@@ -12,6 +12,20 @@
   // Menu stays open underneath and cancelling returns straight to it.
   z-index: 300;
   padding: $space * 2;
+
+  // Open the backdrop instantly (no fade-in) so a hand-off from another modal —
+  // Draft in the player modal closes it and opens this in the same commit —
+  // swaps one full backdrop for another with no transparent gap. Without this
+  // the new backdrop fades up from 0 while the old one is already gone, flashing
+  // the board through for a frame. The card still animates in; closing still
+  // fades the backdrop out.
+  &.modal-anim-backdrop {
+    animation: none;
+
+    &.is-closing {
+      animation: modal-fade-out 180ms ease both;
+    }
+  }
 }
 
 .modal {
