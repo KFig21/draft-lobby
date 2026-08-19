@@ -64,6 +64,37 @@
   }
 }
 
+// A cell first going on the clock (the hand-off from the previous pick's flip):
+// a one-shot accent ring that blooms out and fades, so the cell lights up rather
+// than snapping into the on-clock styling. Ends fully transparent so no resting
+// ring is left (the cell's own 2px border stays; a permanent second ring read as
+// a double-border artifact — see &--onclock).
+@keyframes draft-grid-onclock-in {
+
+  from {
+    box-shadow: 0 0 0 0 rgba($accent, 0.55);
+  }
+
+  to {
+    box-shadow: 0 0 0 7px rgba($accent, 0);
+  }
+}
+
+// The label riding in with it — fades and settles from a hair below + smaller,
+// so "On the clock" doesn't just pop in at full size.
+@keyframes draft-grid-onclock-label-in {
+
+  from {
+    opacity: 0;
+    transform: translateY(3px) scale(0.94);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 .grid-scroll {
   // Own the scroll so the sticky header row / round column freeze against it.
   height: 100%;
@@ -508,11 +539,19 @@
     // past them. Just the one border (no extra box-shadow ring) — combining
     // both produced a visible double-ring artifact at the rounded corners.
     &--onclock {
+      // Lift above neighbouring cells so the entrance bloom (an outset shadow)
+      // isn't painted over by their backgrounds. overflow: hidden clips the
+      // cell's own content/fill to the rounded corners but not this shadow.
+      position: relative;
+      z-index: 1;
       border-width: 2px;
       border-color: $accent;
       text-align: center;
       vertical-align: middle;
       overflow: hidden;
+      // One-shot bloom as the cell gains this class (a team goes on the clock);
+      // the label fades in alongside it (see &__onclock-label below).
+      animation: draft-grid-onclock-in 0.5s ease-out both;
 
       &.draft-grid__cell--warning {
         border-color: $warning;
@@ -523,8 +562,13 @@
       }
 
       // Last 5 seconds — pulses on top of whatever urgency color is active.
+      // (Its own animation replaces the one-shot bloom, which has long finished.)
       &.draft-grid__cell--flash {
         animation: draft-grid-onclock-flash 1s ease-in-out infinite;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        animation: none;
       }
     }
 
@@ -649,6 +693,19 @@
     // Dark-mode default (plenty of time left) — same brand green used
     // elsewhere as text (PickClock, badges).
     color: #fff;
+
+    // Fades/settles in with the cell's entrance bloom when a team goes on the
+    // clock. Scoped to the on-clock cell so the flip's front-face copy of this
+    // label (inside a --flip pick cell, with its own slide-out) is untouched.
+    .draft-grid__cell--onclock & {
+      animation: draft-grid-onclock-label-in 0.45s ease-out both;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .draft-grid__cell--onclock & {
+        animation: none;
+      }
+    }
 
     .draft-grid__cell--warning & {
       color: #fff;
