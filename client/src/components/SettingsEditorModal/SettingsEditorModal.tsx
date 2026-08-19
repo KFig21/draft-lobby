@@ -55,11 +55,12 @@ export function SettingsEditorModal({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Simulate-to-end: only for an in-progress draft, gated by typing SIMULATE.
-  // The run itself is owned by the parent (onSimulate) so it can close this
-  // modal, show a cancelable "simulating…" banner on the board, and hold the
-  // long-lived request.
-  const canSimulate = (status === 'DRAFTING' || status === 'PAUSED') && !!onSimulate;
+  // Simulate-to-end: only for a live (DRAFTING) draft, gated by typing SIMULATE.
+  // Not while paused — pausing is how the commissioner cancels a running
+  // simulation, so it must start from a live draft. The run itself is owned by
+  // the parent (onSimulate) so it can close this modal, show a cancelable
+  // "simulating…" banner on the board, and hold the long-lived request.
+  const canSimulate = status === 'DRAFTING' && !!onSimulate;
   const [simConfirm, setSimConfirm] = useState('');
 
   function simulate() {

@@ -1552,8 +1552,11 @@ draftRouter.post('/:id/simulate', async (req: AuthedRequest, res: Response) => {
     res.status(404).json({ error: 'Lobby not found' });
     return;
   }
-  if (lobby0.status !== 'DRAFTING' && lobby0.status !== 'PAUSED') {
-    res.status(409).json({ error: 'The draft isn’t in progress' });
+  // DRAFTING only — pausing is the cancel signal for a running simulation (see
+  // the loop below), so a simulation must start from a live draft. A paused
+  // commissioner resumes first.
+  if (lobby0.status !== 'DRAFTING') {
+    res.status(409).json({ error: 'Resume the draft before simulating' });
     return;
   }
   // The pool is constant for the season — load it once and reuse it for every pick.
@@ -1576,7 +1579,11 @@ draftRouter.post('/:id/simulate', async (req: AuthedRequest, res: Response) => {
       .eq('id', lobbyId)
       .maybeSingle();
     if (!lobby) break;
-    if (lobby.status !== 'DRAFTING' && lobby.status !== 'PAUSED') break; // COMPLETE or reset
+    // Stop the moment the draft leaves DRAFTING — COMPLETE, reset to STAGING, or
+    // PAUSED. Pausing is how the commissioner cancels a simulation (the client
+    // aborting the request is best-effort; a proxy can swallow the connection
+    // close, so we poll status here as the reliable stop signal instead).
+    if (lobby.status !== 'DRAFTING') break;
 
     const settings = lobby.settings as LobbySettings;
     const totalPicks = settings.teamCount * roundsForSettings(settings);
