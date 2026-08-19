@@ -123,27 +123,6 @@
     font-weight: 700;
     font-size: 1.05em;
   }
-
-  &__subtitle {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-
-  // Team-colored abbreviation pill (bg + text from NFL_TEAM_COLORS via inline
-  // style), matching PlayerHeader's — only rendered when the setting's on. em
-  // units so it scales with the enlarged player block.
-  &__team {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.15em 0.5em;
-    border-radius: $radius-sm;
-    font-size: 0.7em;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-  }
   &__on-behalf {
     padding: $space $space * 1.5;
     border-radius: $radius-sm;
