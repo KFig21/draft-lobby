@@ -1,3 +1,4 @@
+import CloseIcon from '@mui/icons-material/Close';
 import type { ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useModalClose } from '../../lib/useModalClose';
@@ -44,14 +45,24 @@ export function ConfirmModal({
         aria-label={title}
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="confirm-modal__title">{title}</h3>
+        <div className="confirm-modal__header">
+          <h3 className="confirm-modal__title">{title}</h3>
+          <button
+            type="button"
+            className="confirm-modal__close"
+            onClick={requestClose}
+            disabled={busy}
+            aria-label="Close"
+          >
+            <CloseIcon fontSize="small" />
+          </button>
+        </div>
         <div className="confirm-modal__body">{children}</div>
         <div className="confirm-modal__actions">
-          <button className="button" onClick={requestClose} disabled={busy}>
-            Cancel
-          </button>
           <button
-            className={`button ${danger ? 'confirm-modal__danger' : 'button--primary'}`}
+            className={`button confirm-modal__confirm ${
+              danger ? 'confirm-modal__danger' : 'button--primary'
+            }`}
             onClick={onConfirm}
             disabled={busy || confirmDisabled}
           >

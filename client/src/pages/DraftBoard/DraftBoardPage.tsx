@@ -4231,12 +4231,25 @@ export function DraftBoardPage() {
               }}
             >
               <div className="rollback-summary">
-                <span className="rollback-summary__player">
-                  {isSkip ? 'Skipped pick' : (player?.name ?? 'Unknown player')}
-                </span>
-                <span className="rollback-summary__meta">
-                  {team?.name ?? 'A team'} · Round {round} · Pick {overall} overall
-                </span>
+                {!isSkip && player && (
+                  <span
+                    className="rollback-summary__pos"
+                    style={{ background: POSITION_COLORS[player.position as Position] }}
+                  >
+                    {player.position}
+                  </span>
+                )}
+                <div className="rollback-summary__info">
+                  <span className="rollback-summary__player">
+                    {isSkip ? 'Skipped pick' : (player?.name ?? 'Unknown player')}
+                  </span>
+                  <span className="rollback-summary__meta">
+                    {team && (
+                      <Avatar avatar={avatarForTeam(team, members)} size={16} />
+                    )}
+                    {team?.name ?? 'A team'} · Round {round} · Pick {overall} overall
+                  </span>
+                </div>
               </div>
               {multi ? (
                 <>

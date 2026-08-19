@@ -48,16 +48,47 @@
   }
 
   // The title is the modal header — framed as its own $radius-card card (same
-  // treatment as the shared Modal / LockInModal headers).
-  &__title {
+  // treatment as the shared Modal / LockInModal headers), with the close X in
+  // its top-right corner. Cancelling is the X; the confirm button is at the
+  // bottom (see &__actions).
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $space;
     padding: $space * 2 $space * 2.5;
     border: 1px solid $border;
     border-radius: $radius-card;
     background: $bg-raised;
-    font-size: 1.2rem;
 
     :root[data-theme='light'] & {
       background: $bg;
+    }
+  }
+
+  &__title {
+    font-size: 1.2rem;
+  }
+
+  &__close {
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: $radius-sm;
+    background: none;
+    color: $text-muted;
+    cursor: pointer;
+
+    &:hover {
+      color: $text;
+    }
+
+    &:disabled {
+      cursor: default;
+      opacity: 0.5;
     }
   }
 
@@ -101,12 +132,20 @@
     }
   }
 
+  // Just the confirm button now — cancelling is the header's X. Spans the gutter
+  // full-width, flush with the header card above it.
   &__actions {
     display: flex;
-    justify-content: flex-end;
-    gap: $space;
-    // Sit in the window gutter, aligned with the header/body above.
-    padding: 0 $space * 0.5 $space * 0.5;
+  }
+
+  &__confirm {
+    flex: 1;
+
+    // Concentric with the window, matching the header card (qualified with
+    // .button to outrank the base $radius-sm regardless of stylesheet order).
+    &.button {
+      border-radius: $radius-card;
+    }
   }
 
   &__danger {
