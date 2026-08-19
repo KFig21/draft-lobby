@@ -1681,8 +1681,17 @@ draftRouter.post('/:id/restart', async (req: AuthedRequest, res: Response) => {
     return;
   }
 
-  // Hand every team its timeout allowance back.
+  // Hand every team its timeout allowance back, and clear the auto-draft flag
+  // that human/stand-in teams get flipped to when they exhaust that allowance
+  // (see skipFrontier). Without this, a team that ran out of skips in the prior
+  // run would keep auto-picking after the restart instead of honoring
+  // skip-on-timeout again. Bots keep their auto-draft (they draft via is_bot).
   await supabaseAdmin.from('teams').update({ timeouts: 0 }).eq('lobby_id', lobbyId);
+  await supabaseAdmin
+    .from('teams')
+    .update({ auto_draft: false })
+    .eq('lobby_id', lobbyId)
+    .eq('is_bot', false);
 
   // Back to the open draft room, before the first pick, keepers re-opened.
   const { error: updErr } = await supabaseAdmin
