@@ -145,9 +145,6 @@
 
     .avatar {
       flex-shrink: 0;
-      // Nudge the avatar to sit centered on the first text line even when the
-      // label wraps to two, instead of centering across the whole block.
-      margin-top: -1px;
     }
   }
 
