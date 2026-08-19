@@ -12,7 +12,12 @@ import { ChampionBadge } from '../ChampionBadge/ChampionBadge';
 import { BoldPickCell } from './components/BoldPickCell/BoldPickCell';
 import { DefaultPickCell } from './components/DefaultPickCell/DefaultPickCell';
 import { PickCell, type ReactionEntry } from './components/PickCell/PickCell';
+import { SkipReveal } from './components/SkipReveal';
 import './DraftGrid.scss';
+
+// How long the skip announcement plays before its wrapper is dropped, leaving
+// the plain skipped cell (keep in sync with the skip keyframes in DraftGrid.scss).
+const SKIP_ANIM_MS = 2000;
 
 export type { ReactionEntry };
 
@@ -158,6 +163,42 @@ export function DraftGrid({
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => () => flipTimers.current.forEach(clearTimeout), []);
+
+  // Skip announcement, mirroring the pick flip above: when a cell newly becomes
+  // skipped (its `round:teamId` key first appears in `skippedCells`), play the
+  // SkipReveal over it. Seeded on first render so an already-skipped board never
+  // replays; freshly-skipped keys are held in `skipSettling` for the animation's
+  // length, then dropped so the plain skipped cell takes over.
+  const committedSkips = useRef<Set<string> | null>(null);
+  const [skipSettling, setSkipSettling] = useState<Set<string>>(() => new Set());
+  const skipTimers = useRef<number[]>([]);
+
+  const liveSkips = skippedCells ?? new Set<string>();
+  const freshSkips =
+    committedSkips.current === null
+      ? new Set<string>()
+      : new Set([...liveSkips].filter((k) => !committedSkips.current!.has(k)));
+  const skipRevealKeys =
+    freshSkips.size || skipSettling.size ? new Set([...freshSkips, ...skipSettling]) : null;
+
+  useEffect(() => {
+    committedSkips.current = liveSkips;
+    if (freshSkips.size === 0) return;
+    const keys = [...freshSkips];
+    setSkipSettling((prev) => new Set([...prev, ...keys]));
+    const t = window.setTimeout(() => {
+      setSkipSettling((prev) => {
+        const next = new Set(prev);
+        for (const k of keys) next.delete(k);
+        return next;
+      });
+    }, SKIP_ANIM_MS);
+    skipTimers.current.push(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [skippedCells]);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => () => skipTimers.current.forEach(clearTimeout), []);
 
   return (
     <div className="grid-scroll">
@@ -409,21 +450,30 @@ export function DraftGrid({
                           </span>
                         ))}
                       {isSkipped &&
-                        (isMySkipped ? (
-                          <span className="draft-grid__onclock-label">
-                            <span className="draft-grid__onclock-title">
-                              <TouchAppIcon fontSize="inherit" /> You were skipped
+                        (() => {
+                          const restingLabel = isMySkipped ? (
+                            <span className="draft-grid__onclock-label">
+                              <span className="draft-grid__onclock-title">
+                                <TouchAppIcon fontSize="inherit" /> You were skipped
+                              </span>
+                              <span className="draft-grid__onclock-sub">
+                                Click here — you can still pick
+                              </span>
                             </span>
-                            <span className="draft-grid__onclock-sub">
-                              Click here — you can still pick
+                          ) : (
+                            <span className="draft-grid__onclock-label draft-grid__skipped-label">
+                              <SkipNextIcon className="draft-grid__onclock-icon" />
+                              Skipped
                             </span>
-                          </span>
-                        ) : (
-                          <span className="draft-grid__onclock-label draft-grid__skipped-label">
-                            <SkipNextIcon className="draft-grid__onclock-icon" />
-                            Skipped
-                          </span>
-                        ))}
+                          );
+                          // Freshly skipped this render → play the announcement,
+                          // which ends on the resting label; otherwise show it plain.
+                          return skipRevealKeys?.has(`${round}:${team.id}`) ? (
+                            <SkipReveal>{restingLabel}</SkipReveal>
+                          ) : (
+                            restingLabel
+                          );
+                        })()}
                     </td>
                   );
                 })}

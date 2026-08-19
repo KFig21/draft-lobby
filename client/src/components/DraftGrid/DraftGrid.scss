@@ -114,6 +114,61 @@
   }
 }
 
+// Skip announcement (see SkipReveal). Step 1 — the on-clock label shrinks away
+// to nothing. translate(0,-50%) keeps it vertically centred while it scales.
+@keyframes draft-grid-skip-onclock {
+
+  from {
+    opacity: 1;
+    transform: translate(0, -50%) scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: translate(0, -50%) scale(0);
+  }
+}
+
+// Step 2 — "SKIPPED" grows from nothing, holds, then slides off to the right.
+@keyframes draft-grid-skip-word {
+
+  0% {
+    opacity: 0;
+    transform: translate(0, -50%) scale(0);
+  }
+
+  22% {
+    opacity: 1;
+    transform: translate(0, -50%) scale(1);
+  }
+
+  62% {
+    opacity: 1;
+    transform: translate(0, -50%) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(120%, -50%) scale(1);
+  }
+}
+
+// Step 3 — the resting skipped label slides in from the left to replace it,
+// crossing over "SKIPPED" as it exits right (like the pick flip's two labels).
+@keyframes draft-grid-skip-final {
+
+  0%,
+  62% {
+    opacity: 0;
+    transform: translate(-120%, -50%);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translate(0, -50%);
+  }
+}
+
 // The label additionally settles from a hair below + smaller, so "On the clock"
 // doesn't just appear at full size.
 @keyframes draft-grid-onclock-label-in {
@@ -500,6 +555,84 @@
   // breaks between the two halves — never mid-phrase.
   &__flip-word {
     white-space: nowrap;
+  }
+
+  // Skip announcement wrapper (see SkipReveal) — fills the skipped cell and
+  // clips its three sliding/scaling layers to the cell edges.
+  &__skip {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    overflow: hidden;
+  }
+
+  // "On the clock" — the live label (carries .draft-grid__onclock-label too, so
+  // its size/colour/icon-trim match the cell) — scaled away to nothing. Scoped
+  // under &__skip so it outranks the base label's `position: relative`.
+  &__skip &__skip-onclock {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    transform: translate(0, -50%);
+    animation: draft-grid-skip-onclock 0.45s cubic-bezier(0.4, 0, 1, 1) both;
+  }
+
+  // "SKIPPED" — big impact announcement in the skipped amber, growing in then
+  // sliding off (same geometric/condensed stack the pick flip's "THE PICK IS IN"
+  // uses). em side-padding keeps it clear of the cell edges as it scales.
+  &__skip-word {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    padding: 0 0.5em;
+    transform: translate(0, -50%) scale(0);
+    font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+    font-style: italic;
+    font-weight: 700;
+    font-size: 1.05rem;
+    line-height: 0.98;
+    letter-spacing: 0.03em;
+    text-align: center;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: $warning;
+    animation: draft-grid-skip-word 1.6s ease 0.3s both;
+
+    // Fullscreen: grow with the board's measured --fs-scale, same as the flip's
+    // announcement, so it reads big from across the room.
+    .draft-grid--fill & {
+      font-size: calc(1.15rem * var(--fs-scale));
+    }
+  }
+
+  // The resting skipped label, sliding in from the left to land exactly where the
+  // plain cell renders it (so dropping the wrapper is a seamless hand-off).
+  &__skip &__skip-final {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform: translate(0, -50%);
+    animation: draft-grid-skip-final 1.6s ease 0.3s both;
+  }
+
+  // Reduced motion: no announcement — just show the resting label in place.
+  @media (prefers-reduced-motion: reduce) {
+    &__skip-onclock,
+    &__skip-word {
+      display: none;
+    }
+
+    &__skip &__skip-final {
+      animation: none;
+      opacity: 1;
+      transform: translate(0, -50%);
+    }
   }
 
   // Snake-draft direction arrow beneath the round number — matches the round
