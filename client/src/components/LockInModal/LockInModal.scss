@@ -143,6 +143,8 @@
     align-items: center;
     flex-wrap: wrap;
     gap: 6px;
+    // Breathing room under the name.
+    margin-top: 4px;
   }
 
   // Team-colored abbreviation pill (bg + text from NFL_TEAM_COLORS via inline
@@ -153,7 +155,7 @@
     align-items: center;
     padding: 0.15em 0.5em;
     border-radius: $radius-sm;
-    font-size: 0.7em;
+    font-size: 0.56em;
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.03em;
