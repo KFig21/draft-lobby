@@ -153,9 +153,16 @@
     border-color: rgba($danger, 0.5);
     background: none;
 
-    &:hover:not(:disabled) {
+    &:hover:not(:disabled),
+    &:focus-visible:not(:disabled) {
       background: rgba($danger, 0.12);
       border-color: $danger;
+    }
+
+    // No teal focus ring (the global button:focus-visible outline) — the red
+    // hover styling above is the focus cue instead.
+    &:focus-visible {
+      outline: none;
     }
   }
 }
