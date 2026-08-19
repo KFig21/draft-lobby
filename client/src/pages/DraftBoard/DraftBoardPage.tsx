@@ -3995,9 +3995,10 @@ export function DraftBoardPage() {
               Your settings
             </button>
             {/* Board PNG export during the live draft — the top-bar shortcut
-                only appears once the draft is complete, so mid-draft it lives
-                here instead. (Nothing to export while staging.) */}
-            {!isComplete && !isStaging && (
+                only appears once the draft is complete, so mid-draft (and while
+                staging, where keepers may already be on the board) it lives
+                here instead. */}
+            {!isComplete && (
               <button
                 type="button"
                 className="navbar-drawer__link"
