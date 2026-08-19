@@ -99,23 +99,29 @@
 
   &__pos {
     flex-shrink: 0;
-    width: 40px;
-    height: 40px;
+    width: 50px; // 40px * 1.25
+    height: 50px;
     display: grid;
     place-items: center;
     border-radius: $radius-sm;
-    font-size: 0.75rem;
+    font-size: 0.9375rem; // 0.75rem * 1.25
     font-weight: 800;
     color: #05231a;
   }
+  // The chosen player, centred and scaled up 1.25× — font-size drives the block
+  // (name is em, and the .muted team/bye line is already em-based), with the
+  // badge bumped to match. A little vertical padding gives it room to breathe.
   &__player {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: $space * 1.5;
+    font-size: 1.25rem;
+    padding: $space * 0.75 0;
   }
   &__player-name {
     font-weight: 700;
-    font-size: 1.05rem;
+    font-size: 1.05em;
   }
   &__on-behalf {
     padding: $space $space * 1.5;
