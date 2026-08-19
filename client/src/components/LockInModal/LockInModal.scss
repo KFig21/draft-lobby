@@ -44,19 +44,13 @@
     overflow-y: auto;
   }
 
-  // The framed metadata card — title, on-behalf note, chosen player.
+  // The pick data lays flat on the window (only the header is framed) — indented
+  // to line up with the header card's content.
   &__card {
     display: flex;
     flex-direction: column;
     gap: $space * 1.5;
-    padding: $space * 2;
-    border: 1px solid $border;
-    border-radius: $radius-card;
-    background: $bg-raised;
-
-    :root[data-theme='light'] & {
-      background: $bg;
-    }
+    padding: $space $space * 2.5;
   }
 
   // The question is the modal header — framed as its own $radius-card card
