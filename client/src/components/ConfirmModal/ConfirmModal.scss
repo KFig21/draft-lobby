@@ -1,12 +1,34 @@
 @use 'variables' as *;
 
 .confirm-modal {
+  // Concentric "iOS" shell matching LockInModal/PickModal: a $radius-window
+  // window with a $space gutter, the title framed as a $radius-card header card,
+  // and the body laid flat. Dark modes invert the surface stack (flat window /
+  // raised cards); light mode keeps the original raised look.
+  $cm-gutter: $space;
+
   width: min(420px, 92vw);
-  background: $bg-raised;
+  display: flex;
+  flex-direction: column;
+  gap: $cm-gutter;
+  padding: $cm-gutter;
+  background: $bg;
   border: 1px solid $border;
-  border-radius: $radius;
-  padding: $space * 3;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  border-radius: $radius-window;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
+
+  :root[data-theme='light'] & {
+    background: $bg-raised;
+  }
+
+  // TV mode: scale up so it reads from the couch. Capped + scrollable in case a
+  // long body pushes it tall. See Modal.scss.
+  :root.is-tv & {
+    zoom: var(--tv-zoom, 1.35);
+    max-height: calc(90vh / var(--tv-zoom, 1.35));
+    max-width: calc(100% / var(--tv-zoom, 1.35));
+    overflow-y: auto;
+  }
 
   &__backdrop {
     position: fixed;
@@ -25,16 +47,26 @@
     backdrop-filter: blur(2px);
   }
 
+  // The title is the modal header — framed as its own $radius-card card (same
+  // treatment as the shared Modal / LockInModal headers).
   &__title {
+    padding: $space * 2 $space * 2.5;
+    border: 1px solid $border;
+    border-radius: $radius-card;
+    background: $bg-raised;
     font-size: 1.2rem;
-    margin-bottom: $space;
+
+    :root[data-theme='light'] & {
+      background: $bg;
+    }
   }
 
+  // Body lays flat on the window, indented to line up with the header content.
   &__body {
+    padding: $space * 0.5 $space * 2.5 $space;
     color: $text-muted;
     font-size: 0.9rem;
     line-height: 1.5;
-    margin-bottom: $space * 2.5;
 
     p + p {
       margin-top: $space * 1.5;
@@ -56,9 +88,13 @@
     padding: $space * 0.9 $space * 1.1;
     border: 1px solid $border;
     border-radius: $radius-sm;
-    background: $bg;
+    background: $bg-raised;
     color: $text;
     font-size: 0.9rem;
+
+    :root[data-theme='light'] & {
+      background: $bg;
+    }
 
     &:focus {
       border-color: $primary;
@@ -69,6 +105,8 @@
     display: flex;
     justify-content: flex-end;
     gap: $space;
+    // Sit in the window gutter, aligned with the header/body above.
+    padding: 0 $space * 0.5 $space * 0.5;
   }
 
   &__danger {
