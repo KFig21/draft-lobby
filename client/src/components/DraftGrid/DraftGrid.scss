@@ -359,30 +359,21 @@
     }
   }
 
-  // "On the clock" — the on-clock label itself (timer icon stacked over the
-  // words, same as the live cell), which slides off to the right. Centred in the
-  // face; the slide (translateX) is layered on the -50% Y centring.
-  &__flip-onclock {
+  // "On the clock" — the same label the live on-clock cell renders (it carries
+  // .draft-grid__onclock-label too, so its size/colour/icon-trim come from there
+  // in every context and never jump when the cell flips). This only positions it
+  // as an overlay and slides it off to the right; the slide (translateX) layers
+  // on the -50% Y centring. Scoped under &__flip-front so it outranks the base
+  // label's `position: relative` regardless of source order.
+  &__flip-front &__flip-onclock {
     position: absolute;
     top: 50%;
     left: 0;
     right: 0;
     transform: translate(0, -50%);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.25em;
-    font-weight: 700;
-    font-size: 0.65rem;
-    line-height: 1.02;
-    color: #fff;
     // Accelerate out (ease-in) as it exits right, mirroring the incoming label's
     // decelerating arrival — they cross in the middle.
     animation: draft-grid-announce-out 0.5s cubic-bezier(0.4, 0, 1, 1) both;
-
-    :root[data-theme='light'] & {
-      color: #05231a;
-    }
   }
 
   // "THE PICK IS IN" — bold italic Futura (same geometric stack the canvas

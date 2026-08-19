@@ -26,7 +26,10 @@ export function CellFlip({
   return (
     <div className="draft-grid__flip" aria-hidden>
       <div className="draft-grid__flip-face draft-grid__flip-front">
-        <span className="draft-grid__flip-onclock">
+        {/* Carries the live on-clock label class too, so it inherits that
+            label's exact size in every context (base, fullscreen --fs-scale,
+            icon trim) and never jumps size when the cell flips. */}
+        <span className="draft-grid__onclock-label draft-grid__flip-onclock">
           <TimerOutlinedIcon className="draft-grid__onclock-icon" />
           On the clock
         </span>
