@@ -394,17 +394,18 @@
     font-variant-numeric: tabular-nums;
     pointer-events: none;
 
-    // On the on-clock cell it stays put through the 3.5s entrance hold (so the
-    // slot still shows its number), then fades out as the on-clock look animates
-    // in — same delay as the frame/label. `forwards` keeps it hidden after.
-    .draft-grid__cell--onclock & {
+    // On a freshly on-clock cell it stays put through the 3.5s entrance hold (so
+    // the slot still shows its number), then fades out as the on-clock look
+    // animates in. The cell only renders it while fresh (see DraftGrid.tsx), so a
+    // settled on-clock cell has no number sitting over its label.
+    .draft-grid__cell--onclock-fresh & {
       animation: draft-grid-slot-out 0.45s ease-out 3.5s forwards;
     }
 
     // Reduced motion: no entrance sequence, so hide it immediately rather than
     // leaving the number sitting over the on-clock label.
     @media (prefers-reduced-motion: reduce) {
-      .draft-grid__cell--onclock & {
+      .draft-grid__cell--onclock-fresh & {
         animation: none;
         opacity: 0;
       }
@@ -741,15 +742,6 @@
       text-align: center;
       vertical-align: middle;
       overflow: hidden;
-      // Frame colours + blooms in as the cell gains this class (a team goes on
-      // the clock); the fill wash and label fade in alongside it (below). Held
-      // off 1.7s — with `backwards` fill the cell looks like a plain empty cell
-      // until then — so the whole on-clock look waits out the previous pick's
-      // "THE PICK IS IN" announcement (it holds until --flip-hold: 1.9s before
-      // the card turns) instead of appearing over it. `backwards` (not `both`)
-      // so the static border-color below takes over afterwards and the
-      // warning/danger transitions still apply.
-      animation: draft-grid-onclock-in 0.5s ease-out 3.5s backwards;
 
       &.draft-grid__cell--warning {
         border-color: $warning;
@@ -764,6 +756,18 @@
       &.draft-grid__cell--flash {
         animation: draft-grid-onclock-flash 1s ease-in-out infinite;
       }
+    }
+
+    // The one-shot entrance (bloom + border colour-in), gated to the JS "fresh"
+    // window (see DraftGrid.tsx) so it plays once when a team comes on the clock
+    // — NOT again every time the board is re-layered by entering/leaving
+    // fullscreen. Held off 3.5s — with `backwards` fill the cell looks like a
+    // plain empty cell until then — so the whole on-clock look waits out the
+    // previous pick's "THE PICK IS IN" announcement (it holds until --flip-hold:
+    // 1.9s before the card turns). `backwards` (not `both`) so the static
+    // --onclock border above takes over afterwards and warning/danger apply.
+    &--onclock-fresh {
+      animation: draft-grid-onclock-in 0.5s ease-out 3.5s backwards;
 
       @media (prefers-reduced-motion: reduce) {
         animation: none;
@@ -867,12 +871,17 @@
     transition:
       width 1s linear,
       background 300ms ease;
-    // Fades in on the same 1.7s hold as the cell frame, so the wash doesn't
-    // show before "THE PICK IS IN" is done.
-    animation: draft-grid-onclock-fade-in 0.45s ease-out 3.5s backwards;
 
-    @media (prefers-reduced-motion: reduce) {
-      animation: none;
+    // Fades in on the same 3.5s hold as the cell frame (so the wash doesn't show
+    // before "THE PICK IS IN" is done) — gated to the fresh window so it plays
+    // once, not on every fullscreen re-layer. A settled on-clock cell shows it at
+    // full strength with no animation.
+    .draft-grid__cell--onclock-fresh & {
+      animation: draft-grid-onclock-fade-in 0.45s ease-out 3.5s backwards;
+
+      @media (prefers-reduced-motion: reduce) {
+        animation: none;
+      }
     }
 
     .draft-grid__cell--warning & {
@@ -900,15 +909,16 @@
     color: #fff;
 
     // Fades/settles in with the cell's entrance bloom when a team goes on the
-    // clock. Scoped to the on-clock cell so the flip's front-face copy of this
-    // label (inside a --flip pick cell, with its own slide-out) is untouched.
-    // Same 1.7s hold as the cell bloom so both wait out "THE PICK IS IN".
-    .draft-grid__cell--onclock & {
+    // clock — gated to the fresh window so it plays once (not on every fullscreen
+    // re-layer). Scoped to the cell so the flip's front-face copy of this label
+    // (inside a --flip pick cell, with its own slide-out) is untouched. A settled
+    // on-clock cell shows the label at rest with no animation.
+    .draft-grid__cell--onclock-fresh & {
       animation: draft-grid-onclock-label-in 0.45s ease-out 3.5s both;
     }
 
     @media (prefers-reduced-motion: reduce) {
-      .draft-grid__cell--onclock & {
+      .draft-grid__cell--onclock-fresh & {
         animation: none;
       }
     }
@@ -1063,11 +1073,11 @@
     // staying purely em-relative; &__onclock-icon (the non-mine, single-line
     // state) is unaffected and stays as-is.
     .draft-grid__onclock-title {
-      font-size: calc(0.6rem * var(--fs-scale));
+      font-size: calc(0.72rem * var(--fs-scale));
     }
 
     .draft-grid__onclock-sub {
-      font-size: calc(0.45rem * var(--fs-scale));
+      font-size: calc(0.52rem * var(--fs-scale));
     }
   }
 }

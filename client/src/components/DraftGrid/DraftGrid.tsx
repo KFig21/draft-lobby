@@ -19,6 +19,14 @@ import './DraftGrid.scss';
 // the plain skipped cell (keep in sync with the skip keyframes in DraftGrid.scss).
 const SKIP_ANIM_MS = 2500;
 
+// How long the on-clock entrance (bloom + label/fill fade-in) runs before the
+// cell drops its --onclock-fresh flag and settles into the plain on-clock look.
+// Covers the 3.5s hold + 0.5s animation (keep in sync with DraftGrid.scss). The
+// entrance is gated to this window — rather than living permanently on --onclock
+// — so entering/leaving fullscreen (which re-layers the board and would restart
+// a CSS animation still attached to the cell) doesn't replay it.
+const ONCLOCK_ANIM_MS = 4200;
+
 export type { ReactionEntry };
 
 interface Props {
@@ -200,6 +208,31 @@ export function DraftGrid({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => () => skipTimers.current.forEach(clearTimeout), []);
 
+  // Fresh on-clock: which cell just came on the clock, held for the entrance's
+  // length so its bloom/fade-in only play once (not on every fullscreen toggle).
+  // Keyed by `round:teamId`. Seeded (undefined) on first render so an already-
+  // running board doesn't animate its current pick in on mount.
+  const onClockKey = onClockTeamId != null ? `${currentRound}:${onClockTeamId}` : null;
+  const committedOnClock = useRef<string | null | undefined>(undefined);
+  const [onClockFresh, setOnClockFresh] = useState<string | null>(null);
+  const onClockTimers = useRef<number[]>([]);
+
+  useEffect(() => {
+    const prev = committedOnClock.current;
+    committedOnClock.current = onClockKey;
+    if (prev === undefined) return; // first render — seed only
+    if (onClockKey === null || onClockKey === prev) return;
+    setOnClockFresh(onClockKey);
+    const t = window.setTimeout(() => {
+      setOnClockFresh((cur) => (cur === onClockKey ? null : cur));
+    }, ONCLOCK_ANIM_MS);
+    onClockTimers.current.push(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onClockKey]);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => () => onClockTimers.current.forEach(clearTimeout), []);
+
   return (
     <div className="grid-scroll">
       <table
@@ -374,12 +407,19 @@ export function DraftGrid({
                       ? teams.length - team.draft_position + 1
                       : team.draft_position;
                   const slotLabel = formatRoundPick(round, pickInRound, teams.length);
+                  // This cell just came on the clock → play the one-shot entrance
+                  // (bloom + fade-in). Only while it's fresh, so a later fullscreen
+                  // toggle can't restart it.
+                  const isFreshOnClock =
+                    isOnClock && onClockFresh === `${round}:${team.id}`;
                   return (
                     <td
                       key={team.id}
                       className={`draft-grid__cell ${
                         isOnClock ? 'draft-grid__cell--onclock' : ''
-                      }${isMyClock ? ' draft-grid__cell--onclock-mine' : ''}${
+                      }${isFreshOnClock ? ' draft-grid__cell--onclock-fresh' : ''}${
+                        isMyClock ? ' draft-grid__cell--onclock-mine' : ''
+                      }${
                         isOnClock && onClockUrgency ? ` draft-grid__cell--${onClockUrgency}` : ''
                       }${isOnClock && onClockFlashing ? ' draft-grid__cell--flash' : ''}${
                         isSkipped ? ' draft-grid__cell--skipped' : ''
@@ -416,12 +456,14 @@ export function DraftGrid({
                       }
                     >
                       {/* Slot coordinate (round.pick) in the top-left corner —
-                          gives an open cell its place on the board. Kept on the
-                          on-clock cell too (skipped cells have their own label):
-                          it stays through the entrance hold so the cell reads as
-                          a normal open slot, then fades out as the on-clock look
-                          animates in (see &__slot-label in the SCSS). */}
-                      {!isSkipped && (
+                          gives an open cell its place on the board. Shown on a
+                          fresh on-clock cell too (skipped cells have their own
+                          label): it stays through the entrance hold so the cell
+                          reads as a normal open slot, then fades out as the
+                          on-clock look animates in (see &__slot-label in the
+                          SCSS). Dropped once the cell settles so it never lingers
+                          over the on-clock label. */}
+                      {!isSkipped && (!isOnClock || isFreshOnClock) && (
                         <span className="draft-grid__slot-label" aria-hidden>
                           {slotLabel}
                         </span>

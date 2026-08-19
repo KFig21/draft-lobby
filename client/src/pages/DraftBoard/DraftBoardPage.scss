@@ -44,10 +44,17 @@
     border-color 120ms ease,
     transform 80ms ease;
 
-  &:hover:not(:disabled) {
+  // Focus mirrors hover (same primary fill) — and no teal focus-visible ring
+  // (the global button outline); the fill is the focus cue.
+  &:hover:not(:disabled),
+  &:focus-visible:not(:disabled) {
     border-color: $primary;
     background: $primary;
     color: white;
+  }
+
+  &:focus-visible {
+    outline: none;
   }
 
   &:active:not(:disabled) {
@@ -782,10 +789,16 @@
     color: $text-muted;
     cursor: pointer;
 
-    &:hover {
+    // Focus mirrors hover, no teal focus-visible ring.
+    &:hover,
+    &:focus-visible {
       background: $primary;
       border: solid 1px $primary;
       color: white;
+    }
+
+    &:focus-visible {
+      outline: none;
     }
   }
 
