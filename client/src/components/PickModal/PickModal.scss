@@ -148,15 +148,11 @@
     }
   }
 
-  // The "who drafted / round.pick / auto" text — takes the row so Roll back
+  // The "who drafted / round.pick" text — takes the row so Roll back
   // sits at the far right.
   &__drafted-txt {
     flex: 1;
     min-width: 0;
-  }
-
-  &__auto {
-    color: $text-muted;
   }
 
   // Commissioner-only: a dangerous action, so red — but now a quiet inline link

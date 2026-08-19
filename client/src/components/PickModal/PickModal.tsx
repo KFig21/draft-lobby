@@ -220,9 +220,9 @@ export function PickModal({
               <ProfileLink userId={team?.owner_id}>
                 <strong>{team?.name ?? 'A team'}</strong>
               </ProfileLink>
-              {team?.owner_id && championUserIds?.has(team.owner_id) && <ChampionBadge size={13} />}{' '}
-              drafted · <strong>{formatRoundPick(pick.round, pickInRound, teamCount)}</strong> (pick{' '}
-              {pick.overall}){pick.is_auto_pick && <span className="pick-modal__auto"> · auto</span>}
+              {team?.owner_id && championUserIds?.has(team.owner_id) && <ChampionBadge size={13} />} ·{' '}
+              <strong>{formatRoundPick(pick.round, pickInRound, teamCount)}</strong> (pick{' '}
+              {pick.overall})
             </span>
             {isCommish && onRollbackTo && (
               <button
