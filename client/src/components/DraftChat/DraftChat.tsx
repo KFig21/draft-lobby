@@ -16,6 +16,7 @@ import PauseIcon from '@mui/icons-material/Pause';
 import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import ReplyIcon from '@mui/icons-material/Reply';
+import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import SendIcon from '@mui/icons-material/Send';
 import SkipNextIcon from '@mui/icons-material/SkipNext';
 import SportsScoreIcon from '@mui/icons-material/SportsScore';
@@ -897,6 +898,7 @@ const SYSTEM_ICONS: { prefix: string; Icon: SvgIconComponent }[] = [
   { prefix: '⏭️', Icon: SkipNextIcon }, // team skipped
   { prefix: '🔒', Icon: LockOutlinedIcon }, // keeper(s)
   { prefix: '↩️', Icon: UndoIcon }, // rollback
+  { prefix: '🔄', Icon: RestartAltIcon }, // draft restarted
 ];
 
 /** Split a system message into its icon (from the leading emoji) and the
