@@ -1,5 +1,6 @@
 import CloseIcon from '@mui/icons-material/Close';
 import { POSITION_COLORS, type Position } from '@draft-lobby/shared';
+import { getTeamColors, getTeamColorsEnabled } from '../../lib/nflTeamColors';
 import { useModalClose } from '../../lib/useModalClose';
 import type { PlayerRow } from '../../lib/types';
 import './LockInModal.scss';
@@ -40,6 +41,9 @@ export function LockInModal({
   const { closing, requestClose } = useModalClose(onCancel);
   // Only offer a choice when the picker genuinely owns more than one open slot.
   const choose = (slots?.length ?? 0) >= 2;
+  // Team-colored abbreviation pill — only when the user has the setting on and
+  // the team is one we have a color pair for (else fall back to plain text).
+  const teamColors = getTeamColorsEnabled() ? getTeamColors(player.nfl_team) : null;
   return (
     <div
       className={`modal-overlay modal-anim-backdrop${closing ? ' is-closing' : ''}`}
@@ -83,9 +87,23 @@ export function LockInModal({
             </span>
             <div>
               <div className="modal__player-name">{player.name}</div>
-              <div className="muted">
-                {player.nfl_team}
-                {player.bye_week ? ` · Bye ${player.bye_week}` : ''}
+              <div className="modal__subtitle">
+                {teamColors ? (
+                  <>
+                    <span
+                      className="modal__team"
+                      style={{ background: teamColors.bg, color: teamColors.text }}
+                    >
+                      {player.nfl_team}
+                    </span>
+                    {player.bye_week ? <span className="muted">Bye {player.bye_week}</span> : null}
+                  </>
+                ) : (
+                  <span className="muted">
+                    {player.nfl_team}
+                    {player.bye_week ? ` · Bye ${player.bye_week}` : ''}
+                  </span>
+                )}
               </div>
             </div>
           </div>
