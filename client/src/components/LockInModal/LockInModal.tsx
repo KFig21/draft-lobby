@@ -48,8 +48,10 @@ export function LockInModal({
         className={`modal modal-anim-card${closing ? ' is-closing' : ''}`}
         onClick={(e) => e.stopPropagation()}
       >
+        <h2 className="modal__title">
+          {choose ? 'Which pick is this?' : onBehalfOfTeam ? 'Make this pick?' : 'Lock in your pick?'}
+        </h2>
         <div className="modal__card">
-          <h2>{choose ? 'Which pick is this?' : onBehalfOfTeam ? 'Make this pick?' : 'Lock in your pick?'}</h2>
           {onBehalfOfTeam && (
             <p className="modal__on-behalf">
               Picking for <strong>{onBehalfOfTeam}</strong> as commissioner
