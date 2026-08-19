@@ -2490,17 +2490,6 @@ export function DraftBoardPage() {
             )}
           </div>
         )}
-        {skipped.length > 0 && (
-          <button
-            className="draft__tool-btn"
-            onClick={autopickSkipped}
-            disabled={autopickBusy}
-            title="Auto-pick for every skipped team's outstanding slot"
-          >
-            <SkipNextIcon fontSize="small" />
-            <span className="draft__btn-label">Auto-pick skipped · {skipped.length}</span>
-          </button>
-        )}
         {commishError && <span className="draft__commish-error">{commishError}</span>}
       </>
     );
@@ -4078,6 +4067,24 @@ export function DraftBoardPage() {
                 </span>
               </button>
             ) : null}
+            {/* Commissioner: fill every skipped team's outstanding slot at once —
+                lives here now instead of crowding the top bar. */}
+            {isCommish && skipped.length > 0 && (
+              <button
+                type="button"
+                className="navbar-drawer__link"
+                onClick={() => {
+                  autopickSkipped();
+                  setDrawerOpen(false);
+                }}
+                disabled={autopickBusy}
+                title="Auto-pick for every skipped team's outstanding slot"
+              >
+                <SkipNextIcon fontSize="small" />
+                Auto-pick skipped
+                <span className="navbar-drawer__toggle-pill">{skipped.length}</span>
+              </button>
+            )}
           </>
         }
       />
