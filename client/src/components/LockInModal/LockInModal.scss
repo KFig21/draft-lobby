@@ -54,16 +54,46 @@
   }
 
   // The question is the modal header — framed as its own $radius-card card
-  // (same treatment as the shared Modal's header), above the player card.
-  &__title {
+  // (same treatment as the shared Modal's header), with the close button in its
+  // top-right corner. Above the flat player data.
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $space;
     padding: $space * 2 $space * 2.5;
     border: 1px solid $border;
     border-radius: $radius-card;
     background: $bg-raised;
-    font-size: 1.2rem;
 
     :root[data-theme='light'] & {
       background: $bg;
+    }
+  }
+
+  &__title {
+    font-size: 1.2rem;
+  }
+
+  &__close {
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: $radius-sm;
+    background: none;
+    color: $text-muted;
+    cursor: pointer;
+
+    &:hover {
+      color: $text;
+    }
+
+    &:disabled {
+      cursor: default;
+      opacity: 0.5;
     }
   }
 
@@ -98,12 +128,20 @@
     color: $danger;
     font-size: 0.9rem;
   }
+  // Just the confirm button now — cancelling is the header's X. Spans the gutter
+  // full-width, flush with the header card above it.
   &__actions {
     display: flex;
-    gap: $space;
-    justify-content: flex-end;
-    // Sit in the window gutter, aligned with the card above.
-    padding: 0 $space * 0.5 $space * 0.5;
+  }
+
+  &__confirm {
+    flex: 1;
+
+    // Concentric with the window, matching the header card (qualified with
+    // .button to outrank the base $radius-sm regardless of stylesheet order).
+    &.button {
+      border-radius: $radius-card;
+    }
   }
 }
 
@@ -120,8 +158,6 @@
     display: flex;
     flex-direction: column;
     gap: $space;
-    // Sit in the window gutter, aligned with the card above.
-    padding: 0 $space * 0.5 $space * 0.5;
   }
 
   &__slot-btn {
@@ -131,6 +167,11 @@
     gap: $space * 0.75;
     padding: $space * 1.25 $space * 1.5;
     font-size: 1rem;
+
+    // Concentric with the window, matching the confirm button / header card.
+    &.button {
+      border-radius: $radius-card;
+    }
   }
 
   &__slot-round {
@@ -140,9 +181,5 @@
   &__slot-pick {
     font-size: 0.85rem;
     opacity: 0.85;
-  }
-
-  &__slot-cancel {
-    align-self: center;
   }
 }

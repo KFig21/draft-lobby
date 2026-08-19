@@ -1,3 +1,4 @@
+import CloseIcon from '@mui/icons-material/Close';
 import { POSITION_COLORS, type Position } from '@draft-lobby/shared';
 import { useModalClose } from '../../lib/useModalClose';
 import type { PlayerRow } from '../../lib/types';
@@ -48,9 +49,20 @@ export function LockInModal({
         className={`modal modal-anim-card${closing ? ' is-closing' : ''}`}
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="modal__title">
-          {choose ? 'Which pick is this?' : onBehalfOfTeam ? 'Make this pick?' : 'Lock in your pick?'}
-        </h2>
+        <div className="modal__header">
+          <h2 className="modal__title">
+            {choose ? 'Which pick is this?' : onBehalfOfTeam ? 'Make this pick?' : 'Lock in your pick?'}
+          </h2>
+          <button
+            type="button"
+            className="modal__close"
+            onClick={requestClose}
+            disabled={busy}
+            aria-label="Close"
+          >
+            <CloseIcon fontSize="small" />
+          </button>
+        </div>
         <div className="modal__card">
           {onBehalfOfTeam && (
             <p className="modal__on-behalf">
@@ -92,17 +104,11 @@ export function LockInModal({
                 <span className="lockin__slot-pick">Pick {s.overall}</span>
               </button>
             ))}
-            <button className="button lockin__slot-cancel" onClick={requestClose} disabled={busy}>
-              Cancel
-            </button>
           </div>
         ) : (
           <div className="modal__actions">
-            <button className="button" onClick={requestClose} disabled={busy}>
-              Cancel
-            </button>
             <button
-              className="button button--primary"
+              className="button button--primary modal__confirm"
               onClick={() => onConfirm(slots?.[0]?.overall)}
               disabled={busy}
             >
