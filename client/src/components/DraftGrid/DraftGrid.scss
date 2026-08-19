@@ -577,7 +577,7 @@
       // the card turns) instead of appearing over it. `backwards` (not `both`)
       // so the static border-color below takes over afterwards and the
       // warning/danger transitions still apply.
-      animation: draft-grid-onclock-in 0.5s ease-out 1.7s backwards;
+      animation: draft-grid-onclock-in 0.5s ease-out 3.5s backwards;
 
       &.draft-grid__cell--warning {
         border-color: $warning;
@@ -697,7 +697,7 @@
       background 300ms ease;
     // Fades in on the same 1.7s hold as the cell frame, so the wash doesn't
     // show before "THE PICK IS IN" is done.
-    animation: draft-grid-onclock-fade-in 0.45s ease-out 1.7s backwards;
+    animation: draft-grid-onclock-fade-in 0.45s ease-out 3.5s backwards;
 
     @media (prefers-reduced-motion: reduce) {
       animation: none;
@@ -732,7 +732,7 @@
     // label (inside a --flip pick cell, with its own slide-out) is untouched.
     // Same 1.7s hold as the cell bloom so both wait out "THE PICK IS IN".
     .draft-grid__cell--onclock & {
-      animation: draft-grid-onclock-label-in 0.45s ease-out 1.7s both;
+      animation: draft-grid-onclock-label-in 0.45s ease-out 3.5s both;
     }
 
     @media (prefers-reduced-motion: reduce) {
