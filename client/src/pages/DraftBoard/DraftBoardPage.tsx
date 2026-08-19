@@ -3658,6 +3658,23 @@ export function DraftBoardPage() {
                     </span>
                   </button>
                 )}
+                {isCommish && skipped.length > 0 && (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="draft__tools-item"
+                    onClick={() => {
+                      setShowTools(false);
+                      autopickSkipped();
+                    }}
+                    disabled={autopickBusy}
+                    title="Auto-pick for every skipped team's outstanding slot"
+                  >
+                    <SkipNextIcon fontSize="small" />
+                    <span className="draft__tools-item-label">Auto-pick skipped</span>
+                    <span className="draft__tools-state">{skipped.length}</span>
+                  </button>
+                )}
                 <button
                   type="button"
                   role="menuitem"
