@@ -1574,7 +1574,7 @@
     flex: 1;
     min-height: 0;
     overflow: auto;
-    padding: $space * 1.5;
+    padding: $space * 1.5 $space * 3;
   }
 
   // Crown-vote + grade summary beneath the team dropdown — click to open
