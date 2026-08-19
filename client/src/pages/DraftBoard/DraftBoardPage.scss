@@ -2885,6 +2885,19 @@
     max-width: calc(100% / var(--tv-zoom-chat, 1.6));
   }
 
+  // The per-tab zoom above also scales the shared tab strip, so the tab
+  // headers would render bigger on Players/Chat than on Roster. Counter-scale
+  // the strip back down by the same ratio (net zoom = base --tv-zoom on every
+  // tab) so the headers stay a uniform size. Roster/Simple already sit at the
+  // base --tv-zoom, so they need no correction.
+  :root.is-tv &.is-players .draft__sidebar-tabs {
+    zoom: calc(var(--tv-zoom, 1.35) / var(--tv-zoom-players, 1.45));
+  }
+
+  :root.is-tv &.is-chat .draft__sidebar-tabs {
+    zoom: calc(var(--tv-zoom, 1.35) / var(--tv-zoom-chat, 1.6));
+  }
+
   // TV mode: each tab zooms by a different factor, so the fixed 75vh/680px
   // height rendered to a different on-screen size per tab (Roster, at the lower
   // base zoom, came out shorter than Players/Chat). Make the height large enough
