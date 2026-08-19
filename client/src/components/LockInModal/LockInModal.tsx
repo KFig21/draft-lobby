@@ -48,33 +48,35 @@ export function LockInModal({
         className={`modal modal-anim-card${closing ? ' is-closing' : ''}`}
         onClick={(e) => e.stopPropagation()}
       >
-        <h2>{choose ? 'Which pick is this?' : onBehalfOfTeam ? 'Make this pick?' : 'Lock in your pick?'}</h2>
-        {onBehalfOfTeam && (
-          <p className="modal__on-behalf">
-            Picking for <strong>{onBehalfOfTeam}</strong> as commissioner
-          </p>
-        )}
-        {choose && (
-          <p className="lockin__choose-hint">
-            You’ve got more than one open pick — choose which slot this player fills.
-          </p>
-        )}
-        <div className="modal__player">
-          <span
-            className="modal__pos"
-            style={{ background: POSITION_COLORS[player.position as Position] }}
-          >
-            {player.position}
-          </span>
-          <div>
-            <div className="modal__player-name">{player.name}</div>
-            <div className="muted">
-              {player.nfl_team}
-              {player.bye_week ? ` · Bye ${player.bye_week}` : ''}
+        <div className="modal__card">
+          <h2>{choose ? 'Which pick is this?' : onBehalfOfTeam ? 'Make this pick?' : 'Lock in your pick?'}</h2>
+          {onBehalfOfTeam && (
+            <p className="modal__on-behalf">
+              Picking for <strong>{onBehalfOfTeam}</strong> as commissioner
+            </p>
+          )}
+          {choose && (
+            <p className="lockin__choose-hint">
+              You’ve got more than one open pick — choose which slot this player fills.
+            </p>
+          )}
+          <div className="modal__player">
+            <span
+              className="modal__pos"
+              style={{ background: POSITION_COLORS[player.position as Position] }}
+            >
+              {player.position}
+            </span>
+            <div>
+              <div className="modal__player-name">{player.name}</div>
+              <div className="muted">
+                {player.nfl_team}
+                {player.bye_week ? ` · Bye ${player.bye_week}` : ''}
+              </div>
             </div>
           </div>
+          {error && <p className="modal__error">{error}</p>}
         </div>
-        {error && <p className="modal__error">{error}</p>}
         {choose ? (
           <div className="lockin__slots">
             {slots!.map((s) => (

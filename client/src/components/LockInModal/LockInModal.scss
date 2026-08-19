@@ -15,14 +15,25 @@
 }
 
 .modal {
-  background: $bg-raised;
+  // Concentric "iOS" shell matching PickModal/PlayerDetailModal: a $radius-window
+  // window with a $space gutter, and the header/meta framed as one $radius-card
+  // card ($radius-window − gutter). Dark modes invert the surface stack (flat
+  // window / raised card); light mode keeps the original raised look.
+  $lm-gutter: $space;
+
+  background: $bg;
   border: 1px solid $border;
-  border-radius: $radius;
-  padding: $space * 3;
+  border-radius: $radius-window;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
+  padding: $lm-gutter;
   width: min(400px, 100%);
   display: flex;
   flex-direction: column;
-  gap: $space * 2;
+  gap: $lm-gutter;
+
+  :root[data-theme='light'] & {
+    background: $bg-raised;
+  }
 
   // TV mode: scale the pick-confirm up so it reads from the couch. Capped +
   // scrollable in case a long name/stat pushes it tall. See Modal.scss.
@@ -31,6 +42,21 @@
     max-height: calc(90vh / var(--tv-zoom, 1.35));
     max-width: calc(100% / var(--tv-zoom, 1.35));
     overflow-y: auto;
+  }
+
+  // The framed metadata card — title, on-behalf note, chosen player.
+  &__card {
+    display: flex;
+    flex-direction: column;
+    gap: $space * 1.5;
+    padding: $space * 2;
+    border: 1px solid $border;
+    border-radius: $radius-card;
+    background: $bg-raised;
+
+    :root[data-theme='light'] & {
+      background: $bg;
+    }
   }
 
   h2 {
@@ -58,7 +84,6 @@
     font-size: 1.05rem;
   }
   &__on-behalf {
-    margin-top: -$space;
     padding: $space $space * 1.5;
     border-radius: $radius-sm;
     background: color-mix(in srgb, $warning 15%, transparent);
@@ -73,6 +98,8 @@
     display: flex;
     gap: $space;
     justify-content: flex-end;
+    // Sit in the window gutter, aligned with the card above.
+    padding: 0 $space * 0.5 $space * 0.5;
   }
 }
 
@@ -81,7 +108,6 @@
 // label reads clearly, with Cancel below them.
 .lockin {
   &__choose-hint {
-    margin-top: -$space;
     font-size: 0.9rem;
     color: $text-muted;
   }
@@ -90,6 +116,8 @@
     display: flex;
     flex-direction: column;
     gap: $space;
+    // Sit in the window gutter, aligned with the card above.
+    padding: 0 $space * 0.5 $space * 0.5;
   }
 
   &__slot-btn {
