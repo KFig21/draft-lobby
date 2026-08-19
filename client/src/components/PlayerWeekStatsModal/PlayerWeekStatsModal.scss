@@ -9,8 +9,9 @@
   display: grid;
   place-items: center;
   padding: $space * 2;
+  // No backdrop blur here — this opens on top of the player/pick modal (a
+  // second layer), and blurring would smear that already-blurred surface.
   background: rgba(0, 0, 0, 0.62);
-  backdrop-filter: blur(2px);
 }
 
 .pws {
