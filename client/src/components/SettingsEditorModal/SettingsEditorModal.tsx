@@ -25,6 +25,13 @@ interface Props {
   onClose: () => void;
   /** The saved (server-effective) settings — the parent should adopt these. */
   onSaved: (settings: LobbySettings) => void;
+  /**
+   * Start a full "simulate to end" run. Handled by the parent (draft board) so
+   * it can close this modal, show a "simulating…" banner, and let the
+   * commissioner cancel — the request is long-lived. When omitted, the Simulate
+   * section isn't offered.
+   */
+  onSimulate?: () => void;
 }
 
 /**
@@ -41,6 +48,7 @@ export function SettingsEditorModal({
   canEditName,
   onClose,
   onSaved,
+  onSimulate,
 }: Props) {
   const [draft, setDraft] = useState<LobbySettings>(settings);
   const [nameDraft, setNameDraft] = useState(name);
@@ -48,24 +56,15 @@ export function SettingsEditorModal({
   const [error, setError] = useState<string | null>(null);
 
   // Simulate-to-end: only for an in-progress draft, gated by typing SIMULATE.
-  const canSimulate = status === 'DRAFTING' || status === 'PAUSED';
+  // The run itself is owned by the parent (onSimulate) so it can close this
+  // modal, show a cancelable "simulating…" banner on the board, and hold the
+  // long-lived request.
+  const canSimulate = (status === 'DRAFTING' || status === 'PAUSED') && !!onSimulate;
   const [simConfirm, setSimConfirm] = useState('');
-  const [simBusy, setSimBusy] = useState(false);
-  const [simError, setSimError] = useState<string | null>(null);
 
-  async function simulate() {
+  function simulate() {
     if (simConfirm !== 'SIMULATE') return;
-    setSimBusy(true);
-    setSimError(null);
-    try {
-      await api(`/lobbies/${lobbyId}/simulate`, { method: 'POST' });
-      // Picks land + the draft completes via realtime; just close the editor.
-      onClose();
-    } catch (err) {
-      setSimError(err instanceof Error ? err.message : 'Could not simulate the draft');
-    } finally {
-      setSimBusy(false);
-    }
+    onSimulate?.();
   }
 
   // Restart: wipe the drafted picks and drop back to STAGING. In-progress only,
@@ -189,18 +188,16 @@ export function SettingsEditorModal({
                 aria-label="Type SIMULATE to confirm"
                 autoComplete="off"
                 spellCheck={false}
-                disabled={simBusy}
               />
               <button
                 type="button"
                 className="button button--danger"
                 onClick={simulate}
-                disabled={simBusy || simConfirm !== 'SIMULATE'}
+                disabled={simConfirm !== 'SIMULATE'}
               >
-                {simBusy ? 'Simulating…' : 'Simulate to end'}
+                Simulate to end
               </button>
             </div>
-            {simError && <p className="settings-editor__error">{simError}</p>}
           </section>
         )}
 

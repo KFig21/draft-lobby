@@ -1,6 +1,14 @@
 @use 'variables' as *;
 @use 'mixins' as *;
 
+// Spinner for the "simulating…" banner icon.
+@keyframes draft-simulating-spin {
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @keyframes draft-topbar-flash {
 
   0%,
@@ -1217,6 +1225,61 @@
     font-variant-numeric: tabular-nums;
     font-weight: 800;
     font-size: 0.78rem;
+  }
+
+  // Shown while a "Simulate to end" run is in flight — a spinner + a Cancel that
+  // aborts the request (the server stops mid-loop). Primary-tinted like an
+  // active process, with the Cancel in the destructive red.
+  &__simulating-banner {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: $space * 1.5;
+    padding: $space $space * 2;
+    text-align: center;
+    font-size: 0.85rem;
+    font-weight: 700;
+    background: color-mix(in srgb, $primary 15%, transparent);
+    color: $primary-hover;
+
+    span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+  }
+
+  &__simulating-spin {
+    animation: draft-simulating-spin 0.9s linear infinite;
+
+    @media (prefers-reduced-motion: reduce) {
+      animation: none;
+    }
+  }
+
+  &__simulating-cancel {
+    padding: $space * 0.4 $space * 1.25;
+    border: 1px solid rgba($danger, 0.5);
+    border-radius: $radius-sm;
+    background: none;
+    color: $danger;
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+
+    &:hover {
+      background: rgba($danger, 0.12);
+      border-color: $danger;
+    }
+
+    &:focus-visible {
+      outline: none;
+      background: rgba($danger, 0.12);
+      border-color: $danger;
+    }
   }
 
   // Keepers — gold, matching the keeper-cell outline/badge color elsewhere, so

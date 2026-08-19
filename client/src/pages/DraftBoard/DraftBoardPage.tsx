@@ -27,6 +27,7 @@ import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlined';
 import CheckIcon from '@mui/icons-material/Check';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import AssignmentIndOutlinedIcon from '@mui/icons-material/AssignmentIndOutlined';
+import AutorenewIcon from '@mui/icons-material/Autorenew';
 import ChecklistIcon from '@mui/icons-material/Checklist';
 import CloseIcon from '@mui/icons-material/Close';
 import DataObjectOutlinedIcon from '@mui/icons-material/DataObjectOutlined';
@@ -506,6 +507,13 @@ export function DraftBoardPage() {
   // consecutive bot in one call) when the commissioner turns the toggle back
   // off — abort it, or the server just keeps drafting bots regardless.
   const fastForwardAbortRef = useRef<AbortController | null>(null);
+
+  // "Simulate to end" runs on the server as one long-lived request (it loops
+  // every remaining pick). Track it so the board can show a "simulating…" banner
+  // and let the commissioner cancel — aborting the request closes the connection,
+  // which the server watches (req.on('close')) to stop the loop mid-run.
+  const [simulating, setSimulating] = useState(false);
+  const simulateAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     const onFsChange = () => {
@@ -2204,6 +2212,31 @@ export function DraftBoardPage() {
     }
   }
 
+  // Kick off a full simulation: close the settings editor so the commissioner
+  // watches picks land on the board, then hold the request open (picks + the
+  // "draft complete" all arrive via realtime). Cancelling aborts it — the picks
+  // made so far stay, and the draft is left where it stopped.
+  async function startSimulate() {
+    setShowLobbySettings(false);
+    setCommishError(null);
+    setSimulating(true);
+    const controller = new AbortController();
+    simulateAbortRef.current = controller;
+    try {
+      await api(`/lobbies/${id}/simulate`, { method: 'POST', signal: controller.signal });
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return;
+      setCommishError(err instanceof Error ? err.message : 'Simulation failed');
+    } finally {
+      setSimulating(false);
+      simulateAbortRef.current = null;
+    }
+  }
+
+  function cancelSimulate() {
+    simulateAbortRef.current?.abort();
+  }
+
   // The top bar keeps its "your pick" colour + warning/danger even while paused,
   // using the frozen remaining time (pick_deadline goes null server-side when
   // paused, so fall back to pick_deadline_remaining_ms — same as the on-clock
@@ -3728,6 +3761,22 @@ export function DraftBoardPage() {
         </div>
       )}
 
+      {simulating && (
+        <div className="draft__simulating-banner">
+          <span>
+            <AutorenewIcon className="draft__simulating-spin" fontSize="small" /> Simulating the
+            rest of the draft…
+          </span>
+          <button
+            type="button"
+            className="draft__simulating-cancel"
+            onClick={cancelSimulate}
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+
       {isStaging && (
         <div className="draft__staging-banner">
           <span>
@@ -4628,6 +4677,7 @@ export function DraftBoardPage() {
           name={lobby.name}
           onClose={() => setShowLobbySettings(false)}
           onSaved={() => refetch()}
+          onSimulate={startSimulate}
         />
       )}
     </div>
