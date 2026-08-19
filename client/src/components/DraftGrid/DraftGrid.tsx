@@ -454,11 +454,9 @@ export function DraftGrid({
                           const restingLabel = isMySkipped ? (
                             <span className="draft-grid__onclock-label">
                               <span className="draft-grid__onclock-title">
-                                <TouchAppIcon fontSize="inherit" /> You were skipped
+                                <TouchAppIcon fontSize="inherit" /> Skipped
                               </span>
-                              <span className="draft-grid__onclock-sub">
-                                Click here — you can still pick
-                              </span>
+                              <span className="draft-grid__onclock-sub">make your pick</span>
                             </span>
                           ) : (
                             <span className="draft-grid__onclock-label draft-grid__skipped-label">
