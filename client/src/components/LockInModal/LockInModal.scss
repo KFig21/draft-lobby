@@ -4,6 +4,7 @@
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(2px);
   display: grid;
   place-items: center;
   // Above the generic Modal (z-index 200) so the pick-confirm dialog stacks on

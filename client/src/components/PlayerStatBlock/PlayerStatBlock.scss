@@ -134,13 +134,18 @@
     // Neutral card, matching the two key cards above it (not a colored panel).
     border: 1px solid $border;
     border-radius: $radius-card-tight;
-    // Solid fill matching the modal surface it sits on.
-    background: $bg-raised;
+    // Solid fill matching the modal surface it sits on. Dark modes sit on the
+    // flat window, so the raised value would clash; light mode keeps it raised.
+    background: $bg;
     color: inherit;
     font: inherit;
     text-align: left;
     cursor: pointer;
     transition: border-color 0.15s ease;
+
+    :root[data-theme='light'] & {
+      background: $bg-raised;
+    }
 
     &.is-loading {
       cursor: default;

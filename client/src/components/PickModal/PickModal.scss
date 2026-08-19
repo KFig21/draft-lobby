@@ -14,10 +14,16 @@
   max-height: 90dvh;
   overflow: hidden;
   padding: $pm-gutter;
-  background: $bg-raised;
+  // Dark modes invert the surface stack (flat window / raised cards); light mode
+  // keeps the original raised window with flat cards, which reads better there.
+  background: $bg;
   border: 1px solid $border;
   border-radius: $radius-window;
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
+
+  :root[data-theme='light'] & {
+    background: $bg-raised;
+  }
 
   // TV mode: scale the whole modal up, capping both dimensions to the viewport
   // after the zoom so it still fits and scrolls. See Modal.scss for the knob.
@@ -41,10 +47,14 @@
     position: relative; // anchors the close button in the card's corner
     flex-shrink: 0;
     padding: $space * 2;
-    background: $bg;
+    background: $bg-raised;
     border: 1px solid $border;
     border-radius: $radius-card;
     z-index: 2;
+
+    :root[data-theme='light'] & {
+      background: $bg;
+    }
   }
 
   // Stats + reactions + comments — lays flat on the window (no card), and is the
@@ -84,6 +94,7 @@
     place-items: center;
     padding: $space * 2;
     background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(2px);
   }
 
   &__close {
@@ -629,9 +640,13 @@
     align-items: center;
     gap: $space * 0.5;
     padding: $space * 0.5 $space * 0.5 $space * 0.5 $space * 1.25;
-    background: $bg;
+    background: $bg-raised;
     border: 1px solid $border;
     border-radius: $radius-card;
+
+    :root[data-theme='light'] & {
+      background: $bg;
+    }
 
     &:focus-within {
       border-color: $primary;

@@ -43,6 +43,7 @@ $mobile-tabs-h: 60px;
     bottom: $mobile-tabs-h;
     z-index: 1;
     background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(2px);
     opacity: 0;
     pointer-events: none;
     transition: opacity 220ms ease;
