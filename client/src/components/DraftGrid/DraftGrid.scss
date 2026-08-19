@@ -414,7 +414,9 @@
     top: 50%;
     left: 0;
     right: 0;
-    padding: 0 4px;
+    // em-based so the gutter grows with the text — at TV-mode --fs-scale the
+    // phrase stays clear of the cell edges instead of butting right up to them.
+    padding: 0 0.5em;
     transform: translate(-120%, -50%);
     // Impact — tall, condensed and heavy, so the words fill the cell's height
     // (and read from across a room). Haettenschweiler / Arial Narrow Bold are
@@ -433,9 +435,10 @@
     animation: draft-grid-announce-in 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) 0.15s both;
 
     // Fullscreen ("TV mode"): grow with the board's measured --fs-scale, same as
-    // the cell names, so the announcement reads big from across the room.
+    // the cell names, so the announcement reads big from across the room. Eased
+    // down from 1.15rem so the wider text keeps its edge gutter (above).
     .draft-grid--fill & {
-      font-size: calc(1.15rem * var(--fs-scale));
+      font-size: calc(1.05rem * var(--fs-scale));
     }
 
     :root[data-theme='light'] & {
@@ -550,8 +553,10 @@
       vertical-align: middle;
       overflow: hidden;
       // One-shot bloom as the cell gains this class (a team goes on the clock);
-      // the label fades in alongside it (see &__onclock-label below).
-      animation: draft-grid-onclock-in 0.5s ease-out both;
+      // the label fades in alongside it (see &__onclock-label below). Held off
+      // 0.7s so it waits for the previous pick's "THE PICK IS IN" to finish
+      // sliding in (announce-in ends ~0.65s) rather than competing with it.
+      animation: draft-grid-onclock-in 0.5s ease-out 0.7s both;
 
       &.draft-grid__cell--warning {
         border-color: $warning;
@@ -697,8 +702,9 @@
     // Fades/settles in with the cell's entrance bloom when a team goes on the
     // clock. Scoped to the on-clock cell so the flip's front-face copy of this
     // label (inside a --flip pick cell, with its own slide-out) is untouched.
+    // Same 0.7s hold as the cell bloom so both wait out "THE PICK IS IN".
     .draft-grid__cell--onclock & {
-      animation: draft-grid-onclock-label-in 0.45s ease-out both;
+      animation: draft-grid-onclock-label-in 0.45s ease-out 0.7s both;
     }
 
     @media (prefers-reduced-motion: reduce) {
