@@ -6,7 +6,8 @@
     display: flex;
     align-items: center;
     gap: $space * 1.25;
-    padding-right: $space * 4;
+    // Clears the top-right close button (8px offset, 32px wide → ~24px in).
+    padding-right: $space * 3;
   }
 
   &__pos {
@@ -25,6 +26,14 @@
     color: #05231a;
     font-weight: 800;
     font-size: 1.35rem;
+
+    // Mobile: a smaller badge frees width so the name + inline action icons
+    // (favorite/queue) stay on the name's line instead of wrapping under it.
+    @media (max-width: #{$bp-md - 1px}) {
+      width: 48px;
+      height: 48px;
+      font-size: 1.1rem;
+    }
   }
 
   &__title {
@@ -44,6 +53,12 @@
       gap: 6px;
       font-size: 1.3rem;
       line-height: 1.2;
+
+      // Mobile: slightly smaller so a longer name keeps its action icons on the
+      // same line rather than wrapping them.
+      @media (max-width: #{$bp-md - 1px}) {
+        font-size: 1.15rem;
+      }
     }
 
     .muted {

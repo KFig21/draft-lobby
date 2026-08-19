@@ -122,6 +122,7 @@
     font-weight: 800;
     color: #05231a;
   }
+
   // The chosen player, centred and scaled up 1.25× — font-size drives the block
   // (name is em, and the .muted team/bye line is already em-based), with the
   // badge bumped to match. A little vertical padding gives it room to breathe.
@@ -133,6 +134,7 @@
     font-size: 1.25rem;
     padding: $space * 0.75 0;
   }
+
   &__player-name {
     font-weight: 700;
     font-size: 1.05em;
@@ -143,8 +145,7 @@
     align-items: center;
     flex-wrap: wrap;
     gap: 6px;
-    // Breathing room under the name.
-    margin-top: 4px;
+    margin-top: 2px;
   }
 
   // Team-colored abbreviation pill (bg + text from NFL_TEAM_COLORS via inline
@@ -160,6 +161,7 @@
     text-transform: uppercase;
     letter-spacing: 0.03em;
   }
+
   &__on-behalf {
     padding: $space $space * 1.5;
     border-radius: $radius-sm;
@@ -167,10 +169,12 @@
     color: $warning;
     font-size: 0.9rem;
   }
+
   &__error {
     color: $danger;
     font-size: 0.9rem;
   }
+
   // Just the confirm button now — cancelling is the header's X. Spans the gutter
   // full-width, flush with the header card above it.
   &__actions {

@@ -85,11 +85,14 @@
     backdrop-filter: blur(2px);
   }
 
-  // Sits in the metadata card's top-right corner (a child of &__top now).
+  // Tucked into the metadata card's top-right corner (a child of &__top). Sits
+  // tight to the corner — matches PickModal's close — and above the header
+  // content so it's never painted over.
   &__close {
     position: absolute;
-    top: $space * 2;
-    right: $space * 2;
+    top: $space;
+    right: $space;
+    z-index: 3;
     display: grid;
     place-items: center;
     width: 32px;
