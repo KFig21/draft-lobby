@@ -74,11 +74,15 @@
 @keyframes draft-grid-onclock-in {
 
   from {
+    // Match the plain empty cell exactly during the hold — 1px border, not the
+    // static 2px the on-clock cell settles at, so it doesn't pre-thicken.
+    border-width: 1px;
     border-color: $border;
     box-shadow: 0 0 0 0 rgba($accent, 0.55);
   }
 
   to {
+    border-width: 2px;
     border-color: $accent;
     box-shadow: 0 0 0 7px rgba($accent, 0);
   }
