@@ -6,12 +6,12 @@
 // transform: scale) so the box reflows and inner scroll areas keep working.
 :root.is-tv {
   --tv-zoom: 1.35;
-  // The Players and Chat tabs of the fullscreen Menu pack the most (and
-  // smallest) text, so they get a bump beyond the shared factor. Players has a
-  // wide stats table, so it gets a smaller bump than Chat — enough to read, but
-  // not so much the columns overflow into a horizontal scroll.
-  --tv-zoom-players: 1.45;
-  --tv-zoom-chat: 1.6;
+  // The fullscreen Menu (Players/Roster/Chat) packs the most — and smallest —
+  // text, so it gets one bump beyond the shared factor. A single value for the
+  // whole dialog (every tab) keeps its title + tab strip a uniform size; the
+  // wide Players stats table gets its room from the per-tab dialog width
+  // instead. See .draft__fs-menu-dialog in DraftBoardPage.scss.
+  --tv-zoom-menu: 1.45;
 }
 
 .dialog-overlay {

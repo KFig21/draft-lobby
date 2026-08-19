@@ -2869,41 +2869,17 @@
     width: min(600px, 100%);
   }
 
-  // TV mode: the base .dialog rule (Modal.scss) already zooms this to
-  // --tv-zoom; the Players and Chat tabs are the densest/smallest text, so
-  // give them a larger factor. Players stays smaller than Chat so its wide
-  // stats table fits without a horizontal scroll. Caps stay in sync.
-  :root.is-tv &.is-players {
-    zoom: var(--tv-zoom-players, 1.45);
-    max-height: calc(90vh / var(--tv-zoom-players, 1.45));
-    max-width: calc(100% / var(--tv-zoom-players, 1.45));
-  }
-
-  :root.is-tv &.is-chat {
-    zoom: var(--tv-zoom-chat, 1.6);
-    max-height: calc(90vh / var(--tv-zoom-chat, 1.6));
-    max-width: calc(100% / var(--tv-zoom-chat, 1.6));
-  }
-
-  // The per-tab zoom above also scales the shared tab strip, so the tab
-  // headers would render bigger on Players/Chat than on Roster. Counter-scale
-  // the strip back down by the same ratio (net zoom = base --tv-zoom on every
-  // tab) so the headers stay a uniform size. Roster/Simple already sit at the
-  // base --tv-zoom, so they need no correction.
-  :root.is-tv &.is-players .draft__sidebar-tabs {
-    zoom: calc(var(--tv-zoom, 1.35) / var(--tv-zoom-players, 1.45));
-  }
-
-  :root.is-tv &.is-chat .draft__sidebar-tabs {
-    zoom: calc(var(--tv-zoom, 1.35) / var(--tv-zoom-chat, 1.6));
-  }
-
-  // TV mode: each tab zooms by a different factor, so the fixed 75vh/680px
-  // height rendered to a different on-screen size per tab (Roster, at the lower
-  // base zoom, came out shorter than Players/Chat). Make the height large enough
-  // that the per-tab max-height (calc(90vh / <its zoom>)) is always the binding
-  // constraint — every tab then renders at the same ~90vh regardless of zoom.
+  // TV mode: one zoom for the whole Menu dialog, the SAME on every tab, so the
+  // title header and the Players/Roster/Chat tab strip stay a uniform size —
+  // per-tab zoom (which scaled those headers differently) is gone. Overrides
+  // the base .dialog rule (Modal.scss) with its own --tv-zoom-menu knob so the
+  // other modals keep the base --tv-zoom. The per-tab width lives on the dialog
+  // (see .is-players 1060px etc.), so the wide stats table still gets its room.
+  // Height is forced to the max-height cap so every tab renders at ~90vh.
   :root.is-tv & {
+    zoom: var(--tv-zoom-menu, 1.45);
+    max-height: calc(90vh / var(--tv-zoom-menu, 1.45));
+    max-width: calc(100% / var(--tv-zoom-menu, 1.45));
     height: 90vh;
   }
 
