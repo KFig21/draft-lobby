@@ -2233,14 +2233,23 @@ export function DraftBoardPage() {
     }
   }
 
-  function cancelSimulate() {
+  async function cancelSimulate() {
     // Pausing is the reliable stop: the server simulate loop breaks the instant
     // the draft leaves DRAFTING (it polls status each iteration), and a paused
     // draft also halts the background bot auto-draft. The request abort is
     // best-effort — a proxy can swallow the connection close — so we don't lean
-    // on it. The draft is left paused; the commissioner can resume or roll back.
+    // on it. `resetClock` freezes a fresh full clock (the sim left the deadline
+    // in an arbitrary spot), so the team on the clock gets its whole turn on
+    // resume. The draft is left paused; the commissioner can resume or roll back.
     simulateAbortRef.current?.abort();
-    void commishAction('pause');
+    setPauseBusy(true);
+    try {
+      await api(`/lobbies/${id}/pause`, { method: 'POST', body: { resetClock: true } });
+    } catch (err) {
+      setCommishError(err instanceof Error ? err.message : 'Could not pause the draft');
+    } finally {
+      setPauseBusy(false);
+    }
   }
 
   // The top bar keeps its "your pick" colour + warning/danger even while paused,

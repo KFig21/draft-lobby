@@ -1781,7 +1781,7 @@ draftRouter.post('/:id/pause', async (req: AuthedRequest, res: Response) => {
 
   const { data: lobby } = await supabaseAdmin
     .from('lobbies')
-    .select('status, pick_deadline')
+    .select('status, pick_deadline, settings, current_overall')
     .eq('id', lobbyId)
     .single();
   if (!lobby) {
@@ -1793,11 +1793,25 @@ draftRouter.post('/:id/pause', async (req: AuthedRequest, res: Response) => {
     return;
   }
 
-  // Save whatever time was left on the clock so resume can restore it,
-  // instead of the on-the-clock team getting a fresh full turn for free.
-  const remainingMs = lobby.pick_deadline
-    ? Math.max(0, new Date(lobby.pick_deadline as string).getTime() - Date.now())
-    : null;
+  // Normally save whatever time was left on the clock so resume can restore it,
+  // instead of the on-the-clock team getting a fresh full turn for free. When
+  // `resetClock` is set (a cancelled simulation), reset it to a fresh full clock
+  // instead — the sim left the deadline in an arbitrary place, so the team that
+  // ends up on the clock should get its whole turn.
+  const resetClock = (req.body as { resetClock?: boolean } | undefined)?.resetClock === true;
+  let remainingMs: number | null;
+  if (resetClock) {
+    const full = await computeFullClockMs(
+      lobbyId,
+      lobby.settings as LobbySettings,
+      lobby.current_overall as number,
+    );
+    remainingMs = full > 0 ? full : null; // null = an unlimited (untimed) round
+  } else {
+    remainingMs = lobby.pick_deadline
+      ? Math.max(0, new Date(lobby.pick_deadline as string).getTime() - Date.now())
+      : null;
+  }
 
   const { error } = await supabaseAdmin
     .from('lobbies')
