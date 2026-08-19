@@ -71,6 +71,18 @@
 
   &__simulate-row .button {
     white-space: nowrap;
+
+    // Focus mirrors hover (same fill) and drops the global teal focus-visible
+    // ring — these are the destructive Simulate/Restart confirm buttons, so the
+    // fill change is the focus cue, not a green outline.
+    &:hover:not(:disabled),
+    &:focus-visible:not(:disabled) {
+      background: $bg-hover;
+    }
+
+    &:focus-visible {
+      outline: none;
+    }
   }
 
   // Just the button row now — the surrounding bar (border-top, padding,
