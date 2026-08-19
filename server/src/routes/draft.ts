@@ -1453,15 +1453,26 @@ draftRouter.post('/:id/pick', async (req: AuthedRequest, res: Response) => {
 
   // A commissioner filling the CURRENT (frontier) pick while paused advanced the
   // clock inside applyPick, which set a fresh live pick_deadline — but the draft
-  // is still frozen. Re-freeze: clear that deadline and the previous team's
-  // stored remainder so resume() computes a clean, full clock for the team now
-  // on the clock. A behind-frontier (skipped) pick never moves the clock, so
-  // there's nothing to fix; a pick that completed the draft already went
-  // COMPLETE. Guarded on status so a concurrent resume isn't clobbered.
+  // is still frozen. Re-freeze: clear the live deadline and store a FRESH FULL
+  // clock for the team now on the clock as the frozen remainder, so the paused
+  // board shows their new pick clock (not "-") and resume gives them a whole
+  // turn — rather than clearing the remainder to null, which showed "-" and let
+  // resume fall back to the previous team's leftover time. A behind-frontier
+  // (skipped) pick never moves the clock, so there's nothing to fix; a pick that
+  // completed the draft already went COMPLETE. Guarded on status so a concurrent
+  // resume isn't clobbered.
   if (paused && !result.complete && targetOverall === frontier) {
+    const { data: after } = await supabaseAdmin
+      .from('lobbies')
+      .select('current_overall')
+      .eq('id', lobbyId)
+      .single();
+    const fullMs = after
+      ? await computeFullClockMs(lobbyId, settings, after.current_overall as number)
+      : 0;
     await supabaseAdmin
       .from('lobbies')
-      .update({ pick_deadline: null, pick_deadline_remaining_ms: null })
+      .update({ pick_deadline: null, pick_deadline_remaining_ms: fullMs > 0 ? fullMs : null })
       .eq('id', lobbyId)
       .eq('status', 'PAUSED');
   }
