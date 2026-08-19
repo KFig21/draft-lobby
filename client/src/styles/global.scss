@@ -170,6 +170,24 @@ a {
     font-size: 0.85rem;
   }
 
+  // Destructive action — outlined red that fills on hover. Focus mirrors hover
+  // (no teal focus-visible ring) since the fill change is the focus cue.
+  &--danger {
+    color: $danger;
+    border-color: rgba($danger, 0.5);
+    background: none;
+
+    &:hover:not(:disabled),
+    &:focus-visible:not(:disabled) {
+      background: rgba($danger, 0.12);
+      border-color: $danger;
+    }
+
+    &:focus-visible {
+      outline: none;
+    }
+  }
+
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
