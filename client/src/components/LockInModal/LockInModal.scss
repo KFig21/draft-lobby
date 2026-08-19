@@ -59,11 +59,18 @@
     }
   }
 
-  // The question is the modal header — sits flat on the window above the framed
-  // player card, indented to line up with the card's content.
+  // The question is the modal header — framed as its own $radius-card card
+  // (same treatment as the shared Modal's header), above the player card.
   &__title {
+    padding: $space * 2 $space * 2.5;
+    border: 1px solid $border;
+    border-radius: $radius-card;
+    background: $bg-raised;
     font-size: 1.2rem;
-    padding: $space * 0.5 $space * 2 0;
+
+    :root[data-theme='light'] & {
+      background: $bg;
+    }
   }
 
   &__pos {
