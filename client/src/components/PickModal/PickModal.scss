@@ -138,13 +138,16 @@
   // sits just below the player header.
   &__drafted {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: $space * 0.75;
     margin-top: $space * 1.5;
     font-size: 0.9rem;
 
     .avatar {
       flex-shrink: 0;
+      // Nudge the avatar to sit centered on the first text line even when the
+      // label wraps to two, instead of centering across the whole block.
+      margin-top: -1px;
     }
   }
 
