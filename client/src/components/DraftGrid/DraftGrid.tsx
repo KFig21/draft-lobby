@@ -375,10 +375,12 @@ export function DraftGrid({
                       }
                     >
                       {/* Slot coordinate (round.pick) in the top-left corner —
-                          gives an open cell its place on the board. Suppressed
-                          on the on-clock / skipped cells, which have their own
-                          prominent centered label. */}
-                      {!isOnClock && !isSkipped && (
+                          gives an open cell its place on the board. Kept on the
+                          on-clock cell too (skipped cells have their own label):
+                          it stays through the entrance hold so the cell reads as
+                          a normal open slot, then fades out as the on-clock look
+                          animates in (see &__slot-label in the SCSS). */}
+                      {!isSkipped && (
                         <span className="draft-grid__slot-label" aria-hidden>
                           {slotLabel}
                         </span>

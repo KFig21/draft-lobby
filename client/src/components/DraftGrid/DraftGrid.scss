@@ -101,6 +101,19 @@
   }
 }
 
+// The open-slot coordinate (round.pick) fading out as the on-clock look takes
+// over — held visible through the entrance delay, then gone.
+@keyframes draft-grid-slot-out {
+
+  from {
+    opacity: 0.5;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
 // The label additionally settles from a hair below + smaller, so "On the clock"
 // doesn't just appear at full size.
 @keyframes draft-grid-onclock-label-in {
@@ -324,6 +337,22 @@
     opacity: 0.5;
     font-variant-numeric: tabular-nums;
     pointer-events: none;
+
+    // On the on-clock cell it stays put through the 3.5s entrance hold (so the
+    // slot still shows its number), then fades out as the on-clock look animates
+    // in — same delay as the frame/label. `forwards` keeps it hidden after.
+    .draft-grid__cell--onclock & {
+      animation: draft-grid-slot-out 0.45s ease-out 3.5s forwards;
+    }
+
+    // Reduced motion: no entrance sequence, so hide it immediately rather than
+    // leaving the number sitting over the on-clock label.
+    @media (prefers-reduced-motion: reduce) {
+      .draft-grid__cell--onclock & {
+        animation: none;
+        opacity: 0;
+      }
+    }
 
     // Hovering an empty slot lifts its round.pick coordinate to full strength in
     // the accent (mint on dark, primary teal on light) — matching the team +
