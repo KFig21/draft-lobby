@@ -1480,6 +1480,15 @@ draftRouter.post('/:id/pick', async (req: AuthedRequest, res: Response) => {
   res.json({ ok: true, overall: targetOverall, round, complete: result.complete });
 });
 
+// Lobbies whose in-flight fast-forward loop has been asked to stop. The client
+// aborts its fetch when "Skip bots" is toggled off, but that connection close is
+// unreliable (a proxy can swallow it), so the loop couldn't tell and kept
+// burning bots until the draft was paused. The toggle-off now also hits the
+// cancel endpoint below, which drops the lobby id here; the loop checks this set
+// each iteration and stops promptly. Single-process, in-memory — same as the
+// rate limiter.
+const fastForwardCancels = new Set<string>();
+
 /** POST /api/lobbies/:id/fast-forward — commissioner burns through consecutive bot picks. */
 draftRouter.post('/:id/fast-forward', async (req: AuthedRequest, res: Response) => {
   const lobbyId = req.params.id;
@@ -1489,9 +1498,11 @@ draftRouter.post('/:id/fast-forward', async (req: AuthedRequest, res: Response) 
     return;
   }
 
-  // The commissioner can toggle "skip bots" off mid-stream on the client,
-  // which aborts this request — without this, the loop below has no way to
-  // notice and just keeps burning through every remaining bot regardless.
+  // A stale cancel from a previous run must not kill this fresh one.
+  fastForwardCancels.delete(lobbyId);
+
+  // Best-effort secondary stop signal (see fastForwardCancels for the reliable
+  // one): the client aborts this request when "skip bots" is toggled off.
   let aborted = false;
   req.on('close', () => {
     aborted = true;
@@ -1500,7 +1511,7 @@ draftRouter.post('/:id/fast-forward', async (req: AuthedRequest, res: Response) 
   let made = 0;
   // Cap the loop so a bug can never spin forever.
   for (let i = 0; i < 1000; i++) {
-    if (aborted) break;
+    if (aborted || fastForwardCancels.has(lobbyId)) break;
     const { data: lobby } = await supabaseAdmin
       .from('lobbies')
       .select('status, settings, current_overall')
@@ -1534,8 +1545,25 @@ draftRouter.post('/:id/fast-forward', async (req: AuthedRequest, res: Response) 
     // that were swamping clients watching the board.
     await new Promise((resolve) => setTimeout(resolve, 200));
   }
+  fastForwardCancels.delete(lobbyId); // consumed (or never set) — don't leak it
   if (aborted) return; // connection's gone — nothing to respond to
   res.json({ ok: true, picks: made });
+});
+
+/**
+ * POST /api/lobbies/:id/fast-forward/cancel — reliably stop an in-flight
+ * fast-forward. The client calls this when "skip bots" is toggled off, since
+ * aborting the fetch alone doesn't always reach the server.
+ */
+draftRouter.post('/:id/fast-forward/cancel', async (req: AuthedRequest, res: Response) => {
+  const lobbyId = req.params.id;
+  const role = await getRole(lobbyId, req.user!.id);
+  if (!isCommish(role)) {
+    res.status(403).json({ error: 'Only the commissioner can fast-forward' });
+    return;
+  }
+  fastForwardCancels.add(lobbyId);
+  res.json({ ok: true });
 });
 
 /**

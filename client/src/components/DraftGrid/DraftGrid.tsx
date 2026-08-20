@@ -180,6 +180,11 @@ export function DraftGrid({
   const committedSkips = useRef<Set<string> | null>(null);
   const [skipSettling, setSkipSettling] = useState<Set<string>>(() => new Set());
   const skipTimers = useRef<number[]>([]);
+  // Every slot (`round:teamId`) that has been skipped at any point this session.
+  // A slot is only filled once, so this never needs pruning — it lets a pick
+  // flipping into a formerly-skipped slot open its flip on "Skipped" instead of
+  // the (now untrue) "On the clock".
+  const everSkipped = useRef<Set<string>>(new Set());
 
   const liveSkips = skippedCells ?? new Set<string>();
   const freshSkips =
@@ -191,6 +196,7 @@ export function DraftGrid({
 
   useEffect(() => {
     committedSkips.current = liveSkips;
+    for (const k of liveSkips) everSkipped.current.add(k);
     if (freshSkips.size === 0) return;
     const keys = [...freshSkips];
     setSkipSettling((prev) => new Set([...prev, ...keys]));
@@ -323,6 +329,11 @@ export function DraftGrid({
                   // shortcut instead). Set only when onRollbackSkipped is given.
                   const canRollbackHere = isSkipped && !isMySkipped && !!onRollbackSkipped;
                   if (pick && player) {
+                    // A flip landing on a slot that had been skipped opens on the
+                    // skipped resting label (not "On the clock"). Only matters
+                    // while flipping; the "mine" flavour is the two-line label.
+                    const flipFromSkip = everSkipped.current.has(`${round}:${team.id}`);
+                    const flipFromSkipMine = flipFromSkip && team.id === myTeamId;
                     if (cellStyle === 'bold') {
                       return (
                         <BoldPickCell
@@ -331,6 +342,8 @@ export function DraftGrid({
                           player={player}
                           tvMode={tvMode}
                           flipping={flipIds?.has(pick.id)}
+                          fromSkip={flipFromSkip}
+                          fromSkipMine={flipFromSkipMine}
                           entry={reactionsByPick?.get(pick.id)}
                           hasComment={(commentsByPick?.get(pick.id)?.length ?? 0) > 0}
                           onReact={onReactPick}
@@ -352,6 +365,8 @@ export function DraftGrid({
                           player={player}
                           teamCount={teams.length}
                           flipping={flipIds?.has(pick.id)}
+                          fromSkip={flipFromSkip}
+                          fromSkipMine={flipFromSkipMine}
                           entry={reactionsByPick?.get(pick.id)}
                           hasComment={(commentsByPick?.get(pick.id)?.length ?? 0) > 0}
                           onReact={onReactPick}
@@ -373,6 +388,8 @@ export function DraftGrid({
                         player={player}
                         teamCount={teams.length}
                         flipping={flipIds?.has(pick.id)}
+                        fromSkip={flipFromSkip}
+                        fromSkipMine={flipFromSkipMine}
                         entry={reactionsByPick?.get(pick.id)}
                         hasComment={(commentsByPick?.get(pick.id)?.length ?? 0) > 0}
                         onReact={onReactPick}

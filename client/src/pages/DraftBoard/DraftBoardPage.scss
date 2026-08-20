@@ -513,6 +513,22 @@
     }
   }
 
+  // On a coloured bar (green my-turn, plus its amber/red urgency shifts) the
+  // colour-swap hover reads muddy against the fill — so there the mark keeps
+  // the bar's own colour and instead swells gently to 1.1 on hover. --warning
+  // and --danger only tint the bar alongside --myturn, so this one selector
+  // covers all three coloured states.
+  &__topbar--myturn &__brand {
+    transition: transform 0.15s ease-in-out;
+
+    @include hover-only {
+      &:hover {
+        color: inherit;
+        transform: scale(1.2);
+      }
+    }
+  }
+
   // Home + Room: traditional buttons, pinned to the far left. Desktop-only —
   // mobile reaches both via the "Menu" drawer.
   &__nav-links {

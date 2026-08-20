@@ -29,6 +29,8 @@ export function DefaultPickCell({
   player,
   teamCount,
   flipping,
+  fromSkip,
+  fromSkipMine,
   entry,
   hasComment,
   onReact,
@@ -43,6 +45,11 @@ export function DefaultPickCell({
   teamCount: number;
   /** Just drafted — play the one-shot card-flip entrance (see DraftGrid.scss). */
   flipping?: boolean;
+  /** The flipped-in pick filled a slot that had been skipped — open the flip on
+   * the skipped resting label rather than "On the clock". */
+  fromSkip?: boolean;
+  /** …and that skipped slot was the viewer's own (two-line "make your pick"). */
+  fromSkipMine?: boolean;
   entry?: ReactionEntry;
   hasComment?: boolean;
   onReact?: (pickId: string, emoji: string) => void;
@@ -92,7 +99,7 @@ export function DefaultPickCell({
       onMouseLeave={onLeave}
     >
       {flipping ? (
-        <CellFlip variant="default" backBg={posColor}>
+        <CellFlip variant="default" backBg={posColor} fromSkip={fromSkip} fromSkipMine={fromSkipMine}>
           {info}
         </CellFlip>
       ) : (

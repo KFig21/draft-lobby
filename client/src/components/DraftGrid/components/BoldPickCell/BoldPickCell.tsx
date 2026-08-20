@@ -40,6 +40,8 @@ export function BoldPickCell({
   player,
   tvMode,
   flipping,
+  fromSkip,
+  fromSkipMine,
   entry,
   hasComment,
   onReact,
@@ -54,6 +56,11 @@ export function BoldPickCell({
   tvMode?: boolean;
   /** Just drafted — play the one-shot card-flip entrance (see DraftGrid.scss). */
   flipping?: boolean;
+  /** The flipped-in pick filled a slot that had been skipped — open the flip on
+   * the skipped resting label rather than "On the clock". */
+  fromSkip?: boolean;
+  /** …and that skipped slot was the viewer's own (two-line "make your pick"). */
+  fromSkipMine?: boolean;
   entry?: ReactionEntry;
   hasComment?: boolean;
   onReact?: (pickId: string, emoji: string) => void;
@@ -90,7 +97,7 @@ export function BoldPickCell({
       onMouseLeave={onLeave}
     >
       {flipping ? (
-        <CellFlip variant="bold" backBg={posColor}>
+        <CellFlip variant="bold" backBg={posColor} fromSkip={fromSkip} fromSkipMine={fromSkipMine}>
           {name}
         </CellFlip>
       ) : (

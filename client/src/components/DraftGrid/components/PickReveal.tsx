@@ -1,4 +1,6 @@
+import SkipNextIcon from '@mui/icons-material/SkipNext';
 import TimerOutlinedIcon from '@mui/icons-material/TimerOutlined';
+import TouchAppIcon from '@mui/icons-material/TouchApp';
 import type { ReactNode } from 'react';
 
 // The two-faced flip that turns a just-made pick's cell over. The front is the
@@ -14,24 +16,58 @@ import type { ReactNode } from 'react';
 // `variant` sets the back face's padding/alignment to match the cell style it's
 // standing in for; `backBg` paints it with that cell's own fill so the settled
 // back face is indistinguishable from the real cell once DraftGrid drops it.
+// `fromSkip` is set when the pick landed on a slot that had been skipped: the
+// cell was reading its "Skipped" resting label, so the front face opens on that
+// exact label (not "On the clock", which would be a brief lie) and zooms out of
+// it into "THE PICK IS IN". `fromSkipMine` picks the label the cell actually
+// showed — the two-line "Skipped / make your pick" for the viewer's own slot, or
+// the plain muted "Skipped" for another team's.
 export function CellFlip({
   variant,
   backBg,
+  fromSkip = false,
+  fromSkipMine = false,
   children,
 }: {
   variant: 'bold' | 'default' | 'clean';
   backBg: string;
+  fromSkip?: boolean;
+  fromSkipMine?: boolean;
   children: ReactNode;
 }) {
   return (
     <div className="draft-grid__flip" aria-hidden>
       <div className="draft-grid__flip-face draft-grid__flip-front">
-        {/* Carries the live on-clock label class too, so it inherits that
-            label's exact size in every context (base, fullscreen --fs-scale,
-            icon trim) and never jumps size when the cell flips. */}
-        <span className="draft-grid__onclock-label draft-grid__flip-onclock">
-          <TimerOutlinedIcon className="draft-grid__onclock-icon" />
-          On the clock
+        {/* The front's opening label — a replica of exactly what the cell was
+            showing, so the flip continues from it seamlessly. It carries
+            .draft-grid__onclock-label (size/icon-trim/fullscreen scaling) and
+            .draft-grid__flip-onclock (the zoom-out), and its contents mirror the
+            live cell: the on-clock label, or the skipped resting label. */}
+        <span
+          className={`draft-grid__onclock-label draft-grid__flip-onclock${
+            fromSkip && !fromSkipMine ? ' draft-grid__skipped-label' : ''
+          }`}
+        >
+          {fromSkip ? (
+            fromSkipMine ? (
+              <>
+                <span className="draft-grid__onclock-title">
+                  <TouchAppIcon fontSize="inherit" /> Skipped
+                </span>
+                <span className="draft-grid__onclock-sub">make your pick</span>
+              </>
+            ) : (
+              <>
+                <SkipNextIcon className="draft-grid__onclock-icon" />
+                Skipped
+              </>
+            )
+          ) : (
+            <>
+              <TimerOutlinedIcon className="draft-grid__onclock-icon" />
+              On the clock
+            </>
+          )}
         </span>
         {/* Each half is kept non-breaking, so the line either fits as one
             ("THE PICK IS IN") or breaks only between them ("THE PICK" / "IS

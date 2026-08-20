@@ -2441,7 +2441,12 @@ export function DraftBoardPage() {
           className={`draft__tool-btn draft__skipbots-btn${autoSkipBots ? ' is-on' : ''}`}
           onClick={() =>
             setAutoSkipBots((v) => {
-              if (v) fastForwardAbortRef.current?.abort();
+              if (v) {
+                // Abort the open request AND tell the server to stop — the abort
+                // alone can be swallowed by a proxy, leaving the loop skipping.
+                fastForwardAbortRef.current?.abort();
+                void api(`/lobbies/${id}/fast-forward/cancel`, { method: 'POST' }).catch(() => {});
+              }
               return !v;
             })
           }
