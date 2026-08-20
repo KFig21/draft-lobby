@@ -114,48 +114,51 @@
   }
 }
 
-// Skip announcement (see SkipReveal). Step 1 — the on-clock label shrinks away
-// to nothing. translate(0,-50%) keeps it vertically centred while it scales.
+// Skip announcement (see SkipReveal). Step 1 — the on-clock label slides off to
+// the right (fading as it goes), the way the old "THE PICK IS IN" reveal exited.
+// translateY keeps it vertically centred throughout.
 @keyframes draft-grid-skip-onclock {
 
   from {
     opacity: 1;
-    transform: translate(0, -50%) scale(1);
+    transform: translate(0, -50%);
   }
 
   to {
     opacity: 0;
-    transform: translate(0, -50%) scale(0);
+    transform: translate(120%, -50%);
   }
 }
 
-// Step 2 — "SKIPPED" grows from nothing, holds (a beat longer now), then slides
-// off to the right.
+// Step 2 — "SKIPPED" slides in from the left (crossing the exiting on-clock
+// label), holds, then slides off to the right — same crossover the old "THE
+// PICK IS IN" reveal used.
 @keyframes draft-grid-skip-word {
 
   0% {
     opacity: 0;
-    transform: translate(0, -50%) scale(0);
+    transform: translate(-120%, -50%);
   }
 
   17% {
     opacity: 1;
-    transform: translate(0, -50%) scale(1);
+    transform: translate(0, -50%);
   }
 
   72% {
     opacity: 1;
-    transform: translate(0, -50%) scale(1);
+    transform: translate(0, -50%);
   }
 
   100% {
     opacity: 0;
-    transform: translate(120%, -50%) scale(1);
+    transform: translate(120%, -50%);
   }
 }
 
-// Step 3 — the resting skipped label slides in from the left to replace it,
-// crossing over "SKIPPED" as it exits right (like the pick flip's two labels).
+// Step 3 (viewer's own skipped slot only) — the resting "make your pick" label
+// slides in from the left to replace "SKIPPED", crossing over it as it exits
+// right (like the pick flip's two labels).
 @keyframes draft-grid-skip-final {
 
   0%,
@@ -165,6 +168,22 @@
   }
 
   100% {
+    opacity: 1;
+    transform: translate(0, -50%);
+  }
+}
+
+// Another team's skipped slot — "SKIPPED" is the cell's resting state, so it
+// just slides in from the left (crossing the exiting on-clock label) and stays;
+// no hold-and-exit, no third label.
+@keyframes draft-grid-skip-enter {
+
+  from {
+    opacity: 0;
+    transform: translate(-120%, -50%);
+  }
+
+  to {
     opacity: 1;
     transform: translate(0, -50%);
   }
@@ -569,7 +588,7 @@
   }
 
   // "On the clock" — the live label (carries .draft-grid__onclock-label too, so
-  // its size/colour/icon-trim match the cell) — scaled away to nothing. Scoped
+  // its size/colour/icon-trim match the cell) — sliding off to the right. Scoped
   // under &__skip so it outranks the base label's `position: relative`.
   &__skip &__skip-onclock {
     position: absolute;
@@ -580,17 +599,17 @@
     animation: draft-grid-skip-onclock 0.45s cubic-bezier(0.4, 0, 1, 1) both;
   }
 
-  // "SKIPPED" — big impact announcement, growing in then sliding off (same
-  // geometric/condensed stack the pick flip's "THE PICK IS IN" uses). Normal
-  // text colour (white on dark, near-black on light). em side-padding keeps it
-  // clear of the cell edges as it scales.
+  // "SKIPPED" — big impact announcement, sliding in from the left then off to
+  // the right (same geometric/condensed stack the pick flip's "THE PICK IS IN"
+  // uses). Normal text colour (white on dark, near-black on light). em
+  // side-padding keeps it clear of the cell edges.
   &__skip-word {
     position: absolute;
     top: 50%;
     left: 0;
     right: 0;
     padding: 0 0.5em;
-    transform: translate(0, -50%) scale(0);
+    transform: translate(-120%, -50%);
     font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
     font-style: italic;
     font-weight: 700;
@@ -614,8 +633,9 @@
     }
   }
 
-  // The resting skipped label, sliding in from the left to land exactly where the
-  // plain cell renders it (so dropping the wrapper is a seamless hand-off).
+  // The viewer's own resting skipped label, sliding in from the left to land
+  // exactly where the plain cell renders it (so dropping the wrapper is a
+  // seamless hand-off).
   &__skip &__skip-final {
     position: absolute;
     top: 50%;
@@ -628,6 +648,21 @@
     animation: draft-grid-skip-final 2.1s ease 0.3s both;
   }
 
+  // Another team's skip: the resting "SKIPPED" word slides in as the on-clock
+  // label exits, then stays put (this is the cell's resting state — no exit,
+  // no third label). `both` fill holds it in place after it lands.
+  &__skip &__skip-enter {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform: translate(0, -50%);
+    animation: draft-grid-skip-enter 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) 0.3s both;
+  }
+
   // Reduced motion: no announcement — just show the resting label in place.
   @media (prefers-reduced-motion: reduce) {
     &__skip-onclock,
@@ -635,7 +670,8 @@
       display: none;
     }
 
-    &__skip &__skip-final {
+    &__skip &__skip-final,
+    &__skip &__skip-enter {
       animation: none;
       opacity: 1;
       transform: translate(0, -50%);
@@ -852,8 +888,34 @@
     }
   }
 
-  &__skipped-label {
-    color: $warning;
+  // Another team's skipped slot rests on the big "SKIPPED" announcement word
+  // itself (the viewer's own slot instead rests on "Skipped / make your pick").
+  // Same impact stack as the pick flip's "THE PICK IS IN" and the skip
+  // announcement, centred as normal cell content; the skip reveal and the
+  // fill-in flip reuse this exact element so those hand-offs stay seamless.
+  &__skip-rest {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 0.5em;
+    font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+    font-style: italic;
+    font-weight: 700;
+    font-size: 1.05rem;
+    line-height: 0.98;
+    letter-spacing: 0.03em;
+    text-align: center;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: #fff;
+
+    :root[data-theme='light'] & {
+      color: #05231a;
+    }
+
+    .draft-grid--fill & {
+      font-size: calc(1.15rem * var(--fs-scale));
+    }
   }
 
   // Grows left-to-right as the pick clock counts down (percentage width set

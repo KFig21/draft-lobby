@@ -68,6 +68,7 @@ import SportsFootballIcon from '@mui/icons-material/SportsFootball';
 import TableChartOutlinedIcon from '@mui/icons-material/TableChartOutlined';
 import UndoIcon from '@mui/icons-material/Undo';
 import type { SvgIconComponent } from '@mui/icons-material';
+import type { ReactNode } from 'react';
 import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   Link,
@@ -1859,7 +1860,15 @@ export function DraftBoardPage() {
   if (lobby.status === 'SETUP' || lobby.status === 'SCHEDULED')
     return <Navigate to={`/lobby/${id}`} replace />;
 
-  const { round, onClockTeam, skipped, myOpen, myPickProjections } = derived!;
+  const {
+    round,
+    overall: frontierOverall,
+    totalPicks,
+    onClockTeam,
+    skipped,
+    myOpen,
+    myPickProjections,
+  } = derived!;
   const totalRounds = roundsForSettings(lobby.settings);
   const isComplete = lobby.status === 'COMPLETE';
   // The 3-column Power Rankings board replaces the grid on desktop/fullscreen; it
@@ -1907,6 +1916,46 @@ export function DraftBoardPage() {
   // Only show "picking for X" when the caller doesn't own an open slot (a
   // commissioner covering the team on the clock) — never when picking your own.
   const pickingForTeam = !iOwnAnOpenSlot && onClockTeam ? onClockTeam.name : null;
+  // Commissioner pick targets — every open slot that currently owes a pick: each
+  // skipped slot (one per round, so a team skipped several times can be filled in
+  // a chosen round) plus the team on the clock. Surfaced in the LockInModal so
+  // the commish chooses which team/round a hand-made pick is for once teams have
+  // been skipped; empty for non-commish and when nobody's been skipped. Skipped
+  // slots (behind the frontier) sort first by overall, the on-clock pick last.
+  const commishTargets: {
+    key: string;
+    teamId: string;
+    teamName: string;
+    avatar: ReactNode;
+    overall: number;
+    round: number;
+    onClock: boolean;
+  }[] = [];
+  if (isCommish && skipped.length > 0) {
+    for (const sl of skipped) {
+      commishTargets.push({
+        key: `${sl.overall}`,
+        teamId: sl.team.id,
+        teamName: sl.team.name,
+        avatar: <Avatar avatar={avatarForTeam(sl.team, members)} size={20} />,
+        overall: sl.overall,
+        round: sl.round,
+        onClock: false,
+      });
+    }
+    if (onClockTeam && frontierOverall <= totalPicks) {
+      commishTargets.push({
+        key: `${frontierOverall}`,
+        teamId: onClockTeam.id,
+        teamName: onClockTeam.name,
+        avatar: <Avatar avatar={avatarForTeam(onClockTeam, members)} size={20} />,
+        overall: frontierOverall,
+        round,
+        onClock: true,
+      });
+    }
+    commishTargets.sort((a, b) => a.overall - b.overall);
+  }
   // Board highlight: `${round}:${teamId}` for every skipped, still-open slot.
   const skippedCellKeys = new Set(skipped.map((sl) => `${sl.round}:${sl.team.id}`));
   // Distinct skipped team names (a team may owe more than one) for the banner —
@@ -2016,14 +2065,18 @@ export function DraftBoardPage() {
   // `overall` names a specific open slot to fill — set only when a skipped
   // picker who's up again chose which of their slots this player goes into
   // (see LockInModal). Omitted → the server fills their earliest open slot.
-  async function confirmPick(overall?: number) {
+  async function confirmPick(overall?: number, onBehalfOfTeamId?: string) {
     if (!selected) return;
     setPickError(null);
     setPickBusy(true);
     try {
       await api(`/lobbies/${id}/pick`, {
         method: 'POST',
-        body: { playerId: selected.id, ...(overall != null ? { overall } : {}) },
+        body: {
+          playerId: selected.id,
+          ...(overall != null ? { overall } : {}),
+          ...(onBehalfOfTeamId ? { onBehalfOfTeamId } : {}),
+        },
       });
       setSelected(null);
       setShowFsMenu(false); // pick made — close the fullscreen Menu too (no-op if closed)
@@ -3962,6 +4015,7 @@ export function DraftBoardPage() {
           error={pickError}
           onBehalfOfTeam={pickingForTeam}
           slots={myOpenSlots}
+          commishTargets={commishTargets.length > 0 ? commishTargets : undefined}
         />
       )}
 

@@ -1,4 +1,5 @@
 import CloseIcon from '@mui/icons-material/Close';
+import type { ReactNode } from 'react';
 import { POSITION_COLORS, type Position } from '@draft-lobby/shared';
 import { getTeamColors, getTeamColorsEnabled } from '../../lib/nflTeamColors';
 import { useModalClose } from '../../lib/useModalClose';
@@ -11,10 +12,25 @@ export interface LockInSlot {
   round: number;
 }
 
+/** A slot a commissioner can draft this player for (on the clock or skipped). */
+export interface CommishTarget {
+  /** Unique per slot (its overall) — a team skipped several times has several. */
+  key: string;
+  teamId: string;
+  teamName: string;
+  avatar: ReactNode;
+  overall: number;
+  round: number;
+  onClock: boolean;
+}
+
 interface Props {
   player: PlayerRow;
-  /** `overall` names the chosen slot; omitted → the server fills the earliest. */
-  onConfirm: (overall?: number) => void;
+  /**
+   * `overall` names the chosen slot; omitted → the server fills the earliest.
+   * `onBehalfOfTeamId` (commissioner only) names which team the pick is for.
+   */
+  onConfirm: (overall?: number, onBehalfOfTeamId?: string) => void;
   onCancel: () => void;
   busy?: boolean;
   error?: string | null;
@@ -26,6 +42,12 @@ interface Props {
    * which round/pick this player fills; 0–1 renders a single button.
    */
   slots?: LockInSlot[];
+  /**
+   * Commissioner-only: the teams that currently owe a pick (on the clock + any
+   * skipped). Present once teams have been skipped, so the commish chooses who a
+   * hand-made pick is for instead of it always landing on the team on the clock.
+   */
+  commishTargets?: CommishTarget[];
 }
 
 /** Confirmation modal shown before a pick is locked in. */
@@ -37,10 +59,14 @@ export function LockInModal({
   error,
   onBehalfOfTeam,
   slots,
+  commishTargets,
 }: Props) {
   const { closing, requestClose } = useModalClose(onCancel);
-  // Only offer a choice when the picker genuinely owns more than one open slot.
-  const choose = (slots?.length ?? 0) >= 2;
+  // Commissioner choosing which skipped/on-clock team this pick is for — takes
+  // priority over the own-slots chooser below.
+  const chooseTeam = (commishTargets?.length ?? 0) > 0;
+  // Only offer a slot choice when the picker genuinely owns more than one.
+  const choose = !chooseTeam && (slots?.length ?? 0) >= 2;
   // Team-colored abbreviation pill — only when the user has the setting on and
   // the team is one we have a color pair for (else fall back to plain text).
   const teamColors = getTeamColorsEnabled() ? getTeamColors(player.nfl_team) : null;
@@ -55,7 +81,13 @@ export function LockInModal({
       >
         <div className="modal__header">
           <h2 className="modal__title">
-            {choose ? 'Which pick is this?' : onBehalfOfTeam ? 'Make this pick?' : 'Lock in your pick?'}
+            {chooseTeam
+              ? "Who's this pick for?"
+              : choose
+                ? 'Which pick is this?'
+                : onBehalfOfTeam
+                  ? 'Make this pick?'
+                  : 'Lock in your pick?'}
           </h2>
           <button
             type="button"
@@ -68,10 +100,16 @@ export function LockInModal({
           </button>
         </div>
         <div className="modal__card">
-          {onBehalfOfTeam && (
-            <p className="modal__on-behalf">
-              Picking for <strong>{onBehalfOfTeam}</strong> as commissioner
+          {chooseTeam ? (
+            <p className="lockin__choose-hint">
+              Teams have been skipped — choose which team to draft this player for.
             </p>
+          ) : (
+            onBehalfOfTeam && (
+              <p className="modal__on-behalf">
+                Picking for <strong>{onBehalfOfTeam}</strong> as commissioner
+              </p>
+            )
           )}
           {choose && (
             <p className="lockin__choose-hint">
@@ -109,7 +147,24 @@ export function LockInModal({
           </div>
           {error && <p className="modal__error">{error}</p>}
         </div>
-        {choose ? (
+        {chooseTeam ? (
+          <div className="lockin__slots">
+            {commishTargets!.map((t) => (
+              <button
+                key={t.key}
+                className="button button--primary lockin__target-btn"
+                onClick={() => onConfirm(t.overall, t.teamId)}
+                disabled={busy}
+              >
+                <span className="lockin__target-avatar">{t.avatar}</span>
+                <span className="lockin__target-name">{t.teamName}</span>
+                <span className="lockin__target-meta">
+                  {t.onClock ? 'On the clock' : `Skipped · Round ${t.round}`}
+                </span>
+              </button>
+            ))}
+          </div>
+        ) : choose ? (
           <div className="lockin__slots">
             {slots!.map((s) => (
               <button

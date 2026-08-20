@@ -1,5 +1,4 @@
 import type { DraftType } from '@draft-lobby/shared';
-import SkipNextIcon from '@mui/icons-material/SkipNext';
 import TimerOutlinedIcon from '@mui/icons-material/TimerOutlined';
 import TouchAppIcon from '@mui/icons-material/TouchApp';
 import { useEffect, useRef, useState } from 'react';
@@ -518,15 +517,14 @@ export function DraftGrid({
                               <span className="draft-grid__onclock-sub">make your pick</span>
                             </span>
                           ) : (
-                            <span className="draft-grid__onclock-label draft-grid__skipped-label">
-                              <SkipNextIcon className="draft-grid__onclock-icon" />
-                              Skipped
-                            </span>
+                            // Another team's skipped slot rests on the "SKIPPED"
+                            // announcement word itself (see &__skip-rest).
+                            <span className="draft-grid__skip-rest">Skipped</span>
                           );
                           // Freshly skipped this render → play the announcement,
                           // which ends on the resting label; otherwise show it plain.
                           return skipRevealKeys?.has(`${round}:${team.id}`) ? (
-                            <SkipReveal>{restingLabel}</SkipReveal>
+                            <SkipReveal mine={isMySkipped}>{restingLabel}</SkipReveal>
                           ) : (
                             restingLabel
                           );

@@ -229,4 +229,34 @@
     font-size: 0.85rem;
     opacity: 0.85;
   }
+
+  // Commissioner target mode: one button per owed slot (each skipped round + the
+  // team on the clock), with the team's avatar so several skipped teams — each
+  // possibly skipped in several rounds — stay distinguishable at a glance.
+  &__target-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: $space * 0.75;
+    padding: $space * 1.1 $space * 1.5;
+    font-size: 1rem;
+
+    &.button {
+      border-radius: $radius-card;
+    }
+  }
+
+  &__target-avatar {
+    display: inline-flex;
+    flex-shrink: 0;
+  }
+
+  &__target-name {
+    font-weight: 800;
+  }
+
+  &__target-meta {
+    font-size: 0.85rem;
+    opacity: 0.85;
+  }
 }

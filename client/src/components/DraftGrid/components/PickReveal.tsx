@@ -1,4 +1,3 @@
-import SkipNextIcon from '@mui/icons-material/SkipNext';
 import TimerOutlinedIcon from '@mui/icons-material/TimerOutlined';
 import TouchAppIcon from '@mui/icons-material/TouchApp';
 import type { ReactNode } from 'react';
@@ -39,17 +38,17 @@ export function CellFlip({
     <div className="draft-grid__flip" aria-hidden>
       <div className="draft-grid__flip-face draft-grid__flip-front">
         {/* The front's opening label — a replica of exactly what the cell was
-            showing, so the flip continues from it seamlessly. It carries
-            .draft-grid__onclock-label (size/icon-trim/fullscreen scaling) and
-            .draft-grid__flip-onclock (the zoom-out), and its contents mirror the
-            live cell: the on-clock label, or the skipped resting label. */}
-        <span
-          className={`draft-grid__onclock-label draft-grid__flip-onclock${
-            fromSkip && !fromSkipMine ? ' draft-grid__skipped-label' : ''
-          }`}
-        >
-          {fromSkip ? (
-            fromSkipMine ? (
+            showing, so the flip continues from it seamlessly. Another team's
+            skipped slot rests on the "SKIPPED" word, so that's its own impact
+            element; otherwise it's the on-clock label (which the "make your
+            pick" variant reuses for its size/icon-trim/fullscreen scaling). Both
+            carry .draft-grid__flip-onclock so they zoom out into "THE PICK IS
+            IN". */}
+        {fromSkip && !fromSkipMine ? (
+          <span className="draft-grid__skip-rest draft-grid__flip-onclock">Skipped</span>
+        ) : (
+          <span className="draft-grid__onclock-label draft-grid__flip-onclock">
+            {fromSkipMine ? (
               <>
                 <span className="draft-grid__onclock-title">
                   <TouchAppIcon fontSize="inherit" /> Skipped
@@ -58,17 +57,12 @@ export function CellFlip({
               </>
             ) : (
               <>
-                <SkipNextIcon className="draft-grid__onclock-icon" />
-                Skipped
+                <TimerOutlinedIcon className="draft-grid__onclock-icon" />
+                On the clock
               </>
-            )
-          ) : (
-            <>
-              <TimerOutlinedIcon className="draft-grid__onclock-icon" />
-              On the clock
-            </>
-          )}
-        </span>
+            )}
+          </span>
+        )}
         {/* Each half is kept non-breaking, so the line either fits as one
             ("THE PICK IS IN") or breaks only between them ("THE PICK" / "IS
             IN") — never mid-phrase. */}
