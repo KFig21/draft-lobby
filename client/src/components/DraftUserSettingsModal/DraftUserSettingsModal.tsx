@@ -33,6 +33,8 @@ interface Props {
   onTvModeChange: (enabled: boolean) => void;
   hostMode: boolean;
   onHostModeChange: (enabled: boolean) => void;
+  topbarPickReveal: boolean;
+  onTopbarPickRevealChange: (enabled: boolean) => void;
   toastPrefs: ToastPrefs;
   onToastsEnabledChange: (enabled: boolean) => void;
   onToastCategoryChange: (category: ToastCategory, enabled: boolean) => void;
@@ -68,6 +70,8 @@ export function DraftUserSettingsModal({
   onTvModeChange,
   hostMode,
   onHostModeChange,
+  topbarPickReveal,
+  onTopbarPickRevealChange,
   toastPrefs,
   onToastsEnabledChange,
   onToastCategoryChange,
@@ -156,6 +160,21 @@ export function DraftUserSettingsModal({
               label="Toggle next-pick projection"
               checked={showPickProjection}
               onChange={onShowPickProjectionChange}
+            />
+          </div>
+          <div className="draft-user-settings__row">
+            <div className="draft-user-settings__row-main">
+              <span className="draft-user-settings__row-name">Top bar pick reveal</span>
+              <span className="muted">
+                When a pick lands, the top bar clock slides down to reveal “THE
+                PICK IS IN”, then the drafted player — the team and pick stay put
+                until it finishes
+              </span>
+            </div>
+            <ToggleSwitch
+              label="Toggle top bar pick reveal"
+              checked={topbarPickReveal}
+              onChange={onTopbarPickRevealChange}
             />
           </div>
           <div className="draft-user-settings__row">

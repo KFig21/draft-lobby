@@ -21,6 +21,35 @@
   }
 }
 
+// Hand-off out of a pick reveal — a continuous downward motion: the just-
+// revealed pick drops out the bottom (exit), then the next team + clock drop in
+// from the top (enter).
+@keyframes draft-center-exit {
+
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(110%);
+  }
+}
+
+@keyframes draft-center-enter {
+
+  from {
+    opacity: 0;
+    transform: translateY(-70%);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 // Shared look for the top-bar chip buttons (Home, Room, Pause, Undo, Skip
 // bots, Export…). Blends the theme's text color into the raised bar
 // background via color-mix so they read clearly against it in both themes,
@@ -106,6 +135,15 @@
     flex-shrink: 0;
     transition: background 150ms ease;
     z-index: 50;
+
+    // Only while a pick reveal is sliding out the bottom / the next readout is
+    // dropping in from the top: clip to the bar so neither is seen past its
+    // edges. Scoped to those brief phases so the drop-down menus (which live in
+    // the bar and open downward) aren't clipped the rest of the time. The reveal
+    // text stays within the bar's width, so this never shaves it horizontally.
+    &--reveal-clip {
+      overflow: hidden;
+    }
 
     // Desktop: true 3-column centering (grid, not flex space-between) so
     // &__center — the on-clock team + pick clock — lands dead in the middle
@@ -640,6 +678,38 @@
     @include lg {
       display: none;
     }
+
+    // Touch: these tool buttons keep their resting look on hover/focus/active —
+    // a tap otherwise leaves the primary fill / press-down transform looking
+    // stuck (there's no cursor to clear a sticky :hover). This block only exists
+    // on mobile (the bar is hidden at lg), so it never touches the desktop bar.
+    .draft__tool-btn {
+      -webkit-tap-highlight-color: transparent;
+
+      &:hover:not(:disabled),
+      &:focus-visible:not(:disabled),
+      &:active:not(:disabled) {
+        border-color: color-mix(in srgb, $text 16%, transparent);
+        background: color-mix(in srgb, $bg-raised 78%, $text 12%);
+        color: $text;
+        transform: none;
+      }
+
+      &:focus-visible {
+        outline: none;
+      }
+    }
+
+    // …but "Skip bots" while on keeps its own accent rather than the reset above.
+    .draft__skipbots-btn.is-on {
+      &:hover:not(:disabled),
+      &:focus-visible:not(:disabled),
+      &:active:not(:disabled) {
+        border-color: $accent;
+        background: rgba($accent, 0.16);
+        color: $accent;
+      }
+    }
   }
 
   // Compact commissioner / member tools that live in the top bar.
@@ -1105,10 +1175,61 @@
     }
   }
 
+  // Hand-off out of a pick reveal (see revealExiting / nextEntering in
+  // DraftBoardPage.tsx): the revealed pick drops out the bottom, then the next
+  // team + clock drop in from the top.
+  &__center--reveal-exit {
+    .draft__status,
+    .draft__clock-wrap {
+      animation: draft-center-exit 0.34s ease-in both;
+    }
+  }
+
+  &__center--entering {
+    .draft__status,
+    .draft__clock-wrap {
+      animation: draft-center-enter 0.42s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+    }
+  }
+
+  &__center--reveal-exit,
+  &__center--entering {
+    @media (prefers-reduced-motion: reduce) {
+      .draft__status,
+      .draft__clock-wrap {
+        animation: none;
+      }
+    }
+  }
+
   &__clock-wrap {
     display: flex;
     align-items: center;
     min-width: 0;
+  }
+
+  // During the top-bar pick reveal: the real clock stays in the flow but hidden,
+  // reserving its normal width/height so the top bar's grid never shifts (no side
+  // rail wrapping, no height change). The reveal itself is overlaid on top,
+  // anchored to the clock's start edge and free to extend rightward over the
+  // centre gap (see TopbarPickReveal.scss).
+  &__clock-wrap--reveal {
+    position: relative;
+
+    .clock {
+      visibility: hidden;
+    }
+
+    .tpr {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      // Size to the content, not the narrow reserved clock footprint (an absolute
+      // box with only `left` set would otherwise shrink-wrap against the parent's
+      // width and clip). It's free to overflow rightward over the centre gap.
+      width: max-content;
+    }
   }
 
   &__status {

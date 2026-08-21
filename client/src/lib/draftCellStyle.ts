@@ -152,3 +152,23 @@ export function getHostMode(): boolean {
 export function setHostMode(on: boolean): void {
   localStorage.setItem(HOST_MODE_STORAGE_KEY, on ? '1' : '0');
 }
+
+/** "Top bar pick reveal" — when a pick lands, play a short animation in the top
+ * bar: the pick clock slides down and is replaced by "THE PICK IS IN", which
+ * then slides down and is replaced by the drafted player (with position badge).
+ * The team/pick readout stays frozen on the pick being revealed until it ends.
+ * A per-device display flourish for a shared/host screen; default OFF, so read
+ * as `=== '1'`. */
+const TOPBAR_PICK_REVEAL_STORAGE_KEY = 'draftTopbarPickReveal';
+
+export function getTopbarPickReveal(): boolean {
+  try {
+    return localStorage.getItem(TOPBAR_PICK_REVEAL_STORAGE_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+export function setTopbarPickReveal(on: boolean): void {
+  localStorage.setItem(TOPBAR_PICK_REVEAL_STORAGE_KEY, on ? '1' : '0');
+}

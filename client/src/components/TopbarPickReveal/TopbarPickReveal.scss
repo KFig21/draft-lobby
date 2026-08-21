@@ -1,0 +1,224 @@
+@use 'variables' as *;
+
+// Downward "slot machine": each row fills the box and is shifted vertically by
+// its keyframes — translateY(0) centred, -100% parked above, 100% dropped below.
+// One shared 4s timeline (percentages line the three rows up), so the clock
+// drops out as "THE PICK IS IN" drops in, which then drops out as the player
+// drops in. `both` fill holds each row's start/end frame outside its window.
+$tpr-duration: 4s;
+
+@keyframes tpr-clock {
+  0%,
+  7% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  17%,
+  100% {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+}
+
+@keyframes tpr-pii {
+  0%,
+  7% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+
+  17%,
+  45% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  55%,
+  100% {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+}
+
+@keyframes tpr-player {
+  0%,
+  45% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+
+  55%,
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+// Skip announcement: "SKIPPED" drops in right after the clock leaves and holds
+// to the end (no player to hand off to).
+@keyframes tpr-skipword {
+  0%,
+  7% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+
+  17%,
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.tpr {
+  // Overlaid on the top bar, anchored over a hidden clock spacer that reserves
+  // the normal clock footprint (see &__clock-wrap--reveal in DraftBoardPage.scss)
+  // — so the reveal never widens or heightens the bar (which would wrap the side
+  // rails / grow the bar), and its content is free to extend rightward over the
+  // centre gap. Absolute positioning + full height come from that parent.
+  //
+  // Single-cell grid with all three rows stacked in it (grid-area 1/1), each
+  // left-aligned so the clock, "THE PICK IS IN" and the player share one start
+  // edge instead of shifting under a centred layout.
+  display: grid;
+  grid-template: 1fr / auto;
+  align-items: center;
+  justify-items: start;
+  min-width: 0;
+  // Right-only breathing room so the name's trailing edge isn't shaved by the
+  // overflow clip (which is only there to hide the vertical slide). No LEFT
+  // padding — the rows must start exactly at the real clock's edge so the clock
+  // doesn't shift when the reveal takes over.
+  padding: 0 0.5em 0 0;
+  overflow: hidden;
+  pointer-events: none;
+
+  &__row {
+    grid-area: 1 / 1; // stack every row over the same cell
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: $space * 0.5;
+    min-width: 0;
+    line-height: 1;
+    white-space: nowrap;
+    will-change: transform, opacity;
+    animation-duration: $tpr-duration;
+    animation-timing-function: cubic-bezier(0.5, 0, 0.2, 1);
+    animation-fill-mode: both;
+
+    @media (prefers-reduced-motion: reduce) {
+      animation: none;
+    }
+  }
+
+  // Reduced motion: no slide — just show the reveal's end state (the drafted
+  // player, or "SKIPPED") so the box lands on it instead of on a parked clock.
+  @media (prefers-reduced-motion: reduce) {
+    .tpr__clock,
+    .tpr__pii {
+      display: none;
+    }
+
+    .tpr__player,
+    .tpr__skipword {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  // Matches the top bar's own clock exactly (size + min-width + right-align, see
+  // PickClock.scss) so it sits right on top of the real clock — no shrink and no
+  // horizontal shift when the reveal takes over.
+  &__clock {
+    // Right-align the digits within the same 3.5ch min-width the real clock uses
+    // (it's a flex row, so justify-content — not text-align — does it), so the
+    // reveal clock lands exactly on the real one.
+    min-width: 3.5ch;
+    justify-content: flex-end;
+    font-size: 2rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    animation-name: tpr-clock;
+
+    .draft__topbar--fill & {
+      font-size: clamp(1.6rem, 3.2vw, 3rem);
+    }
+  }
+
+  &__pii,
+  &__skipword {
+    font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+    font-style: italic;
+    font-weight: 700;
+    font-size: 1.6rem;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+
+    .draft__topbar--fill & {
+      font-size: clamp(1.6rem, 3vw, 2.6rem);
+    }
+  }
+
+  &__pii {
+    animation-name: tpr-pii;
+  }
+
+  &__skipword {
+    animation-name: tpr-skipword;
+  }
+
+  &__player {
+    font-size: 1.4rem;
+    font-weight: 700;
+    animation-name: tpr-player;
+
+    .draft__topbar--fill & {
+      font-size: clamp(1.4rem, 2.6vw, 2.4rem);
+    }
+  }
+
+  // Position badge, matching the pick/lock-in modals' square chip, scaled down
+  // to sit inline on the bar. A light ring keeps it legible even when the bar
+  // colour (green my-turn / amber / red) matches the badge's own fill.
+  &__pos {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.5em;
+    padding: 0.12em 0.4em;
+    border-radius: 5px;
+    // A border (not an outset ring) so it stays inside the overflow clip at the
+    // box's left edge instead of being shaved.
+    border: 1.5px solid rgba(255, 255, 255, 0.85);
+    color: #05231a;
+    font-size: 0.62em;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+  }
+
+  &__name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  // Mobile: the bar is narrow, so shrink the player (and its chip) to fit. The
+  // announcement ("THE PICK IS IN" / "SKIPPED") and the clock keep their size —
+  // both are short, fixed phrases that fit, and the clock must still land on the
+  // real mobile clock.
+  @media (max-width: #{$bp-md - 1px}) {
+    &__player {
+      font-size: 0.95rem;
+    }
+
+    &__pos {
+      min-width: 1.4em;
+      padding: 0.1em 0.3em;
+      border-width: 1px;
+      font-size: 0.66em;
+    }
+  }
+}
