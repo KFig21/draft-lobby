@@ -193,8 +193,10 @@ $tpr-duration: 4.5s;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 1.9em;
-    height: 1.9em;
+    // Box a touch bigger than the text (both are em-based, so the smaller font
+    // alone wouldn't add a gap) — leaves space between the letters and the border.
+    width: 2.2em;
+    height: 2.2em;
     padding: 0;
     line-height: 1;
     border-radius: 5px;
@@ -202,7 +204,7 @@ $tpr-duration: 4.5s;
     // box's left edge instead of being shaved.
     border: 1px solid rgba(255, 255, 255, 0.85);
     color: #05231a;
-    font-size: 0.62em;
+    font-size: 0.55em;
     font-weight: 800;
     letter-spacing: 0.02em;
   }
