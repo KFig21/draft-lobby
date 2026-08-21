@@ -2,22 +2,21 @@
 
 // Downward "slot machine": each row fills the box and is shifted vertically by
 // its keyframes — translateY(0) centred, -100% parked above, 100% dropped below.
-// One shared 4.5s timeline (percentages line the three rows up), so the clock
+// One shared 5s timeline (percentages line the three rows up), so the clock
 // drops out as "THE PICK IS IN" drops in, which then drops out as the player
 // drops in. `both` fill holds each row's start/end frame outside its window.
-// The stops keep the clock's exit at ~0.68s but hold "THE PICK IS IN" and the
-// player each ~0.25s longer than a 4s run, so they read in step with the board
-// cell's flip.
-$tpr-duration: 4.5s;
+// Each drop spans a 20% (~1s) window to match the pace of the next-pick slide-in
+// (draft-center-enter), with a beat of hold between them.
+$tpr-duration: 5s;
 
 @keyframes tpr-clock {
   0%,
-  6% {
+  4% {
     transform: translateY(0);
     opacity: 1;
   }
 
-  15%,
+  24%,
   100% {
     transform: translateY(100%);
     opacity: 0;
@@ -26,18 +25,18 @@ $tpr-duration: 4.5s;
 
 @keyframes tpr-pii {
   0%,
-  6% {
+  4% {
     transform: translateY(-100%);
     opacity: 0;
   }
 
-  15%,
-  46% {
+  24%,
+  44% {
     transform: translateY(0);
     opacity: 1;
   }
 
-  54%,
+  64%,
   100% {
     transform: translateY(100%);
     opacity: 0;
@@ -46,12 +45,12 @@ $tpr-duration: 4.5s;
 
 @keyframes tpr-player {
   0%,
-  46% {
+  44% {
     transform: translateY(-100%);
     opacity: 0;
   }
 
-  54%,
+  64%,
   100% {
     transform: translateY(0);
     opacity: 1;
@@ -62,12 +61,12 @@ $tpr-duration: 4.5s;
 // to the end (no player to hand off to).
 @keyframes tpr-skipword {
   0%,
-  6% {
+  4% {
     transform: translateY(-100%);
     opacity: 0;
   }
 
-  15%,
+  24%,
   100% {
     transform: translateY(0);
     opacity: 1;
@@ -108,7 +107,9 @@ $tpr-duration: 4.5s;
     white-space: nowrap;
     will-change: transform, opacity;
     animation-duration: $tpr-duration;
-    animation-timing-function: cubic-bezier(0.5, 0, 0.2, 1);
+    // Same easing as the next-pick slide-in (draft-center-enter) so the drops
+    // share its feel, not just its duration.
+    animation-timing-function: cubic-bezier(0.2, 0.7, 0.2, 1);
     animation-fill-mode: both;
 
     @media (prefers-reduced-motion: reduce) {
