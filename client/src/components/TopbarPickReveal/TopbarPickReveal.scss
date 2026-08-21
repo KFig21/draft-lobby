@@ -106,6 +106,9 @@ $tpr-duration: 4s;
     will-change: transform, opacity;
     animation-duration: $tpr-duration;
     animation-timing-function: cubic-bezier(0.5, 0, 0.2, 1);
+    // Hold the clock a beat longer before starting, so "THE PICK IS IN" and the
+    // player land in step with the board cell's own flip and don't spoil it.
+    animation-delay: 0.25s;
     animation-fill-mode: both;
 
     @media (prefers-reduced-motion: reduce) {
@@ -183,22 +186,23 @@ $tpr-duration: 4s;
   // to sit inline on the bar. A light ring keeps it legible even when the bar
   // colour (green my-turn / amber / red) matches the badge's own fill.
   &__pos {
-    flex-shrink: 0;
+    // Fixed, equal width + height (box-sizing is border-box globally) so it's a
+    // true square — height alone / aspect-ratio got overridden by the text's own
+    // line box on the flex item. No padding, so the square isn't stretched wide.
+    flex: none;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    // Square, not vertically condensed — an explicit height forces it (aspect-
-    // ratio gets overridden by the text's own line height on a flex item);
-    // min-width matches it and lets "DEF" widen a touch.
-    height: 1.7em;
-    min-width: 1.7em;
-    padding: 0 0.25em;
+    width: 1.9em;
+    height: 1.9em;
+    padding: 0;
+    line-height: 1;
     border-radius: 5px;
     // A border (not an outset ring) so it stays inside the overflow clip at the
     // box's left edge instead of being shaved.
     border: 1px solid rgba(255, 255, 255, 0.85);
     color: #05231a;
-    font-size: 0.66em;
+    font-size: 0.62em;
     font-weight: 800;
     letter-spacing: 0.02em;
   }
