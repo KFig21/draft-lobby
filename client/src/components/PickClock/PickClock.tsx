@@ -38,14 +38,17 @@ export function PickClock({
 
   const remainingMs = new Date(deadline).getTime() - now;
   const remaining = Math.max(0, Math.floor(remainingMs / 1000));
-  const expired = remaining === 0;
-  const urgent = remaining <= 10 && !expired;
+  // Match the on-clock cell / on-turn top bar urgency thresholds (see
+  // onClockCellUrgency in DraftBoardPage): amber from 25s, red from 10s — so the
+  // clock a bystander watches turns the same colours, at the same times.
+  const danger = remaining <= 10;
+  const warning = !danger && remaining <= 25;
 
   return (
     <span
-      className={`clock ${urgent ? 'clock--urgent' : ''} ${expired ? 'clock--expired' : ''}`}
+      className={`clock ${warning ? 'clock--warning' : ''} ${danger ? 'clock--danger' : ''}`}
     >
-      {expired ? '0:00' : formatDuration(remaining)}
+      {formatDuration(remaining)}
     </span>
   );
 }

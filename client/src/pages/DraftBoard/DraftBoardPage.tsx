@@ -321,6 +321,10 @@ export function DraftBoardPage() {
   const [nextEntering, setNextEntering] = useState(false);
   const revealExitTimer = useRef<number | null>(null);
   const nextEnterTimer = useRef<number | null>(null);
+  // Reveal-off plain flip: track the on-clock team so a change (advance) triggers
+  // the slide-in, with its own debounce (separate from the reveal's).
+  const committedOnClockRef = useRef<string | null | undefined>(undefined);
+  const lastFlipAtRef = useRef(0);
 
   function updateCellStyle(style: DraftCellStyle) {
     setDraftCellStyle(style);
@@ -1677,13 +1681,12 @@ export function DraftBoardPage() {
     }, TOPBAR_REVEAL_MS);
   }
 
-  // Top-bar handling when a single new draft pick lands during live drafting.
-  // With the reveal on: freeze the readout on it and play the full reveal (see
-  // TopbarPickReveal). With it off: still flip the readout — slide the next team
-  // + clock in from the top — so the top bar animates the pick either way.
+  // Top-bar pick reveal: when a single new draft pick lands during live drafting,
+  // freeze the top-bar readout on it and play the reveal (see TopbarPickReveal).
   // Seeds the current picks on first run so an already-populated board / a
   // mid-draft toggle-on never replays; a 1.2s debounce keeps fast-forward and
-  // simulate bursts from flickering through it.
+  // simulate bursts from flickering through it. (When the reveal is OFF, the
+  // plain flip is handled by the on-clock-change effect below instead.)
   useEffect(() => {
     const liveIds = new Set(picks.filter((p) => !p.is_keeper).map((p) => p.id));
     const seeded = committedRevealPickIds.current !== null;
@@ -1691,32 +1694,44 @@ export function DraftBoardPage() {
       ? [...liveIds].filter((pid) => !committedRevealPickIds.current!.has(pid))
       : [];
     committedRevealPickIds.current = liveIds;
-    if (!seeded || lobby?.status !== 'DRAFTING') return;
+    if (!seeded || !topbarPickReveal || lobby?.status !== 'DRAFTING') return;
     if (fresh.length !== 1) return; // one clean pick at a time (skip bulk arrivals)
     const now = Date.now();
     if (now - lastRevealAtRef.current < 1200) return; // burst — don't flicker
     const p = picks.find((pp) => pp.id === fresh[0]);
-    if (!p) return;
+    const player = p ? playersById.get(p.player_id) : undefined;
+    if (!p || !player) return;
     lastRevealAtRef.current = now;
-    const player = playersById.get(p.player_id);
-    if (topbarPickReveal && player) {
-      setPickReveal({
-        player,
-        skipped: false,
-        team: teamsById.get(p.team_id) ?? null,
-        round: Math.floor((p.overall - 1) / lobby.settings.teamCount) + 1,
-        overall: p.overall,
-        clockLabel: prevClockLabelRef.current,
-      });
-      scheduleRevealHandoff();
-    } else {
-      // Reveal off (or player missing): just flip to the next readout.
-      setNextEntering(true);
-      if (nextEnterTimer.current) clearTimeout(nextEnterTimer.current);
-      nextEnterTimer.current = window.setTimeout(() => setNextEntering(false), TOPBAR_NEXT_ENTER_MS);
-    }
+    setPickReveal({
+      player,
+      skipped: false,
+      team: teamsById.get(p.team_id) ?? null,
+      round: Math.floor((p.overall - 1) / lobby.settings.teamCount) + 1,
+      overall: p.overall,
+      clockLabel: prevClockLabelRef.current,
+    });
+    scheduleRevealHandoff();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [picks, topbarPickReveal, lobby?.status]);
+
+  // Reveal OFF: still flip the top bar to the next readout — but keyed on the
+  // on-clock team actually changing (which happens once the pick/skip advances
+  // the frontier), so it animates the NEW team, not the old one a beat early.
+  useEffect(() => {
+    const id = derived?.onClockTeam?.id ?? null;
+    const prev = committedOnClockRef.current;
+    committedOnClockRef.current = id;
+    if (prev === undefined) return; // seed
+    if (topbarPickReveal || lobby?.status !== 'DRAFTING') return;
+    if (id == null || id === prev) return;
+    const now = Date.now();
+    if (now - lastFlipAtRef.current < 1200) return;
+    lastFlipAtRef.current = now;
+    setNextEntering(true);
+    if (nextEnterTimer.current) clearTimeout(nextEnterTimer.current);
+    nextEnterTimer.current = window.setTimeout(() => setNextEntering(false), TOPBAR_NEXT_ENTER_MS);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [derived?.onClockTeam?.id, topbarPickReveal, lobby?.status]);
 
   // Top-bar skip reveal: same treatment when a team is skipped (its clock runs
   // out and no pick is made) — the clock slides down to "SKIPPED", which holds
