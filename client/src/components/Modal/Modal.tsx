@@ -1,3 +1,4 @@
+import CloseIcon from '@mui/icons-material/Close';
 import { useEffect, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useModalClose } from '../../lib/useModalClose';
@@ -54,7 +55,7 @@ export function Modal({ title, onClose, onBack, wide, className, icon, footer, c
             <h2>{title}</h2>
           </div>
           <button className="dialog__close" onClick={requestClose} aria-label="Close">
-            ✕
+            <CloseIcon fontSize="small" />
           </button>
         </header>
         <div className="dialog__body">{children}</div>
