@@ -2,6 +2,11 @@ import { POSITION_COLORS, type Position } from '@draft-lobby/shared';
 import type { PlayerRow } from '../../lib/types';
 import './TopbarPickReveal.scss';
 
+// Trailing non-breaking space appended to the announcements so the box's
+// overflow clip clears the italic tail of the last letter — its slant overhangs
+// the advance width the box is sized to, which otherwise shaves the final glyph.
+const NBSP = ' ';
+
 // The top-bar pick reveal (opt-in — see getTopbarPickReveal). Plays where the
 // pick clock normally sits, rows stacked over the same spot and sliding downward
 // in turn (timing + keyframes in TopbarPickReveal.scss):
@@ -26,10 +31,10 @@ export function TopbarPickReveal({
     <div className="tpr" aria-hidden>
       <span className="tpr__row tpr__clock">{clockLabel}</span>
       {skipped ? (
-        <span className="tpr__row tpr__skipword">Skipped</span>
+        <span className="tpr__row tpr__skipword">Skipped{NBSP}</span>
       ) : (
         <>
-          <span className="tpr__row tpr__pii">The pick is in</span>
+          <span className="tpr__row tpr__pii">The pick is in{NBSP}</span>
           {player && (
             <span className="tpr__row tpr__player">
               <span

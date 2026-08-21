@@ -1188,7 +1188,7 @@
   &__center--entering {
     .draft__status,
     .draft__clock-wrap {
-      animation: draft-center-enter 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+      animation: draft-center-enter 1s cubic-bezier(0.2, 0.7, 0.2, 1) both;
     }
   }
 

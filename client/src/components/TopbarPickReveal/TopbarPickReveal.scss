@@ -205,18 +205,11 @@ $tpr-duration: 4s;
     text-overflow: ellipsis;
   }
 
-  // Mobile: the bar is narrow and the reveal extends rightward from mid-bar, so
-  // cap the announcement to the viewport width (kept as big as fits — it's still
-  // the largest thing here) and shrink the player + chip. Extra right padding
-  // clears the italic tail from the clip edge. The clock is left alone so it
-  // still lands on the real mobile clock.
+  // Mobile: keep the announcement full-size (the trailing-space fix clears the
+  // italic tail, so it no longer clips) and only shrink the player + chip, which
+  // vary in length. The clock is left alone so it still lands on the real clock.
   @media (max-width: #{$bp-md - 1px}) {
     padding-right: 0.7em;
-
-    &__pii,
-    &__skipword {
-      font-size: min(1.6rem, 4vw);
-    }
 
     &__player {
       font-size: 0.95rem;

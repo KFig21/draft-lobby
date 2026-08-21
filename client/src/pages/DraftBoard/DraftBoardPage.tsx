@@ -216,7 +216,7 @@ const TOPBAR_REVEAL_MS = 4000;
 const TOPBAR_REVEAL_EXIT_MS = 340;
 // How long the next team + clock slide in for once a reveal ends / on a plain
 // pick flip (must match the draft-center-enter animation in DraftBoardPage.scss).
-const TOPBAR_NEXT_ENTER_MS = 720;
+const TOPBAR_NEXT_ENTER_MS = 1020;
 
 // Board screenshot: breathing room (px, pre-scale) around the captured table
 // — html2canvas otherwise crops exactly to the table's own box, edge to edge.
