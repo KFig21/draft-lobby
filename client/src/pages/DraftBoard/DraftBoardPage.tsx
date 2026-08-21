@@ -304,6 +304,9 @@ export function DraftBoardPage() {
     /** null → a skip announcement ("SKIPPED") rather than a made pick. */
     player: PlayerRow | null;
     skipped: boolean;
+    /** true → no announcement at all: just freeze the outgoing team and slide it
+     * out (the reveal-off flip, so the previous team doesn't vanish abruptly). */
+    plain: boolean;
     team: TeamRow | null;
     round: number;
     overall: number;
@@ -321,9 +324,12 @@ export function DraftBoardPage() {
   const [nextEntering, setNextEntering] = useState(false);
   const revealExitTimer = useRef<number | null>(null);
   const nextEnterTimer = useRef<number | null>(null);
-  // Reveal-off plain flip: track the on-clock team so a change (advance) triggers
-  // the slide-in, with its own debounce (separate from the reveal's).
-  const committedOnClockRef = useRef<string | null | undefined>(undefined);
+  // Reveal-off plain flip: track the on-clock team (with its round/pick) so a
+  // change (advance) can slide the OUTGOING team out and the next in, with its
+  // own debounce (separate from the reveal's).
+  const committedOnClockRef = useRef<
+    { id: string; team: TeamRow; round: number; overall: number } | null | undefined
+  >(undefined);
   const lastFlipAtRef = useRef(0);
 
   function updateCellStyle(style: DraftCellStyle) {
@@ -1705,6 +1711,7 @@ export function DraftBoardPage() {
     setPickReveal({
       player,
       skipped: false,
+      plain: false,
       team: teamsById.get(p.team_id) ?? null,
       round: Math.floor((p.overall - 1) / lobby.settings.teamCount) + 1,
       overall: p.overall,
@@ -1714,22 +1721,43 @@ export function DraftBoardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [picks, topbarPickReveal, lobby?.status]);
 
-  // Reveal OFF: still flip the top bar to the next readout — but keyed on the
-  // on-clock team actually changing (which happens once the pick/skip advances
-  // the frontier), so it animates the NEW team, not the old one a beat early.
+  // Reveal OFF: still animate the top bar flipping to the next team — keyed on
+  // the on-clock team actually changing (a pick/skip advances the frontier), so
+  // it uses the NEW team, not the old one a beat early. Freezes the OUTGOING
+  // team and slides it out the bottom, then the next drops in from the top — so
+  // the previous team doesn't just vanish.
   useEffect(() => {
-    const id = derived?.onClockTeam?.id ?? null;
+    const cur = derived?.onClockTeam
+      ? { id: derived.onClockTeam.id, team: derived.onClockTeam, round, overall: frontierOverall }
+      : null;
     const prev = committedOnClockRef.current;
-    committedOnClockRef.current = id;
+    committedOnClockRef.current = cur;
     if (prev === undefined) return; // seed
     if (topbarPickReveal || lobby?.status !== 'DRAFTING') return;
-    if (id == null || id === prev) return;
+    if (!cur || !prev || cur.id === prev.id) return;
     const now = Date.now();
     if (now - lastFlipAtRef.current < 1200) return;
     lastFlipAtRef.current = now;
-    setNextEntering(true);
-    if (nextEnterTimer.current) clearTimeout(nextEnterTimer.current);
-    nextEnterTimer.current = window.setTimeout(() => setNextEntering(false), TOPBAR_NEXT_ENTER_MS);
+    // Freeze on the team that just left the clock and slide it out the bottom…
+    setPickReveal({
+      player: null,
+      skipped: false,
+      plain: true,
+      team: prev.team,
+      round: prev.round,
+      overall: prev.overall,
+      clockLabel: prevClockLabelRef.current,
+    });
+    setRevealExiting(true);
+    if (revealExitTimer.current) clearTimeout(revealExitTimer.current);
+    revealExitTimer.current = window.setTimeout(() => {
+      // …then the next team + clock drop in from the top.
+      setPickReveal(null);
+      setRevealExiting(false);
+      setNextEntering(true);
+      if (nextEnterTimer.current) clearTimeout(nextEnterTimer.current);
+      nextEnterTimer.current = window.setTimeout(() => setNextEntering(false), TOPBAR_NEXT_ENTER_MS);
+    }, TOPBAR_REVEAL_EXIT_MS);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [derived?.onClockTeam?.id, topbarPickReveal, lobby?.status]);
 
@@ -1754,6 +1782,7 @@ export function DraftBoardPage() {
     setPickReveal({
       player: null,
       skipped: true,
+      plain: false,
       team: sl.team,
       round: sl.round,
       overall: sl.overall,
@@ -3745,20 +3774,28 @@ export function DraftBoardPage() {
                   Round {pickReveal.round} · Pick {pickReveal.overall}
                 </span>
               </div>
-              <div className="draft__clock-wrap draft__clock-wrap--reveal">
-                {/* Hidden live clock reserves the normal footprint so the top
-                    bar layout doesn't shift while the reveal overlays it. */}
-                <PickClock
-                  deadline={lobby.pick_deadline}
-                  frozenMs={lobby.pick_deadline_remaining_ms}
-                  unlimited={clockUnlimited}
-                />
-                <TopbarPickReveal
-                  clockLabel={pickReveal.clockLabel}
-                  skipped={pickReveal.skipped}
-                  player={pickReveal.player}
-                />
-              </div>
+              {pickReveal.plain ? (
+                // Reveal-off flip: no announcement, just the outgoing team's
+                // frozen clock riding out the bottom with its status.
+                <div className="draft__clock-wrap">
+                  <span className="clock">{pickReveal.clockLabel}</span>
+                </div>
+              ) : (
+                <div className="draft__clock-wrap draft__clock-wrap--reveal">
+                  {/* Hidden live clock reserves the normal footprint so the top
+                      bar layout doesn't shift while the reveal overlays it. */}
+                  <PickClock
+                    deadline={lobby.pick_deadline}
+                    frozenMs={lobby.pick_deadline_remaining_ms}
+                    unlimited={clockUnlimited}
+                  />
+                  <TopbarPickReveal
+                    clockLabel={pickReveal.clockLabel}
+                    skipped={pickReveal.skipped}
+                    player={pickReveal.player}
+                  />
+                </div>
+              )}
             </>
           ) : (
             <>
