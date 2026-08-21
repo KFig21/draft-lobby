@@ -187,14 +187,17 @@ $tpr-duration: 4s;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 1.5em;
-    padding: 0.12em 0.4em;
+    // Square, not vertically condensed — aspect-ratio keeps height == width;
+    // min-width sets the floor and lets "DEF" widen it (staying square).
+    min-width: 1.7em;
+    aspect-ratio: 1;
+    padding: 0 0.3em;
     border-radius: 5px;
     // A border (not an outset ring) so it stays inside the overflow clip at the
     // box's left edge instead of being shaved.
-    border: 1.5px solid rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.85);
     color: #05231a;
-    font-size: 0.62em;
+    font-size: 0.66em;
     font-weight: 800;
     letter-spacing: 0.02em;
   }
@@ -213,13 +216,6 @@ $tpr-duration: 4s;
 
     &__player {
       font-size: 0.95rem;
-    }
-
-    &__pos {
-      min-width: 1.4em;
-      padding: 0.1em 0.3em;
-      border-width: 1px;
-      font-size: 0.66em;
     }
   }
 }

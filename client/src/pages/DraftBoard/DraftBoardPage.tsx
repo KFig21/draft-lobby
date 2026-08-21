@@ -1700,7 +1700,9 @@ export function DraftBoardPage() {
       ? [...liveIds].filter((pid) => !committedRevealPickIds.current!.has(pid))
       : [];
     committedRevealPickIds.current = liveIds;
-    if (!seeded || !topbarPickReveal || lobby?.status !== 'DRAFTING') return;
+    // Skip-bots mode auto-picks a bot roughly every second — far faster than the
+    // reveal can play — so suppress the top-bar animation while it's on.
+    if (!seeded || !topbarPickReveal || autoSkipBots || lobby?.status !== 'DRAFTING') return;
     if (fresh.length !== 1) return; // one clean pick at a time (skip bulk arrivals)
     const now = Date.now();
     if (now - lastRevealAtRef.current < 1200) return; // burst — don't flicker
@@ -1719,7 +1721,7 @@ export function DraftBoardPage() {
     });
     scheduleRevealHandoff();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [picks, topbarPickReveal, lobby?.status]);
+  }, [picks, topbarPickReveal, autoSkipBots, lobby?.status]);
 
   // Reveal OFF: still animate the top bar flipping to the next team — keyed on
   // the on-clock team actually changing (a pick/skip advances the frontier), so
@@ -1741,7 +1743,7 @@ export function DraftBoardPage() {
     const prev = committedOnClockRef.current;
     committedOnClockRef.current = cur;
     if (prev === undefined) return; // seed
-    if (topbarPickReveal || lobby?.status !== 'DRAFTING') return;
+    if (topbarPickReveal || autoSkipBots || lobby?.status !== 'DRAFTING') return;
     if (!cur || !prev || cur.id === prev.id) return;
     const now = Date.now();
     if (now - lastFlipAtRef.current < 1200) return;
@@ -1767,7 +1769,7 @@ export function DraftBoardPage() {
       nextEnterTimer.current = window.setTimeout(() => setNextEntering(false), TOPBAR_NEXT_ENTER_MS);
     }, TOPBAR_REVEAL_EXIT_MS);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [derived?.onClockTeam?.id, topbarPickReveal, lobby?.status]);
+  }, [derived?.onClockTeam?.id, topbarPickReveal, autoSkipBots, lobby?.status]);
 
   // Top-bar skip reveal: same treatment when a team is skipped (its clock runs
   // out and no pick is made) — the clock slides down to "SKIPPED", which holds
@@ -1780,7 +1782,7 @@ export function DraftBoardPage() {
       ? [...liveKeys].filter((k) => !committedRevealSkipKeys.current!.has(k))
       : [];
     committedRevealSkipKeys.current = liveKeys;
-    if (!seeded || !topbarPickReveal || lobby?.status !== 'DRAFTING') return;
+    if (!seeded || !topbarPickReveal || autoSkipBots || lobby?.status !== 'DRAFTING') return;
     if (fresh.length !== 1) return;
     const now = Date.now();
     if (now - lastRevealAtRef.current < 1200) return;
@@ -1798,7 +1800,7 @@ export function DraftBoardPage() {
     });
     scheduleRevealHandoff();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [derived?.skipped, topbarPickReveal, lobby?.status]);
+  }, [derived?.skipped, topbarPickReveal, autoSkipBots, lobby?.status]);
 
   // Snapshot the clock a render behind for the reveal above (must run after it).
   useEffect(() => {
