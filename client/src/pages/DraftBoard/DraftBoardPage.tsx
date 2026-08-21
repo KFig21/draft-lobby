@@ -208,9 +208,9 @@ const MOBILE_TABS: { key: MobileTab; label: string; Icon: SvgIconComponent }[] =
 const MIN_SIDEBAR = 300;
 const MAX_SIDEBAR = 600;
 
-// How long the top-bar pick reveal holds before the readout unfreezes — the 4s
-// animation timeline in TopbarPickReveal.scss plus its 0.25s start delay.
-const TOPBAR_REVEAL_MS = 4250;
+// How long the top-bar pick reveal holds before the readout unfreezes (must
+// match the 4.5s animation timeline in TopbarPickReveal.scss).
+const TOPBAR_REVEAL_MS = 4500;
 // How long the revealed pick slides out the bottom for at the end (must match
 // draft-center-exit in DraftBoardPage.scss).
 const TOPBAR_REVEAL_EXIT_MS = 340;

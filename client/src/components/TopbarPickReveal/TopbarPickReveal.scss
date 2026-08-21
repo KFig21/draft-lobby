@@ -2,19 +2,22 @@
 
 // Downward "slot machine": each row fills the box and is shifted vertically by
 // its keyframes — translateY(0) centred, -100% parked above, 100% dropped below.
-// One shared 4s timeline (percentages line the three rows up), so the clock
+// One shared 4.5s timeline (percentages line the three rows up), so the clock
 // drops out as "THE PICK IS IN" drops in, which then drops out as the player
 // drops in. `both` fill holds each row's start/end frame outside its window.
-$tpr-duration: 4s;
+// The stops keep the clock's exit at ~0.68s but hold "THE PICK IS IN" and the
+// player each ~0.25s longer than a 4s run, so they read in step with the board
+// cell's flip.
+$tpr-duration: 4.5s;
 
 @keyframes tpr-clock {
   0%,
-  7% {
+  6% {
     transform: translateY(0);
     opacity: 1;
   }
 
-  17%,
+  15%,
   100% {
     transform: translateY(100%);
     opacity: 0;
@@ -23,18 +26,18 @@ $tpr-duration: 4s;
 
 @keyframes tpr-pii {
   0%,
-  7% {
+  6% {
     transform: translateY(-100%);
     opacity: 0;
   }
 
-  17%,
-  45% {
+  15%,
+  46% {
     transform: translateY(0);
     opacity: 1;
   }
 
-  55%,
+  54%,
   100% {
     transform: translateY(100%);
     opacity: 0;
@@ -43,12 +46,12 @@ $tpr-duration: 4s;
 
 @keyframes tpr-player {
   0%,
-  45% {
+  46% {
     transform: translateY(-100%);
     opacity: 0;
   }
 
-  55%,
+  54%,
   100% {
     transform: translateY(0);
     opacity: 1;
@@ -59,12 +62,12 @@ $tpr-duration: 4s;
 // to the end (no player to hand off to).
 @keyframes tpr-skipword {
   0%,
-  7% {
+  6% {
     transform: translateY(-100%);
     opacity: 0;
   }
 
-  17%,
+  15%,
   100% {
     transform: translateY(0);
     opacity: 1;
@@ -106,9 +109,6 @@ $tpr-duration: 4s;
     will-change: transform, opacity;
     animation-duration: $tpr-duration;
     animation-timing-function: cubic-bezier(0.5, 0, 0.2, 1);
-    // Hold the clock a beat longer before starting, so "THE PICK IS IN" and the
-    // player land in step with the board cell's own flip and don't spoil it.
-    animation-delay: 0.25s;
     animation-fill-mode: both;
 
     @media (prefers-reduced-motion: reduce) {
