@@ -187,11 +187,12 @@ $tpr-duration: 4s;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    // Square, not vertically condensed — aspect-ratio keeps height == width;
-    // min-width sets the floor and lets "DEF" widen it (staying square).
+    // Square, not vertically condensed — an explicit height forces it (aspect-
+    // ratio gets overridden by the text's own line height on a flex item);
+    // min-width matches it and lets "DEF" widen a touch.
+    height: 1.7em;
     min-width: 1.7em;
-    aspect-ratio: 1;
-    padding: 0 0.3em;
+    padding: 0 0.25em;
     border-radius: 5px;
     // A border (not an outset ring) so it stays inside the overflow clip at the
     // box's left edge instead of being shaved.
