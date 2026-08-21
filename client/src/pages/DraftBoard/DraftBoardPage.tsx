@@ -1727,8 +1727,16 @@ export function DraftBoardPage() {
   // team and slides it out the bottom, then the next drops in from the top — so
   // the previous team doesn't just vanish.
   useEffect(() => {
+    // Read round/overall off `derived` directly (not the destructured `round`/
+    // `frontierOverall`, which are declared after an early return below — using
+    // them here would be a temporal-dead-zone crash on the early-return render).
     const cur = derived?.onClockTeam
-      ? { id: derived.onClockTeam.id, team: derived.onClockTeam, round, overall: frontierOverall }
+      ? {
+          id: derived.onClockTeam.id,
+          team: derived.onClockTeam,
+          round: derived.round,
+          overall: derived.overall,
+        }
       : null;
     const prev = committedOnClockRef.current;
     committedOnClockRef.current = cur;
