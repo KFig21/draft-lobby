@@ -258,8 +258,10 @@ $tpr-duration: 5s;
     // The chip scales off the (shrunken) player font, so bump it here — bigger
     // box and larger letters that sit more centred, less lost in the padding.
     &__pos {
-      width: 2em;
-      height: 2em;
+      // Slightly bigger box (same font-size) so the "WR" text isn't almost
+      // touching the border — a touch more breathing room inside the square.
+      width: 2.3em;
+      height: 2.3em;
       font-size: 0.7em;
     }
   }
