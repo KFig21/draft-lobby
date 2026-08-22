@@ -1,9 +1,11 @@
 import { defaultAvatar } from '@draft-lobby/shared';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import IosShareIcon from '@mui/icons-material/IosShare';
 import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Avatar } from '../../components/Avatar/Avatar';
 import { Loader } from '../../components/Loader/Loader';
 import { ProfileLink } from '../../components/ProfileLink/ProfileLink';
@@ -15,13 +17,12 @@ import {
   inviteUrl,
 } from '../../lib/friendInvite';
 import { supabase } from '../../supabase';
-import { useInfiniteScroll } from '../../lib/useInfiniteScroll';
 import type { FriendshipRow, ProfileMini } from '../../lib/types';
 import './FriendsPage.scss';
 
 type Relation = 'none' | 'friends' | 'incoming' | 'outgoing';
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 10;
 
 const FRIENDS_SELECT =
   '*, requester:requester_id ( id, username, avatar ), addressee:addressee_id ( id, username, avatar )';
@@ -31,12 +32,11 @@ export function FriendsPage() {
   const me = session?.user.id ?? '';
 
   // "Your friends" — the only list that can realistically grow large, so it's
-  // the one that's paginated.
+  // the one that's paginated (discrete prev/next pager, matching My Drafts).
   const [friends, setFriends] = useState<FriendshipRow[]>([]);
   const [friendsLoading, setFriendsLoading] = useState(true);
-  const [friendsLoadingMore, setFriendsLoadingMore] = useState(false);
-  const [friendsHasMore, setFriendsHasMore] = useState(true);
-  const friendsCursorRef = useRef<string | null>(null);
+  const [friendsPage, setFriendsPage] = useState(0);
+  const [friendsTotal, setFriendsTotal] = useState(0);
 
   // Incoming pending requests — bounded/actionable, loaded in full.
   const [incoming, setIncoming] = useState<FriendshipRow[]>([]);
@@ -47,48 +47,37 @@ export function FriendsPage() {
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // One page window (offset-based) plus the exact total, so we can render a
+  // "Page X of Y" pager rather than an endless scroll.
   const fetchFriendsPage = useCallback(
-    async (before?: string | null) => {
-      if (!me) return [] as FriendshipRow[];
-      let q = supabase
+    async (page: number) => {
+      if (!me) return { rows: [] as FriendshipRow[], total: 0 };
+      const from = page * PAGE_SIZE;
+      const { data, count } = await supabase
         .from('friendships')
-        .select(FRIENDS_SELECT)
+        .select(FRIENDS_SELECT, { count: 'exact' })
         .eq('status', 'ACCEPTED')
         .or(`requester_id.eq.${me},addressee_id.eq.${me}`)
         .order('created_at', { ascending: false })
-        .limit(PAGE_SIZE);
-      if (before) q = q.lt('created_at', before);
-      const { data } = await q;
-      return (data ?? []) as unknown as FriendshipRow[];
+        .range(from, from + PAGE_SIZE - 1);
+      return { rows: (data ?? []) as unknown as FriendshipRow[], total: count ?? 0 };
     },
     [me],
   );
 
-  const loadFirstFriendsPage = useCallback(() => {
-    setFriendsLoading(true);
-    void fetchFriendsPage().then((rows) => {
-      setFriends(rows);
-      friendsCursorRef.current = rows.length > 0 ? rows[rows.length - 1].created_at : null;
-      setFriendsHasMore(rows.length === PAGE_SIZE);
-      setFriendsLoading(false);
-    });
-  }, [fetchFriendsPage]);
+  const loadFriends = useCallback(
+    (page: number) => {
+      setFriendsLoading(true);
+      void fetchFriendsPage(page).then(({ rows, total }) => {
+        setFriends(rows);
+        setFriendsTotal(total);
+        setFriendsLoading(false);
+      });
+    },
+    [fetchFriendsPage],
+  );
 
-  const loadMoreFriends = useCallback(() => {
-    if (!friendsCursorRef.current) return;
-    setFriendsLoadingMore(true);
-    void fetchFriendsPage(friendsCursorRef.current).then((rows) => {
-      setFriends((prev) => [...prev, ...rows]);
-      friendsCursorRef.current = rows.length > 0 ? rows[rows.length - 1].created_at : null;
-      setFriendsHasMore(rows.length === PAGE_SIZE);
-      setFriendsLoadingMore(false);
-    });
-  }, [fetchFriendsPage]);
-
-  const friendsSentinelRef = useInfiniteScroll(loadMoreFriends, {
-    hasMore: friendsHasMore,
-    loading: friendsLoadingMore,
-  });
+  const friendsPageCount = Math.max(1, Math.ceil(friendsTotal / PAGE_SIZE));
 
   const loadIncoming = useCallback(() => {
     if (!me) {
@@ -105,9 +94,12 @@ export function FriendsPage() {
   }, [me]);
 
   useEffect(() => {
-    loadFirstFriendsPage();
+    loadFriends(friendsPage);
+  }, [loadFriends, friendsPage]);
+
+  useEffect(() => {
     loadIncoming();
-  }, [loadFirstFriendsPage, loadIncoming]);
+  }, [loadIncoming]);
 
   // Relation of `me` to a specific set of other users — used only for search
   // results, so it never needs to load the (potentially large) full friend list.
@@ -157,7 +149,13 @@ export function FriendsPage() {
     try {
       await api(`/friends/${path}`, { method: 'POST', body });
       loadIncoming();
-      if (path === 'respond' || path === 'remove') loadFirstFriendsPage();
+      // Accepting a request / removing a friend changes the list — jump back to
+      // the first page (reloading in place if already there, since setting the
+      // same page won't retrigger the effect).
+      if (path === 'respond' || path === 'remove') {
+        if (friendsPage === 0) loadFriends(0);
+        else setFriendsPage(0);
+      }
       if (results.length > 0) setResultRelations(await loadRelationsFor(results.map((p) => p.id)));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong');
@@ -297,10 +295,29 @@ export function FriendsPage() {
                 );
               })}
             </ul>
-            <div ref={friendsSentinelRef} />
-            {friendsLoadingMore && (
-              <div className="section-loading section-loading--inline">
-                <Loader label="Loading more…" />
+            {friendsPageCount > 1 && (
+              <div className="friends__pager">
+                <button
+                  type="button"
+                  className="friends__pager-btn"
+                  disabled={friendsPage === 0}
+                  onClick={() => setFriendsPage((p) => Math.max(0, p - 1))}
+                  aria-label="Previous page"
+                >
+                  <ChevronLeftIcon fontSize="small" />
+                </button>
+                <span className="muted">
+                  Page {friendsPage + 1} of {friendsPageCount}
+                </span>
+                <button
+                  type="button"
+                  className="friends__pager-btn"
+                  disabled={friendsPage >= friendsPageCount - 1}
+                  onClick={() => setFriendsPage((p) => Math.min(friendsPageCount - 1, p + 1))}
+                  aria-label="Next page"
+                >
+                  <ChevronRightIcon fontSize="small" />
+                </button>
               </div>
             )}
           </>

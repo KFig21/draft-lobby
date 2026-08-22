@@ -68,7 +68,7 @@
     gap: $space * 1.5;
     background: $bg-raised;
     border: 1px solid $border;
-    border-radius: $radius-sm;
+    border-radius: $radius-lg;
     padding: $space $space * 1.5;
   }
 
@@ -95,7 +95,7 @@
     gap: $space;
     padding: $space * 1.5;
     border: 1px solid $border;
-    border-radius: $radius-sm;
+    border-radius: $radius-lg;
     background: $bg-raised;
   }
 
@@ -173,5 +173,37 @@
 
   &__empty {
     padding: $space;
+  }
+
+  // Discrete prev/next pager for "Your friends" — same treatment as My Drafts.
+  &__pager {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: $space * 1.5;
+    margin-top: $space * 1.5;
+  }
+
+  &__pager-btn {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: $bg-raised;
+    color: $text;
+    cursor: pointer;
+
+    @media (hover: hover) {
+      &:hover:not(:disabled) {
+        background: $bg-overlay;
+      }
+    }
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
   }
 }
