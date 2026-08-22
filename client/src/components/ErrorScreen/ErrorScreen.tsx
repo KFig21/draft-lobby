@@ -1,4 +1,3 @@
-import { useNavigate } from 'react-router-dom';
 import './ErrorScreen.scss';
 
 interface Props {
@@ -14,7 +13,6 @@ export function ErrorScreen({
   message = 'Try heading back home and starting again.',
   onRetry,
 }: Props) {
-  const navigate = useNavigate();
   return (
     <div className="error-screen">
       <div className="error-screen__card">
@@ -29,7 +27,16 @@ export function ErrorScreen({
               Try again
             </button>
           )}
-          <button className="button button--primary" onClick={() => navigate('/home')}>
+          {/* Deliberately a HARD navigation, not the SPA `navigate('/home')`.
+              When this renders inside a tripped ErrorBoundary, the boundary has
+              replaced the whole tree and only clears when location.pathname
+              actually changes — so an in-app navigate to /home from a crash that
+              happened ON /home does nothing at all. A full reload rebuilds the
+              app from scratch, guaranteeing an escape from any wedged state. */}
+          <button
+            className="button button--primary"
+            onClick={() => window.location.assign('/home')}
+          >
             Back to home
           </button>
         </div>

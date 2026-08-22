@@ -140,6 +140,9 @@
     background: var(--pos);
     color: #000000;
     letter-spacing: 0.02em;
+    // Keep "D/ST" on one line — Firefox will otherwise break after the slash
+    // and burst the pill (Chrome happens not to).
+    white-space: nowrap;
   }
 
   &__n {
