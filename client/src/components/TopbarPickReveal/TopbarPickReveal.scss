@@ -202,8 +202,9 @@ $tpr-duration: 5s;
     line-height: 1;
     border-radius: 5px;
     // A border (not an outset ring) so it stays inside the overflow clip at the
-    // box's left edge instead of being shaved.
-    border: 1px solid rgba(255, 255, 255, 0.85);
+    // box's left edge instead of being shaved. Theme-aware (derived from the bar
+    // text colour) so it reads on both the dark and light top bar.
+    border: 1px solid color-mix(in srgb, $text 65%, transparent);
     color: #05231a;
     font-size: 0.55em;
     font-weight: 800;
@@ -224,6 +225,14 @@ $tpr-duration: 5s;
 
     &__player {
       font-size: 0.95rem;
+    }
+
+    // The chip scales off the (shrunken) player font, so bump it here — bigger
+    // box and larger letters that sit more centred, less lost in the padding.
+    &__pos {
+      width: 2em;
+      height: 2em;
+      font-size: 0.7em;
     }
   }
 }
