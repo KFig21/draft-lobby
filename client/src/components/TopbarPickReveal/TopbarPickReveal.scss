@@ -202,9 +202,10 @@ $tpr-duration: 5s;
     line-height: 1;
     border-radius: 5px;
     // A border (not an outset ring) so it stays inside the overflow clip at the
-    // box's left edge instead of being shaved. Theme-aware (derived from the bar
-    // text colour) so it reads on both the dark and light top bar.
-    border: 1px solid color-mix(in srgb, $text 65%, transparent);
+    // box's left edge instead of being shaved. Matches the top bar's own default
+    // background ($bg-raised) — so it's dark in dark mode / light in light mode,
+    // reading as a gap that separates the chip's fill from a coloured bar.
+    border: 1px solid $bg-raised;
     color: #05231a;
     font-size: 0.55em;
     font-weight: 800;
