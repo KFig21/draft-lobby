@@ -177,9 +177,12 @@ $tpr-duration: 5s;
     font-size: 1.4rem;
     font-weight: 700;
     animation-name: tpr-player;
+    // A little more chip-to-name gap than the 4px shared row gap (desktop +1px).
+    gap: 5px;
 
     .draft__topbar--fill & {
       font-size: clamp(1.4rem, 2.6vw, 2.4rem);
+      gap: 6px; // fullscreen +2px
     }
   }
 
@@ -210,6 +213,13 @@ $tpr-duration: 5s;
     font-size: 0.55em;
     font-weight: 800;
     letter-spacing: 0.02em;
+
+    // Fullscreen: the chip scales off the large player font, so trim it a little
+    // (em-based, so a smaller font shrinks the whole square, keeping its inner
+    // spacing).
+    .draft__topbar--fill & {
+      font-size: 0.48em;
+    }
   }
 
   &__name {
