@@ -2592,17 +2592,9 @@ export function DraftBoardPage() {
   // to everyone, not just the person picking. Off, the bar reacts only to your
   // own turn as before. (The countdown fill already shows for all viewers.)
   const hostBarColors = hostMode && !isComplete && !isStaging && !!onClockTeam;
-  // Between-picks buffer window: the clock is frozen full, so there's more time
-  // left than the round clock. During it, drop the bar back to its default colour
-  // (even host mode) — the colour coding returns once the next pick's clock
-  // actually starts ticking. With no buffer selected, this is never true.
-  const inBuffer =
-    onClockCellSecondsLeft != null &&
-    onClockCellTotalSeconds != null &&
-    onClockCellSecondsLeft > onClockCellTotalSeconds;
-  const topbarHighlight = !inBuffer && (hostBarColors || myTurnHighlight);
-  const topbarUrgency = inBuffer ? null : hostBarColors ? onClockCellUrgency : myTurnUrgency;
-  const topbarFlashing = inBuffer ? false : hostBarColors ? onClockCellFlashing : myTurnFlashing;
+  const topbarHighlight = hostBarColors || myTurnHighlight;
+  const topbarUrgency = hostBarColors ? onClockCellUrgency : myTurnUrgency;
+  const topbarFlashing = hostBarColors ? onClockCellFlashing : myTurnFlashing;
 
   // From a read-only keeper view modal's edit pencil: close it and open the
   // Keeper Manager scoped straight to this team.

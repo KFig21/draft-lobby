@@ -1223,10 +1223,7 @@
     .tpr {
       position: absolute;
       top: 0;
-      // Extend the clip a touch below the clock footprint so a player name's
-      // descenders (g/p/y) aren't shaved — the box is otherwise sized to the
-      // descenderless clock and runs tight when the name nears the clock size.
-      bottom: -0.4rem;
+      bottom: 0;
       left: 0;
       // Size to the content, not the narrow reserved clock footprint (an absolute
       // box with only `left` set would otherwise shrink-wrap against the parent's
@@ -1249,12 +1246,6 @@
     // whole top bar visibly grew/shrank switching between them (most jarring
     // on mobile, where there's no extra padding to absorb the difference).
     min-height: 2.5rem;
-
-    // "Round X · Pick XX" — a touch heavier than plain muted so it reads clearly
-    // (desktop, mobile, and scaled up in fullscreen / TV mode).
-    .muted {
-      font-weight: 600;
-    }
   }
 
   &__onclock-team {
