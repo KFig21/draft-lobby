@@ -2122,6 +2122,16 @@ export function DraftBoardPage() {
     !isComplete &&
     (iOwnAnOpenSlot || isCommish) &&
     (!isPaused || isCommish);
+  // Hold-to-draft (press-and-hold to pick instantly, no confirm modal) is
+  // deliberately limited to picking your OWN open slot — never a commissioner
+  // drafting on behalf of the team on the clock, where an accidental long-press
+  // could make an unintended pick for someone else. A commissioner covering
+  // another team still gets the tap → lock-in modal (with its per-team/round
+  // target chooser); only the instant hold is withheld. A skipped picker still
+  // owns an open slot, so they keep hold-to-draft; and when they owe more than
+  // one slot (skipped, then up again on the snake turn) a bare pick fills their
+  // EARLIEST open slot server-side — i.e. the earliest skipped pick.
+  const canHoldDraft = canPick && iOwnAnOpenSlot;
   // Every open slot I own, as { overall, round } — when I owe more than one
   // (skipped and up again, e.g. the snake turn), the LockInModal offers a
   // button per slot so I choose which round/pick this player fills.
@@ -2930,7 +2940,7 @@ export function DraftBoardPage() {
                 onFavorite={canFavorite ? () => toggleFavorite(p.id) : undefined}
                 favorited={favoriteIds?.has(p.id) ?? false}
                 onPick={canPick ? () => pick(p) : undefined}
-                onHoldPick={canPick ? () => holdDraft(p) : undefined}
+                onHoldPick={canHoldDraft ? () => holdDraft(p) : undefined}
                 disabled={!canPick}
                 blockedReason={limitBlock(p)}
                 onOpenDetail={() => setDetailPlayer(p)}
@@ -3224,7 +3234,10 @@ export function DraftBoardPage() {
                           <HoldButton
                             className="button button--primary pool-table__draft"
                             onTap={() => pick(p)}
-                            onHold={() => holdDraft(p)}
+                            // Hold only drafts instantly for your own slot;
+                            // otherwise fall back to the confirm modal (see
+                            // canHoldDraft).
+                            onHold={canHoldDraft ? () => holdDraft(p) : () => pick(p)}
                             disabled={!!limitBlock(p)}
                             title={limitBlock(p) ?? 'Hold to draft instantly · tap to confirm'}
                             ariaLabel={`Draft ${p.name}`}
@@ -3271,7 +3284,7 @@ export function DraftBoardPage() {
                   drafted={isDrafted}
                   draftedLabel={isDrafted ? pickLabelByPlayerId.get(p.id) : undefined}
                   onPick={!isDrafted && canPick ? () => pick(p) : undefined}
-                  onHoldPick={!isDrafted && canPick ? () => holdDraft(p) : undefined}
+                  onHoldPick={!isDrafted && canHoldDraft ? () => holdDraft(p) : undefined}
                   disabled={!canPick}
                   blockedReason={isDrafted ? undefined : limitBlock(p)}
                   onQueue={!showPoolMarks || isDrafted ? undefined : () => toggleQueue(p.id)}
@@ -3453,7 +3466,9 @@ export function DraftBoardPage() {
                   <HoldButton
                     className="button button--primary draft-dash__qrow-draft"
                     onTap={() => setSelected(p)}
-                    onHold={() => holdDraft(p)}
+                    // Hold only drafts instantly for your own slot; otherwise
+                    // fall back to the confirm modal (see canHoldDraft).
+                    onHold={canHoldDraft ? () => holdDraft(p) : () => setSelected(p)}
                     disabled={!!limitBlock(p)}
                     title={limitBlock(p) ?? 'Hold to draft instantly · tap to confirm'}
                     ariaLabel={`Draft ${p.name}`}
@@ -4303,7 +4318,7 @@ export function DraftBoardPage() {
               : undefined
           }
           onHoldPick={
-            canPick && !draftedIds.has(detailPlayer.id)
+            canHoldDraft && !draftedIds.has(detailPlayer.id)
               ? () => {
                   setDetailPlayer(null);
                   holdDraft(detailPlayer);
