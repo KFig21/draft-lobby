@@ -10,6 +10,7 @@
 $tpr-duration: 5s;
 
 @keyframes tpr-clock {
+
   0%,
   4% {
     transform: translateY(0);
@@ -24,6 +25,7 @@ $tpr-duration: 5s;
 }
 
 @keyframes tpr-pii {
+
   0%,
   4% {
     transform: translateY(-100%);
@@ -44,6 +46,7 @@ $tpr-duration: 5s;
 }
 
 @keyframes tpr-player {
+
   0%,
   44% {
     transform: translateY(-100%);
@@ -60,6 +63,7 @@ $tpr-duration: 5s;
 // Skip announcement: "SKIPPED" drops in right after the clock leaves and holds
 // to the end (no player to hand off to).
 @keyframes tpr-skipword {
+
   0%,
   4% {
     transform: translateY(-100%);
@@ -120,6 +124,7 @@ $tpr-duration: 5s;
   // Reduced motion: no slide — just show the reveal's end state (the drafted
   // player, or "SKIPPED") so the box lands on it instead of on a parked clock.
   @media (prefers-reduced-motion: reduce) {
+
     .tpr__clock,
     .tpr__pii {
       display: none;
@@ -218,12 +223,16 @@ $tpr-duration: 5s;
     // (em-based, so a smaller font shrinks the whole square, keeping its inner
     // spacing).
     .draft__topbar--fill & {
-      font-size: 0.48em;
+      font-size: 0.38em;
     }
   }
 
   &__name {
     min-width: 0;
+    // Ellipsis needs overflow:hidden, but the row's line-height:1 leaves no room
+    // below the baseline, so that same clip shaves descenders (the 'g' tail).
+    // A taller line box gives the descender room to sit inside the clip.
+    line-height: 1.3;
     overflow: hidden;
     text-overflow: ellipsis;
   }

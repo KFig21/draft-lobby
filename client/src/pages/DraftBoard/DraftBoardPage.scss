@@ -405,7 +405,7 @@
       }
 
       .draft__onclock-team {
-        font-size: clamp(1.2rem, 2.1vw, 2rem);
+        font-size: clamp(1.2rem, 2.1vw, 2.25rem);
       }
 
       .draft__complete {
@@ -427,6 +427,7 @@
 
       .muted {
         font-size: clamp(0.85rem, 1.2vw, 1.05rem);
+        font-weight: 700;
       }
 
       .draft__yourturn,
@@ -702,6 +703,7 @@
 
     // …but "Skip bots" while on keeps its own accent rather than the reset above.
     .draft__skipbots-btn.is-on {
+
       &:hover:not(:disabled),
       &:focus-visible:not(:disabled),
       &:active:not(:disabled) {
@@ -1179,6 +1181,7 @@
   // DraftBoardPage.tsx): the revealed pick drops out the bottom, then the next
   // team + clock drop in from the top.
   &__center--reveal-exit {
+
     .draft__status,
     .draft__clock-wrap {
       animation: draft-center-exit 0.34s ease-in both;
@@ -1186,6 +1189,7 @@
   }
 
   &__center--entering {
+
     .draft__status,
     .draft__clock-wrap {
       animation: draft-center-enter 1s cubic-bezier(0.2, 0.7, 0.2, 1) both;
@@ -1195,6 +1199,7 @@
   &__center--reveal-exit,
   &__center--entering {
     @media (prefers-reduced-motion: reduce) {
+
       .draft__status,
       .draft__clock-wrap {
         animation: none;
@@ -1253,6 +1258,7 @@
     align-items: center;
     gap: $space;
     font-weight: 700;
+    font-size: 20px;
   }
 
   &__onclock-team--btn {
@@ -1263,6 +1269,7 @@
     font: inherit;
     cursor: pointer;
     font-weight: 700;
+    font-size: 20px;
 
     &:hover,
     &:focus-visible {
