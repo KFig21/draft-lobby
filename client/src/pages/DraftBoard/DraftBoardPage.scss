@@ -136,11 +136,14 @@
     transition: background 150ms ease;
     z-index: 50;
 
-    // Only while a pick reveal is sliding out the bottom / the next readout is
-    // dropping in from the top: clip to the bar so neither is seen past its
-    // edges. Scoped to those brief phases so the drop-down menus (which live in
-    // the bar and open downward) aren't clipped the rest of the time. The reveal
-    // text stays within the bar's width, so this never shaves it horizontally.
+    // During the pick reveal AND its slide-out/next-slide-in hand-off: clip to
+    // the bar itself so the reveal (and the exiting/entering readout) slides all
+    // the way to the bar's visible edges — the same full-height clip the hand-off
+    // uses, so the reveal isn't trapped a few px inside the edges by its own
+    // content-sized box (see .tpr, which no longer self-clips). Scoped to those
+    // phases so the drop-down menus (which live in the bar and open downward)
+    // aren't clipped the rest of the time. The reveal text stays within the bar's
+    // width, so this never shaves it horizontally.
     &--reveal-clip {
       overflow: hidden;
     }
@@ -1220,6 +1223,13 @@
   // centre gap (see TopbarPickReveal.scss).
   &__clock-wrap--reveal {
     position: relative;
+    // The centre column is align-items:center, so the clock-wrap normally only
+    // takes its 1-line clock height — which caps the reveal overlay to a narrow
+    // central band. Stretch it to the full centre height (as tall as the 2-line
+    // status beside it, ≈ the whole bar) so the reveal slides edge-to-edge like
+    // the next-pick hand-off (which animates that full-height status). Only the
+    // reveal wrapper stretches; the real clock stays centred within it below.
+    align-self: stretch;
 
     .clock {
       visibility: hidden;

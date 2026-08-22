@@ -3702,7 +3702,7 @@ export function DraftBoardPage() {
         }${topbarHighlight ? ' draft__topbar--myturn' : ''}${
           topbarUrgency ? ` draft__topbar--${topbarUrgency}` : ''
         }${topbarFlashing ? ' draft__topbar--flash' : ''}${
-          revealExiting || nextEntering ? ' draft__topbar--reveal-clip' : ''
+          pickReveal || revealExiting || nextEntering ? ' draft__topbar--reveal-clip' : ''
         }`}
       >
         {onClockCellElapsedPct != null && (

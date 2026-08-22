@@ -19,7 +19,7 @@ $tpr-duration: 5s;
 
   24%,
   100% {
-    transform: translateY(100%);
+    transform: translateY(115%);
     opacity: 0;
   }
 }
@@ -28,7 +28,7 @@ $tpr-duration: 5s;
 
   0%,
   4% {
-    transform: translateY(-100%);
+    transform: translateY(-115%);
     opacity: 0;
   }
 
@@ -40,7 +40,7 @@ $tpr-duration: 5s;
 
   64%,
   100% {
-    transform: translateY(100%);
+    transform: translateY(115%);
     opacity: 0;
   }
 }
@@ -49,7 +49,7 @@ $tpr-duration: 5s;
 
   0%,
   44% {
-    transform: translateY(-100%);
+    transform: translateY(-115%);
     opacity: 0;
   }
 
@@ -66,7 +66,7 @@ $tpr-duration: 5s;
 
   0%,
   4% {
-    transform: translateY(-100%);
+    transform: translateY(-115%);
     opacity: 0;
   }
 
@@ -92,16 +92,24 @@ $tpr-duration: 5s;
   align-items: center;
   justify-items: start;
   min-width: 0;
-  // Right-only breathing room so the name's trailing edge isn't shaved by the
-  // overflow clip (which is only there to hide the vertical slide). No LEFT
+  // Right-only breathing room so the name's trailing edge isn't shaved. No LEFT
   // padding — the rows must start exactly at the real clock's edge so the clock
   // doesn't shift when the reveal takes over.
   padding: 0 0.5em 0 0;
-  overflow: hidden;
+  // No self-clip: clipping here (a content-sized box) trapped the slide a few px
+  // inside the bar's edges. The top bar clips instead (--reveal-clip, applied for
+  // the whole reveal) so the rows slide all the way to the visible edges. Parked
+  // rows are opacity:0, so nothing shows outside the bar between windows.
   pointer-events: none;
 
   &__row {
     grid-area: 1 / 1; // stack every row over the same cell
+    // Fill the full overlay height (which spans the whole top bar) instead of
+    // sitting as a single centred line — so translateY(±100%) travels the full
+    // bar height and the reveal slides edge-to-edge, matching the next-pick
+    // hand-off (draft-center-exit/enter on the ~full-height status + clock).
+    // The row's own flex still vertically centres the text within that height.
+    align-self: stretch;
     display: flex;
     align-items: center;
     justify-content: flex-start;
