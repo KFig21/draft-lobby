@@ -12,6 +12,7 @@ import {
   SLOT_LABELS,
   SLOT_MAX,
   DEFAULT_BOT_PICK_SECONDS,
+  DEFAULT_PICK_BUFFER_SECONDS,
   MATCH_ROUND_PICK_SECONDS,
   UNLIMITED_PICK_SECONDS,
   matchPreset,
@@ -568,6 +569,26 @@ export function LeagueSettingsFields({ settings, onChange, nameField, editableGr
                 {botSpeedLabel(s)}
               </option>
             ))}
+          </select>
+        </label>
+        <label className="field">
+          <span>
+            Buffer between picks{' '}
+            <em className="muted">
+              (after each pick or skip the next clock holds full for this long
+              before it ticks — a breather that also lets the pick-reveal
+              animation play. Picking is never blocked during it)
+            </em>
+          </span>
+          <select
+            value={settings.pickBufferSeconds ?? DEFAULT_PICK_BUFFER_SECONDS}
+            onChange={(e) => set('pickBufferSeconds', Number(e.target.value))}
+          >
+            <option value={0}>Off</option>
+            <option value={3}>3 seconds</option>
+            <option value={5}>5 seconds</option>
+            <option value={8}>8 seconds</option>
+            <option value={10}>10 seconds</option>
           </select>
         </label>
         </SettingsGroupFieldset>

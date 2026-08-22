@@ -208,6 +208,17 @@ export function isMatchRoundBot(seconds: number): boolean {
 export const DEFAULT_BOT_PICK_SECONDS = 5;
 
 /**
+ * Buffer between picks (seconds): after a pick is made or a team is skipped, the
+ * next team's clock is frozen at full for this long before it starts ticking —
+ * a breather that also lets the pick-reveal animation play without eating the
+ * next picker's time. Picking is never blocked during it (the clock is just
+ * frozen), so a skipped team and the on-clock team can both pick right away.
+ * 0 disables it. The default matches the ~5s pick-reveal animation.
+ */
+export const DEFAULT_PICK_BUFFER_SECONDS = 5;
+export const MAX_PICK_BUFFER_SECONDS = 15;
+
+/**
  * A pick-clock tier: every round up to and including `untilRound` gets
  * `seconds` on the clock. `untilRound: null` is the catch-all for the
  * remaining rounds. Tiers let leagues ramp the clock down over the draft
@@ -286,6 +297,15 @@ export const lobbySettingsSchema = z.object({
   allowSkips: z.boolean().default(false),
   /** Number of times a team may let the clock expire before auto-picks kick in. Null = unlimited. */
   timeoutAllowance: z.number().int().min(0).nullable().default(null),
+  /** Seconds the next team's clock is frozen at full after a pick/skip before it
+   * ticks (a between-picks breather; also covers the pick-reveal animation). 0 =
+   * off. Picking is allowed throughout — the clock is only frozen, not blocked. */
+  pickBufferSeconds: z
+    .number()
+    .int()
+    .min(0)
+    .max(MAX_PICK_BUFFER_SECONDS)
+    .default(DEFAULT_PICK_BUFFER_SECONDS),
   keepersEnabled: z.boolean().default(false),
   scheduledStart: z.string().datetime().nullable().default(null),
   /** Scoring rules (drives projections / power rankings). */
@@ -360,6 +380,7 @@ export const DEFAULT_LOBBY_SETTINGS: LobbySettings = {
   botPickSeconds: DEFAULT_BOT_PICK_SECONDS,
   allowSkips: false,
   timeoutAllowance: null,
+  pickBufferSeconds: DEFAULT_PICK_BUFFER_SECONDS,
   keepersEnabled: false,
   scheduledStart: null,
   scoring: DEFAULT_SCORING_RULES,
@@ -392,6 +413,7 @@ export const SETTINGS_FIELD_GROUP: Record<keyof LobbySettings, SettingsGroup> = 
   botPickSeconds: 'behavioral',
   allowSkips: 'behavioral',
   timeoutAllowance: 'behavioral',
+  pickBufferSeconds: 'behavioral',
 };
 
 /**

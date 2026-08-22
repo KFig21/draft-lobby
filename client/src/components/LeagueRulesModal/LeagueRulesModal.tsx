@@ -315,6 +315,12 @@ export function LeagueRulesModal({ settings, defaultName, onClose }: Props) {
               .
             </p>
           )}
+          {settings.pickBufferSeconds > 0 && (
+            <p className="rules-modal__note muted">
+              {settings.pickBufferSeconds}s buffer between picks — the next clock
+              holds full for a beat before it starts ticking.
+            </p>
+          )}
         </section>
 
         {/* Starting lineup */}

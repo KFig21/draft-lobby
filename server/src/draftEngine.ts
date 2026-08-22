@@ -5,6 +5,7 @@ import {
   UNLIMITED_PICK_SECONDS,
   draftPositionForOverall,
   hasAnyPositionLimit,
+  DEFAULT_PICK_BUFFER_SECONDS,
   isMatchRoundBot,
   isUnlimitedPick,
   openSlots,
@@ -212,16 +213,21 @@ export function clockSeconds(team: OnClockTeam | null, settings: LobbySettings, 
 }
 
 /** Deadline ISO string for whoever is on the clock at `overall`, or null when
- * the clock is unlimited (an untimed round — the draft waits for the pick). */
+ * the clock is unlimited (an untimed round — the draft waits for the pick).
+ * `extraMs` (the between-picks buffer) is added on top of the clock when
+ * advancing to a new pick, so the next clock effectively holds full for that
+ * long before it starts ticking (the client freezes the display to match). An
+ * unlimited round has no deadline, so no buffer either. */
 export async function computeDeadline(
   lobbyId: string,
   settings: LobbySettings,
   overall: number,
+  extraMs = 0,
 ): Promise<string | null> {
   const team = await onClockTeam(lobbyId, settings, overall);
   const secs = clockSeconds(team, settings, overall);
   if (secs <= 0) return null;
-  return new Date(Date.now() + secs * 1000).toISOString();
+  return new Date(Date.now() + secs * 1000 + Math.max(0, extraMs)).toISOString();
 }
 
 /** A fresh, full clock duration (ms) for whoever is on the clock at `overall`
@@ -860,8 +866,11 @@ export async function applyPick(
   // remain: the clock then has nowhere to go (end-game), so it goes quiet
   // (pick_deadline = null) while the stragglers pick untimed.
   const nextFrontier = await nextOpenOverall(lobbyId, overall + 1, totalPicks);
+  // Between-picks buffer: hold the next clock full for a beat before it ticks.
   const deadline =
-    nextFrontier === null ? null : await computeDeadline(lobbyId, settings, nextFrontier);
+    nextFrontier === null
+      ? null
+      : await computeDeadline(lobbyId, settings, nextFrontier, (settings.pickBufferSeconds ?? DEFAULT_PICK_BUFFER_SECONDS) * 1000);
 
   const { error: advanceError } = await supabaseAdmin
     .from('lobbies')
@@ -1006,8 +1015,13 @@ async function skipFrontier(
 ): Promise<void> {
   const totalPicks = settings.teamCount * roundsForSettings(settings);
   const nextFrontier = await nextOpenOverall(lobbyId, frontier + 1, totalPicks);
+  // Same between-picks buffer as a normal pick. Picking isn't blocked during it
+  // (clock only frozen), so the skipped team and the new on-clock team can both
+  // pick right away.
   const deadline =
-    nextFrontier === null ? null : await computeDeadline(lobbyId, settings, nextFrontier);
+    nextFrontier === null
+      ? null
+      : await computeDeadline(lobbyId, settings, nextFrontier, (settings.pickBufferSeconds ?? DEFAULT_PICK_BUFFER_SECONDS) * 1000);
 
   // Conditional on the frontier still sitting here AND still being expired —
   // if a pick landed at the frontier in the meantime it moved current_overall,

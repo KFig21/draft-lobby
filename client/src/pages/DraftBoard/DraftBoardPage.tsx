@@ -3891,6 +3891,7 @@ export function DraftBoardPage() {
                 deadline={lobby.pick_deadline}
                 frozenMs={lobby.pick_deadline_remaining_ms}
                 unlimited={clockUnlimited}
+                maxSeconds={onClockCellTotalSeconds}
               />
             </div>
           )}
