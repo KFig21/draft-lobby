@@ -148,7 +148,7 @@
     // against the card's bottom edge.
     padding: $space * 2 $space * 3;
     border: 1px solid $border;
-    border-radius: $radius;
+    border-radius: $radius-lg;
     background: $bg-raised;
     color: inherit;
     font: inherit;
@@ -256,9 +256,12 @@
     display: flex;
     justify-content: center;
 
+    // Rounder CTA to match the lobby's other 18px containers (scoped here so
+    // the global .button — used app-wide — keeps its default radius).
     .button {
       width: 100%;
       max-width: 360px;
+      border-radius: $radius-lg;
     }
   }
 
@@ -423,13 +426,19 @@
   }
 }
 
+// Rounder Invite card — compound selector beats the shared global `.card`
+// radius without touching cards elsewhere.
+.room__invite.card {
+  border-radius: $radius-lg;
+}
+
 .room__friend {
   display: flex;
   align-items: center;
   gap: $space * 1.5;
   background: $bg-raised;
   border: 1px solid $border;
-  border-radius: $radius-sm;
+  border-radius: $radius-lg;
   padding: $space $space * 1.5;
 
   &-name {
@@ -588,7 +597,7 @@
     gap: $space * 1.5 - 2px;
     background: $bg-raised;
     border: 1px solid $border;
-    border-radius: $radius-sm;
+    border-radius: $radius-lg;
     padding: $space * 1.25 $space * 1.5;
 
     // While renaming, line 1 is [pos][avatar][input][✓][✗] and the chips wrap

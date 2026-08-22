@@ -7,7 +7,7 @@
   bottom: 0;
   left: 0;
   right: 0;
-  z-index: 20;
+  z-index: 30;
   // Deterministic height (56px + safe area) so overlays can sit flush on it.
   height: calc(56px + env(safe-area-inset-bottom, 0));
   display: flex;
@@ -307,4 +307,3 @@
     padding: 0 4px;
   }
 }
-

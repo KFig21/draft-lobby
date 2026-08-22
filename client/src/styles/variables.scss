@@ -46,6 +46,9 @@ $font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
 // ── Layout ──────────────────────────────────────────────────────────
 $radius: 10px;
 $radius-sm: 6px;
+// Softer, more rounded container corners — rolled out per-area (starting with
+// the draft lobby) to make the app's cards/rows feel more uniform.
+$radius-lg: 18px;
 $space: 8px;
 
 // Modal "concentric" rounding — a rounded window with framed inner cards inset

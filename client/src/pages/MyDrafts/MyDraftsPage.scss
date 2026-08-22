@@ -131,9 +131,12 @@
   &__item {
     display: flex;
     align-items: stretch;
-    background: $bg-raised;
+    background: $bg;
     border: 1px solid $border;
-    border-radius: $radius-sm;
+    // Rounder card corners, matching the draft lobby's 18px rollout. overflow:
+    // hidden clips the row + actions column to this radius, so the row's visible
+    // corners follow it.
+    border-radius: $radius-lg;
     overflow: hidden;
     transition: border-color 120ms ease;
 
@@ -153,7 +156,8 @@
     align-items: center;
     justify-content: space-between;
     gap: $space * 1.5;
-    padding: $space * 1.5;
+    padding: $space * 2;
+    background: var(--bg-raised);
     color: inherit;
     -webkit-tap-highlight-color: transparent;
   }
