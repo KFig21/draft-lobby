@@ -125,8 +125,16 @@
     }
   }
 
+  &__keepnote {
+    margin: 0;
+    font-size: 0.85rem;
+    line-height: 1.4;
+  }
+
   &__cta {
     margin-top: $space * 0.5;
+    // Rounder to match the app's 18px controls.
+    border-radius: $radius-lg;
   }
 
   &__error {

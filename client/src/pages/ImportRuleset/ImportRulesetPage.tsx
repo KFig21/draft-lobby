@@ -12,6 +12,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
 import { Loader } from '../../components/Loader/Loader';
+import { RulesOverview } from '../../components/LeagueRulesModal/RulesOverview';
 import { ToggleSwitch } from '../../components/ToggleSwitch/ToggleSwitch';
 import { clockSummary } from '../../lib/format';
 import {
@@ -156,26 +157,16 @@ export function ImportRulesetPage() {
                 {settings!.keepersEnabled ? ', and keepers' : ''}.
               </p>
             </header>
-            <dl className="import-ruleset__meta">
-              <div>
-                <dt>Teams</dt>
-                <dd>{settings!.teamCount}</dd>
-              </div>
-              <div>
-                <dt>Rounds</dt>
-                <dd>{roundsForSettings(settings!)}</dd>
-              </div>
-              <div>
-                <dt>Scoring</dt>
-                <dd>{scoringLabel}</dd>
-              </div>
-              {settings!.keepersEnabled && (
-                <div>
-                  <dt>Keepers</dt>
-                  <dd>{keeperCount > 0 ? `${keeperCount} pre-set` : 'On'}</dd>
-                </div>
-              )}
-            </dl>
+            {/* The full at-a-glance overview (teams, draft type, rounds, pick
+                clock, scoring, keepers) — same block the lobby + rules modal
+                use — so the importer sees exactly what the draft will be. */}
+            <RulesOverview settings={settings!} />
+            {settings!.keepersEnabled && keeperCount > 0 && (
+              <p className="muted import-ruleset__keepnote">
+                {keeperCount} keeper{keeperCount === 1 ? '' : 's'} pre-set — locked onto the board
+                when you create the lobby.
+              </p>
+            )}
             <label className="field import-ruleset__field">
               <span>Lobby name</span>
               <input
