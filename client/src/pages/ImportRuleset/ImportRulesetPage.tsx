@@ -148,8 +148,14 @@ export function ImportRulesetPage() {
           </div>
         ) : isDraftSetup ? (
           <div className="import-ruleset__card">
-            <span className="import-ruleset__kind">Draft setup</span>
-            <h2>{shared.name}</h2>
+            <header className="import-ruleset__card-head">
+              <span className="import-ruleset__kind">Draft setup</span>
+              <h2>{shared.name}</h2>
+              <p className="muted import-ruleset__card-sub">
+                Create a new lobby pre-loaded with this setup — teams, scoring
+                {settings!.keepersEnabled ? ', and keepers' : ''}.
+              </p>
+            </header>
             <dl className="import-ruleset__meta">
               <div>
                 <dt>Teams</dt>

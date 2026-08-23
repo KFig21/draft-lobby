@@ -44,6 +44,26 @@
     }
   }
 
+  // A clear header block for the create-a-lobby (DRAFT_SETUP) form — kind badge,
+  // title, and a one-line description, divided from the meta/fields below.
+  &__card-head {
+    display: flex;
+    flex-direction: column;
+    gap: $space * 0.5;
+    padding-bottom: $space * 1.5;
+    border-bottom: 1px solid $border;
+
+    h2 {
+      margin: 0;
+    }
+  }
+
+  &__card-sub {
+    margin: 0;
+    font-size: 0.88rem;
+    line-height: 1.5;
+  }
+
   &__kind {
     align-self: flex-start;
     padding: 3px 9px;
