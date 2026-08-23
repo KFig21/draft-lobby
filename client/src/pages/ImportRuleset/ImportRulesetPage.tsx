@@ -8,10 +8,12 @@ import {
   type ScoringRules,
 } from '@draft-lobby/shared';
 import CheckIcon from '@mui/icons-material/Check';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
 import { Loader } from '../../components/Loader/Loader';
+import { LeagueRulesModal } from '../../components/LeagueRulesModal/LeagueRulesModal';
 import { RulesOverview } from '../../components/LeagueRulesModal/RulesOverview';
 import { ToggleSwitch } from '../../components/ToggleSwitch/ToggleSwitch';
 import { clockSummary } from '../../lib/format';
@@ -40,6 +42,7 @@ export function ImportRulesetPage() {
   const [draftMode, setDraftMode] = useState<DraftMode>('LIVE');
   const [mySeat, setMySeat] = useState<number | null>(null);
   const [fillBots, setFillBots] = useState(false);
+  const [showRules, setShowRules] = useState(false);
 
   useEffect(() => {
     if (!token) return;
@@ -163,6 +166,13 @@ export function ImportRulesetPage() {
                   {keeperCount} keeper{keeperCount === 1 ? '' : 's'} pre-set, locked onto the board.
                 </p>
               )}
+              <button
+                type="button"
+                className="import-ruleset__viewrules"
+                onClick={() => setShowRules(true)}
+              >
+                <InfoOutlinedIcon fontSize="inherit" /> View full rules
+              </button>
             </div>
 
             {/* Section 2 — the lobby you're creating from it. */}
@@ -278,6 +288,14 @@ export function ImportRulesetPage() {
           </div>
         )}
       </section>
+
+      {showRules && settings && (
+        <LeagueRulesModal
+          settings={settings}
+          defaultName={shared?.name}
+          onClose={() => setShowRules(false)}
+        />
+      )}
     </main>
   );
 }

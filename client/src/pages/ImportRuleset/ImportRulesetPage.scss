@@ -174,6 +174,33 @@
     line-height: 1.4;
   }
 
+  // "View full rules" — opens the full league/draft details modal. A quiet,
+  // left-aligned inline action beneath the overview grid.
+  &__viewrules {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0;
+    border: none;
+    background: none;
+    color: $accent;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+
+    @media (hover: hover) {
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+
+    // Accent convention: mint on dark, teal primary on light.
+    :root[data-theme='light'] & {
+      color: $primary;
+    }
+  }
+
   &__cta {
     margin-top: $space * 0.5;
     // Rounder to match the app's 18px controls.
