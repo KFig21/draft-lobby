@@ -232,7 +232,7 @@ export function CopyDraftModal({ source, onClose }: Props) {
               <input
                 type="text"
                 value={name}
-                maxLength={60}
+                maxLength={40}
                 onChange={(e) => setName(e.target.value)}
               />
             </label>

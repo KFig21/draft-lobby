@@ -42,7 +42,7 @@ export function ImportRulesetPage() {
     void fetchSharedRuleset(token).then((row) => {
       setShared(row);
       if (row?.kind === 'DRAFT_SETUP') {
-        setName(row.name.slice(0, 60));
+        setName(row.name.slice(0, 40));
         setDraftMode((row.payload as DraftSetupSnapshot).settings.draftMode ?? 'LIVE');
       }
       setLoading(false);
@@ -156,7 +156,7 @@ export function ImportRulesetPage() {
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                maxLength={60}
+                maxLength={40}
                 placeholder="Draft lobby"
               />
             </label>

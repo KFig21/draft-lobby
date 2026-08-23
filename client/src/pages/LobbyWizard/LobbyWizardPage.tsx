@@ -200,7 +200,7 @@ export function LobbyWizardPage() {
               value={lobbyName}
               onChange={(e) => setLobbyName(e.target.value)}
               placeholder={settings.name || 'Draft lobby'}
-              maxLength={60}
+              maxLength={40}
             />
           </label>
           <div className="field">

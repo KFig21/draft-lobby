@@ -103,7 +103,7 @@ export function SettingsEditorModal({
       <span>Draft name</span>
       <input
         value={nameDraft}
-        maxLength={60}
+        maxLength={40}
         onChange={(e) => setNameDraft(e.target.value)}
         placeholder="Draft name"
       />
