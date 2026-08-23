@@ -255,8 +255,8 @@ export function LobbyWizardPage() {
             </div>
             <em className="muted">
               {settings.draftMode === 'MOCK'
-                ? 'Practice run — empty seats fill with bots and results stay off friends’ timelines.'
-                : 'A real league draft. Empty seats fill with bots at start so no pick is missed.'}
+                ? 'Practice run — kept off friends’ feeds.'
+                : 'A real league draft.'}
             </em>
           </div>
           <div className="field">
@@ -272,12 +272,8 @@ export function LobbyWizardPage() {
                   if (!e.target.checked) setPublicVotingAllowed(false);
                 }}
               />
-              <span>Make draft results public once complete</span>
+              <span>Results — final rosters + crown votes</span>
             </label>
-            <em className="muted">
-              Anyone signed in with the lobby link can view final rosters and crown-vote
-              results — chat/reactions stay private unless enabled below.
-            </em>
             {resultsPublic && (
               <label className="toggle">
                 <input
@@ -285,7 +281,7 @@ export function LobbyWizardPage() {
                   checked={publicVotingAllowed}
                   onChange={(e) => setPublicVotingAllowed(e.target.checked)}
                 />
-                <span>Let non-members vote on who won the draft</span>
+                <span>Let non-members crown-vote too</span>
               </label>
             )}
             <label className="toggle">
@@ -294,9 +290,11 @@ export function LobbyWizardPage() {
                 checked={chatPublic}
                 onChange={(e) => setChatPublic(e.target.checked)}
               />
-              <span>Make chat + reactions public once complete</span>
+              <span>Chat + reactions (view-only)</span>
             </label>
-            <em className="muted">Non-members can view chat and reactions, but not post.</em>
+            <em className="muted">
+              Shared with anyone who has the lobby link, once the draft completes.
+            </em>
           </div>
           <div className="field">
             <span>Chat & reactions lock</span>
@@ -335,7 +333,7 @@ export function LobbyWizardPage() {
               </label>
             )}
             <em className="muted">
-              How long after the draft ends before chat and reactions close for good.
+              How long after the draft before chat + reactions close.
             </em>
           </div>
           {settings.visibility === 'PRIVATE' && (
