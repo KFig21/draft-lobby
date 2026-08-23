@@ -144,11 +144,14 @@
     -webkit-appearance: none;
     display: block;
     width: 100%;
-    // Extra room below the "View full rules" line — otherwise it sits flush
-    // against the card's bottom edge.
-    padding: $space * 2 $space * 3;
+    // Match the wizard / Settings cards: a 24px card whose HEADER pill sits a
+    // slim $space (8px) strip in from the edge, with the content (stat grid +
+    // "View full rules") inset a further $space*2 so the header reads as its
+    // own strip. Roomier bottom so the CTA isn't flush to the edge.
+    padding: $space;
+    padding-bottom: $space * 2;
     border: 1px solid $border;
-    border-radius: $radius-lg;
+    border-radius: 24px;
     background: $bg-raised;
     color: inherit;
     font: inherit;
@@ -162,6 +165,29 @@
       &:hover {
         border-color: $primary;
       }
+    }
+
+    // Turn the shared RulesOverview's "Overview" heading row into the full-width
+    // bordered pill header at the card edge — lobby only (the rules modal keeps
+    // its plain heading).
+    .rules-modal__overview-head {
+      border: solid 1px $border;
+      padding: 16px;
+      border-radius: $radius-lg;
+      background-color: $bg-raised;
+      margin-bottom: $space;
+
+      // The pill supplies the spacing now — drop the heading's own bottom pad
+      // so it sits centered against the badges.
+      .rules-modal__h3 {
+        padding-bottom: 0;
+      }
+    }
+
+    // Content below the header strip, inset a further $space*2 past it.
+    .rules-modal__overview,
+    .room__overview-cta {
+      margin-inline: $space * 2;
     }
 
     // The shared RulesOverview renders its "Overview" heading with the rules
@@ -189,7 +215,6 @@
     display: inline-flex;
     align-items: center;
     gap: $space * 0.75;
-    padding-bottom: 8px;
   }
 
   // Icon next to a section heading ("Draft order", "Invite") — primary in
@@ -461,12 +486,13 @@
 // Invite button beside it. Compound (both classes) to beat the base .button
 // background at otherwise-equal single-class specificity.
 .room__friend-btn.room__friend-btn--reserve {
-  background: color-mix(in srgb, $accent 14%, transparent);
-  border-color: color-mix(in srgb, $accent 45%, transparent);
-  color: $accent;
+  background: $primary;
+  border-color: $primary;
+  color: #fff;
 
   &:hover:not(:disabled) {
-    background: color-mix(in srgb, $accent 22%, transparent);
+    background: color-mix(in srgb, $primary 85%, #000);
+    border-color: color-mix(in srgb, $primary 85%, #000);
   }
 }
 
@@ -516,11 +542,22 @@
   font-weight: 700;
   cursor: pointer;
 
+  // Accent convention: mint on dark, teal primary on light. Guarded so the
+  // locked (--on / warning) and danger (--danger) variants keep their own
+  // semantic colors — the descendant selector would otherwise out-specify them.
+  :root[data-theme='light'] &:not(.room__order-btn--on):not(.room__order-btn--danger) {
+    color: $primary;
+  }
+
   // Hover-gated so the tapped state doesn't stick on touch (see hover-only).
   @include hover-only {
     &:hover:not(:disabled) {
       border-color: $accent;
       color: $text;
+
+      :root[data-theme='light'] &:not(.room__order-btn--on):not(.room__order-btn--danger) {
+        border-color: $primary;
+      }
     }
   }
 

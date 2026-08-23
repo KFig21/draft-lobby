@@ -4,21 +4,46 @@
 .rules-modal {
   display: flex;
   flex-direction: column;
-  // No gap here — every direct child is a &__section, and its own
-  // padding-top (below) is what spaces sections apart, alongside the divider.
-  gap: 0;
+  // Each section is its own card now (see &__section) — a gap separates them
+  // instead of the old dividers.
+  gap: $space * 2;
 
+  // Each section is its own bordered card, matching the wizard / Settings /
+  // modal styling: a 24px card whose HEADER pill sits a slim $space (8px) strip
+  // in from the edge, with the content below inset a further $space*2 so the
+  // header reads as its own strip.
   &__section {
     display: flex;
     flex-direction: column;
     gap: $space;
-    padding-bottom: $space * 2.5;
+    @include card-surface;
+    padding: $space;
+    padding-bottom: $space * 2;
+    border-radius: 24px;
 
-    // A divider between sections (not above the first) instead of relying on
-    // a gap alone to separate them.
-    &:not(:first-child) {
-      padding-top: $space * 2.5;
-      border-top: 1px solid $border;
+    // Header pill — a bare section <h3>, or the Overview section's head wrapper
+    // (which holds its h3 + any trailing badges). Full-width bordered pill at
+    // the card edge.
+    > .rules-modal__h3,
+    > .rules-modal__overview-head {
+      border: solid 1px $border;
+      padding: 16px;
+      border-radius: $radius-lg;
+      background-color: $bg-raised;
+      margin: 0;
+    }
+
+    // The Overview head wraps its own h3 — the pill supplies the spacing now,
+    // so drop that inner h3's bottom pad to match the other sections' pills.
+    > .rules-modal__overview-head .rules-modal__h3 {
+      padding: 0;
+      border: none;
+      background: none;
+    }
+
+    // Section content inset a further $space*2 past the header strip.
+    > :not(.rules-modal__h3):not(.rules-modal__overview-head) {
+      margin-inline: $space * 2;
     }
   }
 

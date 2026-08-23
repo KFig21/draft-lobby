@@ -1287,9 +1287,6 @@ export function LobbyRoomPage() {
           <section className="room__friends">
             <div className="room__friends-head">
               <h2>Invite friends</h2>
-              <Link className="room__friends-link" to="/friends">
-                Manage friends →
-              </Link>
             </div>
             {friends.length === 0 ? (
               <p className="muted">
