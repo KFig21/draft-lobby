@@ -152,7 +152,7 @@ export function ImportRulesetPage() {
             {/* Section 1 — what the shared draft is. */}
             <div className="import-ruleset__card">
               <header className="import-ruleset__card-head">
-                <h2>This draft</h2>
+                <h2>Importing</h2>
                 <p className="muted import-ruleset__card-sub">{shared.name}</p>
               </header>
               {/* Same at-a-glance grid the lobby + rules modal use (its own
