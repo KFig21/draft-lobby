@@ -271,11 +271,11 @@ function WeeklySparkCard({
     >
       <span className="player-stat-block__spark-bars" aria-hidden>
         {showLoading
-          ? SPARK_SKELETON.map((_h, i) => (
+          ? SPARK_SKELETON.map((h, i) => (
               <span
                 key={i}
                 className="player-stat-block__spark-bar"
-                style={{ ['--i' as string]: i }}
+                style={{ ['--h' as string]: h }}
               />
             ))
           : points.map((p) => (
