@@ -30,6 +30,21 @@
     }
   }
 
+  // Stack the section cards (the DRAFT_SETUP flow renders two) with a gap; a
+  // single-card branch is unaffected.
+  &__body {
+    display: flex;
+    flex-direction: column;
+    gap: $space * 2;
+  }
+
+  // RulesOverview brings its own "Overview" heading (with an icon) — redundant
+  // and out of place here, since the "This draft" section header already labels
+  // it. Hide it and keep just the stat grid.
+  .rules-modal__overview-head {
+    display: none;
+  }
+
   // Concentric section treatment, same as the modals / Settings / wizard cards:
   // a 24px card whose HEADER pill sits a slim $space (8px) strip in from the
   // edge, with the content below inset a further $space*2.

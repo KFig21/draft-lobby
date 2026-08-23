@@ -148,91 +148,95 @@ export function ImportRulesetPage() {
             </div>
           </div>
         ) : isDraftSetup ? (
-          <div className="import-ruleset__card">
-            <header className="import-ruleset__card-head">
-              <h2>{shared.name}</h2>
-              <p className="muted import-ruleset__card-sub">
-                Create a new lobby pre-loaded with this setup — teams, scoring
-                {settings!.keepersEnabled ? ', and keepers' : ''}.
-              </p>
-            </header>
-            {/* The full at-a-glance overview (teams, draft type, rounds, pick
-                clock, scoring, keepers) — same block the lobby + rules modal
-                use — so the importer sees exactly what the draft will be. */}
-            <RulesOverview settings={settings!} />
-            {settings!.keepersEnabled && keeperCount > 0 && (
-              <p className="muted import-ruleset__keepnote">
-                {keeperCount} keeper{keeperCount === 1 ? '' : 's'} pre-set — locked onto the board
-                when you create the lobby.
-              </p>
-            )}
-            <label className="field import-ruleset__field">
-              <span>Lobby name</span>
-              <input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                maxLength={40}
-                placeholder="Draft lobby"
-              />
-            </label>
-            <div className="field import-ruleset__field">
-              <span>Draft type</span>
-              <div className="segmented">
-                <button
-                  type="button"
-                  className={`segmented__opt${draftMode === 'LIVE' ? ' segmented__opt--on' : ''}`}
-                  onClick={() => setDraftMode('LIVE')}
-                >
-                  Live
-                </button>
-                <button
-                  type="button"
-                  className={`segmented__opt${draftMode === 'MOCK' ? ' segmented__opt--on' : ''}`}
-                  onClick={() => setDraftMode('MOCK')}
-                >
-                  Mock
-                </button>
-              </div>
+          <>
+            {/* Section 1 — what the shared draft is. */}
+            <div className="import-ruleset__card">
+              <header className="import-ruleset__card-head">
+                <h2>This draft</h2>
+                <p className="muted import-ruleset__card-sub">{shared.name}</p>
+              </header>
+              {/* Same at-a-glance grid the lobby + rules modal use (its own
+                  "Overview" heading is hidden here — the section header covers it). */}
+              <RulesOverview settings={settings!} />
+              {settings!.keepersEnabled && keeperCount > 0 && (
+                <p className="muted import-ruleset__keepnote">
+                  {keeperCount} keeper{keeperCount === 1 ? '' : 's'} pre-set, locked onto the board.
+                </p>
+              )}
             </div>
-            {seats.length > 0 && (
+
+            {/* Section 2 — the lobby you're creating from it. */}
+            <div className="import-ruleset__card">
+              <header className="import-ruleset__card-head">
+                <h2>Your lobby</h2>
+                <p className="muted import-ruleset__card-sub">
+                  Name it, take a seat, and choose how it runs.
+                </p>
+              </header>
               <label className="field import-ruleset__field">
-                <span>Your seat</span>
-                <select
-                  value={mySeat ?? ''}
-                  onChange={(e) => setMySeat(Number(e.target.value))}
-                >
-                  {seats.map((t) => (
-                    <option key={t.draftPosition} value={t.draftPosition}>
-                      {t.draftPosition}. {t.name}
-                    </option>
-                  ))}
-                </select>
+                <span>Lobby name</span>
+                <input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  maxLength={40}
+                  placeholder="Draft lobby"
+                />
               </label>
-            )}
-            <div className="import-ruleset__botfill">
-              <div className="import-ruleset__botfill-text">
-                <span>Fill the other seats with bots</span>
-                <span className="muted">
-                  Every seat but yours drafts itself — a solo mock you can start
-                  right away. Leave off to keep seats open for friends (you can
-                  still add bots, reserve seats, and reorder later in the lobby).
-                </span>
+              <div className="field import-ruleset__field">
+                <span>Draft type</span>
+                <div className="segmented">
+                  <button
+                    type="button"
+                    className={`segmented__opt${draftMode === 'LIVE' ? ' segmented__opt--on' : ''}`}
+                    onClick={() => setDraftMode('LIVE')}
+                  >
+                    Live
+                  </button>
+                  <button
+                    type="button"
+                    className={`segmented__opt${draftMode === 'MOCK' ? ' segmented__opt--on' : ''}`}
+                    onClick={() => setDraftMode('MOCK')}
+                  >
+                    Mock
+                  </button>
+                </div>
               </div>
-              <ToggleSwitch
-                label="Fill the other seats with bots"
-                checked={fillBots}
-                onChange={setFillBots}
-              />
+              {seats.length > 0 && (
+                <label className="field import-ruleset__field">
+                  <span>Your seat</span>
+                  <select value={mySeat ?? ''} onChange={(e) => setMySeat(Number(e.target.value))}>
+                    {seats.map((t) => (
+                      <option key={t.draftPosition} value={t.draftPosition}>
+                        {t.draftPosition}. {t.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              <div className="import-ruleset__botfill">
+                <div className="import-ruleset__botfill-text">
+                  <span>Fill the other seats with bots</span>
+                  <span className="muted">
+                    Every other seat becomes a bot — a ready-to-run solo mock. Off keeps them open
+                    to invite.
+                  </span>
+                </div>
+                <ToggleSwitch
+                  label="Fill the other seats with bots"
+                  checked={fillBots}
+                  onChange={setFillBots}
+                />
+              </div>
+              {error && <p className="import-ruleset__error">{error}</p>}
+              <button
+                className="button button--primary import-ruleset__cta"
+                onClick={doCreateLobby}
+                disabled={importState === 'working' || !name.trim()}
+              >
+                {importState === 'working' ? 'Creating…' : 'Create lobby'}
+              </button>
             </div>
-            {error && <p className="import-ruleset__error">{error}</p>}
-            <button
-              className="button button--primary import-ruleset__cta"
-              onClick={doCreateLobby}
-              disabled={importState === 'working' || !name.trim()}
-            >
-              {importState === 'working' ? 'Creating…' : 'Create lobby from setup'}
-            </button>
-          </div>
+          </>
         ) : (
           <div className="import-ruleset__card">
             <span className="import-ruleset__kind">
