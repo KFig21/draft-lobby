@@ -495,7 +495,7 @@ export function DraftGrid({
                         (isMyClock ? (
                           <span className="draft-grid__onclock-label">
                             <span className="draft-grid__onclock-title">
-                              <TouchAppIcon fontSize="inherit" /> On the clock!
+                              <TouchAppIcon fontSize="inherit" /> On the clock
                             </span>
                             <span className="draft-grid__onclock-sub">
                               Click here to view players
