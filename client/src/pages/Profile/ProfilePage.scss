@@ -84,7 +84,7 @@
   padding: $space * 1.25 $space;
   background: $bg-raised;
   border: 1px solid $border;
-  border-radius: $radius-sm;
+  border-radius: $radius-lg;
 
   &__value {
     font-size: 1.4rem;
@@ -131,7 +131,7 @@
     padding: $space * 0.75 $space;
     background: $bg-raised;
     border: 1px solid $border;
-    border-radius: $radius-sm;
+    border-radius: $radius-lg;
   }
 
   &__pos {
@@ -175,7 +175,7 @@
     padding: $space $space * 1.25;
     background: $bg-raised;
     border: 1px solid $border;
-    border-radius: $radius-sm;
+    border-radius: $radius-lg;
   }
 
   &__name {
@@ -206,7 +206,7 @@
     gap: $space * 1.5;
     background: $bg-raised;
     border: 1px solid $border;
-    border-radius: $radius-sm;
+    border-radius: $radius-lg;
     padding: $space * 1.5;
     transition: border-color 120ms ease;
 
@@ -264,7 +264,7 @@
     padding: $space * 1.25;
     background: $bg-raised;
     border: 1px solid $border;
-    border-radius: $radius-sm;
+    border-radius: $radius-lg;
     color: $text;
     transition: border-color 120ms ease;
 
