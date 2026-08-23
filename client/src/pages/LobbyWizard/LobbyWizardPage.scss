@@ -265,6 +265,8 @@
     // Full-width Save button on the standalone page.
     .button {
       flex: 1;
+      // Rounder to match the app's 18px controls.
+      border-radius: $radius-lg;
     }
   }
 
