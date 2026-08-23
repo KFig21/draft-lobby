@@ -29,6 +29,9 @@
     align-items: center;
     gap: $space;
     padding: $space $space * 1.5;
+    // Pill-shaped like the nav links, so the focus ring wraps it as a rounded
+    // pill instead of a sharp rectangle.
+    border-radius: 999px;
     font-weight: 800;
     font-size: 1.15rem;
     color: $text;

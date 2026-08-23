@@ -64,10 +64,20 @@
       border: solid 1px $border;
       padding: 16px;
       border-radius: $radius-lg;
-      background-color: $bg-raised;
+      // Header fill, per theme: $bg-overlay on dark (the :root default),
+      // $bg-raised on light, $bg-hover on night.
+      background-color: $bg-overlay;
       color: $text;
       font-size: 1rem;
       margin-bottom: $space;
+
+      :root[data-theme='light'] & {
+        background-color: $bg-raised;
+      }
+
+      :root[data-theme='night'] & {
+        background-color: $bg-hover;
+      }
     }
 
     // The section's content (rows) inset past the header strip. Margin, not
