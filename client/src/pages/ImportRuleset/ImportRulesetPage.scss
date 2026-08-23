@@ -6,7 +6,7 @@
   flex-direction: column;
   gap: $space * 3;
 
-  > * {
+  >* {
     width: 100%;
     max-width: 560px;
     margin-inline: auto;
@@ -30,31 +30,59 @@
     }
   }
 
+  // Concentric section treatment, same as the modals / Settings / wizard cards:
+  // a 24px card whose HEADER pill sits a slim $space (8px) strip in from the
+  // edge, with the content below inset a further $space*2.
   &__card {
     display: flex;
     flex-direction: column;
     gap: $space * 1.5;
-    padding: $space * 3;
+    padding: $space;
+    padding-bottom: $space * 2;
     background: $bg-raised;
     border: 1px solid $border;
-    border-radius: $radius-lg;
+    border-radius: 24px;
 
-    h2 {
-      font-size: 1.4rem;
+    // Header pill — a bare card <h2> (simple/link states) OR the DRAFT_SETUP
+    // header block (title + description). Per-theme fill matching the Settings /
+    // wizard / join section headers: $bg-overlay dark, $bg-raised light,
+    // $bg-hover night.
+    > h2,
+    > .import-ruleset__card-head {
+      border: 1px solid $border;
+      padding: 16px;
+      border-radius: $radius-lg;
+      background-color: $bg-overlay;
+
+      :root[data-theme='light'] & {
+        background-color: $bg-raised;
+      }
+
+      :root[data-theme='night'] & {
+        background-color: $bg-hover;
+      }
+    }
+
+    > h2 {
+      font-size: 1.2rem;
+    }
+
+    // Everything after the header strip inset a further $space*2, so the header
+    // reads as its own container above the content.
+    > :not(h2):not(.import-ruleset__card-head) {
+      margin-inline: $space * 2;
     }
   }
 
-  // A clear header block for the create-a-lobby (DRAFT_SETUP) form — kind badge,
-  // title, and a one-line description, divided from the meta/fields below.
+  // The DRAFT_SETUP header pill's contents — title + one-line description.
   &__card-head {
     display: flex;
     flex-direction: column;
     gap: $space * 0.5;
-    padding-bottom: $space * 1.5;
-    border-bottom: 1px solid $border;
 
     h2 {
       margin: 0;
+      font-size: 1.2rem;
     }
   }
 

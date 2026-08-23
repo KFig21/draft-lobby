@@ -150,7 +150,6 @@ export function ImportRulesetPage() {
         ) : isDraftSetup ? (
           <div className="import-ruleset__card">
             <header className="import-ruleset__card-head">
-              <span className="import-ruleset__kind">Draft setup</span>
               <h2>{shared.name}</h2>
               <p className="muted import-ruleset__card-sub">
                 Create a new lobby pre-loaded with this setup — teams, scoring
