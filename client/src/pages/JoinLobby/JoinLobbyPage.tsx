@@ -110,40 +110,42 @@ export function JoinLobbyPage() {
 
       <form className="join__card" onSubmit={handleSubmit}>
         <h2>Join by ID</h2>
-        <label className="field">
-          <span>Lobby ID</span>
-          <input
-            value={lobbyId}
-            onChange={(e) => setLobbyId(e.target.value)}
-            placeholder="Paste the lobby ID from your invite"
-            required
-          />
-        </label>
-        <label className="field">
-          <span>
-            Password <em className="muted">(not needed for open lobbies)</em>
-          </span>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </label>
-        <label className="field">
-          <span>
-            Team name <em className="muted">(optional)</em>
-          </span>
-          <input
-            value={teamName}
-            onChange={(e) => setTeamName(e.target.value)}
-            placeholder="Auto-assigned if blank"
-            maxLength={40}
-          />
-        </label>
+        <div className="fields_container">
+          <label className="field">
+            <span>Lobby ID</span>
+            <input
+              value={lobbyId}
+              onChange={(e) => setLobbyId(e.target.value)}
+              placeholder="Paste the lobby ID from your invite"
+              required
+              />
+          </label>
+          <label className="field">
+            <span>
+              Password <em className="muted">(not needed for open lobbies)</em>
+            </span>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              />
+          </label>
+          <label className="field">
+            <span>
+              Team name <em className="muted">(optional)</em>
+            </span>
+            <input
+              value={teamName}
+              onChange={(e) => setTeamName(e.target.value)}
+              placeholder="Auto-assigned if blank"
+              maxLength={40}
+              />
+          </label>
+        </div>
 
         {error && <p className="join__error">{error}</p>}
 
-        <button className="button button--primary" disabled={busy}>
+        <button className="button button--primary join__button" disabled={busy}>
           {busy ? 'Joining…' : 'Join lobby'}
         </button>
       </form>

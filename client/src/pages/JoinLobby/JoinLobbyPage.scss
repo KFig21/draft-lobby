@@ -79,10 +79,26 @@
     flex-direction: column;
     gap: $space * 2;
     @include card-surface;
-    padding: $space * 3;
+    padding: $space * 1;
+    border-radius: 24px;
 
     h2 {
       font-size: 1rem;
+      border: solid 1px $border;
+      padding: 16px;
+      border-radius: $radius-lg;
+      background-color: $bg-raised;
+    }
+
+    .fields_container {
+      padding: 0 $space;
+      gap: $space;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .join__button {
+      border-radius: $radius-lg;
     }
   }
 
