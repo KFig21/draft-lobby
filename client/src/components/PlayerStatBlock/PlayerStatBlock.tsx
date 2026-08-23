@@ -254,9 +254,12 @@ function WeeklySparkCard({
     // modal doesn't resize as this resolves.
     return (
       <div className="player-stat-block__spark player-stat-block__spark--empty">
-        <span className="player-stat-block__spark-empty">
-          No {season} weekly stats
+        <span className="player-stat-block__spark-bars" aria-hidden>
+          {SPARK_SKELETON.map((_h, i) => (
+            <span key={i} className="player-stat-block__spark-bar" />
+          ))}
         </span>
+        <span className="player-stat-block__spark-empty">No stats for {season}</span>
       </div>
     );
   }

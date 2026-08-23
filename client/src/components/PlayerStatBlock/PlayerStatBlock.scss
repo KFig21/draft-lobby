@@ -188,12 +188,23 @@
   // "No prior-season stats" state — same card box as the sparkline button, but
   // static: centered muted text, no pointer/hover.
   &__spark--empty {
-    justify-content: center;
     cursor: default;
     pointer-events: none;
+
+    // Flat, minimum-height muted bars — a clear "no data" baseline. The explicit
+    // muted fill (both themes) beats the base bar's accent/primary.
+    .player-stat-block__spark-bar {
+      height: 6px;
+      background: color-mix(in srgb, #{$text-muted} 40%, transparent);
+
+      :root[data-theme='light'] & {
+        background: color-mix(in srgb, #{$text-muted} 40%, transparent);
+      }
+    }
   }
 
   &__spark-empty {
+    flex: 0 0 auto;
     font-size: 0.82rem;
     font-weight: 600;
     color: $text-muted;
