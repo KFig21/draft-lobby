@@ -6,10 +6,13 @@
   gap: $space * 1.5;
 
   // The shared wizard sections carry generous page-level spacing; in this
-  // modal that reads as inflated, so tighten the section padding + inner gaps
-  // here only (the standalone wizard pages keep their roomier layout).
+  // modal that reads as inflated, so tighten the inner gaps + bottom here only
+  // (the standalone wizard pages keep their roomier layout). Keep the header
+  // pill's slim $space (8px) gutter from the card edge, same as the wizard /
+  // Settings cards — the old $space*2 override pushed it in to 16px.
   .wizard__section {
-    padding: $space * 1.75 $space * 2;
+    padding: $space;
+    padding-bottom: $space * 2;
     gap: $space * 1.25;
   }
 

@@ -10,15 +10,40 @@
   flex-direction: column;
   gap: $space * 2.5;
 
-  // Each section is its own bordered card (matching the Settings page) so the
-  // groups read as distinct blocks instead of one long stack of rows.
+  // Each section is its own bordered card (matching the Settings page + wizard):
+  // a 24px card whose HEADER pill sits a slim $space (8px) strip in from the
+  // edge, with the content below inset a further $space*2 so the header reads as
+  // its own strip.
   &__section {
+    display: flex;
+    flex-direction: column;
     @include card-surface;
-    padding: $space * 1.5 $space * 2;
+    padding: $space;
+    padding-bottom: $space * 2;
+    border-radius: 24px;
 
+    // Full-width bordered pill header at the card edge.
     h3 {
-      font-size: 1.05rem;
-      margin-bottom: $space * 0.5;
+      border: solid 1px $border;
+      padding: 16px;
+      border-radius: $radius-lg;
+      background-color: $bg-raised;
+      color: $text;
+      font-size: 1rem;
+      margin: 0 0 $space;
+    }
+
+    // The section's content (rows / pickers) inset past the header strip.
+    // Margin, not padding, so the rows keep their own border-top dividers as a
+    // flush list.
+    > :not(h3) {
+      margin-inline: $space * 2;
+    }
+
+    // The pill header separates itself, so the first row doesn't need its own
+    // divider line right beneath it.
+    > h3 + .draft-user-settings__row {
+      border-top: none;
     }
   }
 
