@@ -239,9 +239,14 @@ function WeeklySparkCard({
   const max = games ? Math.max(...points.map((p) => p.pts), 1) : 1;
 
   if (!loading && games === 0) {
+    // Rookies (and anyone without prior-season game logs) have no weekly data.
+    // Show a message at the same card height as the loader + sparkline, so the
+    // modal doesn't resize as this resolves.
     return (
-      <div className="player-stat-block__stats-head">
-        <span className="player-stat-block__section-label">Stats</span>
+      <div className="player-stat-block__spark player-stat-block__spark--empty">
+        <span className="player-stat-block__spark-empty">
+          No {season} weekly stats
+        </span>
       </div>
     );
   }
