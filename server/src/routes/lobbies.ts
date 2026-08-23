@@ -141,7 +141,7 @@ lobbiesRouter.post('/:id/copy', async (req: AuthedRequest, res: Response) => {
     res.status(400).json({ error: parsed.error.flatten() });
     return;
   }
-  const { name, draftMode, include } = parsed.data;
+  const { name, draftMode, include, fillBots } = parsed.data;
 
   // Keeper copy maps to copied seats and its round-cost `overall` needs the same
   // format — so both flags require team names + league setup (also gated in UI).
@@ -244,20 +244,24 @@ lobbiesRouter.post('/:id/copy', async (req: AuthedRequest, res: Response) => {
   const posToNewTeam = new Map<number, string>();
 
   if (include.teamNames && (srcTeams?.length ?? 0) > 0) {
-    const rows = srcTeams!.map((t) => ({
-      lobby_id: lobby.id,
-      // Keep the copier owning their own seat; everyone else's is unowned
-      // (a human seat to re-invite, or a bot that keeps drafting itself).
-      owner_id: t.owner_id === userId ? userId : null,
-      name: t.name,
-      draft_position: t.draft_position,
-      color: t.color,
-      is_prev_champion: t.is_prev_champion,
-      // Preserve bot seats so a copied mock still drafts itself. A human seat
-      // (is_bot false) with its owner cleared becomes an empty seat to invite.
-      is_bot: t.is_bot,
-      auto_draft: t.auto_draft,
-    }));
+    const rows = srcTeams!.map((t) => {
+      const mine = t.owner_id === userId;
+      return {
+        lobby_id: lobby.id,
+        // Keep the copier owning their own seat; everyone else's is unowned
+        // (a human seat to re-invite, or a bot that keeps drafting itself).
+        owner_id: mine ? userId : null,
+        name: t.name,
+        draft_position: t.draft_position,
+        color: t.color,
+        is_prev_champion: t.is_prev_champion,
+        // Preserve bot seats so a copied mock still drafts itself. A human seat
+        // (is_bot false) with its owner cleared normally becomes an empty seat
+        // to invite — unless fillBots, which turns it into a bot instead.
+        is_bot: mine ? t.is_bot : t.is_bot || fillBots,
+        auto_draft: t.auto_draft,
+      };
+    });
     // The copier is this lobby's commissioner — make sure they own a seat even
     // if they didn't in the source (e.g. a mock they never sat in). Claiming a
     // seat makes it human, not a bot.
@@ -530,7 +534,7 @@ lobbiesRouter.post('/from-shared-setup', async (req: AuthedRequest, res: Respons
     res.status(400).json({ error: parsed.error.flatten() });
     return;
   }
-  const { sharedId, name, draftMode } = parsed.data;
+  const { sharedId, name, draftMode, mySeat, fillBots } = parsed.data;
 
   const { data: shared } = await supabaseAdmin
     .from('shared_rulesets')
@@ -592,18 +596,30 @@ lobbiesRouter.post('/from-shared-setup', async (req: AuthedRequest, res: Respons
   const posToNewTeam = new Map<number, string>();
   if (bundle.teams.length > 0) {
     const sorted = [...bundle.teams].sort((a, b) => a.draftPosition - b.draftPosition);
-    const rows = sorted.map((t, i) => ({
-      lobby_id: lobby.id,
-      // Caller takes the first seat (human); everyone else's is unowned (a human
-      // seat to invite, or a bot that keeps drafting itself).
-      owner_id: i === 0 ? me : null,
-      name: t.name,
-      draft_position: t.draftPosition,
-      color: t.color ?? null,
-      is_prev_champion: t.isPrevChampion ?? false,
-      is_bot: i === 0 ? false : (t.isBot ?? false),
-      auto_draft: i === 0 ? false : (t.autoDraft ?? false),
-    }));
+    // The caller's seat: their chosen draft position if it's one of the setup's
+    // seats, otherwise the first (the original default).
+    const mineSeat =
+      mySeat != null && sorted.some((t) => t.draftPosition === mySeat)
+        ? mySeat
+        : sorted[0].draftPosition;
+    // Rename the taken seat to the caller (it carried the original owner's name,
+    // e.g. "Nordy") — everyone else keeps their snapshot name.
+    const myName = (await usernameOf(me)) ?? 'You';
+    const rows = sorted.map((t) => {
+      const mine = t.draftPosition === mineSeat;
+      return {
+        lobby_id: lobby.id,
+        // Caller owns their chosen seat (human); every other seat is unowned — a
+        // human seat to invite, or (fillBots) a bot that drafts itself.
+        owner_id: mine ? me : null,
+        name: mine ? myName : t.name,
+        draft_position: t.draftPosition,
+        color: t.color ?? null,
+        is_prev_champion: t.isPrevChampion ?? false,
+        is_bot: mine ? false : fillBots ? true : (t.isBot ?? false),
+        auto_draft: mine ? false : (t.autoDraft ?? false),
+      };
+    });
     const { data: inserted, error: teamErr } = await supabaseAdmin
       .from('teams')
       .insert(rows)

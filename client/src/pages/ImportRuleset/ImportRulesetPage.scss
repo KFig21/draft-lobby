@@ -75,6 +75,30 @@
     }
   }
 
+  // "Fill the other seats with bots" — a label + hint on the left, toggle right.
+  &__botfill {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $space * 1.5;
+
+    span:first-child {
+      font-weight: 600;
+    }
+  }
+
+  &__botfill-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+
+    .muted {
+      font-size: 0.85rem;
+      line-height: 1.4;
+    }
+  }
+
   &__cta {
     margin-top: $space * 0.5;
   }

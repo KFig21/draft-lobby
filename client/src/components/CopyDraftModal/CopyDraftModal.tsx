@@ -63,6 +63,9 @@ export function CopyDraftModal({ source, onClose }: Props) {
     keeperLists: showKeepers,
     keeperPicks: showKeepers,
   });
+  // Turn every carried-over seat the copier doesn't own into a bot (a
+  // ready-to-run solo mock) rather than an empty seat to re-invite.
+  const [fillBots, setFillBots] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<CopyLobbyResult | null>(null);
@@ -97,6 +100,8 @@ export function CopyDraftModal({ source, onClose }: Props) {
           keeperLists: keeperGate && include.keeperLists,
           keeperPicks: keeperGate && include.keeperPicks,
         },
+        // Only meaningful when seats are recreated (teamNames on).
+        fillBots: include.teamNames && fillBots,
       });
       setResult(res);
     } catch (err) {
@@ -267,6 +272,30 @@ export function CopyDraftModal({ source, onClose }: Props) {
               {CORE_TOGGLES.map(renderToggle)}
               {showKeepers && KEEPER_TOGGLES.map(renderToggle)}
             </div>
+
+            {include.teamNames && (
+              <>
+                <h3 className="copy-draft__subhead">Seats</h3>
+                <div className="copy-draft__toggles">
+                  <label className="copy-draft__toggle">
+                    <input
+                      type="checkbox"
+                      checked={fillBots}
+                      onChange={() => setFillBots((v) => !v)}
+                    />
+                    <span className="copy-draft__toggle-text">
+                      <span className="copy-draft__toggle-label">
+                        Replace the other players with bots
+                      </span>
+                      <span className="copy-draft__toggle-desc">
+                        Turn every seat but yours into a bot now — a solo mock you
+                        can start right away. Off keeps them open to re-invite.
+                      </span>
+                    </span>
+                  </label>
+                </div>
+              </>
+            )}
 
             {error && <p className="copy-draft__error">{error}</p>}
 

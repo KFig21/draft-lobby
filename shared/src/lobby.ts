@@ -570,6 +570,9 @@ export const copyLobbySchema = z.object({
   name: z.string().trim().min(1).max(60),
   draftMode: draftModeSchema,
   include: copyLobbyIncludeSchema,
+  // Turn every carried-over seat the copier doesn't own into a bot (instead of
+  // an empty seat to re-invite) — a ready-to-run solo mock. Off by default.
+  fillBots: z.boolean().default(false),
 });
 export type CopyLobbyInput = z.infer<typeof copyLobbySchema>;
 
@@ -625,5 +628,11 @@ export const createLobbyFromSharedSetupSchema = z.object({
   sharedId: z.string().uuid(),
   name: z.string().trim().min(1).max(60),
   draftMode: draftModeSchema,
+  // The seat (by draft position) the caller takes. Omitted → the first seat,
+  // preserving the original single-seat behavior.
+  mySeat: z.number().int().positive().optional(),
+  // Turn every other seat into a bot (instead of an empty seat to invite) — a
+  // ready-to-run solo mock. Off by default.
+  fillBots: z.boolean().default(false),
 });
 export type CreateLobbyFromSharedSetupInput = z.infer<typeof createLobbyFromSharedSetupSchema>;

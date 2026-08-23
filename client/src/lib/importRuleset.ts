@@ -56,10 +56,14 @@ export async function createLobbyFromSharedSetup(
   sharedId: string,
   name: string,
   draftMode: DraftMode,
+  /** Draft position of the seat the caller takes (omit → the first seat). */
+  mySeat?: number,
+  /** Turn every other seat into a bot (a ready-to-run solo mock). */
+  fillBots = false,
 ): Promise<LobbyRow> {
   const res = await api<{ lobby: LobbyRow }>('/lobbies/from-shared-setup', {
     method: 'POST',
-    body: { sharedId, name, draftMode },
+    body: { sharedId, name, draftMode, mySeat, fillBots },
   });
   return res.lobby;
 }

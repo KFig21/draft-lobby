@@ -12,6 +12,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
 import { Loader } from '../../components/Loader/Loader';
+import { ToggleSwitch } from '../../components/ToggleSwitch/ToggleSwitch';
 import { clockSummary } from '../../lib/format';
 import {
   createLobbyFromSharedSetup,
@@ -32,9 +33,12 @@ export function ImportRulesetPage() {
   const [importState, setImportState] = useState<'idle' | 'working' | 'done'>('idle');
   const [error, setError] = useState<string | null>(null);
 
-  // DRAFT_SETUP import creates a real lobby — its own name + mode inputs.
+  // DRAFT_SETUP import creates a real lobby — its own name + mode inputs, plus
+  // which seat the importer takes and whether the rest fill with bots.
   const [name, setName] = useState('');
   const [draftMode, setDraftMode] = useState<DraftMode>('LIVE');
+  const [mySeat, setMySeat] = useState<number | null>(null);
+  const [fillBots, setFillBots] = useState(false);
 
   useEffect(() => {
     if (!token) return;
@@ -42,8 +46,13 @@ export function ImportRulesetPage() {
     void fetchSharedRuleset(token).then((row) => {
       setShared(row);
       if (row?.kind === 'DRAFT_SETUP') {
+        const snap = row.payload as DraftSetupSnapshot;
         setName(row.name.slice(0, 40));
-        setDraftMode((row.payload as DraftSetupSnapshot).settings.draftMode ?? 'LIVE');
+        setDraftMode(snap.settings.draftMode ?? 'LIVE');
+        // Default to the first seat (the old forced behavior) — the picker lets
+        // them move.
+        const first = [...snap.teams].sort((a, b) => a.draftPosition - b.draftPosition)[0];
+        setMySeat(first?.draftPosition ?? 1);
       }
       setLoading(false);
     });
@@ -67,7 +76,13 @@ export function ImportRulesetPage() {
     setImportState('working');
     setError(null);
     try {
-      const lobby = await createLobbyFromSharedSetup(shared.id, name.trim(), draftMode);
+      const lobby = await createLobbyFromSharedSetup(
+        shared.id,
+        name.trim(),
+        draftMode,
+        mySeat ?? undefined,
+        fillBots,
+      );
       navigate(`/lobby/${lobby.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not create the lobby');
@@ -91,6 +106,10 @@ export function ImportRulesetPage() {
   const preset = rules ? matchPreset(rules) : null;
   const scoringLabel = preset ? SCORING_PRESETS[preset].label : 'Custom';
   const keeperCount = setupSnap?.keeperPicks.length ?? 0;
+  // Seats offered in the "Your seat" picker, in draft order.
+  const seats = setupSnap
+    ? [...setupSnap.teams].sort((a, b) => a.draftPosition - b.draftPosition)
+    : [];
 
   return (
     <main className="import-ruleset">
@@ -178,6 +197,36 @@ export function ImportRulesetPage() {
                   Mock
                 </button>
               </div>
+            </div>
+            {seats.length > 0 && (
+              <label className="field import-ruleset__field">
+                <span>Your seat</span>
+                <select
+                  value={mySeat ?? ''}
+                  onChange={(e) => setMySeat(Number(e.target.value))}
+                >
+                  {seats.map((t) => (
+                    <option key={t.draftPosition} value={t.draftPosition}>
+                      {t.draftPosition}. {t.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            <div className="import-ruleset__botfill">
+              <div className="import-ruleset__botfill-text">
+                <span>Fill the other seats with bots</span>
+                <span className="muted">
+                  Every seat but yours drafts itself — a solo mock you can start
+                  right away. Leave off to keep seats open for friends (you can
+                  still add bots, reserve seats, and reorder later in the lobby).
+                </span>
+              </div>
+              <ToggleSwitch
+                label="Fill the other seats with bots"
+                checked={fillBots}
+                onChange={setFillBots}
+              />
             </div>
             {error && <p className="import-ruleset__error">{error}</p>}
             <button
