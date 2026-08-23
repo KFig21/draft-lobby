@@ -265,18 +265,25 @@
     gap: 3px;
     padding: 1px 7px;
     border-radius: 999px;
-    // Light: --bg-overlay reads clearly against the white card. Dark + night:
-    // --bg-overlay sits too close to (in night, darker than) the card's
-    // --bg-raised, so the chip vanishes — use --bg-hover, lighter than the card
-    // in both, to keep it visible.
+    // Light: --bg-overlay reads clearly against the white card.
     background: $bg-overlay;
     color: $text-muted;
     font-size: 0.68rem;
     font-weight: 700;
     white-space: nowrap;
 
-    :root:not([data-theme='light']) & {
+    // Dark: --bg-overlay sits too close to the card — lift to --bg-hover and
+    // add a hairline border so the chip is clearly delineated.
+    :root[data-theme='dark'] & {
       background: $bg-hover;
+      border: 1px solid $border;
+    }
+
+    // Night: near-black surfaces cluster so tightly that even --bg-hover barely
+    // separates — use a clearly lighter mixed fill, plus the border.
+    :root[data-theme='night'] & {
+      background: color-mix(in srgb, #{$bg-hover}, #fff 12%);
+      border: 1px solid $border;
     }
 
     svg {
