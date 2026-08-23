@@ -6,6 +6,7 @@ import {
   SLOT_ELIGIBILITY,
   SLOT_HINTS,
   SLOT_LABELS,
+  defaultAvatar,
   groupScoringRules,
   isUnlimitedPick,
   matchPreset,
@@ -158,6 +159,12 @@ export function LeagueRulesModal({ settings, defaultName, onClose }: Props) {
         'requester_id, addressee_id, requester:requester_id ( id, username, avatar ), addressee:addressee_id ( id, username, avatar )',
       )
       .eq('status', 'ACCEPTED')
+      // Cap the picker so it never tries to pull thousands of friends into a
+      // send-to list at once — the most recent connections, which are the most
+      // likely share targets. (A searchable picker is the follow-up if anyone
+      // routinely has more than this.)
+      .order('created_at', { ascending: false })
+      .limit(50)
       .then(({ data }) => {
         const list = ((data ?? []) as unknown as FriendshipJoin[])
           .map((f) => (f.requester_id === userId ? f.addressee : f.requester))
@@ -284,7 +291,9 @@ export function LeagueRulesModal({ settings, defaultName, onClose }: Props) {
           onClick={() => onSend(f)}
           disabled={wasSent || sending === f.id}
         >
-          {f.avatar && <Avatar avatar={f.avatar} size={24} />}
+          {/* Fall back to a deterministic default so early accounts without a
+              stored avatar still show one here (never a blank gap). */}
+          <Avatar avatar={f.avatar ?? defaultAvatar(f.id)} size={24} />
           <span className="rules-modal__friend-name">{f.username}</span>
           {wasSent ? (
             <span className="rules-modal__friend-sent">

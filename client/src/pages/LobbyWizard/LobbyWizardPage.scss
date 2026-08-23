@@ -83,24 +83,55 @@
   &__section {
     display: flex;
     flex-direction: column;
-    gap: $space * 1.5;
+    // Space between the header strip and its content block below.
+    gap: $space * 2;
     @include card-surface;
-    padding: $space * 2.5;
+    // The card padding sets where the HEADER pill sits — a slim strip $space
+    // (8px) in from the card edge. The content below is inset a further $space*2
+    // (see the :not(:first-child) rule) so the h2 reads as its own container,
+    // separate from the padded content beneath it.
+    padding: $space;
+    padding-bottom: $space * 3;
+    border-radius: 24px;
 
-    // Phone: the card padding + inner gaps read as inflated on a small screen —
-    // pull the padding in a further notch.
-    @media (max-width: #{$bp-md - 1px}) {
-      padding: $space * 2;
+    // Content = everything after the header (always the first child, whether a
+    // bare <h2> or a &__section-head). Inset it a further $space*2 past the
+    // header strip. Margin, not a wrapper's padding, so a full-width field
+    // inside still fills its own box.
+    > :not(:first-child) {
+      margin-inline: $space * 2;
     }
 
-    // Same reasoning in the "Set up a league" modal at any width — the card
-    // padding otherwise stacks on the modal body's own padding.
+    // Phone: pull the content inset + bottom in a notch so the card doesn't feel
+    // inflated on a small screen.
+    @media (max-width: #{$bp-md - 1px}) {
+      padding-bottom: $space * 2;
+
+      > :not(:first-child) {
+        margin-inline: $space;
+      }
+    }
+
+    // In the "Set up a league" modal the card padding stacks on the modal body's
+    // own padding — keep the header→content gap a touch tighter.
     .dialog__body & {
       gap: $space * 1.5;
-      padding: $space * 2;
     }
 
-    h2 {
+    // Header strip: a bare <h2> (plain sections) OR a &__section-head (when the
+    // title needs an info button / summary line beside it). Both render as the
+    // full-width bordered pill at the card edge — so a header carrying extra
+    // content spans the full width and CONTAINS that content, instead of
+    // shrinking to a title-only pill with the extra bits floating outside it.
+    > h2,
+    > .wizard__section-head {
+      border: solid 1px $border;
+      padding: 16px;
+      border-radius: $radius-lg;
+      background-color: $bg-raised;
+    }
+
+    > h2 {
       font-size: 1rem;
       color: $text;
     }
@@ -112,6 +143,13 @@
     justify-content: space-between;
     gap: $space;
     flex-wrap: wrap;
+
+    // The strip carries the pill chrome now, so the inner <h2> is just the
+    // title text sitting beside the info button / summary line.
+    h2 {
+      font-size: 1rem;
+      color: $text;
+    }
   }
 
   // Groups a section heading with its little info icon so they sit together on

@@ -4391,25 +4391,25 @@ export function DraftBoardPage() {
               <SettingsIcon fontSize="small" />
               Your settings
             </button>
-            {/* Board PNG export during the live draft — the top-bar shortcut
-                only appears once the draft is complete, so mid-draft (and while
-                staging, where keepers may already be on the board) it lives
-                here instead. */}
-            {!isComplete && (
-              <button
-                type="button"
-                className="navbar-drawer__link"
-                onClick={() => {
-                  resetExport();
-                  setExportStep('screenshot');
-                  setShowExport(true);
-                  setDrawerOpen(false);
-                }}
-              >
-                <FileDownloadOutlinedIcon fontSize="small" />
-                Export board
-              </button>
-            )}
+            {/* Export lives in the drawer at every stage so mobile users can grab
+                the board before the draft starts (staging, keepers already on the
+                board), mid-draft, or after. When complete it opens the full export
+                menu (board / grades / roster / data); before then only the board
+                is meaningful, so it jumps straight to the board screenshot. The
+                top-bar shortcut still mirrors this once the draft is complete. */}
+            <button
+              type="button"
+              className="navbar-drawer__link"
+              onClick={() => {
+                resetExport();
+                setExportStep(isComplete ? 'menu' : 'screenshot');
+                setShowExport(true);
+                setDrawerOpen(false);
+              }}
+            >
+              <FileDownloadOutlinedIcon fontSize="small" />
+              {isComplete ? 'Export' : 'Export board'}
+            </button>
             {myTeam && !myTeam.is_bot && !isComplete ? (
               <button
                 type="button"
