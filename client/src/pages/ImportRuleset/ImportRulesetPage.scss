@@ -37,7 +37,7 @@
     padding: $space * 3;
     background: $bg-raised;
     border: 1px solid $border;
-    border-radius: $radius;
+    border-radius: $radius-lg;
 
     h2 {
       font-size: 1.4rem;
@@ -75,26 +75,32 @@
     }
   }
 
-  // "Fill the other seats with bots" — a label + hint on the left, toggle right.
+  // "Fill the other seats with bots" — a bordered row (label + hint on the left,
+  // toggle right) so it reads as a proper control, matching the settings rows.
   &__botfill {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: $space * 1.5;
-
-    span:first-child {
-      font-weight: 600;
-    }
+    padding: $space * 1.25 $space * 1.5;
+    border: 1px solid $border;
+    border-radius: $radius-lg;
+    background: $bg;
   }
 
   &__botfill-text {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 3px;
     min-width: 0;
 
+    span:first-child {
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
     .muted {
-      font-size: 0.85rem;
+      font-size: 0.82rem;
       line-height: 1.4;
     }
   }
