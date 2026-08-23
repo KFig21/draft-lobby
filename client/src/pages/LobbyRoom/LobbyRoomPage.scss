@@ -174,8 +174,18 @@
       border: solid 1px $border;
       padding: 16px;
       border-radius: $radius-lg;
-      background-color: $bg-raised;
+      // Header fill, per theme: $bg-overlay dark, $bg-raised light, $bg-hover
+      // night — matching the Settings / wizard / join section headers.
+      background-color: $bg-overlay;
       margin-bottom: $space;
+
+      :root[data-theme='light'] & {
+        background-color: $bg-raised;
+      }
+
+      :root[data-theme='night'] & {
+        background-color: $bg-hover;
+      }
 
       // The pill supplies the spacing now — drop the heading's own bottom pad
       // so it sits centered against the badges.
