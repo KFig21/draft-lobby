@@ -388,7 +388,7 @@ function FeedCard({
             <span className="feed-card__time">{timeAgo(item.createdAt)}</span>
             {/* Drafts the user is part of link straight to the lobby. */}
             {item.isMember && item.lobbyId && item.type !== 'OPEN_LOBBY_CREATED' && (
-              <Link to={`/lobby/${item.lobbyId}/draft`} className="feed-card__link">
+              <Link to={`/lobby/${item.lobbyId}/draft`} className="feed-card__view">
                 View draft →
               </Link>
             )}

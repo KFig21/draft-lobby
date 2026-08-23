@@ -55,6 +55,8 @@
   text-align: left;
   color: inherit;
   @include card-surface;
+  // Rounder corners, matching the 18px rollout across the app.
+  border-radius: $radius-lg;
   padding: $space * 1.5;
   // Active drafts get a green border to stand out in the timeline.
   border-color: $accent;
@@ -124,6 +126,8 @@
   display: flex;
   flex-direction: column;
   @include card-surface;
+  // Rounder corners, matching the 18px rollout across the app.
+  border-radius: $radius-lg;
   padding: $space * 2;
 
   // Avatars + text content, side by side — what &__reactions used to sit
@@ -179,9 +183,48 @@
 
   &__foot {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: $space;
     margin-top: 2px;
+  }
+
+  // "View draft" — a small pill button in the card foot, distinct from the
+  // inline __link used inside the feed sentence. Accent-tinted on dark, teal
+  // primary on light (the app's accent convention).
+  &__view {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: $space * 0.4 $space;
+    border: 1px solid color-mix(in srgb, $accent 45%, transparent);
+    border-radius: 999px;
+    background: color-mix(in srgb, $accent 14%, transparent);
+    color: $accent;
+    font-size: 0.8rem;
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
+    transition:
+      background 120ms ease,
+      border-color 120ms ease;
+
+    @media (hover: hover) {
+      &:hover {
+        background: color-mix(in srgb, $accent 24%, transparent);
+      }
+    }
+
+    :root[data-theme='light'] & {
+      border-color: color-mix(in srgb, $primary 45%, transparent);
+      background: color-mix(in srgb, $primary 12%, transparent);
+      color: $primary;
+
+      @media (hover: hover) {
+        &:hover {
+          background: color-mix(in srgb, $primary 20%, transparent);
+        }
+      }
+    }
   }
 
   &__time {
