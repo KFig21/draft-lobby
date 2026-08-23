@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 
 /** Keep exit animations in sync with the CSS in global.scss (modal-fade-*-out). */
-export const MODAL_EXIT_MS = 180;
+export const MODAL_EXIT_MS = 270;
 
 /**
  * Drives a modal's exit animation. Call `requestClose()` from every dismiss path
