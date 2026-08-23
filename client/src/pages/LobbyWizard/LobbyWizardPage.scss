@@ -123,8 +123,8 @@
     // full-width bordered pill at the card edge — so a header carrying extra
     // content spans the full width and CONTAINS that content, instead of
     // shrinking to a title-only pill with the extra bits floating outside it.
-    > h2,
-    > .wizard__section-head {
+    >h2,
+    >.wizard__section-head {
       border: solid 1px $border;
       padding: 16px;
       border-radius: $radius-lg;
@@ -141,7 +141,7 @@
       }
     }
 
-    > h2 {
+    >h2 {
       font-size: 1rem;
       color: $text;
     }
