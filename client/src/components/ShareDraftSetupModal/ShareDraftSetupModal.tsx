@@ -7,6 +7,7 @@ import { shareDraftSetup } from '../../lib/lobbyShare';
 import { supabase } from '../../supabase';
 import type { ProfileMini } from '../../lib/types';
 import { Avatar } from '../Avatar/Avatar';
+import { Loader } from '../Loader/Loader';
 import { Modal } from '../Modal/Modal';
 import './ShareDraftSetupModal.scss';
 
@@ -33,6 +34,7 @@ export function ShareDraftSetupModal({ source, onClose }: Props) {
   const me = session?.user.id ?? '';
 
   const [friends, setFriends] = useState<ProfileMini[]>([]);
+  const [loading, setLoading] = useState(true);
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [sentIds, setSentIds] = useState<Set<string>>(new Set());
   const [linkState, setLinkState] = useState<'idle' | 'working' | 'copied'>('idle');
@@ -40,6 +42,10 @@ export function ShareDraftSetupModal({ source, onClose }: Props) {
 
   useEffect(() => {
     if (!me) return;
+    // Hold the loader for at least ~0.5s even if the query returns instantly —
+    // otherwise the empty state flashes for a frame before the list, which reads
+    // as a jarring flicker + height jump.
+    const started = Date.now();
     void supabase
       .from('friendships')
       .select(
@@ -53,7 +59,11 @@ export function ShareDraftSetupModal({ source, onClose }: Props) {
         const list = ((data ?? []) as unknown as FriendJoin[])
           .map((f) => (f.requester_id === me ? f.addressee : f.requester))
           .filter((p): p is ProfileMini => !!p);
-        setFriends(list);
+        const wait = Math.max(0, 500 - (Date.now() - started));
+        setTimeout(() => {
+          setFriends(list);
+          setLoading(false);
+        }, wait);
       });
   }, [me]);
 
@@ -114,11 +124,16 @@ export function ShareDraftSetupModal({ source, onClose }: Props) {
         {error && <p className="share-setup__error">{error}</p>}
 
         <div className="share-setup__friends-head">Send to a friend</div>
-        {friends.length === 0 ? (
-          <p className="muted share-setup__empty">No friends yet — copy the link instead.</p>
-        ) : (
-          <div className="share-setup__friends">
-            {friends.map((f) => {
+        <div className="share-setup__friends-region">
+          {loading ? (
+            <div className="share-setup__loading">
+              <Loader label="Loading friends…" />
+            </div>
+          ) : friends.length === 0 ? (
+            <p className="muted share-setup__empty">No friends yet — copy the link instead.</p>
+          ) : (
+            <div className="share-setup__friends">
+              {friends.map((f) => {
               const wasSent = sentIds.has(f.id);
               return (
                 <button
@@ -141,9 +156,10 @@ export function ShareDraftSetupModal({ source, onClose }: Props) {
                   )}
                 </button>
               );
-            })}
-          </div>
-        )}
+              })}
+            </div>
+          )}
+        </div>
       </div>
     </Modal>
   );

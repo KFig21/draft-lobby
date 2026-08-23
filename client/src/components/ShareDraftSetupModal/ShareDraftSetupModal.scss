@@ -35,6 +35,20 @@
     font-size: 0.85rem;
   }
 
+  // Fixed-height region so switching from loader → list (or empty) never jumps
+  // the modal's height; the list scrolls inside it once it's tall enough.
+  &__friends-region {
+    min-height: 176px;
+    max-height: 264px;
+    overflow-y: auto;
+  }
+
+  &__loading {
+    display: grid;
+    place-items: center;
+    min-height: 176px;
+  }
+
   &__friends {
     display: flex;
     flex-direction: column;
