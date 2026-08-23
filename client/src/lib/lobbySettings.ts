@@ -16,3 +16,22 @@ export async function updateLobbySettings(
   );
   return saved;
 }
+
+export interface SpectateSettings {
+  spectatePublic: boolean;
+  spectateReact: boolean;
+  spectateGrade: boolean;
+}
+
+/** Commissioner opens/closes live spectating + its react/grade sub-permissions.
+ * The server clamps the sub-toggles off when the master is off; returns the
+ * effective result. */
+export async function setSpectateSettings(
+  lobbyId: string,
+  input: SpectateSettings,
+): Promise<SpectateSettings> {
+  return api<SpectateSettings>(`/lobbies/${lobbyId}/spectate-settings`, {
+    method: 'POST',
+    body: input,
+  });
+}

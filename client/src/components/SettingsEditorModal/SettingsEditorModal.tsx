@@ -9,9 +9,14 @@ import {
 } from '@draft-lobby/shared';
 import { useMemo, useState } from 'react';
 import { api } from '../../lib/api';
-import { updateLobbySettings } from '../../lib/lobbySettings';
+import {
+  setSpectateSettings,
+  updateLobbySettings,
+  type SpectateSettings,
+} from '../../lib/lobbySettings';
 import { LeagueSettingsFields } from '../LeagueSettingsFields/LeagueSettingsFields';
 import { Modal } from '../Modal/Modal';
+import { ToggleSwitch } from '../ToggleSwitch/ToggleSwitch';
 import './SettingsEditorModal.scss';
 
 interface Props {
@@ -25,6 +30,10 @@ interface Props {
   onClose: () => void;
   /** The saved (server-effective) settings — the parent should adopt these. */
   onSaved: (settings: LobbySettings) => void;
+  /** Current live-spectating flags + a callback to adopt changes. When omitted,
+   * the Spectators section isn't shown (non-commissioner or unsupported view). */
+  spectate?: SpectateSettings;
+  onSpectateChange?: (next: SpectateSettings) => void;
   /**
    * Start a full "simulate to end" run. Handled by the parent (draft board) so
    * it can close this modal, show a "simulating…" banner, and let the
@@ -48,9 +57,36 @@ export function SettingsEditorModal({
   canEditName,
   onClose,
   onSaved,
+  spectate,
+  onSpectateChange,
   onSimulate,
 }: Props) {
   const [draft, setDraft] = useState<LobbySettings>(settings);
+  const [spec, setSpec] = useState<SpectateSettings | undefined>(spectate);
+  const [specBusy, setSpecBusy] = useState(false);
+
+  // Spectating toggles save immediately (their own endpoint) rather than with
+  // the settings Save button. Turning the master off clears the sub-toggles.
+  async function updateSpectate(patch: Partial<SpectateSettings>) {
+    if (!spec) return;
+    const merged = { ...spec, ...patch };
+    const next: SpectateSettings = {
+      spectatePublic: merged.spectatePublic,
+      spectateReact: merged.spectatePublic && merged.spectateReact,
+      spectateGrade: merged.spectatePublic && merged.spectateGrade,
+    };
+    setSpec(next); // optimistic
+    setSpecBusy(true);
+    try {
+      const saved = await setSpectateSettings(lobbyId, next);
+      setSpec(saved);
+      onSpectateChange?.(saved);
+    } catch {
+      setSpec(spec); // revert
+    } finally {
+      setSpecBusy(false);
+    }
+  }
   const [nameDraft, setNameDraft] = useState(name);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -172,6 +208,55 @@ export function SettingsEditorModal({
           nameField={nameField}
         />
         {error && <p className="settings-editor__error">{error}</p>}
+
+        {spec && (
+          <section className="settings-editor__spectate">
+            <h3 className="settings-editor__spectate-title">Spectators</h3>
+            <p className="muted settings-editor__spectate-note">
+              Let people who aren’t in this draft watch the board live.
+            </p>
+            <label className="settings-editor__spectate-row">
+              <div className="settings-editor__spectate-text">
+                <span>Allow spectators</span>
+                <span className="muted">Anyone with the link can watch the board (read-only).</span>
+              </div>
+              <ToggleSwitch
+                label="Allow spectators"
+                checked={spec.spectatePublic}
+                onChange={(v) => updateSpectate({ spectatePublic: v })}
+                disabled={specBusy}
+              />
+            </label>
+            <label
+              className={`settings-editor__spectate-row${spec.spectatePublic ? '' : ' is-disabled'}`}
+            >
+              <div className="settings-editor__spectate-text">
+                <span>Spectators can react &amp; comment</span>
+                <span className="muted">React to picks and post in chat.</span>
+              </div>
+              <ToggleSwitch
+                label="Spectators can react and comment"
+                checked={spec.spectateReact}
+                onChange={(v) => updateSpectate({ spectateReact: v })}
+                disabled={specBusy || !spec.spectatePublic}
+              />
+            </label>
+            <label
+              className={`settings-editor__spectate-row${spec.spectatePublic ? '' : ' is-disabled'}`}
+            >
+              <div className="settings-editor__spectate-text">
+                <span>Spectators can grade</span>
+                <span className="muted">Leave roster grades once the draft is complete.</span>
+              </div>
+              <ToggleSwitch
+                label="Spectators can grade"
+                checked={spec.spectateGrade}
+                onChange={(v) => updateSpectate({ spectateGrade: v })}
+                disabled={specBusy || !spec.spectatePublic}
+              />
+            </label>
+          </section>
+        )}
 
         {canSimulate && (
           <section className="settings-editor__simulate">

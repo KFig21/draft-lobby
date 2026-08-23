@@ -2211,7 +2211,9 @@ export function DraftBoardPage() {
   // the commissioner has opted into public results and/or public chat.
   const isMember = members.some((m) => m.user_id === userId);
   const canVote = isMember || lobby.public_voting_allowed;
-  const canGrade = isMember;
+  const canGrade = isMember || lobby.spectate_grade;
+  // Spectators (non-members) can react + comment when the commissioner allows it.
+  const canReact = isMember || lobby.spectate_react;
   const rosterTeamId = rosterTeamSel ?? myTeamId ?? teams[0]?.id ?? '';
 
   // How many players the current user has drafted at each position (for filter badges).
@@ -3414,7 +3416,7 @@ export function DraftBoardPage() {
         onOpenPick={setPickModal}
         focusMessageId={focusMessageId}
         onFocusHandled={() => setFocusMessageId(null)}
-        viewOnly={!isMember}
+        viewOnly={!canReact}
       />
     );
   }
@@ -3589,7 +3591,7 @@ export function DraftBoardPage() {
         draftType={lobby.settings.draftType}
         onTeamClick={openTeamRoster}
         reactionsByPick={showCellReactions ? reactionsByPick : undefined}
-        onReactPick={isMember ? reactPick : undefined}
+        onReactPick={canReact ? reactPick : undefined}
         onPickClick={setPickModal}
         commentsByPick={showCellReactions ? commentsByPick : undefined}
         cellStyle={cellStyle}
@@ -3613,7 +3615,7 @@ export function DraftBoardPage() {
       <>
         <div className="draft__sidebar-tabs">
           {SIDEBAR_TABS.filter((t) => t.key !== 'results' || isComplete)
-            .filter((t) => t.key !== 'chat' || isMember || lobby.chat_public)
+            .filter((t) => t.key !== 'chat' || isMember || lobby.chat_public || lobby.spectate_public)
             .map(({ key, label, Icon }) => (
               <button
                 key={key}
@@ -4199,7 +4201,7 @@ export function DraftBoardPage() {
                   onOpenPick={setPickModal}
                   focusMessageId={focusMessageId}
                   onFocusHandled={() => setFocusMessageId(null)}
-                  viewOnly={!isMember}
+                  viewOnly={!canReact}
                 />
               }
             />
@@ -4264,7 +4266,7 @@ export function DraftBoardPage() {
       {/* Mobile-only section tabs + nav. */}
       <nav className="draft__tabs">
         {MOBILE_TABS.filter((t) => t.key !== 'results' || isComplete)
-          .filter((t) => t.key !== 'chat' || isMember || lobby.chat_public)
+          .filter((t) => t.key !== 'chat' || isMember || lobby.chat_public || lobby.spectate_public)
           .map(({ key, label, Icon }) => (
           <button
             key={key}
@@ -4587,8 +4589,8 @@ export function DraftBoardPage() {
               comments={comments}
               onReactComment={reactMessage}
               members={members}
-              locked={chatLocked || !isMember}
-              reactionsLocked={reactionsLocked || !isMember}
+              locked={chatLocked || !canReact}
+              reactionsLocked={reactionsLocked || !canReact}
               onClose={() => setPickModal(null)}
               isCommish={isCommish}
               myUserId={userId}
@@ -5045,6 +5047,16 @@ export function DraftBoardPage() {
           name={lobby.name}
           onClose={() => setShowLobbySettings(false)}
           onSaved={() => refetch()}
+          spectate={
+            isCommish
+              ? {
+                  spectatePublic: lobby.spectate_public,
+                  spectateReact: lobby.spectate_react,
+                  spectateGrade: lobby.spectate_grade,
+                }
+              : undefined
+          }
+          onSpectateChange={() => refetch()}
           onSimulate={startSimulate}
         />
       )}

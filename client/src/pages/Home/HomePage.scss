@@ -90,6 +90,13 @@
     justify-content: center;
   }
 
+  // "In progress" — a live lobby not open to spectators has no working action.
+  &__note {
+    margin-top: $space * 0.5;
+    text-align: center;
+    font-size: 0.85rem;
+  }
+
   &__error {
     color: $danger;
     font-size: 0.78rem;

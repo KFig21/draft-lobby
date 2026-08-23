@@ -92,6 +92,15 @@ export const postChatSchema = z.object({
 });
 export type PostChatInput = z.infer<typeof postChatSchema>;
 
+/** Commissioner: open/close live spectating + its react/grade sub-permissions.
+ * The sub-toggles imply the master (enforced server-side + by a DB constraint). */
+export const spectateSettingsSchema = z.object({
+  spectatePublic: z.boolean(),
+  spectateReact: z.boolean().default(false),
+  spectateGrade: z.boolean().default(false),
+});
+export type SpectateSettingsInput = z.infer<typeof spectateSettingsSchema>;
+
 /** Comment on a specific pick — posts to chat as a reply to that pick. */
 export const pickCommentSchema = z.object({
   pickId: z.string().uuid(),

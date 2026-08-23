@@ -26,6 +26,55 @@
     font-size: 0.9rem;
   }
 
+  // Live-spectating toggles — a small bordered panel of rows.
+  &__spectate {
+    display: flex;
+    flex-direction: column;
+    gap: $space;
+    padding: $space * 1.75 $space * 2;
+    border: 1px solid $border;
+    border-radius: $radius;
+  }
+
+  &__spectate-title {
+    margin: 0;
+    font-size: 1rem;
+  }
+
+  &__spectate-note {
+    margin: 0 0 $space * 0.5;
+    font-size: 0.85rem;
+    line-height: 1.45;
+  }
+
+  &__spectate-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $space * 1.5;
+
+    &.is-disabled {
+      opacity: 0.5;
+    }
+  }
+
+  &__spectate-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+
+    span:first-child {
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .muted {
+      font-size: 0.82rem;
+      line-height: 1.4;
+    }
+  }
+
   // "Simulate to end" — an irreversible action, so it's set apart in its own
   // danger-tinted panel at the bottom, gated by typing SIMULATE.
   &__simulate {

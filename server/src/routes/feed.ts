@@ -117,7 +117,7 @@ feedRouter.get('/', async (req: AuthedRequest, res: Response) => {
       if (candidateIds.length > 0) {
         const { data: candidateLobbies } = await supabaseAdmin
           .from('lobbies')
-          .select('id, name, status, settings, created_at')
+          .select('id, name, status, settings, created_at, spectate_public')
           .in('id', candidateIds)
           .in('status', ['SETUP', 'SCHEDULED', 'STAGING', 'DRAFTING', 'PAUSED'])
           .order('created_at', { ascending: false });
@@ -145,6 +145,7 @@ feedRouter.get('/', async (req: AuthedRequest, res: Response) => {
             filled: filledCounts.get(l.id) ?? 0,
             teamCount: (l.settings as { teamCount: number }).teamCount,
             friendMembers: friendMap.get(l.id) ?? [],
+            spectatePublic: !!l.spectate_public,
           }));
         }
       }

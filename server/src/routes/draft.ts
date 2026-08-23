@@ -29,6 +29,7 @@ import {
   setAutoDraftSchema,
   setDraftOrderSchema,
   setKeeperCountSchema,
+  spectateSettingsSchema,
   updateKeeperOptionSchema,
   type LobbySettings,
   type Position,
@@ -67,6 +68,21 @@ async function getRole(lobbyId: string, userId: string): Promise<Role | null> {
 
 function isCommish(role: Role | null): boolean {
   return role === 'COMMISSIONER' || role === 'SUB_COMMISSIONER';
+}
+
+/** Whether a non-member spectator is allowed to write via a given toggle
+ * (`spectate_react` for reactions/comments, `spectate_grade` for grading).
+ * Both implicitly require `spectate_public` per the DB check constraints. */
+async function spectatorCan(
+  lobbyId: string,
+  flag: 'spectate_react' | 'spectate_grade',
+): Promise<boolean> {
+  const { data } = await supabaseAdmin
+    .from('lobbies')
+    .select(flag)
+    .eq('id', lobbyId)
+    .maybeSingle();
+  return !!(data as Record<string, boolean> | null)?.[flag];
 }
 
 async function usernameOf(userId: string): Promise<string> {
@@ -2300,7 +2316,7 @@ draftRouter.post('/:id/chat', rateLimit('chat', { max: 8, windowMs: 10_000 }), a
   const userId = req.user!.id;
 
   const role = await getRole(lobbyId, userId);
-  if (!role) {
+  if (!role && !(await spectatorCan(lobbyId, 'spectate_react'))) {
     res.status(403).json({ error: 'Only members can chat in this lobby' });
     return;
   }
@@ -2337,7 +2353,7 @@ draftRouter.post('/:id/pick-comment', rateLimit('pick-comment', { max: 8, window
   const userId = req.user!.id;
 
   const role = await getRole(lobbyId, userId);
-  if (!role) {
+  if (!role && !(await spectatorCan(lobbyId, 'spectate_react'))) {
     res.status(403).json({ error: 'Only members can comment in this lobby' });
     return;
   }
@@ -2411,7 +2427,7 @@ draftRouter.post('/:id/chat-react', rateLimit('chat-react', { max: 20, windowMs:
   const userId = req.user!.id;
 
   const role = await getRole(lobbyId, userId);
-  if (!role) {
+  if (!role && !(await spectatorCan(lobbyId, 'spectate_react'))) {
     res.status(403).json({ error: 'Only members can react in this lobby' });
     return;
   }
@@ -2453,6 +2469,43 @@ draftRouter.post('/:id/chat-react', rateLimit('chat-react', { max: 20, windowMs:
   }
   await notifyReactionTarget(lobbyId, targetType, targetId, userId, emoji);
   res.json({ ok: true, reacted: true });
+});
+
+/** POST /api/lobbies/:id/spectate-settings — commissioner opens/closes live
+ * spectating and its react/grade sub-permissions. The two sub-toggles imply the
+ * master (a DB check constraint enforces it too). */
+draftRouter.post('/:id/spectate-settings', async (req: AuthedRequest, res: Response) => {
+  const lobbyId = req.params.id;
+  const userId = req.user!.id;
+
+  const role = await getRole(lobbyId, userId);
+  if (!isCommish(role)) {
+    res.status(403).json({ error: 'Only the commissioner can change spectating' });
+    return;
+  }
+  const parsed = spectateSettingsSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.flatten() });
+    return;
+  }
+  const spectatePublic = parsed.data.spectatePublic;
+  // Sub-toggles can't be on without the master.
+  const spectateReact = spectatePublic && parsed.data.spectateReact;
+  const spectateGrade = spectatePublic && parsed.data.spectateGrade;
+
+  const { error } = await supabaseAdmin
+    .from('lobbies')
+    .update({
+      spectate_public: spectatePublic,
+      spectate_react: spectateReact,
+      spectate_grade: spectateGrade,
+    })
+    .eq('id', lobbyId);
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
+  res.json({ spectatePublic, spectateReact, spectateGrade });
 });
 
 /** POST /api/lobbies/:id/request-pause — any member flags the commissioner for a pause. */
@@ -3400,7 +3453,7 @@ draftRouter.post('/:id/grade-team', rateLimit('grade-team', { max: 30, windowMs:
   const userId = req.user!.id;
 
   const role = await getRole(lobbyId, userId);
-  if (!role) {
+  if (!role && !(await spectatorCan(lobbyId, 'spectate_grade'))) {
     res.status(403).json({ error: 'Only members can grade rosters in this lobby' });
     return;
   }
@@ -3484,7 +3537,7 @@ draftRouter.post('/:id/grade-reaction', rateLimit('grade-reaction', { max: 60, w
   const userId = req.user!.id;
 
   const role = await getRole(lobbyId, userId);
-  if (!role) {
+  if (!role && !(await spectatorCan(lobbyId, 'spectate_grade'))) {
     res.status(403).json({ error: 'Only members can react to grades in this lobby' });
     return;
   }

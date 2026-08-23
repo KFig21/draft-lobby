@@ -1506,6 +1506,16 @@ export function LobbyRoomPage() {
           canEditName={!renameLocked}
           onClose={() => setShowSettings(false)}
           onSaved={() => refetch()}
+          spectate={
+            isCommish
+              ? {
+                  spectatePublic: lobby.spectate_public,
+                  spectateReact: lobby.spectate_react,
+                  spectateGrade: lobby.spectate_grade,
+                }
+              : undefined
+          }
+          onSpectateChange={() => refetch()}
         />
       )}
     </main>

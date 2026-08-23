@@ -59,6 +59,8 @@ interface FriendOpenLobby {
   filled: number;
   teamCount: number;
   friendMembers: FeedActor[];
+  /** The commissioner has opened the live board to spectators (migration 0047). */
+  spectatePublic: boolean;
 }
 
 /** "You" for the signed-in user, their actual name for everyone else. */
@@ -301,13 +303,19 @@ function FriendOpenCard({ lobby }: { lobby: FriendOpenLobby }) {
         >
           {busy ? 'Joining…' : 'Join'}
         </button>
-      ) : (
-        <Link
-          className="button button--sm pinned-card__action"
-          to={live ? `/lobby/${lobby.id}/draft` : `/lobby/${lobby.id}`}
-        >
+      ) : !live ? (
+        // Full but not started — the lobby room is still viewable.
+        <Link className="button button--sm pinned-card__action" to={`/lobby/${lobby.id}`}>
           View
         </Link>
+      ) : lobby.spectatePublic ? (
+        // Live and open to spectators — watch the board.
+        <Link className="button button--sm pinned-card__action" to={`/lobby/${lobby.id}/draft`}>
+          Watch
+        </Link>
+      ) : (
+        // Live but not open to non-members — no action that would work.
+        <span className="muted pinned-card__note">In progress</span>
       )}
       {error && <p className="pinned-card__error">{error}</p>}
     </div>

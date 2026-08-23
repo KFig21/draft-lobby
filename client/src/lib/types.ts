@@ -28,6 +28,10 @@ export interface LobbyRow {
   results_public: boolean;
   chat_public: boolean;
   public_voting_allowed: boolean;
+  // Live spectating (migration 0047): master read toggle + write sub-toggles.
+  spectate_public: boolean;
+  spectate_react: boolean;
+  spectate_grade: boolean;
   chat_lock_ms: number;
   team_names_locked: boolean;
   keepers_locked: boolean;
