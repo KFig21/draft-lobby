@@ -47,6 +47,12 @@
     align-items: center;
     justify-content: flex-end;
     gap: $space * 1.5;
+
+    // Rounder Save button to match the settings cards' 18px treatment.
+    .button {
+      border-radius: $radius-lg;
+      padding: $space * 0.85 $space * 1.75;
+    }
   }
 
   &__status {

@@ -48,20 +48,38 @@
   &__section {
     display: flex;
     flex-direction: column;
-    padding: $space * 2 $space * 3;
     @include card-surface;
+    // Match the draft wizard + modals: a 24px card whose HEADER pill sits a slim
+    // strip ($space) in from the edge, with the content below inset a further
+    // $space*2 (see the :not(h2) rule) so the h2 reads as its own strip.
+    padding: $space;
+    // A touch more room at the bottom so the last row / CTA button isn't cramped
+    // against the card edge (mirrors the wizard's roomier bottom).
+    padding-bottom: $space * 2;
+    border-radius: 24px;
 
+    // Full-width bordered pill header at the card edge (same treatment as the
+    // wizard's section headers).
     h2 {
-      font-size: 1.2rem;
-      margin-bottom: $space * 1.5;
+      border: solid 1px $border;
+      padding: 16px;
+      border-radius: $radius-lg;
+      background-color: $bg-raised;
+      color: $text;
+      font-size: 1rem;
+      margin-bottom: $space;
     }
 
-    // Sections whose body isn't a list of rows (e.g. Profile) miss the divider
-    // that a first row's border-top otherwise draws under the heading — give
-    // the heading its own underline so it matches every other section.
-    &--profile h2 {
-      padding-bottom: $space * 1.5;
-      border-bottom: 1px solid $border;
+    // The section's content (rows) inset past the header strip. Margin, not
+    // padding, so the rows keep their own border-top dividers as a flush list.
+    > :not(h2) {
+      margin-inline: $space * 2;
+    }
+
+    // The pill header separates itself, so the first row doesn't need its own
+    // divider line right beneath it.
+    > h2 + .settings__row {
+      border-top: none;
     }
   }
 
@@ -145,30 +163,48 @@
     font-size: 0.92rem;
   }
 
+  // "Set up a custom …" CTA — a full-width ghost button rather than a plain
+  // underlined link, so it reads as a clear action beneath the list.
   &__setup {
-    display: block;
-    padding: $space * 1.5 0;
-    border-top: 1px solid $border;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    margin-top: $space;
+    padding: $space * 1.25;
+    border: 1px solid $border;
+    border-radius: $radius-lg;
     color: $accent;
-    font-weight: 600;
+    font-weight: 700;
+    font-size: 0.92rem;
+    transition:
+      border-color 120ms ease,
+      background 120ms ease;
 
-    &:hover {
-      color: $text;
+    @media (hover: hover) {
+      &:hover {
+        border-color: $accent;
+        background: color-mix(in srgb, $accent 10%, transparent);
+      }
     }
 
-    // Accent convention: mint on dark, teal primary on light. Re-declare the
-    // hover here so it still wins at this override's raised specificity.
+    // Accent convention: mint on dark, teal primary on light.
     :root[data-theme='light'] & {
       color: $primary;
 
-      &:hover {
-        color: $text;
+      @media (hover: hover) {
+        &:hover {
+          border-color: $primary;
+          background: color-mix(in srgb, $primary 10%, transparent);
+        }
       }
     }
   }
 
   &__signout {
     align-self: flex-start;
+    border-radius: $radius-lg;
+    padding: $space * 0.85 $space * 1.75;
     color: $danger;
     border-color: $danger;
 
