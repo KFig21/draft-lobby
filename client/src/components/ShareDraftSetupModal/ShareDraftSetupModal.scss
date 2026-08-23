@@ -35,18 +35,17 @@
     font-size: 0.85rem;
   }
 
-  // Fixed-height region so switching from loader → list (or empty) never jumps
-  // the modal's height; the list scrolls inside it once it's tall enough.
+  // Truly fixed height so the modal is the same size for the loader, an empty
+  // state, one friend, or many — the list just scrolls inside it.
   &__friends-region {
-    min-height: 176px;
-    max-height: 264px;
+    height: 232px;
     overflow-y: auto;
   }
 
   &__loading {
     display: grid;
     place-items: center;
-    min-height: 176px;
+    height: 100%;
   }
 
   &__friends {
