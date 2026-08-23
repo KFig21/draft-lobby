@@ -241,6 +241,8 @@
     justify-content: space-between;
     gap: $space;
     min-width: 0;
+    // A little breathing room beneath the name before the tags row.
+    margin-bottom: $space * 0.5;
 
     .status-pill {
       flex-shrink: 0;
@@ -263,11 +265,19 @@
     gap: 3px;
     padding: 1px 7px;
     border-radius: 999px;
+    // Light: --bg-overlay reads clearly against the white card. Dark + night:
+    // --bg-overlay sits too close to (in night, darker than) the card's
+    // --bg-raised, so the chip vanishes — use --bg-hover, lighter than the card
+    // in both, to keep it visible.
     background: $bg-overlay;
     color: $text-muted;
     font-size: 0.68rem;
     font-weight: 700;
     white-space: nowrap;
+
+    :root:not([data-theme='light']) & {
+      background: $bg-hover;
+    }
 
     svg {
       font-size: 1.1em;
