@@ -10,6 +10,7 @@ import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import PublicOutlinedIcon from '@mui/icons-material/PublicOutlined';
 import SensorsOutlinedIcon from '@mui/icons-material/SensorsOutlined';
 import SmartToyOutlinedIcon from '@mui/icons-material/SmartToyOutlined';
+import ShieldOutlinedIcon from '@mui/icons-material/ShieldOutlined';
 import UnarchiveOutlinedIcon from '@mui/icons-material/UnarchiveOutlined';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
@@ -537,8 +538,15 @@ function LobbyList({
           <li key={lobby.id} className="lobby-list__item">
             <Link to={to} className="lobby-list__row">
               <div className="lobby-list__main">
-                <div className="lobby-list__name-row">
+                <div className="lobby-list__title-row">
                   <span className="lobby-list__name">{lobby.name}</span>
+                  <span
+                    className={`status-pill status-pill--${lobby.status.toLowerCase()}`}
+                  >
+                    {lobby.status}
+                  </span>
+                </div>
+                <div className="lobby-list__tags">
                   <span className="lobby-list__badge lobby-list__badge--season">
                     <EventOutlinedIcon fontSize="inherit" /> {lobby.season}
                   </span>
@@ -564,20 +572,19 @@ function LobbyList({
                       </>
                     )}
                   </span>
+                  {role === 'COMMISSIONER' && (
+                    <span className="lobby-list__badge">
+                      <ShieldOutlinedIcon fontSize="inherit" /> Commissioner
+                    </span>
+                  )}
                 </div>
                 <span className="muted">
                   {settings.teamCount} teams · {settings.draftType === 'SNAKE' ? 'Snake' : 'Straight'}
                   {' · '}
                   {preset ? SCORING_PRESETS[preset].label : 'Custom scoring'} ·{' '}
                   {new Date(lobby.created_at).toLocaleDateString()}
-                  {role === 'COMMISSIONER' ? ' · Commissioner' : ''}
                 </span>
               </div>
-              <span
-                className={`status-pill status-pill--${lobby.status.toLowerCase()}`}
-              >
-                {lobby.status}
-              </span>
             </Link>
             {renderAction && <div className="lobby-list__actions">{renderAction(row)}</div>}
           </li>

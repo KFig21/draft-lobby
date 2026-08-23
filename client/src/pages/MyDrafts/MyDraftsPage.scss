@@ -168,7 +168,12 @@
   &__actions {
     flex-shrink: 0;
     display: grid;
-    grid-template-columns: repeat(3, 40px);
+    // A fixed 4-column row sized for the most any draft has (Copy/Share/Archive
+    // + Delete on a deletable one). Reserving all four tracks on EVERY row keeps
+    // the actions column — and so the body beside it — a uniform width across
+    // rows, with Copy/Share/Archive column-aligned and Delete filling the 4th
+    // slot only where present.
+    grid-template-columns: repeat(4, 40px);
     align-items: center;
     justify-items: center;
     padding: $space * 0.5;
@@ -212,19 +217,44 @@
   &__main {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: $space * 0.5;
     min-width: 0;
+    // Fill the row so the title row's space-between pushes the status pill all
+    // the way to the card's end, rather than stopping at the content width.
+    width: 100%;
   }
 
-  &__name-row {
+  // The draft's tags on their own row beneath the title (season, mode,
+  // visibility, and the commissioner role) — so a narrow card never wraps them
+  // awkwardly against the name.
+  &__tags {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    gap: $space * 0.75;
+    gap: $space * 0.5;
+  }
+
+  // Title + colored status pill share the top line, the pill pinned to the end.
+  &__title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $space;
+    min-width: 0;
+
+    .status-pill {
+      flex-shrink: 0;
+    }
   }
 
   &__name {
+    // Cap the display: a long name truncates with an ellipsis rather than
+    // pushing the pill off or wrapping the card (input is limited too).
+    min-width: 0;
     font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   &__badge {
