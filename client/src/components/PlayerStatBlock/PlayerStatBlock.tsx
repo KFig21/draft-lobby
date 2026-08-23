@@ -4,7 +4,7 @@ import {
   type Position,
   type ScoringRules,
 } from '@draft-lobby/shared';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import NorthEastIcon from '@mui/icons-material/NorthEast';
 import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined';
@@ -238,7 +238,17 @@ function WeeklySparkCard({
   const games = points.length;
   const max = games ? Math.max(...points.map((p) => p.pts), 1) : 1;
 
-  if (!loading && games === 0) {
+  // Hold the loading skeleton for at least ~0.4s even if the data resolves
+  // instantly (often cached) — a sub-frame flash of skeleton → content reads as
+  // a jarring flicker. Same buffer idea as the share modal's friend loader.
+  const [minElapsed, setMinElapsed] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setMinElapsed(true), 1000);
+    return () => clearTimeout(t);
+  }, []);
+  const showLoading = loading || !minElapsed;
+
+  if (!showLoading && games === 0) {
     // Rookies (and anyone without prior-season game logs) have no weekly data.
     // Show a message at the same card height as the loader + sparkline, so the
     // modal doesn't resize as this resolves.
@@ -254,18 +264,18 @@ function WeeklySparkCard({
   return (
     <button
       type="button"
-      className={`player-stat-block__spark${loading ? ' is-loading' : ''}`}
+      className={`player-stat-block__spark${showLoading ? ' is-loading' : ''}`}
       onClick={onOpen}
-      disabled={loading}
+      disabled={showLoading}
       aria-label={`${player.name} fantasy points by week — open the weekly breakdown`}
     >
       <span className="player-stat-block__spark-bars" aria-hidden>
-        {loading
-          ? SPARK_SKELETON.map((h, i) => (
+        {showLoading
+          ? SPARK_SKELETON.map((_h, i) => (
               <span
                 key={i}
                 className="player-stat-block__spark-bar"
-                style={{ height: `${h}%` }}
+                style={{ ['--i' as string]: i }}
               />
             ))
           : points.map((p) => (
@@ -282,7 +292,7 @@ function WeeklySparkCard({
           <NorthEastIcon className="player-stat-block__spark-arrow" sx={{ fontSize: 15 }} />
         </span>
         <span className="player-stat-block__spark-sub">
-          {loading ? 'Loading weekly…' : `${season} season`}
+          {showLoading ? 'Loading weekly…' : `${season} season`}
         </span>
       </span>
     </button>

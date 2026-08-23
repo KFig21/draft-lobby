@@ -219,9 +219,29 @@
       background: $primary;
     }
 
-    // Skeleton bars read as a quiet placeholder, not real data.
+    // Skeleton bars read as a quiet gray placeholder that ripples up and down
+    // while the weekly data loads (a wave, staggered by each bar's --i index).
     .player-stat-block__spark.is-loading & {
       background: color-mix(in srgb, #{$text-muted} 40%, transparent);
+      height: 100%;
+      transform-origin: bottom;
+      animation: spark-skeleton-wave 1s ease-in-out infinite;
+      animation-delay: calc(var(--i, 0) * -0.09s);
+
+      @media (prefers-reduced-motion: reduce) {
+        animation: none;
+        transform: scaleY(0.5);
+      }
+    }
+  }
+
+  @keyframes spark-skeleton-wave {
+    0%,
+    100% {
+      transform: scaleY(0.22);
+    }
+    50% {
+      transform: scaleY(0.9);
     }
   }
 
