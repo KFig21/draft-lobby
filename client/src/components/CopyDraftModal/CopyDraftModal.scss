@@ -1,56 +1,11 @@
 @use 'variables' as *;
 @use 'mixins' as *;
 
+// The modal chrome (window, header card, footer card, close, backdrop) now comes
+// from the shared Modal component — this file only styles the body content.
 .copy-draft {
-  position: relative;
   display: flex;
   flex-direction: column;
-  width: min(480px, 94vw);
-  max-height: 90dvh;
-  overflow-y: auto;
-  padding: $space * 3;
-  background: $bg-raised;
-  border: 1px solid $border;
-  border-radius: $radius;
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
-
-  &__backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: 200;
-    display: grid;
-    place-items: center;
-    padding: $space * 2;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(2px);
-  }
-
-  &__close {
-    position: absolute;
-    top: $space * 1.5;
-    right: $space * 1.5;
-    display: grid;
-    place-items: center;
-    width: 32px;
-    height: 32px;
-    border: none;
-    border-radius: $radius-sm;
-    background: $bg-overlay;
-    color: $text-muted;
-    cursor: pointer;
-
-    &:hover {
-      color: $text;
-    }
-  }
-
-  &__title {
-    display: flex;
-    align-items: center;
-    gap: $space * 0.5;
-    margin: 0 0 $space * 0.5;
-    font-size: 1.2rem;
-  }
 
   &__intro {
     margin: 0 0 $space * 2;
@@ -100,20 +55,22 @@
     gap: 4px;
     padding: 4px;
     border: 1px solid $border;
-    border-radius: $radius-sm;
+    border-radius: $radius-lg;
     background: $bg;
   }
 
   &__seg-btn {
     padding: $space * 0.85;
     border: none;
-    border-radius: $radius-sm - 2;
+    border-radius: $radius;
     background: none;
     color: $text-muted;
     font-size: 0.9rem;
     font-weight: 700;
     cursor: pointer;
-    transition: background 120ms ease, color 120ms ease;
+    transition:
+      background 120ms ease,
+      color 120ms ease;
 
     &.is-active {
       background: $primary;
@@ -144,7 +101,7 @@
     gap: $space;
     padding: $space * 1.25;
     border: 1px solid $border;
-    border-radius: $radius-sm;
+    border-radius: $radius-lg;
     background: $bg;
     cursor: pointer;
 
@@ -204,7 +161,7 @@
     gap: $space;
     padding: $space * 0.75 $space;
     border: 1px solid $border;
-    border-radius: $radius-sm;
+    border-radius: $radius-lg;
     background: $bg;
   }
 
@@ -224,7 +181,7 @@
     flex-shrink: 0;
     padding: $space * 0.5 $space;
     border: 1px solid $border;
-    border-radius: $radius-sm;
+    border-radius: $radius-lg;
     background: $bg-overlay;
     color: $text;
     font-size: 0.82rem;
@@ -246,9 +203,11 @@
     color: $danger;
     font-size: 0.85rem;
   }
+}
 
-  &__go {
-    margin-top: $space * 2;
-    width: 100%;
-  }
+// Primary action lives in the shared Modal footer now — full-width, rounded to
+// match the other modal buttons.
+.copy-draft__go {
+  width: 100%;
+  border-radius: $radius-lg;
 }

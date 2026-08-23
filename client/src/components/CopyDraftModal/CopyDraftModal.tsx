@@ -1,15 +1,13 @@
 import { defaultAvatar, type CopyLobbyInclude } from '@draft-lobby/shared';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import CloseIcon from '@mui/icons-material/Close';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import PersonAddOutlinedIcon from '@mui/icons-material/PersonAddAltOutlined';
 import { useState } from 'react';
-import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { copyLobby, reinviteToLobby, type CopyLobbyResult } from '../../lib/lobbyCopy';
-import { useModalClose } from '../../lib/useModalClose';
 import type { LobbyRow } from '../../lib/types';
 import { Avatar } from '../Avatar/Avatar';
+import { Modal } from '../Modal/Modal';
 import './CopyDraftModal.scss';
 
 interface Props {
@@ -48,7 +46,6 @@ const KEEPER_TOGGLES: ToggleDef[] = [
  * original members (nobody is auto-added).
  */
 export function CopyDraftModal({ source, onClose }: Props) {
-  const { closing, requestClose } = useModalClose(onClose);
   const navigate = useNavigate();
 
   const showKeepers = source.settings.keepersEnabled;
@@ -151,31 +148,36 @@ export function CopyDraftModal({ source, onClose }: Props) {
     );
   }
 
-  // Portaled to <body>: the My Drafts page sits inside the app layout, whose
-  // content column establishes a containing block, so a plain fixed-position
-  // backdrop would only cover that column (not the sidebar). Body-level escapes it.
-  return createPortal(
-    <div
-      className={`copy-draft__backdrop modal-anim-backdrop${closing ? ' is-closing' : ''}`}
-      onClick={requestClose}
+  return (
+    <Modal
+      title={result ? 'Draft created' : 'Copy draft'}
+      icon={result ? <CheckCircleIcon fontSize="small" /> : <ContentCopyIcon fontSize="small" />}
+      onClose={onClose}
+      footer={
+        result ? (
+          <button
+            type="button"
+            className="button button--primary copy-draft__go"
+            onClick={goToDraft}
+          >
+            Go to draft
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="button button--primary copy-draft__go"
+            onClick={submit}
+            disabled={busy}
+          >
+            {busy ? 'Copying…' : 'Copy draft'}
+          </button>
+        )
+      }
     >
-      <div
-        className={`copy-draft modal-anim-card${closing ? ' is-closing' : ''}`}
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-label="Copy draft"
-      >
-        <button className="copy-draft__close" aria-label="Close" onClick={requestClose}>
-          <CloseIcon fontSize="small" />
-        </button>
-
+      <div className="copy-draft">
         {result ? (
           // ── Step 2: created + re-invite ──
           <>
-            <h2 className="copy-draft__title">
-              <CheckCircleIcon fontSize="small" /> Draft created
-            </h2>
             <p className="copy-draft__intro">
               <strong>{result.lobby.name}</strong> is ready. Invite anyone from the original draft,
               or jump straight in — empty seats fill with bots in a mock.
@@ -216,17 +218,10 @@ export function CopyDraftModal({ source, onClose }: Props) {
             )}
 
             {error && <p className="copy-draft__error">{error}</p>}
-
-            <button className="button button--primary copy-draft__go" onClick={goToDraft}>
-              Go to draft
-            </button>
           </>
         ) : (
           // ── Step 1: configure the copy ──
           <>
-            <h2 className="copy-draft__title">
-              <ContentCopyIcon fontSize="small" /> Copy draft
-            </h2>
             <p className="copy-draft__intro">
               Duplicate <strong>{source.name}</strong> into a new draft. Pick what carries over —
               the picks themselves never do.
@@ -298,18 +293,9 @@ export function CopyDraftModal({ source, onClose }: Props) {
             )}
 
             {error && <p className="copy-draft__error">{error}</p>}
-
-            <button
-              className="button button--primary copy-draft__go"
-              onClick={submit}
-              disabled={busy}
-            >
-              {busy ? 'Copying…' : 'Copy draft'}
-            </button>
           </>
         )}
       </div>
-    </div>,
-    document.body,
+    </Modal>
   );
 }

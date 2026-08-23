@@ -16,6 +16,8 @@
     align-items: center;
     justify-content: center;
     gap: 4px;
+    // Rounder to match the other modal buttons.
+    border-radius: $radius-lg;
   }
 
   &__error {
