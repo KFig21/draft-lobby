@@ -529,20 +529,20 @@ textarea {
 
 // Applied to a modal backdrop + its card. Add `.is-closing` to play the exit.
 .modal-anim-backdrop {
-  animation: modal-fade-in 225ms ease both;
+  animation: modal-fade-in 200ms ease both;
 
   &.is-closing {
-    animation: modal-fade-out 270ms ease both;
+    animation: modal-fade-out 240ms ease both;
   }
 }
 
 .modal-anim-card {
-  animation: modal-fade-in-up 330ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: modal-fade-in-up 293ms cubic-bezier(0.16, 1, 0.3, 1) both;
 
   &.is-closing {
     // Close durations must stay <= MODAL_EXIT_MS (useModalClose.ts) or the modal
     // unmounts before the exit animation finishes.
-    animation: modal-fade-down-out 270ms ease both;
+    animation: modal-fade-down-out 240ms ease both;
   }
 }
 
