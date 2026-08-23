@@ -80,6 +80,12 @@ export function NotificationsPage() {
         setHandled((h) => ({ ...h, [n.id]: 'Unavailable' }));
         return;
       }
+      // A shared draft setup materializes a whole lobby (name + mode inputs), so
+      // hand off to the import page rather than cloning inline like a ruleset.
+      if (shared.kind === 'DRAFT_SETUP') {
+        navigate(`/import/ruleset/${shared.id}`);
+        return;
+      }
       await importSharedRuleset(shared, userId);
       setHandled((h) => ({ ...h, [n.id]: 'Imported' }));
     } finally {
@@ -215,7 +221,9 @@ export function NotificationsPage() {
             )}
             {n.type === 'RULESET_SHARE' && (
               <>
-                <strong>{name}</strong> shared a ruleset with you
+                {/* One type now covers scoring formats, league rulesets, AND full
+                    draft setups — keep the wording kind-neutral. */}
+                <strong>{name}</strong> shared a setup with you
                 {n.snippet ? (
                   <>
                     : <strong>{n.snippet}</strong>

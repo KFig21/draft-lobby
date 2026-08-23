@@ -2,6 +2,8 @@ import {
   SCORING_PRESETS,
   matchPreset,
   roundsForSettings,
+  type DraftMode,
+  type DraftSetupSnapshot,
   type LobbySettings,
   type ScoringRules,
 } from '@draft-lobby/shared';
@@ -11,7 +13,12 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
 import { Loader } from '../../components/Loader/Loader';
 import { clockSummary } from '../../lib/format';
-import { fetchSharedRuleset, importSharedRuleset, type SharedRuleset } from '../../lib/importRuleset';
+import {
+  createLobbyFromSharedSetup,
+  fetchSharedRuleset,
+  importSharedRuleset,
+  type SharedRuleset,
+} from '../../lib/importRuleset';
 import './ImportRulesetPage.scss';
 
 export function ImportRulesetPage() {
@@ -25,11 +32,19 @@ export function ImportRulesetPage() {
   const [importState, setImportState] = useState<'idle' | 'working' | 'done'>('idle');
   const [error, setError] = useState<string | null>(null);
 
+  // DRAFT_SETUP import creates a real lobby — its own name + mode inputs.
+  const [name, setName] = useState('');
+  const [draftMode, setDraftMode] = useState<DraftMode>('LIVE');
+
   useEffect(() => {
     if (!token) return;
     setLoading(true);
     void fetchSharedRuleset(token).then((row) => {
       setShared(row);
+      if (row?.kind === 'DRAFT_SETUP') {
+        setName(row.name.slice(0, 60));
+        setDraftMode((row.payload as DraftSetupSnapshot).settings.draftMode ?? 'LIVE');
+      }
       setLoading(false);
     });
   }, [token]);
@@ -47,11 +62,35 @@ export function ImportRulesetPage() {
     }
   }
 
+  async function doCreateLobby() {
+    if (!shared || !userId || !name.trim()) return;
+    setImportState('working');
+    setError(null);
+    try {
+      const lobby = await createLobbyFromSharedSetup(shared.id, name.trim(), draftMode);
+      navigate(`/lobby/${lobby.id}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not create the lobby');
+      setImportState('idle');
+    }
+  }
+
+  const isDraftSetup = shared?.kind === 'DRAFT_SETUP';
   const isLeague = shared?.kind === 'LEAGUE';
-  const settings = isLeague ? (shared!.payload as LobbySettings) : null;
-  const rules = shared ? (isLeague ? settings!.scoring : (shared.payload as ScoringRules)) : null;
+  const setupSnap = isDraftSetup ? (shared!.payload as DraftSetupSnapshot) : null;
+  const settings: LobbySettings | null = isDraftSetup
+    ? setupSnap!.settings
+    : isLeague
+      ? (shared!.payload as LobbySettings)
+      : null;
+  const rules: ScoringRules | null = shared
+    ? isDraftSetup || isLeague
+      ? settings!.scoring
+      : (shared.payload as ScoringRules)
+    : null;
   const preset = rules ? matchPreset(rules) : null;
   const scoringLabel = preset ? SCORING_PRESETS[preset].label : 'Custom';
+  const keeperCount = setupSnap?.keeperPicks.length ?? 0;
 
   return (
     <main className="import-ruleset">
@@ -88,10 +127,71 @@ export function ImportRulesetPage() {
               </Link>
             </div>
           </div>
+        ) : isDraftSetup ? (
+          <div className="import-ruleset__card">
+            <span className="import-ruleset__kind">Draft setup</span>
+            <h2>{shared.name}</h2>
+            <dl className="import-ruleset__meta">
+              <div>
+                <dt>Teams</dt>
+                <dd>{settings!.teamCount}</dd>
+              </div>
+              <div>
+                <dt>Rounds</dt>
+                <dd>{roundsForSettings(settings!)}</dd>
+              </div>
+              <div>
+                <dt>Scoring</dt>
+                <dd>{scoringLabel}</dd>
+              </div>
+              {settings!.keepersEnabled && (
+                <div>
+                  <dt>Keepers</dt>
+                  <dd>{keeperCount > 0 ? `${keeperCount} pre-set` : 'On'}</dd>
+                </div>
+              )}
+            </dl>
+            <label className="field import-ruleset__field">
+              <span>Lobby name</span>
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                maxLength={60}
+                placeholder="Draft lobby"
+              />
+            </label>
+            <div className="field import-ruleset__field">
+              <span>Draft type</span>
+              <div className="segmented">
+                <button
+                  type="button"
+                  className={`segmented__opt${draftMode === 'LIVE' ? ' segmented__opt--on' : ''}`}
+                  onClick={() => setDraftMode('LIVE')}
+                >
+                  Live
+                </button>
+                <button
+                  type="button"
+                  className={`segmented__opt${draftMode === 'MOCK' ? ' segmented__opt--on' : ''}`}
+                  onClick={() => setDraftMode('MOCK')}
+                >
+                  Mock
+                </button>
+              </div>
+            </div>
+            {error && <p className="import-ruleset__error">{error}</p>}
+            <button
+              className="button button--primary import-ruleset__cta"
+              onClick={doCreateLobby}
+              disabled={importState === 'working' || !name.trim()}
+            >
+              {importState === 'working' ? 'Creating…' : 'Create lobby from setup'}
+            </button>
+          </div>
         ) : (
           <div className="import-ruleset__card">
             <span className="import-ruleset__kind">
-              {shared.kind === 'LEAGUE' ? 'League setup' : 'Scoring format'}
+              {isLeague ? 'League setup' : 'Scoring format'}
             </span>
             <h2>{shared.name}</h2>
             <dl className="import-ruleset__meta">
@@ -124,7 +224,7 @@ export function ImportRulesetPage() {
             >
               {importState === 'working'
                 ? 'Importing…'
-                : `Import to my ${shared.kind === 'LEAGUE' ? 'leagues' : 'scoring formats'}`}
+                : `Import to my ${isLeague ? 'leagues' : 'scoring formats'}`}
             </button>
           </div>
         )}

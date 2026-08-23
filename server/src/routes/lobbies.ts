@@ -6,9 +6,12 @@ import {
   DRAFT_RESULTS_LOCK_MS,
   canDeleteLobby,
   copyLobbySchema,
+  createLobbyFromSharedSetupSchema,
   createLobbySchema,
+  draftSetupSnapshotSchema,
   joinLobbySchema,
   lobbySettingsSchema,
+  shareDraftSetupSchema,
   mergeEditableSettings,
   normalizeTiers,
   overallForDraftPosition,
@@ -36,6 +39,18 @@ function verifyPassword(password: string, stored: string): boolean {
   if (!salt || !hash) return false;
   const candidate = scryptSync(password, salt, 64);
   return timingSafeEqual(candidate, Buffer.from(hash, 'hex'));
+}
+
+/** Are `a` and `b` accepted friends (either direction)? Mirrors rulesets.ts. */
+async function areFriends(a: string, b: string): Promise<boolean> {
+  const { data } = await supabaseAdmin
+    .from('friendships')
+    .select('id')
+    .eq('status', 'ACCEPTED')
+    .in('requester_id', [a, b])
+    .in('addressee_id', [a, b])
+    .limit(1);
+  return !!data?.length;
 }
 
 /** POST /api/lobbies — create a lobby; caller becomes commissioner + first team. */
@@ -369,6 +384,326 @@ lobbiesRouter.post('/:id/copy', async (req: AuthedRequest, res: Response) => {
   }
 
   res.status(201).json({ lobby, members });
+});
+
+/**
+ * POST /api/lobbies/:id/share-setup — snapshot this draft's SETUP (settings +
+ * team names/order + keeper lists + assigned keepers) into a token-readable
+ * shared_rulesets row (kind DRAFT_SETUP) and, when `toUserId` is an accepted
+ * friend, drop a RULESET_SHARE notification. The recipient materializes it into
+ * a fresh lobby (see /from-shared-setup) — keepers and all. Members can share.
+ */
+lobbiesRouter.post('/:id/share-setup', async (req: AuthedRequest, res: Response) => {
+  const sourceId = req.params.id;
+  const me = req.user!.id;
+
+  const parsed = shareDraftSetupSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.flatten() });
+    return;
+  }
+  const { toUserId } = parsed.data;
+
+  const { data: membership } = await supabaseAdmin
+    .from('lobby_members')
+    .select('role')
+    .eq('lobby_id', sourceId)
+    .eq('user_id', me)
+    .maybeSingle();
+  if (!membership) {
+    res.status(403).json({ error: 'Only members can share this draft' });
+    return;
+  }
+  if (toUserId) {
+    if (toUserId === me) {
+      res.status(400).json({ error: "You can't share with yourself" });
+      return;
+    }
+    if (!(await areFriends(me, toUserId))) {
+      res.status(403).json({ error: 'You can only share with friends' });
+      return;
+    }
+  }
+
+  const { data: source } = await supabaseAdmin
+    .from('lobbies')
+    .select('name, settings')
+    .eq('id', sourceId)
+    .maybeSingle();
+  if (!source) {
+    res.status(404).json({ error: 'Draft not found' });
+    return;
+  }
+
+  const { data: teams } = await supabaseAdmin
+    .from('teams')
+    .select('id, name, draft_position, color, is_prev_champion, is_bot, auto_draft')
+    .eq('lobby_id', sourceId)
+    .order('draft_position');
+  const posByTeam = new Map<string, number>(
+    (teams ?? []).map((t) => [t.id as string, t.draft_position as number]),
+  );
+
+  const { data: opts } = await supabaseAdmin
+    .from('keeper_options')
+    .select('team_id, player_id, round, selected, is_default')
+    .eq('lobby_id', sourceId);
+  const { data: keepers } = await supabaseAdmin
+    .from('picks')
+    .select('team_id, player_id, round')
+    .eq('lobby_id', sourceId)
+    .eq('is_keeper', true);
+
+  const snapshot = {
+    settings: source.settings,
+    teams: (teams ?? []).map((t) => ({
+      name: t.name as string,
+      draftPosition: t.draft_position as number,
+      color: (t.color as string | null) ?? null,
+      isPrevChampion: (t.is_prev_champion as boolean) ?? false,
+      isBot: (t.is_bot as boolean) ?? false,
+      autoDraft: (t.auto_draft as boolean) ?? false,
+    })),
+    keeperOptions: (opts ?? [])
+      .map((o) => {
+        const teamPos = posByTeam.get(o.team_id as string);
+        if (teamPos == null) return null;
+        return {
+          teamPos,
+          playerId: o.player_id as string,
+          round: o.round as number,
+          selected: (o.selected as boolean) ?? false,
+          isDefault: (o.is_default as boolean) ?? false,
+        };
+      })
+      .filter((r): r is NonNullable<typeof r> => r !== null),
+    keeperPicks: (keepers ?? [])
+      .map((k) => {
+        const teamPos = posByTeam.get(k.team_id as string);
+        if (teamPos == null) return null;
+        return { teamPos, playerId: k.player_id as string, round: k.round as number };
+      })
+      .filter((r): r is NonNullable<typeof r> => r !== null),
+  };
+
+  const validSnap = draftSetupSnapshotSchema.safeParse(snapshot);
+  if (!validSnap.success) {
+    res.status(400).json({ error: 'Could not snapshot this draft' });
+    return;
+  }
+
+  const { data: shared, error } = await supabaseAdmin
+    .from('shared_rulesets')
+    .insert({ owner_id: me, kind: 'DRAFT_SETUP', name: source.name as string, payload: validSnap.data })
+    .select('id')
+    .single();
+  if (error || !shared) {
+    res.status(500).json({ error: error?.message ?? 'Failed to create share' });
+    return;
+  }
+
+  if (toUserId) {
+    await supabaseAdmin.from('notifications').insert({
+      user_id: toUserId,
+      actor_id: me,
+      type: 'RULESET_SHARE',
+      shared_ruleset_id: shared.id,
+      snippet: source.name as string,
+    });
+  }
+
+  res.json({ id: shared.id });
+});
+
+/**
+ * POST /api/lobbies/from-shared-setup — materialize a shared DRAFT_SETUP snapshot
+ * (see /share-setup) into a fresh SETUP lobby the caller commissions: settings,
+ * seats (owners cleared, caller takes the first), and keepers pre-locked on the
+ * board. Keeper player refs that no longer exist in the pool (e.g. a re-seeded
+ * season) are skipped so a stale snapshot can't fail the whole import.
+ */
+lobbiesRouter.post('/from-shared-setup', async (req: AuthedRequest, res: Response) => {
+  const me = req.user!.id;
+
+  const parsed = createLobbyFromSharedSetupSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.flatten() });
+    return;
+  }
+  const { sharedId, name, draftMode } = parsed.data;
+
+  const { data: shared } = await supabaseAdmin
+    .from('shared_rulesets')
+    .select('kind, payload')
+    .eq('id', sharedId)
+    .maybeSingle();
+  if (!shared || shared.kind !== 'DRAFT_SETUP') {
+    res.status(404).json({ error: 'Shared setup not found' });
+    return;
+  }
+  const snap = draftSetupSnapshotSchema.safeParse(shared.payload);
+  if (!snap.success) {
+    res.status(400).json({ error: 'This shared setup is invalid' });
+    return;
+  }
+  const bundle = snap.data;
+
+  const merged: LobbySettings = {
+    ...bundle.settings,
+    name,
+    draftMode,
+    visibility: 'PRIVATE',
+    scheduledStart: null,
+  };
+  const validated = lobbySettingsSchema.safeParse(merged);
+  if (!validated.success) {
+    res.status(400).json({ error: validated.error.flatten() });
+    return;
+  }
+  const newSettings = validated.data;
+
+  const { data: lobby, error } = await supabaseAdmin
+    .from('lobbies')
+    .insert({
+      name,
+      commissioner_id: me,
+      password_hash: hashPassword(''),
+      settings: newSettings,
+      status: 'SETUP',
+      results_public: false,
+      chat_public: false,
+      public_voting_allowed: false,
+      chat_lock_ms: CHAT_LOCK_MS,
+    })
+    .select()
+    .single();
+  if (error || !lobby) {
+    res.status(500).json({ error: error?.message ?? 'Failed to create lobby' });
+    return;
+  }
+  const { error: memberError } = await supabaseAdmin
+    .from('lobby_members')
+    .insert({ lobby_id: lobby.id, user_id: me, role: 'COMMISSIONER' });
+  if (memberError) {
+    res.status(500).json({ error: memberError.message });
+    return;
+  }
+
+  const posToNewTeam = new Map<number, string>();
+  if (bundle.teams.length > 0) {
+    const sorted = [...bundle.teams].sort((a, b) => a.draftPosition - b.draftPosition);
+    const rows = sorted.map((t, i) => ({
+      lobby_id: lobby.id,
+      // Caller takes the first seat (human); everyone else's is unowned (a human
+      // seat to invite, or a bot that keeps drafting itself).
+      owner_id: i === 0 ? me : null,
+      name: t.name,
+      draft_position: t.draftPosition,
+      color: t.color ?? null,
+      is_prev_champion: t.isPrevChampion ?? false,
+      is_bot: i === 0 ? false : (t.isBot ?? false),
+      auto_draft: i === 0 ? false : (t.autoDraft ?? false),
+    }));
+    const { data: inserted, error: teamErr } = await supabaseAdmin
+      .from('teams')
+      .insert(rows)
+      .select('id, draft_position');
+    if (teamErr) {
+      res.status(500).json({ error: teamErr.message });
+      return;
+    }
+    for (const t of inserted ?? []) posToNewTeam.set(t.draft_position as number, t.id as string);
+  } else {
+    const { data: myTeam, error: teamErr } = await supabaseAdmin
+      .from('teams')
+      .insert({
+        lobby_id: lobby.id,
+        owner_id: me,
+        name: (await usernameOf(me)) ?? 'Team 1',
+        draft_position: 1,
+      })
+      .select('id, draft_position')
+      .single();
+    if (teamErr) {
+      res.status(500).json({ error: teamErr.message });
+      return;
+    }
+    posToNewTeam.set(1, myTeam.id as string);
+  }
+
+  // Which keeper player refs still exist in the pool — skip the rest.
+  const keeperPlayerIds = [
+    ...new Set([
+      ...bundle.keeperOptions.map((o) => o.playerId),
+      ...bundle.keeperPicks.map((k) => k.playerId),
+    ]),
+  ];
+  let existingPlayers = new Set<string>();
+  if (keeperPlayerIds.length > 0) {
+    const { data: pl } = await supabaseAdmin
+      .from('players')
+      .select('id')
+      .in('id', keeperPlayerIds);
+    existingPlayers = new Set((pl ?? []).map((p) => p.id as string));
+  }
+
+  // Keeper candidate lists (offered pools), remapped to the new seats.
+  if (bundle.keeperOptions.length > 0) {
+    const optionRows = bundle.keeperOptions
+      .map((o) => {
+        const newTeam = posToNewTeam.get(o.teamPos);
+        if (!newTeam || !existingPlayers.has(o.playerId)) return null;
+        return {
+          lobby_id: lobby.id,
+          team_id: newTeam,
+          player_id: o.playerId,
+          round: o.round,
+          selected: o.selected ?? false,
+          is_default: o.isDefault ?? false,
+        };
+      })
+      .filter((r): r is NonNullable<typeof r> => r !== null);
+    if (optionRows.length > 0) {
+      const { error: optErr } = await supabaseAdmin.from('keeper_options').insert(optionRows);
+      if (optErr) {
+        res.status(500).json({ error: optErr.message });
+        return;
+      }
+    }
+  }
+
+  // Assigned keepers — re-materialize is_keeper picks against the new settings.
+  if (bundle.keeperPicks.length > 0) {
+    const maxRound = roundsForSettings(newSettings);
+    const pickRows = bundle.keeperPicks
+      .map((k) => {
+        const newTeam = posToNewTeam.get(k.teamPos);
+        if (!newTeam || k.round > maxRound || !existingPlayers.has(k.playerId)) return null;
+        return {
+          lobby_id: lobby.id,
+          overall: overallForDraftPosition(
+            k.round,
+            k.teamPos,
+            newSettings.teamCount,
+            newSettings.draftType,
+          ),
+          round: k.round,
+          team_id: newTeam,
+          player_id: k.playerId,
+          is_keeper: true,
+        };
+      })
+      .filter((r): r is NonNullable<typeof r> => r !== null);
+    if (pickRows.length > 0) {
+      const { error: pickErr } = await supabaseAdmin.from('picks').insert(pickRows);
+      if (pickErr) {
+        res.status(500).json({ error: pickErr.message });
+        return;
+      }
+    }
+  }
+
+  res.status(201).json({ lobby });
 });
 
 /**

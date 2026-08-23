@@ -1,0 +1,92 @@
+@use 'variables' as *;
+
+.share-setup {
+  display: flex;
+  flex-direction: column;
+  gap: $space * 1.5;
+
+  &__lead {
+    margin: 0;
+    font-size: 0.88rem;
+    line-height: 1.5;
+  }
+
+  &__link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+  }
+
+  &__error {
+    margin: 0;
+    color: $danger;
+    font-size: 0.85rem;
+  }
+
+  &__friends-head {
+    font-weight: 700;
+    font-size: 0.9rem;
+    margin-top: $space * 0.5;
+  }
+
+  &__empty {
+    margin: 0;
+    font-size: 0.85rem;
+  }
+
+  &__friends {
+    display: flex;
+    flex-direction: column;
+    gap: $space * 0.5;
+  }
+
+  &__friend {
+    display: flex;
+    align-items: center;
+    gap: $space;
+    width: 100%;
+    padding: $space $space * 1.25;
+    border: 1px solid $border;
+    border-radius: $radius-lg;
+    background: $bg;
+    color: $text;
+    cursor: pointer;
+    text-align: left;
+
+    @media (hover: hover) {
+      &:hover:not(:disabled) {
+        border-color: $primary;
+      }
+    }
+
+    &:disabled {
+      cursor: default;
+    }
+  }
+
+  &__friend-name {
+    flex: 1;
+    min-width: 0;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__friend-cta {
+    flex-shrink: 0;
+    font-size: 0.85rem;
+    font-weight: 700;
+  }
+
+  &__friend-sent {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    color: $accent;
+    font-size: 0.85rem;
+    font-weight: 700;
+  }
+}

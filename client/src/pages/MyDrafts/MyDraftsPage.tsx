@@ -4,6 +4,7 @@ import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlineOutlined';
+import IosShareIcon from '@mui/icons-material/IosShare';
 import EventOutlinedIcon from '@mui/icons-material/EventOutlined';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import PublicOutlinedIcon from '@mui/icons-material/PublicOutlined';
@@ -15,6 +16,7 @@ import { Link } from 'react-router-dom';
 import { Avatar } from '../../components/Avatar/Avatar';
 import { ConfirmModal } from '../../components/ConfirmModal/ConfirmModal';
 import { CopyDraftModal } from '../../components/CopyDraftModal/CopyDraftModal';
+import { ShareDraftSetupModal } from '../../components/ShareDraftSetupModal/ShareDraftSetupModal';
 import { Loader } from '../../components/Loader/Loader';
 import { useAuth } from '../../auth/AuthContext';
 import { api } from '../../lib/api';
@@ -114,6 +116,8 @@ export function MyDraftsPage() {
 
   // The draft currently being copied (opens CopyDraftModal).
   const [copySource, setCopySource] = useState<MyLobby['lobby'] | null>(null);
+  // The draft whose setup is being shared (opens ShareDraftSetupModal).
+  const [shareSource, setShareSource] = useState<MyLobby['lobby'] | null>(null);
   // The draft pending delete (opens the confirm modal).
   const [deleteTarget, setDeleteTarget] = useState<MyLobby | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -243,6 +247,20 @@ export function MyDraftsPage() {
     >
       <ContentCopyIcon fontSize="small" />
       <span className="lobby-list__action-label">Copy</span>
+    </button>
+  );
+
+  /** Share a draft's full setup (settings + teams + keepers) to a friend. */
+  const shareButton = (row: MyLobby) => (
+    <button
+      type="button"
+      className="lobby-list__action"
+      aria-label={`Share ${row.lobby.name} setup`}
+      title="Share setup (with keepers)"
+      onClick={() => setShareSource(row.lobby)}
+    >
+      <IosShareIcon fontSize="small" />
+      <span className="lobby-list__action-label">Share</span>
     </button>
   );
 
@@ -386,6 +404,7 @@ export function MyDraftsPage() {
                 renderAction={(row) => (
                   <>
                     {copyButton(row)}
+                    {shareButton(row)}
                     {archiveButton(row)}
                     {deleteButton(row)}
                   </>
@@ -409,6 +428,7 @@ export function MyDraftsPage() {
                   renderAction={(row) => (
                     <>
                       {copyButton(row)}
+                    {shareButton(row)}
                       {archiveButton(row)}
                     </>
                   )}
@@ -457,6 +477,7 @@ export function MyDraftsPage() {
                   renderAction={(row) => (
                     <>
                       {copyButton(row)}
+                    {shareButton(row)}
                       {unarchiveButton(row)}
                       {deleteButton(row)}
                     </>
@@ -470,6 +491,13 @@ export function MyDraftsPage() {
 
       {copySource && (
         <CopyDraftModal source={copySource} onClose={() => setCopySource(null)} />
+      )}
+
+      {shareSource && (
+        <ShareDraftSetupModal
+          source={{ id: shareSource.id, name: shareSource.name }}
+          onClose={() => setShareSource(null)}
+        />
       )}
 
       {deleteTarget && (

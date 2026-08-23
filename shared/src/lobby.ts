@@ -572,3 +572,58 @@ export const copyLobbySchema = z.object({
   include: copyLobbyIncludeSchema,
 });
 export type CopyLobbyInput = z.infer<typeof copyLobbySchema>;
+
+/**
+ * A self-contained snapshot of a draft's SETUP — settings + seats + keepers —
+ * shared to another user (stored as shared_rulesets kind 'DRAFT_SETUP'). Teams
+ * carry no owners; keepers reference their seat by draft position so they remap
+ * onto the freshly-created seats. Materialized into a new staging lobby on
+ * import (POST /lobbies/from-shared-setup), so keepers carry over without the
+ * importer re-entering them by hand.
+ */
+export const draftSetupSnapshotSchema = z.object({
+  settings: lobbySettingsSchema,
+  teams: z.array(
+    z.object({
+      name: z.string(),
+      draftPosition: z.number().int().positive(),
+      color: z.string().nullable().optional(),
+      isPrevChampion: z.boolean().optional(),
+      isBot: z.boolean().optional(),
+      autoDraft: z.boolean().optional(),
+    }),
+  ),
+  keeperOptions: z.array(
+    z.object({
+      teamPos: z.number().int().positive(),
+      playerId: z.string(),
+      round: z.number().int().positive(),
+      selected: z.boolean().optional(),
+      isDefault: z.boolean().optional(),
+    }),
+  ),
+  keeperPicks: z.array(
+    z.object({
+      teamPos: z.number().int().positive(),
+      playerId: z.string(),
+      round: z.number().int().positive(),
+    }),
+  ),
+});
+export type DraftSetupSnapshot = z.infer<typeof draftSetupSnapshotSchema>;
+
+/** Payload for POST /api/lobbies/:id/share-setup — snapshot this draft's setup
+ * into a shareable token, optionally notifying a friend. */
+export const shareDraftSetupSchema = z.object({
+  toUserId: z.string().uuid().optional(),
+});
+export type ShareDraftSetupInput = z.infer<typeof shareDraftSetupSchema>;
+
+/** Payload for POST /api/lobbies/from-shared-setup — materialize a shared draft
+ * setup into a fresh lobby the caller commissions. */
+export const createLobbyFromSharedSetupSchema = z.object({
+  sharedId: z.string().uuid(),
+  name: z.string().trim().min(1).max(60),
+  draftMode: draftModeSchema,
+});
+export type CreateLobbyFromSharedSetupInput = z.infer<typeof createLobbyFromSharedSetupSchema>;
