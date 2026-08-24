@@ -149,7 +149,7 @@
   // sits just below the player header.
   &__drafted {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: $space * 0.75;
     margin-top: $space * 1.5;
     font-size: 0.9rem;

@@ -99,23 +99,35 @@
     border-radius: 999px;
     padding: 4px 10px;
     white-space: nowrap;
+
+    // Mobile: the header is tight, so this badge crowds/covers the player name —
+    // drop it (the season is already in the card's context).
+    @media (max-width: $bp-md) {
+      display: none;
+    }
   }
 
+  // Borderless 32px icon button, matching the player / pick modal close.
   &__close {
     flex: 0 0 auto;
     display: grid;
     place-items: center;
-    width: 30px;
-    height: 30px;
+    width: 32px;
+    height: 32px;
     border: none;
-    border-radius: 8px;
-    background: $bg-overlay;
+    border-radius: $radius-sm;
+    background: none;
     color: $text-muted;
     cursor: pointer;
 
     &:hover {
-      background: $bg-hover;
       color: $text;
+    }
+
+    // Mobile: the season badge (which carried the margin-left:auto that pushed
+    // this to the far right) is hidden, so take over the right-alignment here.
+    @media (max-width: $bp-md) {
+      margin-left: auto;
     }
   }
 
