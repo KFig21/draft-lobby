@@ -188,7 +188,8 @@
 
   // "No stats for {season}" label, sitting where the meta normally is.
   &__spark-empty {
-    flex: 0 0 auto;
+    flex: 1 1 auto;
+    min-width: 0;
     font-size: 0.82rem;
     font-weight: 600;
     color: $text-muted;
@@ -196,7 +197,9 @@
   }
 
   &__spark-bars {
-    flex: 1 1 auto;
+    // Fixed share of the card so the bars are the same width regardless of what
+    // the label reads (the shorter "No stats…" text otherwise let them grow).
+    flex: 0 0 62%;
     min-width: 0;
     height: 46px;
     display: flex;
@@ -252,7 +255,8 @@
   }
 
   &__spark-meta {
-    flex: 0 0 auto;
+    flex: 1 1 auto;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     align-items: center;

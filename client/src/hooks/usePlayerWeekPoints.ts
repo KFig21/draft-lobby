@@ -24,7 +24,7 @@ export function usePlayerWeekPoints(
   season: number | null,
   scoring: ScoringRules,
   enabled: boolean,
-): { points: WeekPoint[]; loading: boolean; error: boolean } {
+): { points: WeekPoint[]; byeWeeks: number[]; loading: boolean; error: boolean } {
   const [rows, setRows] = useState<PlayerWeekStatRow[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
@@ -78,5 +78,9 @@ export function usePlayerWeekPoints(
           : (r.pts_ppr ?? 0),
     }));
 
-  return { points, loading, error };
+  // The week(s) marked as a bye — so callers can leave the bye out of a weekly
+  // axis rather than drawing it as a played-nothing week.
+  const byeWeeks: number[] = (rows ?? []).filter((r) => r.is_bye).map((r) => r.week);
+
+  return { points, byeWeeks, loading, error };
 }

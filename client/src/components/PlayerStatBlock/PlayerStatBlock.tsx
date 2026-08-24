@@ -238,7 +238,13 @@ function WeeklySparkCard({
   scoring: ScoringRules;
   onOpen: () => void;
 }) {
-  const { points, loading } = usePlayerWeekPoints(player.id, player.position, season, scoring, true);
+  const { points, byeWeeks, loading } = usePlayerWeekPoints(
+    player.id,
+    player.position,
+    season,
+    scoring,
+    true,
+  );
   const games = points.length;
   const max = games ? Math.max(...points.map((p) => p.pts), 1) : 1;
 
@@ -255,20 +261,28 @@ function WeeklySparkCard({
   // floor and the meta reads "No stats for {season}".
   const empty = !showLoading && games === 0;
 
-  // One bar per week of the season (the NFL added an 18th week in 2021), so each
-  // game lands on its real week — a mid-season injury shows the gap in place,
-  // not a run of empty bars shoved to the end. The fixed week count keeps the
-  // same bar elements across load → data, so the height change transitions
-  // smoothly (see the SCSS transition).
+  // One bar per week the player could play — the season's weeks (18 since 2021,
+  // else 17) minus the bye, which we leave out entirely. The count is fixed, so
+  // the bars stay stable across load → data for the morph.
   const weeksInSeason = season >= 2021 ? 18 : 17;
+  const barsCount = weeksInSeason - 1;
+  // The non-bye weeks in order — the axis each bar maps to. The bye is unknown
+  // until the data loads, but the count is fixed (one bye), so every player's
+  // games land on their real week with missed games showing a gap in place.
+  const byeSet = new Set(byeWeeks);
+  const axisWeeks: number[] = [];
+  for (let w = 1; w <= weeksInSeason && axisWeeks.length < barsCount; w++) {
+    if (!byeSet.has(w)) axisWeeks.push(w);
+  }
   const byWeek = new Map(points.map((p) => [p.week, p.pts]));
 
-  // Height (%) for week slot i (week i + 1). While loading, its skeleton height
-  // (the bob animates around it). Once loaded, that week's scaled points, or the
-  // floor for a week the player didn't play (missed game or bye).
+  // Height (%) for bar i. While loading, its skeleton height (the bob animates
+  // around it). Once loaded, its week's scaled points, or the floor for a week
+  // the player didn't play.
   const barHeight = (i: number): number => {
     if (showLoading) return SPARK_SKELETON[i];
-    const pts = byWeek.get(i + 1) ?? 0;
+    const week = axisWeeks[i];
+    const pts = week != null ? (byWeek.get(week) ?? 0) : 0;
     return pts > 0 ? Math.max(SPARK_MIN_H, (pts / max) * 100) : SPARK_MIN_H;
   };
 
@@ -283,7 +297,7 @@ function WeeklySparkCard({
       aria-label={`${player.name} fantasy points by week — open the weekly breakdown`}
     >
       <span className="player-stat-block__spark-bars" aria-hidden>
-        {Array.from({ length: weeksInSeason }, (_, i) => (
+        {Array.from({ length: barsCount }, (_, i) => (
           <span
             key={i}
             className="player-stat-block__spark-bar"
