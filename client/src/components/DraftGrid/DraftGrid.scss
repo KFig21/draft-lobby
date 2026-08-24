@@ -1119,79 +1119,46 @@
       font-size: calc(0.62rem * var(--fs-scale));
     }
 
-    // Scales like everything else — &__onclock-icon/-title/-sub are all sized
-    // in em against this, so they grow proportionally for free. (Previously
-    // left unscaled on a guess that it'd look "comically large" on a big
-    // screen — actual TV testing showed the opposite: too small to read.)
+    // The live message — ON THE CLOCK / SKIPPED — is the one thing that needs to
+    // read at a glance in fullscreen, so give every active cell (any team's and
+    // the viewer's own) the big Impact-italic word the other-teams' SKIPPED cell
+    // (&__skip-rest) already uses, and drop the icons + guidance sub-line that
+    // only crowd it. Formerly a TV-mode-only treatment; now the default for all
+    // fullscreen.
     .draft-grid__onclock-label {
-      font-size: calc(0.65rem * var(--fs-scale));
+      font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+      font-style: italic;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      line-height: 0.98;
+      // The single-line "someone else is up" variant renders straight on the
+      // label — this carries it; the stacked "your pick" title matches below.
+      font-size: calc(1.15rem * var(--fs-scale));
     }
 
-    // The "your pick" variant stacks two lines (title + sub) in the same
-    // cell height the single-line "someone else's turn" variant uses — their
-    // normal 1.1em/0.8em (relative to &__onclock-label just above) compounds
-    // with --fs-scale and reads too big once both lines are scaled up
-    // together. Pinned to smaller absolute multipliers here instead of
-    // staying purely em-relative; &__onclock-icon (the non-mine, single-line
-    // state) is unaffected and stays as-is.
+    // Icons only crowd the words at this size — drop them.
+    .draft-grid__onclock-icon,
+    .draft-grid__onclock-title svg {
+      display: none;
+    }
+
+    // The "your pick" variant wraps its message in a nowrap 800-weight
+    // inline-flex title built for the up-close icon layout; strip that so it
+    // renders as the same plain, centered, wrapping Impact word as the others.
     .draft-grid__onclock-title {
-      font-size: calc(0.72rem * var(--fs-scale));
+      display: block;
+      text-align: center;
+      white-space: normal;
+      font-weight: inherit;
+      letter-spacing: inherit;
+      font-size: calc(1.15rem * var(--fs-scale));
     }
 
+    // Drop the guidance sub-line ("Click here to view players" / "make your
+    // pick") — the headline gets the whole cell.
     .draft-grid__onclock-sub {
-      font-size: calc(0.52rem * var(--fs-scale));
+      display: none;
     }
   }
 }
 
-// TV mode (see DraftBoardPage — `is-tv` is set on <html> while the board is
-// fullscreen AND the per-device TV-mode toggle is on). This is the "across the
-// room" view: an active cell's live message — ON THE CLOCK / SKIPPED — is the
-// one thing a room of 10–15 people needs to read from 10–15 ft away. Give every
-// active cell (any team's, and the viewer's own) the same big Impact-italic word
-// that the other-teams' SKIPPED cell (&__skip-rest) already uses, and drop the
-// icons + guidance sub-line that only crowd it from a distance — so the headline
-// gets the whole cell. Plain fullscreen (TV-mode toggle off) is left exactly as
-// it was. Qualified with .draft-grid--fill so it beats the fullscreen sizes on
-// specificity, not just source order; --fs-scale is inherited from there, so
-// these still grow with the screen.
-:root.is-tv .draft-grid--fill {
-  .draft-grid__onclock-label {
-    font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
-    font-style: italic;
-    letter-spacing: 0.03em;
-    text-transform: uppercase;
-    line-height: 0.98;
-    // The single-line "someone else is up" variant renders its text straight on
-    // the label — this carries it; the stacked "your pick" title matches below.
-    font-size: calc(1.15rem * var(--fs-scale));
-  }
-
-  // Icons are a glanceable hint up close; from across the room they only crowd
-  // the words. Drop them so the message reads clean and fills the cell.
-  .draft-grid__onclock-icon,
-  .draft-grid__onclock-title svg {
-    display: none;
-  }
-
-  // The viewer's-own variant wraps its message in a &__onclock-title — a
-  // nowrap, 800-weight inline-flex row built for the up-close icon layout. The
-  // other cells print their word straight on the label, where it wraps to two
-  // centered lines. Strip the title's row styling in TV mode so "your pick"
-  // renders as the exact same plain, centered, wrapping word: same size, same
-  // weight, same wrap — not a one-line odd-one-out.
-  .draft-grid__onclock-title {
-    display: block;
-    text-align: center;
-    white-space: normal;
-    font-weight: inherit;
-    letter-spacing: inherit;
-    font-size: calc(1.15rem * var(--fs-scale));
-  }
-
-  // Drop the guidance sub-line ("Click here to view players" / "make your
-  // pick") — from a distance it's noise, and removing it lets the headline fit.
-  .draft-grid__onclock-sub {
-    display: none;
-  }
-}

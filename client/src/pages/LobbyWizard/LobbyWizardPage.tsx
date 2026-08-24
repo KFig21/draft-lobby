@@ -185,7 +185,7 @@ export function LobbyWizardPage() {
             className="wizard__link"
             onClick={() => setShowLeagueModal(true)}
           >
-            + Set up a league
+            + Set up a league format
           </button>
         </section>
 
