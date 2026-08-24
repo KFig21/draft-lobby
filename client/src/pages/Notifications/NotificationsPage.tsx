@@ -41,18 +41,31 @@ export function NotificationsPage() {
   const navigate = useNavigate();
   const [handled, setHandled] = useState<Record<string, string>>({});
   const [busyId, setBusyId] = useState<string | null>(null);
-  // Snapshot of which ids were unread when the page opened. `read` flips to
-  // true right away (see effect below) so this is what actually drives the
-  // New/Seen split — otherwise it would collapse to empty instantly.
-  const [newIds, setNewIds] = useState<Set<string> | null>(null);
+  // Notifications created after the PREVIOUS visit are "new"; the rest "seen".
+  // Persisted across visits (localStorage), so the split survives even though
+  // markAllRead clears the bell badge on open. Captured on mount (the prior
+  // value); the effect below then records this visit. First-ever visit seeds to
+  // now, so existing notifications read as already-seen instead of a wall.
+  const [lastSeenAt] = useState<number>(() => {
+    try {
+      const v = localStorage.getItem('notifsLastSeenAt');
+      return v ? Number(v) : Date.now();
+    } catch {
+      return Date.now();
+    }
+  });
 
   const sentinelRef = useInfiniteScroll(loadMore, { hasMore, loading: loadingMore });
 
   useEffect(() => {
-    if (!loading && newIds === null) {
-      setNewIds(new Set(notifications.filter((n) => !n.read).map((n) => n.id)));
-      void markAllRead();
+    if (loading) return;
+    // Record this visit for the next one's comparison, and clear the bell badge.
+    try {
+      localStorage.setItem('notifsLastSeenAt', String(Date.now()));
+    } catch {
+      // localStorage unavailable — the split just falls back to all-seen.
     }
+    void markAllRead();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading]);
 
@@ -112,14 +125,14 @@ export function NotificationsPage() {
   }
 
   const { newItems, seenItems } = useMemo(() => {
-    const ids = newIds ?? new Set<string>();
     const newItems: NotificationRow[] = [];
     const seenItems: NotificationRow[] = [];
-    for (const n of notifications) (ids.has(n.id) ? newItems : seenItems).push(n);
+    for (const n of notifications)
+      (new Date(n.created_at).getTime() > lastSeenAt ? newItems : seenItems).push(n);
     return { newItems, seenItems };
-  }, [notifications, newIds]);
+  }, [notifications, lastSeenAt]);
 
-  function renderRow(n: NotificationRow) {
+  function renderRow(n: NotificationRow, isNew = false) {
     const name = n.actor?.username ?? 'Someone';
     const avatar = n.actor?.avatar ?? defaultAvatar(n.actor_id ?? n.id);
     const busy = busyId === n.id;
@@ -136,7 +149,7 @@ export function NotificationsPage() {
     return (
       <li
         key={n.id}
-        className={`notifs__row${n.read ? '' : ' notifs__row--unread'}${
+        className={`notifs__row${isNew ? ' notifs__row--unread' : ''}${
           isDraftLink ? ' notifs__row--link' : ''
         }`}
         onClick={
@@ -305,13 +318,13 @@ export function NotificationsPage() {
           {newItems.length > 0 && (
             <section className="notifs__section">
               <h2 className="notifs__section-title">New</h2>
-              <ul className="notifs__list">{newItems.map(renderRow)}</ul>
+              <ul className="notifs__list">{newItems.map((n) => renderRow(n, true))}</ul>
             </section>
           )}
           {seenItems.length > 0 && (
             <section className="notifs__section">
-              {newItems.length > 0 && <h2 className="notifs__section-title">Seen</h2>}
-              <ul className="notifs__list">{seenItems.map(renderRow)}</ul>
+              <h2 className="notifs__section-title">Seen</h2>
+              <ul className="notifs__list">{seenItems.map((n) => renderRow(n, false))}</ul>
             </section>
           )}
           <div ref={sentinelRef} />
