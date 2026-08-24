@@ -310,7 +310,7 @@ export function NotificationsPage() {
           )}
           {seenItems.length > 0 && (
             <section className="notifs__section">
-              {newItems.length > 0 && <h2 className="notifs__section-title">Earlier</h2>}
+              {newItems.length > 0 && <h2 className="notifs__section-title">Seen</h2>}
               <ul className="notifs__list">{seenItems.map(renderRow)}</ul>
             </section>
           )}
