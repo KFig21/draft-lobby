@@ -30,7 +30,7 @@ interface Props {
  * leave them all unpicked.
  */
 export function OwnerKeepersModal({ lobbyId, team, options, players, locked, onClose }: Props) {
-  const { closing, requestClose } = useModalClose(onClose);
+  const { open, closing, requestClose } = useModalClose(onClose);
   const playersById = useMemo(() => new Map(players.map((p) => [p.id, p])), [players]);
   const sorted = useMemo(() => [...options].sort((a, b) => a.round - b.round), [options]);
 
@@ -91,11 +91,11 @@ export function OwnerKeepersModal({ lobbyId, team, options, players, locked, onC
 
   return (
     <div
-      className={`owner-keepers__backdrop modal-anim-backdrop${closing ? ' is-closing' : ''}`}
+      className={`owner-keepers__backdrop modal-anim-backdrop${open ? ' is-open' : ''}${closing ? ' is-closing' : ''}`}
       onClick={requestClose}
     >
       <div
-        className={`owner-keepers modal-anim-card${closing ? ' is-closing' : ''}`}
+        className={`owner-keepers modal-anim-card${open ? ' is-open' : ''}${closing ? ' is-closing' : ''}`}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"

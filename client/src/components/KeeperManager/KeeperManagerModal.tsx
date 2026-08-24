@@ -204,7 +204,7 @@ export function KeeperManagerModal({
   initialOfferTeamId = null,
   onClose,
 }: Props) {
-  const { closing, requestClose } = useModalClose(onClose);
+  const { open, closing, requestClose } = useModalClose(onClose);
 
   const orderedTeams = useMemo(
     () => [...teams].sort((a, b) => a.draft_position - b.draft_position),
@@ -506,11 +506,11 @@ export function KeeperManagerModal({
 
   return (
     <div
-      className={`keeper-modal__backdrop modal-anim-backdrop${closing ? ' is-closing' : ''}`}
+      className={`keeper-modal__backdrop modal-anim-backdrop${open ? ' is-open' : ''}${closing ? ' is-closing' : ''}`}
       onClick={requestClose}
     >
       <div
-        className={`keeper-modal modal-anim-card${closing ? ' is-closing' : ''}`}
+        className={`keeper-modal modal-anim-card${open ? ' is-open' : ''}${closing ? ' is-closing' : ''}`}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"

@@ -129,7 +129,7 @@ interface Props {
  * draggable week-range that reports their rank + PPG over that stretch.
  */
 export function PlayerWeekStatsModal({ player, season, scoring, onClose }: Props) {
-  const { closing, requestClose } = useModalClose(onClose);
+  const { open, closing, requestClose } = useModalClose(onClose);
   const { rows, loading, error } = usePlayerWeekStats(player.position, season, true);
   const pos = player.position as Position;
   const posColor = POSITION_COLORS[pos];
@@ -354,11 +354,11 @@ export function PlayerWeekStatsModal({ player, season, scoring, onClose }: Props
 
   return createPortal(
     <div
-      className={`pws__backdrop modal-anim-backdrop${closing ? ' is-closing' : ''}`}
+      className={`pws__backdrop modal-anim-backdrop${open ? ' is-open' : ''}${closing ? ' is-closing' : ''}`}
       onClick={requestClose}
     >
       <div
-        className={`pws modal-anim-card${closing ? ' is-closing' : ''}`}
+        className={`pws modal-anim-card${open ? ' is-open' : ''}${closing ? ' is-closing' : ''}`}
         style={{ ['--pos']: posColor } as CSSProperties}
         role="dialog"
         aria-label={`${player.name} week-by-week stats`}

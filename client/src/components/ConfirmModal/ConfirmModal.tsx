@@ -29,18 +29,18 @@ export function ConfirmModal({
   danger = false,
   confirmDisabled = false,
 }: Props) {
-  const { closing, requestClose } = useModalClose(onClose);
+  const { open, closing, requestClose } = useModalClose(onClose);
   // Portal to <body> so the fixed backdrop always covers the full viewport —
   // rendered inline it becomes a child of whatever page invoked it, and a page
   // that clamps its direct children (e.g. .my-drafts > * { max-width }) would
   // shrink the backdrop to that column instead of the whole screen.
   return createPortal(
     <div
-      className={`confirm-modal__backdrop modal-anim-backdrop${closing ? ' is-closing' : ''}`}
+      className={`confirm-modal__backdrop modal-anim-backdrop${open ? ' is-open' : ''}${closing ? ' is-closing' : ''}`}
       onClick={() => !busy && requestClose()}
     >
       <div
-        className={`confirm-modal modal-anim-card${closing ? ' is-closing' : ''}`}
+        className={`confirm-modal modal-anim-card${open ? ' is-open' : ''}${closing ? ' is-closing' : ''}`}
         role="dialog"
         aria-label={title}
         onClick={(e) => e.stopPropagation()}

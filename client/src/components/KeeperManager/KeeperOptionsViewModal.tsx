@@ -63,7 +63,7 @@ export function KeeperOptionsViewModal({
   onEditTeam,
   onClose,
 }: Props) {
-  const { closing, requestClose } = useModalClose(onClose);
+  const { open, closing, requestClose } = useModalClose(onClose);
 
   // Commissioner "select keepers" mode — off by default so this stays a viewer.
   const [selectMode, setSelectMode] = useState(false);
@@ -158,13 +158,13 @@ export function KeeperOptionsViewModal({
 
   return (
     <div
-      className={`keeper-view__backdrop modal-anim-backdrop${closing ? ' is-closing' : ''}`}
+      className={`keeper-view__backdrop modal-anim-backdrop${open ? ' is-open' : ''}${closing ? ' is-closing' : ''}`}
       onClick={requestClose}
     >
       <div
         className={`keeper-view${single ? ' keeper-view--single' : ''} modal-anim-card${
-          closing ? ' is-closing' : ''
-        }`}
+          open ? ' is-open' : ''
+        }${closing ? ' is-closing' : ''}`}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"

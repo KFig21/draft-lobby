@@ -20,10 +20,14 @@
   // the board through for a frame. The card still animates in; closing still
   // fades the backdrop out.
   &.modal-anim-backdrop {
-    animation: none;
+    // Open instantly (visible on mount, no fade) for the hand-off; the card
+    // still transitions in, and closing still fades the backdrop out.
+    opacity: 1;
+    transition: none;
 
     &.is-closing {
-      animation: modal-fade-out 180ms ease both;
+      opacity: 0;
+      transition: opacity 240ms ease;
     }
   }
 }

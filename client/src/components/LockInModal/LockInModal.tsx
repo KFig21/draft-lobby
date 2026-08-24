@@ -61,7 +61,7 @@ export function LockInModal({
   slots,
   commishTargets,
 }: Props) {
-  const { closing, requestClose } = useModalClose(onCancel);
+  const { open, closing, requestClose } = useModalClose(onCancel);
   // Commissioner choosing which skipped/on-clock team this pick is for — takes
   // priority over the own-slots chooser below.
   const chooseTeam = (commishTargets?.length ?? 0) > 0;
@@ -72,11 +72,11 @@ export function LockInModal({
   const teamColors = getTeamColorsEnabled() ? getTeamColors(player.nfl_team) : null;
   return (
     <div
-      className={`modal-overlay modal-anim-backdrop${closing ? ' is-closing' : ''}`}
+      className={`modal-overlay modal-anim-backdrop${open ? ' is-open' : ''}${closing ? ' is-closing' : ''}`}
       onClick={() => !busy && requestClose()}
     >
       <div
-        className={`modal modal-anim-card${closing ? ' is-closing' : ''}`}
+        className={`modal modal-anim-card${open ? ' is-open' : ''}${closing ? ' is-closing' : ''}`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="modal__header">

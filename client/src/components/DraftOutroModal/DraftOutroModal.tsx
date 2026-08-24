@@ -49,7 +49,7 @@ export function DraftOutroModal({
   onGrade,
   onClose,
 }: Props) {
-  const { closing, requestClose } = useModalClose(onClose);
+  const { open, closing, requestClose } = useModalClose(onClose);
   const [step, setStep] = useState<0 | 1>(0);
 
   const myPicks = useMemo(
@@ -67,11 +67,11 @@ export function DraftOutroModal({
 
   return (
     <div
-      className={`draft-outro__backdrop modal-anim-backdrop${closing ? ' is-closing' : ''}`}
+      className={`draft-outro__backdrop modal-anim-backdrop${open ? ' is-open' : ''}${closing ? ' is-closing' : ''}`}
       onClick={requestClose}
     >
       <div
-        className={`draft-outro modal-anim-card${closing ? ' is-closing' : ''}`}
+        className={`draft-outro modal-anim-card${open ? ' is-open' : ''}${closing ? ' is-closing' : ''}`}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-label="Draft complete"

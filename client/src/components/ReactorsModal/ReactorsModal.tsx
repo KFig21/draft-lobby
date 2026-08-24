@@ -25,7 +25,7 @@ interface Props {
 
 /** Full "who reacted" list across every emoji, filterable down to one. */
 export function ReactorsModal({ reactors, myUserId, championUserIds, onClose }: Props) {
-  const { closing, requestClose } = useModalClose(onClose);
+  const { open, closing, requestClose } = useModalClose(onClose);
   const [filter, setFilter] = useState<string | null>(null);
 
   const emojis = useMemo(
@@ -40,7 +40,7 @@ export function ReactorsModal({ reactors, myUserId, championUserIds, onClose }: 
 
   return (
     <div
-      className={`reactors-modal__backdrop modal-anim-backdrop${closing ? ' is-closing' : ''}`}
+      className={`reactors-modal__backdrop modal-anim-backdrop${open ? ' is-open' : ''}${closing ? ' is-closing' : ''}`}
       // Stop here — this can be nested inside another modal (e.g. PickModal),
       // and letting the click bubble would close that one too.
       onClick={(e) => {
@@ -49,7 +49,7 @@ export function ReactorsModal({ reactors, myUserId, championUserIds, onClose }: 
       }}
     >
       <div
-        className={`reactors-modal modal-anim-card${closing ? ' is-closing' : ''}`}
+        className={`reactors-modal modal-anim-card${open ? ' is-open' : ''}${closing ? ' is-closing' : ''}`}
         role="dialog"
         aria-label="Reactions"
         onClick={(e) => e.stopPropagation()}

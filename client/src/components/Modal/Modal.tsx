@@ -23,7 +23,7 @@ interface Props {
 
 /** A centered, scrollable dialog. Closes on overlay click or Escape. */
 export function Modal({ title, onClose, onBack, wide, className, icon, footer, children }: Props) {
-  const { closing, requestClose } = useModalClose(onClose);
+  const { open, closing, requestClose } = useModalClose(onClose);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && requestClose();
@@ -37,13 +37,13 @@ export function Modal({ title, onClose, onBack, wide, className, icon, footer, c
   // parent card instead of the viewport).
   return createPortal(
     <div
-      className={`dialog-overlay modal-anim-backdrop${closing ? ' is-closing' : ''}`}
+      className={`dialog-overlay modal-anim-backdrop${open ? ' is-open' : ''}${closing ? ' is-closing' : ''}`}
       onClick={requestClose}
     >
       <div
         className={`dialog modal-anim-card ${wide ? 'dialog--wide' : ''}${
           className ? ` ${className}` : ''
-        }${closing ? ' is-closing' : ''}`}
+        }${open ? ' is-open' : ''}${closing ? ' is-closing' : ''}`}
         role="dialog"
         aria-modal="true"
         aria-label={title}

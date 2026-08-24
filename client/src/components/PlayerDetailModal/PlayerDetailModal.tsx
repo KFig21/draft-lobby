@@ -61,7 +61,7 @@ export function PlayerDetailModal({
   byeClashCounts,
   weekStats,
 }: Props) {
-  const { closing, requestClose } = useModalClose(onClose);
+  const { open, closing, requestClose } = useModalClose(onClose);
 
   const headerAction =
     onFavorite || onQueue ? (
@@ -95,11 +95,11 @@ export function PlayerDetailModal({
 
   return (
     <div
-      className={`player-detail__backdrop modal-anim-backdrop${closing ? ' is-closing' : ''}`}
+      className={`player-detail__backdrop modal-anim-backdrop${open ? ' is-open' : ''}${closing ? ' is-closing' : ''}`}
       onClick={requestClose}
     >
       <div
-        className={`player-detail modal-anim-card${closing ? ' is-closing' : ''}`}
+        className={`player-detail modal-anim-card${open ? ' is-open' : ''}${closing ? ' is-closing' : ''}`}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-label={`${player.name} details`}

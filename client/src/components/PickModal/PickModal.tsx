@@ -124,7 +124,7 @@ export function PickModal({
   favorited,
   weekStats,
 }: Props) {
-  const { closing, requestClose } = useModalClose(onClose);
+  const { open, closing, requestClose } = useModalClose(onClose);
   const pickInRound = pick.overall - (pick.round - 1) * teamCount;
   const [comment, setComment] = useState('');
   const [posting, setPosting] = useState(false);
@@ -176,11 +176,11 @@ export function PickModal({
 
   return (
     <div
-      className={`pick-modal__backdrop modal-anim-backdrop${closing ? ' is-closing' : ''}`}
+      className={`pick-modal__backdrop modal-anim-backdrop${open ? ' is-open' : ''}${closing ? ' is-closing' : ''}`}
       onClick={requestClose}
     >
       <div
-        className={`pick-modal modal-anim-card${closing ? ' is-closing' : ''}`}
+        className={`pick-modal modal-anim-card${open ? ' is-open' : ''}${closing ? ' is-closing' : ''}`}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-label={`${player.name} pick details`}
