@@ -52,6 +52,37 @@
     border-bottom: 1px solid $border;
   }
 
+  // Opens the Participants modal (view profiles / send friend requests).
+  &__participants-btn {
+    margin-left: auto;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: $space * 0.5 $space;
+    border: 1px solid $border;
+    border-radius: $radius-lg;
+    background: $bg;
+    color: $text;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: border-color 120ms ease;
+
+    @include hover-only {
+      &:hover {
+        border-color: $primary;
+      }
+    }
+
+    // Icon-only on narrow screens to save the header row.
+    @media (max-width: #{$bp-md - 1px}) {
+      .room__participants-label {
+        display: none;
+      }
+    }
+  }
+
   &__title {
     flex: 1;
     display: flex;

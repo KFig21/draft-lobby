@@ -108,6 +108,7 @@ import type { Reactor } from '../../components/ReactorsModal/ReactorsModal';
 import { PlayerCard } from '../../components/PlayerCard/PlayerCard';
 import { PlayerDetailModal } from '../../components/PlayerDetailModal/PlayerDetailModal';
 import { LeagueRulesModal } from '../../components/LeagueRulesModal/LeagueRulesModal';
+import { ParticipantsModal } from '../../components/ParticipantsModal/ParticipantsModal';
 import { TeamLineup } from '../../components/TeamLineup/TeamLineup';
 import {
   TeamResultsDrawer,
@@ -292,6 +293,7 @@ export function DraftBoardPage() {
   const [toastPrefs, setToastPrefsState] = useState(() => getToastPrefs());
   const [showUserSettings, setShowUserSettings] = useState(false);
   const [showRules, setShowRules] = useState(false);
+  const [showParticipants, setShowParticipants] = useState(false);
 
   // Top-bar pick reveal (opt-in, see topbarPickReveal): the pick currently being
   // announced in the top bar, held for the animation's length so the readout
@@ -4067,6 +4069,18 @@ export function DraftBoardPage() {
                   className="draft__tools-item"
                   onClick={() => {
                     setShowTools(false);
+                    setShowParticipants(true);
+                  }}
+                >
+                  <GroupsIcon fontSize="small" />
+                  <span className="draft__tools-item-label">Participants</span>
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="draft__tools-item"
+                  onClick={() => {
+                    setShowTools(false);
                     setShowUserSettings(true);
                   }}
                 >
@@ -4348,6 +4362,17 @@ export function DraftBoardPage() {
         />
       )}
 
+      {showParticipants && (
+        <ParticipantsModal
+          participants={members.map((m) => ({
+            id: m.user_id,
+            username: m.profiles?.username ?? null,
+            avatar: m.profiles?.avatar ?? null,
+          }))}
+          onClose={() => setShowParticipants(false)}
+        />
+      )}
+
       <NavDrawer
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
@@ -4379,6 +4404,17 @@ export function DraftBoardPage() {
             >
               <MenuBookOutlinedIcon fontSize="small" />
               League rules
+            </button>
+            <button
+              type="button"
+              className="navbar-drawer__link"
+              onClick={() => {
+                setShowParticipants(true);
+                setDrawerOpen(false);
+              }}
+            >
+              <GroupsIcon fontSize="small" />
+              Participants
             </button>
             {/* Personal draft-board preferences — the top bar's gear only shows
                 on desktop/fullscreen, so mobile reaches it from here. */}

@@ -14,6 +14,7 @@ import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlined';
 import CasinoIcon from '@mui/icons-material/Casino';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import GroupAddOutlinedIcon from '@mui/icons-material/GroupAddOutlined';
+import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
 import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
@@ -43,6 +44,7 @@ import { DraftChat } from '../../components/DraftChat/DraftChat';
 import { ErrorScreen } from '../../components/ErrorScreen/ErrorScreen';
 import { LeagueRulesModal } from '../../components/LeagueRulesModal/LeagueRulesModal';
 import { RulesOverview } from '../../components/LeagueRulesModal/RulesOverview';
+import { ParticipantsModal } from '../../components/ParticipantsModal/ParticipantsModal';
 import { SettingsEditorModal } from '../../components/SettingsEditorModal/SettingsEditorModal';
 import { Loader } from '../../components/Loader/Loader';
 import { useAuth } from '../../auth/AuthContext';
@@ -89,6 +91,7 @@ export function LobbyRoomPage() {
   const [inviteBusy, setInviteBusy] = useState<string | null>(null);
   const [reserveBusy, setReserveBusy] = useState<string | null>(null);
   const [friendBusy, setFriendBusy] = useState<string | null>(null);
+  const [showParticipants, setShowParticipants] = useState(false);
   const [orderMode, setOrderMode] = useState(false);
   // Positional draft order: index 0 = pick 1; each entry is a team id or null (open slot).
   const [slotOccupants, setSlotOccupants] = useState<(string | null)[]>([]);
@@ -707,6 +710,14 @@ export function LobbyRoomPage() {
               </button>
             )}
           </div>
+          <button
+            type="button"
+            className="room__participants-btn"
+            onClick={() => setShowParticipants(true)}
+          >
+            <GroupsOutlinedIcon fontSize="small" />
+            <span className="room__participants-label">Participants</span>
+          </button>
         </header>
 
         {/* Same stat grid as the League rules modal's own Overview section
@@ -1516,6 +1527,17 @@ export function LobbyRoomPage() {
               : undefined
           }
           onSpectateChange={() => refetch()}
+        />
+      )}
+
+      {showParticipants && (
+        <ParticipantsModal
+          participants={members.map((m) => ({
+            id: m.user_id,
+            username: m.profiles?.username ?? null,
+            avatar: m.profiles?.avatar ?? null,
+          }))}
+          onClose={() => setShowParticipants(false)}
         />
       )}
     </main>
