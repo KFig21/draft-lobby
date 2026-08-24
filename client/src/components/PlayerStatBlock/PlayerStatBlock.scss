@@ -146,10 +146,10 @@
     align-items: center;
     gap: $space * 1.5;
     padding: $space * 1.1 $space * 1.5;
-    // Lock the height (bars 46px + vertical padding + border) so the loading
-    // skeleton, the loaded sparkline, and the "no stats" state are all the same
-    // size — the modal never resizes as the weekly data resolves.
-    min-height: calc(46px + #{$space * 2.2} + 2px);
+    // Fixed height (bars 46px + vertical padding + border) so the loading
+    // skeleton, the loaded sparkline, and the "no stats" state are all exactly
+    // the same size — it never grows or shrinks as the weekly data resolves.
+    height: calc(46px + #{$space * 2.2} + 2px);
     // Neutral card, matching the two key cards above it (not a colored panel).
     border: 1px solid $border;
     border-radius: $radius-card-tight;

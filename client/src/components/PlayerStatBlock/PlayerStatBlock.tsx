@@ -4,11 +4,12 @@ import {
   type Position,
   type ScoringRules,
 } from '@draft-lobby/shared';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import NorthEastIcon from '@mui/icons-material/NorthEast';
 import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined';
-import { usePlayerWeekPoints } from '../../hooks/usePlayerWeekPoints';
+import { usePlayerWeekStats } from '../../hooks/usePlayerWeekStats';
+import { RANK_NEUTRAL, pointsForRow, rankColor } from '../../lib/weekStats';
 import { INJURY_ABBR, INJURY_SEVERITY } from '../../lib/injuryStatus';
 import { getTeamColors, getTeamColorsEnabled } from '../../lib/nflTeamColors';
 import { POS_STAT_COLS, fmtStat } from '../../lib/positionStats';
@@ -238,17 +239,40 @@ function WeeklySparkCard({
   scoring: ScoringRules;
   onOpen: () => void;
 }) {
-  const { points, byeWeeks, loading } = usePlayerWeekPoints(
-    player.id,
-    player.position,
-    season,
-    scoring,
-    true,
-  );
-  const games = points.length;
-  const max = games ? Math.max(...points.map((p) => p.pts), 1) : 1;
+  // Whole-position weekly rows (cached per position+season, and shared with the
+  // deep-stats modal so opening it is instant) — needed to rank the player
+  // against their peers each week and colour the bars the same way the modal
+  // does.
+  const { rows, loading } = usePlayerWeekStats(player.position, season, true);
 
-  // Hold the loading skeleton for at least ~0.4s even if the data resolves
+  // The subject's points per week, the field of everyone's points that week (for
+  // the positional rank), and the subject's bye weeks — the modal's model, so
+  // the bars read identically.
+  const { subjPts, fieldByWeek, byeWeeks, max } = useMemo(() => {
+    const subj = new Map<number, number>();
+    const field = new Map<number, number[]>();
+    const byes: number[] = [];
+    for (const r of rows) {
+      if (r.is_bye) {
+        if (r.player_id === player.id) byes.push(r.week);
+        continue;
+      }
+      const pts = pointsForRow(r, scoring, player.position);
+      const wl = field.get(r.week);
+      if (wl) wl.push(pts);
+      else field.set(r.week, [pts]);
+      if (r.player_id === player.id) subj.set(r.week, pts);
+    }
+    return {
+      subjPts: subj,
+      fieldByWeek: field,
+      byeWeeks: byes,
+      max: subj.size ? Math.max(...subj.values(), 1) : 1,
+    };
+  }, [rows, scoring, player.id, player.position]);
+  const games = subjPts.size;
+
+  // Hold the loading skeleton for at least ~1s even if the data resolves
   // instantly (often cached) — a sub-frame flash of skeleton → content reads as
   // a jarring flicker. Same buffer idea as the share modal's friend loader.
   const [minElapsed, setMinElapsed] = useState(false);
@@ -274,7 +298,6 @@ function WeeklySparkCard({
   for (let w = 1; w <= weeksInSeason && axisWeeks.length < barsCount; w++) {
     if (!byeSet.has(w)) axisWeeks.push(w);
   }
-  const byWeek = new Map(points.map((p) => [p.week, p.pts]));
 
   // Height (%) for bar i. While loading, its skeleton height (the bob animates
   // around it). Once loaded, its week's scaled points, or the floor for a week
@@ -282,8 +305,21 @@ function WeeklySparkCard({
   const barHeight = (i: number): number => {
     if (showLoading) return SPARK_SKELETON[i];
     const week = axisWeeks[i];
-    const pts = week != null ? (byWeek.get(week) ?? 0) : 0;
+    const pts = week != null ? (subjPts.get(week) ?? 0) : 0;
     return pts > 0 ? Math.max(SPARK_MIN_H, (pts / max) * 100) : SPARK_MIN_H;
+  };
+
+  // Bar fill: the green→red positional-rank colour the modal uses (neutral gray
+  // for a week the player didn't play). Left unset while loading / empty so the
+  // muted CSS skeleton shows through and the fade-in still reads.
+  const barColor = (i: number): string | undefined => {
+    if (showLoading || empty) return undefined;
+    const week = axisWeeks[i];
+    const mine = week != null ? subjPts.get(week) : undefined;
+    const field = week != null ? fieldByWeek.get(week) : undefined;
+    if (mine == null || !field) return RANK_NEUTRAL;
+    const rank = 1 + field.filter((p) => p > mine).length;
+    return rankColor(rank, field.length);
   };
 
   return (
@@ -301,7 +337,11 @@ function WeeklySparkCard({
           <span
             key={i}
             className="player-stat-block__spark-bar"
-            style={{ height: `${barHeight(i)}%`, ['--h' as string]: SPARK_SKELETON[i] }}
+            style={{
+              height: `${barHeight(i)}%`,
+              background: barColor(i),
+              ['--h' as string]: SPARK_SKELETON[i],
+            }}
           />
         ))}
       </span>

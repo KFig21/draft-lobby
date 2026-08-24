@@ -1,7 +1,6 @@
 import {
   POSITION_COLORS,
   SCORING_PRESETS,
-  computeFantasyPoints,
   matchPreset,
   type Position,
   type ScoringRules,
@@ -20,19 +19,11 @@ import { createPortal } from 'react-dom';
 import { usePlayerWeekStats } from '../../hooks/usePlayerWeekStats';
 import { getTeamColors, getTeamColorsEnabled } from '../../lib/nflTeamColors';
 import { useModalClose } from '../../lib/useModalClose';
+import { pointsForRow, rankColor } from '../../lib/weekStats';
 import type { PlayerRow, PlayerWeekStatRow } from '../../lib/types';
 import './PlayerWeekStatsModal.scss';
 
 const WEEKS = 18;
-
-/** Rank → colour on a green (best) → amber → red (worst) scale. */
-function rankColor(rank: number | null, count: number): string {
-  if (rank == null || count < 2) return '#8a94a6';
-  const t = (rank - 1) / (count - 1);
-  return t <= 0.5
-    ? `color-mix(in srgb, #f6a642 ${(t * 200).toFixed(0)}%, #3fd6a5)`
-    : `color-mix(in srgb, #f8577d ${((t - 0.5) * 200).toFixed(0)}%, #f6a642)`;
-}
 
 /** A one-decimal number with its fractional part rendered smaller — the same
  * treatment as the Power Rankings projected-points figures (.prb-proj). */
@@ -44,15 +35,6 @@ function DecimalNum({ value }: { value: number }) {
       <span className="pws__dec">.{frac}</span>
     </>
   );
-}
-
-/** Points for a week: the raw line scored under `rules`, else Sleeper's PPR
- * total (K rows and any player missing a mapped raw line). */
-function pointsForRow(row: PlayerWeekStatRow, rules: ScoringRules, position: string): number {
-  if (row.stats && Object.keys(row.stats).length > 0) {
-    return computeFantasyPoints(row.stats, rules, position);
-  }
-  return row.pts_ppr ?? 0;
 }
 
 const n = (v: number | undefined) => (v == null ? 0 : Math.round(v));
