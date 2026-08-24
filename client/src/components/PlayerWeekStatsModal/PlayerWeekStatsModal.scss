@@ -22,7 +22,8 @@
   max-height: 90vh;
   background: $bg;
   border: 1px solid $border;
-  border-radius: $radius;
+  // Match the shared modals' window radius.
+  border-radius: $radius-window;
   overflow: hidden;
 
   // TV mode: scale up like the other pop-ups (the chart + weekly table scale

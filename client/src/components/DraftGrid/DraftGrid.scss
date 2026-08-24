@@ -964,8 +964,17 @@
     flex-direction: column;
     align-items: center;
     gap: 0.25em;
+    // Bold Impact-italic headline — ON THE CLOCK / SKIPPED reads heavy and
+    // condensed in every view (desktop + mobile, normal + fullscreen). The
+    // fullscreen block scales the size up; the mobile viewer's-own SKIPPED cell
+    // opts back out (below) so it keeps its tap guidance.
+    font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+    font-style: italic;
     font-weight: 700;
-    font-size: 0.65rem;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    line-height: 0.98;
+    font-size: 0.78rem;
     // Dark-mode default (plenty of time left) — same brand green used
     // elsewhere as text (PickClock, badges).
     color: #fff;
@@ -1009,61 +1018,68 @@
     }
   }
 
-  &__onclock-icon {
-    font-size: 1.5em;
+  // Icons — the non-mine timer + the mine TouchApp inside the title — are
+  // dropped for the bold headline everywhere (the mobile mine-skipped exception
+  // below brings its TouchApp back).
+  &__onclock-icon,
+  &__onclock-title svg {
+    display: none;
   }
 
   &__onclock-title {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3em;
-    font-weight: 800;
-    font-size: 1.1em;
-    letter-spacing: 0.02em;
-    white-space: nowrap;
-
-    svg {
-      font-size: 1.15em;
-    }
+    // The viewer's-own variant wraps its word in a title; render it as the same
+    // plain, centered Impact word as the single-line variant (inheriting the
+    // label's font).
+    display: block;
+    text-align: center;
+    white-space: normal;
+    font-weight: inherit;
+    letter-spacing: inherit;
+    font-size: 1em;
   }
 
+  // Guidance sub-line dropped for the headline — restored only in the mobile
+  // mine-skipped exception below.
   &__onclock-sub {
-    font-weight: 600;
-    font-size: 0.8em;
-    opacity: 0.8;
+    display: none;
   }
 
-  // Desktop & tablet: trim the timer icon down to 0.9× its box for a slightly
-  // smaller look. Qualified with the label parent (0,2,0) so it beats MUI's own
-  // .MuiSvgIcon-root width/height (tied specificity — same trap noted on the
-  // mobile override below). Mobile keeps its own inline size (further down).
-  @media (min-width: #{$bp-md}) {
-    &__onclock-label &__onclock-icon {
-      width: 0.9em;
-      height: 0.9em;
-    }
-  }
-
-  // Mobile: the big stacked timer icon on top of the wrapped label made the
-  // on-the-clock cell taller than its row's pick cells, stretching the whole
-  // row. Shrink the icon (1.5em → 1em) and close the gap so the cell keeps the
-  // normal row height.
-  // The icon is a MUI SvgIcon — .MuiSvgIcon-root sets its font-size and ties
-  // specificity with a lone .draft-grid__onclock-icon, winning on source order
-  // (emotion injects later). Qualify with the label parent (0,2,0) so this
-  // actually beats it. Same tied-specificity trap seen elsewhere in the app.
+  // Mobile exception: the viewer's-own SKIPPED cell keeps its up-close treatment
+  // — the TouchApp icon + "make your pick" tap guidance — instead of the bold
+  // headline, since a phone drafter needs the affordance. (In fullscreen the
+  // fullscreen sizes out-specify this, so the big screen still reads bold.)
   @media (max-width: #{$bp-md - 1px}) {
-    &__onclock-label {
-      // Icon always stacked above "On the clock" (matching the pick-flip's own
-      // announcement front). A tight gap + line-height keeps the two-line label
-      // from stretching the cell past its row's normal height.
-      flex-direction: column;
-      gap: 0.1em;
-      line-height: 1;
-    }
+    .draft-grid__cell--skipped-mine {
+      .draft-grid__onclock-label {
+        font-family: inherit;
+        font-style: normal;
+        letter-spacing: normal;
+        text-transform: none;
+        line-height: 1;
+        font-size: 0.65rem;
+        gap: 0.1em;
+      }
 
-    &__onclock-label &__onclock-icon {
-      font-size: 1.3em;
+      .draft-grid__onclock-title {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3em;
+        font-weight: 800;
+        font-size: 1.1em;
+        white-space: nowrap;
+
+        svg {
+          display: inline-flex;
+          font-size: 1.15em;
+        }
+      }
+
+      .draft-grid__onclock-sub {
+        display: block;
+        font-weight: 600;
+        font-size: 0.8em;
+        opacity: 0.8;
+      }
     }
   }
 
