@@ -216,10 +216,10 @@ function KeyCard({
 }
 
 // A little skeleton silhouette while the weekly points load — keeps the card's
-// height stable so nothing jumps when the real bars arrive.
-// 17 bars = the most games a player logs in a season (18 weeks − 1 bye). The
-// same bars morph from these skeleton heights into the real weekly points.
-const SPARK_SKELETON = [40, 55, 34, 70, 46, 62, 30, 66, 50, 42, 58, 38, 64, 48, 54, 44, 52];
+// height stable so nothing jumps when the real bars arrive. One bar per week of
+// the season (up to 18); the same bars morph from these skeleton heights into
+// the real weekly points, each landing on its actual week.
+const SPARK_SKELETON = [40, 55, 34, 70, 46, 62, 30, 66, 50, 42, 58, 38, 64, 48, 54, 44, 52, 36];
 // Floor height (%) — for a played week with ~0 pts, and for weeks not played.
 const SPARK_MIN_H = 8;
 
@@ -255,13 +255,20 @@ function WeeklySparkCard({
   // floor and the meta reads "No stats for {season}".
   const empty = !showLoading && games === 0;
 
-  // Height (%) for bar slot i. While loading, its skeleton height (the bob
-  // animates around it). Once loaded, the i-th game's scaled points, or the
-  // floor for weeks the player didn't play. Same 17 bar elements throughout, so
-  // the height change transitions smoothly (see the SCSS transition).
+  // One bar per week of the season (the NFL added an 18th week in 2021), so each
+  // game lands on its real week — a mid-season injury shows the gap in place,
+  // not a run of empty bars shoved to the end. The fixed week count keeps the
+  // same bar elements across load → data, so the height change transitions
+  // smoothly (see the SCSS transition).
+  const weeksInSeason = season >= 2021 ? 18 : 17;
+  const byWeek = new Map(points.map((p) => [p.week, p.pts]));
+
+  // Height (%) for week slot i (week i + 1). While loading, its skeleton height
+  // (the bob animates around it). Once loaded, that week's scaled points, or the
+  // floor for a week the player didn't play (missed game or bye).
   const barHeight = (i: number): number => {
     if (showLoading) return SPARK_SKELETON[i];
-    const pts = i < games ? points[i].pts : 0;
+    const pts = byWeek.get(i + 1) ?? 0;
     return pts > 0 ? Math.max(SPARK_MIN_H, (pts / max) * 100) : SPARK_MIN_H;
   };
 
@@ -276,11 +283,11 @@ function WeeklySparkCard({
       aria-label={`${player.name} fantasy points by week — open the weekly breakdown`}
     >
       <span className="player-stat-block__spark-bars" aria-hidden>
-        {SPARK_SKELETON.map((skel, i) => (
+        {Array.from({ length: weeksInSeason }, (_, i) => (
           <span
             key={i}
             className="player-stat-block__spark-bar"
-            style={{ height: `${barHeight(i)}%`, ['--h' as string]: skel }}
+            style={{ height: `${barHeight(i)}%`, ['--h' as string]: SPARK_SKELETON[i] }}
           />
         ))}
       </span>
