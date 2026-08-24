@@ -411,6 +411,23 @@
     border-radius: 4px 4px 0 0;
     background: $bg-overlay;
     z-index: 1;
+    // Grow up from the baseline on open, swept left → right by week (--i).
+    transform-origin: bottom;
+    animation: pws-bar-rise 0.45s cubic-bezier(0.22, 1, 0.3, 1) both;
+    animation-delay: calc(var(--i, 0) * 0.025s);
+
+    @media (prefers-reduced-motion: reduce) {
+      animation: none;
+    }
+  }
+
+  @keyframes pws-bar-rise {
+    from {
+      transform: scaleY(0);
+    }
+    to {
+      transform: scaleY(1);
+    }
   }
 
   &__col.bye &__bar {

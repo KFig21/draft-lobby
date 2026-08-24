@@ -461,7 +461,11 @@ export function PlayerWeekStatsModal({ player, season, scoring, onClose }: Props
                       {!isBye && <span className="pws__col-v">{pts.toFixed(0)}</span>}
                       <span
                         className="pws__bar"
-                        style={{ height: `${h}%`, background: isBye ? undefined : rankColor(wr?.rank ?? null, wr?.of ?? 0) }}
+                        style={{
+                          height: `${h}%`,
+                          background: isBye ? undefined : rankColor(wr?.rank ?? null, wr?.of ?? 0),
+                          ['--i' as string]: w - 1,
+                        }}
                       />
                       <span className="pws__col-w">{w}</span>
                     </div>

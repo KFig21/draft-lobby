@@ -18,6 +18,7 @@ import {
   matchPreset,
   positionLimitFor,
   rosterSize,
+  scoringRulesEqual,
   startingSpots,
   type LobbySettings,
   type PickTier,
@@ -220,8 +221,10 @@ export function LeagueSettingsFields({ settings, onChange, nameField, editableGr
   const currentScoringChoice = useMemo(() => {
     const preset = matchPreset(settings.scoring);
     if (preset) return `preset:${preset}`;
-    const json = JSON.stringify(settings.scoring);
-    const fmt = scoringFormats.find((f) => JSON.stringify(f.rules) === json);
+    // Structural (order-independent) match, like matchPreset — a JSON.stringify
+    // compare fails on jsonb key-order / number-formatting differences, so a
+    // league whose scoring is a saved custom format fell back to "Custom".
+    const fmt = scoringFormats.find((f) => scoringRulesEqual(f.rules, settings.scoring));
     return fmt ? `format:${fmt.id}` : 'custom';
   }, [settings.scoring, scoringFormats]);
   // Name shown in the scoring-details modal badge for a saved (non-preset)

@@ -163,7 +163,7 @@ function ruleValuesEqual(a: ScoringRuleValue | undefined, b: ScoringRuleValue | 
 }
 
 /** Order-independent rule-set equality. */
-function scoringRulesEqual(a: ScoringRules, b: ScoringRules): boolean {
+export function scoringRulesEqual(a: ScoringRules, b: ScoringRules): boolean {
   const aKeys = Object.keys(a);
   if (aKeys.length !== Object.keys(b).length) return false;
   return aKeys.every((k) => ruleValuesEqual(a[k], b[k]));
