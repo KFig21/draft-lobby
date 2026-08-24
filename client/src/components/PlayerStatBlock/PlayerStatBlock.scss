@@ -166,12 +166,13 @@
       background: $bg-raised;
     }
 
-    &.is-loading {
+    &.is-loading,
+    &.is-empty {
       cursor: default;
     }
 
     @include hover-only {
-      &:not(.is-loading):hover {
+      &:not(.is-loading):not(.is-empty):hover {
         border-color: color-mix(in srgb, $accent 75%, $border);
 
         .player-stat-block__spark-arrow {
@@ -185,24 +186,7 @@
     }
   }
 
-  // "No prior-season stats" state — same card box as the sparkline button, but
-  // static: centered muted text, no pointer/hover.
-  &__spark--empty {
-    cursor: default;
-    pointer-events: none;
-
-    // Flat, minimum-height muted bars — a clear "no data" baseline. The explicit
-    // muted fill (both themes) beats the base bar's accent/primary.
-    .player-stat-block__spark-bar {
-      height: 6px;
-      background: color-mix(in srgb, #{$text-muted} 40%, transparent);
-
-      :root[data-theme='light'] & {
-        background: color-mix(in srgb, #{$text-muted} 40%, transparent);
-      }
-    }
-  }
-
+  // "No stats for {season}" label, sitting where the meta normally is.
   &__spark-empty {
     flex: 0 0 auto;
     font-size: 0.82rem;
@@ -225,17 +209,28 @@
     min-width: 2px;
     border-radius: 2px 2px 0 0;
     background: $accent;
+    // The same 17 bar elements persist across load → data / empty, so height
+    // (skeleton → weekly points, or min) and color (muted → accent) morph
+    // smoothly. The loading bob animates transform separately.
+    transition:
+      height 0.55s cubic-bezier(0.22, 1, 0.3, 1),
+      transform 0.4s ease,
+      background 0.5s ease;
 
     :root[data-theme='light'] & {
       background: $primary;
     }
 
-    // Skeleton bars read as a quiet gray placeholder — each at its own height
-    // (--h), gently bobbing up and down out of sync (delay varies by --h) so it
-    // looks alive without a coordinated wave.
-    .player-stat-block__spark.is-loading & {
+    // Muted while loading, and for a no-data (rookie) player.
+    .player-stat-block__spark.is-loading &,
+    .player-stat-block__spark.is-empty & {
       background: color-mix(in srgb, #{$text-muted} 40%, transparent);
-      height: calc(var(--h, 45) * 1%);
+    }
+
+    // Loading: each bar gently bobs (scaleY) out of sync — phase varies by its
+    // height. Heights are inline so they can transition into the real weekly
+    // points when the data arrives.
+    .player-stat-block__spark.is-loading & {
       transform-origin: bottom;
       animation: spark-skeleton-bob 1.7s ease-in-out infinite;
       animation-delay: calc(var(--h, 45) * -0.03s);

@@ -217,7 +217,11 @@ function KeyCard({
 
 // A little skeleton silhouette while the weekly points load — keeps the card's
 // height stable so nothing jumps when the real bars arrive.
-const SPARK_SKELETON = [40, 55, 34, 70, 46, 62, 30, 66, 50, 42, 58, 38, 64, 48, 54, 44];
+// 17 bars = the most games a player logs in a season (18 weeks − 1 bye). The
+// same bars morph from these skeleton heights into the real weekly points.
+const SPARK_SKELETON = [40, 55, 34, 70, 46, 62, 30, 66, 50, 42, 58, 38, 64, 48, 54, 44, 52];
+// Floor height (%) — for a played week with ~0 pts, and for weeks not played.
+const SPARK_MIN_H = 8;
 
 /** The stats-section entry point: a mini fantasy-points-by-week sparkline that
  * doubles as the "open the weekly breakdown" button (replacing the old plain
@@ -247,56 +251,53 @@ function WeeklySparkCard({
     return () => clearTimeout(t);
   }, []);
   const showLoading = loading || !minElapsed;
+  // Loaded with no game logs at all (rookies, most K/DEF) — bars all sit at the
+  // floor and the meta reads "No stats for {season}".
+  const empty = !showLoading && games === 0;
 
-  if (!showLoading && games === 0) {
-    // Rookies (and anyone without prior-season game logs) have no weekly data.
-    // Show a message at the same card height as the loader + sparkline, so the
-    // modal doesn't resize as this resolves.
-    return (
-      <div className="player-stat-block__spark player-stat-block__spark--empty">
-        <span className="player-stat-block__spark-bars" aria-hidden>
-          {SPARK_SKELETON.map((_h, i) => (
-            <span key={i} className="player-stat-block__spark-bar" />
-          ))}
-        </span>
-        <span className="player-stat-block__spark-empty">No stats for {season}</span>
-      </div>
-    );
-  }
+  // Height (%) for bar slot i. While loading, its skeleton height (the bob
+  // animates around it). Once loaded, the i-th game's scaled points, or the
+  // floor for weeks the player didn't play. Same 17 bar elements throughout, so
+  // the height change transitions smoothly (see the SCSS transition).
+  const barHeight = (i: number): number => {
+    if (showLoading) return SPARK_SKELETON[i];
+    const pts = i < games ? points[i].pts : 0;
+    return pts > 0 ? Math.max(SPARK_MIN_H, (pts / max) * 100) : SPARK_MIN_H;
+  };
 
   return (
     <button
       type="button"
-      className={`player-stat-block__spark${showLoading ? ' is-loading' : ''}`}
-      onClick={onOpen}
-      disabled={showLoading}
+      className={`player-stat-block__spark${showLoading ? ' is-loading' : ''}${
+        empty ? ' is-empty' : ''
+      }`}
+      onClick={showLoading || empty ? undefined : onOpen}
+      disabled={showLoading || empty}
       aria-label={`${player.name} fantasy points by week — open the weekly breakdown`}
     >
       <span className="player-stat-block__spark-bars" aria-hidden>
-        {showLoading
-          ? SPARK_SKELETON.map((h, i) => (
-              <span
-                key={i}
-                className="player-stat-block__spark-bar"
-                style={{ ['--h' as string]: h }}
-              />
-            ))
-          : points.map((p) => (
-              <span
-                key={p.week}
-                className="player-stat-block__spark-bar"
-                style={{ height: `${Math.max(8, (p.pts / max) * 100)}%` }}
-              />
-            ))}
+        {SPARK_SKELETON.map((skel, i) => (
+          <span
+            key={i}
+            className="player-stat-block__spark-bar"
+            style={{ height: `${barHeight(i)}%`, ['--h' as string]: skel }}
+          />
+        ))}
       </span>
       <span className="player-stat-block__spark-meta">
-        <span className="player-stat-block__spark-title">
-          Fantasy pts / week
-          <NorthEastIcon className="player-stat-block__spark-arrow" sx={{ fontSize: 15 }} />
-        </span>
-        <span className="player-stat-block__spark-sub">
-          {showLoading ? 'Loading weekly…' : `${season} season`}
-        </span>
+        {empty ? (
+          <span className="player-stat-block__spark-empty">No stats for {season}</span>
+        ) : (
+          <>
+            <span className="player-stat-block__spark-title">
+              Fantasy pts / week
+              <NorthEastIcon className="player-stat-block__spark-arrow" sx={{ fontSize: 15 }} />
+            </span>
+            <span className="player-stat-block__spark-sub">
+              {showLoading ? 'Loading weekly…' : `${season} season`}
+            </span>
+          </>
+        )}
       </span>
     </button>
   );
