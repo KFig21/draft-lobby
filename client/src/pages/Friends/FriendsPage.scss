@@ -31,10 +31,41 @@
     }
   }
 
+  // Each section is its own bordered card with a pill header — matching the
+  // Join page / modals: a 24px card whose header sits a slim $space (8px) strip
+  // in from the edge, content inset a further $space*2.
   &__section {
+    display: flex;
+    flex-direction: column;
+    background: $bg-raised;
+    border: 1px solid $border;
+    border-radius: 24px;
+    padding: $space;
+    padding-bottom: $space * 2;
+
     h2 {
+      border: 1px solid $border;
+      padding: 16px;
+      border-radius: $radius-lg;
+      // Header fill, per theme: $bg-overlay dark, $bg-raised light, $bg-hover
+      // night — matching the other section headers.
+      background-color: $bg-overlay;
+      color: $text;
       font-size: 1rem;
-      margin-bottom: $space * 1.5;
+      margin: 0 0 $space;
+
+      :root[data-theme='light'] & {
+        background-color: $bg-raised;
+      }
+
+      :root[data-theme='night'] & {
+        background-color: $bg-hover;
+      }
+    }
+
+    // Content below the header strip, inset a further $space*2.
+    > :not(h2) {
+      margin-inline: $space * 2;
     }
   }
 
@@ -88,15 +119,11 @@
     flex-shrink: 0;
   }
 
-  // ── Invite link ──
+  // ── Invite link ── (sits inside the section card now, so no card chrome)
   &__invite {
     display: flex;
     flex-direction: column;
     gap: $space;
-    padding: $space * 1.5;
-    border: 1px solid $border;
-    border-radius: $radius-lg;
-    background: $bg-raised;
   }
 
   &__invite-lead {
