@@ -97,7 +97,8 @@
     display: flex;
     align-items: center;
     gap: $space * 1.5;
-    background: $bg-raised;
+    // $bg (not raised) so the rows read against the raised section card.
+    background: $bg;
     border: 1px solid $border;
     border-radius: $radius-lg;
     padding: $space $space * 1.5;
