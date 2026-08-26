@@ -1791,20 +1791,16 @@
   // (icon-only) so the two floaters never collide.
   &__center-pick {
     position: absolute;
-    // Board padding + the grid's 4px border-spacing, so the gap between the
-    // button and the first column matches the gap between cells.
-    top: $space * 1.5 + 4px;
-    left: $space * 1.5 + 4px;
+    top: $space * 1.5;
+    left: $space * 1.5;
     // Above the grid's sticky corner (13) / round column (11), which share this
     // stacking context and would otherwise paint over the button.
     z-index: 20;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    // Match the round column's 30px width so the button occupies the corner-cell
-    // footprint and keeps a 4px gutter (border-spacing) to the neighbouring cells.
-    width: 30px;
-    height: 30px;
+    width: 38px;
+    height: 38px;
     padding: 0;
     border: 1px solid $border;
     border-radius: $radius-sm;
