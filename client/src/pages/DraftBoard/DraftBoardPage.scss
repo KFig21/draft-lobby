@@ -1793,7 +1793,9 @@
     position: absolute;
     top: $space * 1.5;
     left: $space * 1.5;
-    z-index: 6;
+    // Above the grid's sticky corner (13) / round column (11), which share this
+    // stacking context and would otherwise paint over the button.
+    z-index: 20;
     display: inline-flex;
     align-items: center;
     justify-content: center;
