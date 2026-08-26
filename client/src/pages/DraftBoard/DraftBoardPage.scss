@@ -1791,7 +1791,7 @@
   // (icon-only) so the two floaters never collide.
   &__center-pick {
     position: absolute;
-    bottom: $space * 1.5;
+    top: $space * 1.5;
     left: $space * 1.5;
     z-index: 6;
     display: inline-flex;
