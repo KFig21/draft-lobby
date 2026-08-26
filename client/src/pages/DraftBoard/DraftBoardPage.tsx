@@ -1202,13 +1202,18 @@ export function DraftBoardPage() {
     if (!members.some((m) => m.user_id === userId)) return;
     const endedAtMs = lobby.completed_at ? new Date(lobby.completed_at).getTime() : null;
     if (endedAtMs != null && Date.now() >= endedAtMs + DRAFT_RESULTS_LOCK_MS) return;
-    const seenKey = `draft-outro-seen:${id}:${userId}`;
-    if (localStorage.getItem(seenKey)) return;
+    if (localStorage.getItem(outroSeenKey(lobby.completed_at))) return;
     setShowOutro(true);
   }, [lobby, userId, id, members]);
 
+  // Keyed on completed_at so a rollback → re-complete (a fresh timestamp) shows
+  // the outro once per completion, rather than staying suppressed forever.
+  function outroSeenKey(completedAt: string | null | undefined) {
+    return `draft-outro-seen:${id}:${userId}:${completedAt ?? 'end'}`;
+  }
+
   function dismissOutro() {
-    if (userId) localStorage.setItem(`draft-outro-seen:${id}:${userId}`, '1');
+    if (userId && lobby) localStorage.setItem(outroSeenKey(lobby.completed_at), '1');
     setShowOutro(false);
   }
 
