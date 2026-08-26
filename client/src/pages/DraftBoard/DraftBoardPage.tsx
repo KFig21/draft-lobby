@@ -44,6 +44,7 @@ import GridViewOutlinedIcon from '@mui/icons-material/GridViewOutlined';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import MoreTimeIcon from '@mui/icons-material/MoreTime';
 import ZoomInMapIcon from '@mui/icons-material/ZoomInMap';
+import MyLocationIcon from '@mui/icons-material/MyLocation';
 import ZoomOutMapIcon from '@mui/icons-material/ZoomOutMap';
 import LeaderboardIcon from '@mui/icons-material/Leaderboard';
 import GroupsIcon from '@mui/icons-material/Groups';
@@ -4250,6 +4251,39 @@ export function DraftBoardPage() {
             >
               <ZoomInMapIcon fontSize="small" />
               Reset zoom
+            </button>
+          )}
+          {/* Mobile jump-to-current-pick — recenters the board scroll on the
+              on-the-clock cell. Only while a pick is live. */}
+          {!isDesktop && !showPowerRankings && onClockTeam && (
+            <button
+              type="button"
+              className="draft__center-pick"
+              onClick={() => {
+                const scroll =
+                  boardSectionRef.current?.querySelector<HTMLElement>('.grid-scroll');
+                const cell = scroll?.querySelector<HTMLElement>(
+                  '.draft-grid__cell--onclock',
+                );
+                if (!scroll || !cell) return;
+                const sRect = scroll.getBoundingClientRect();
+                const cRect = cell.getBoundingClientRect();
+                scroll.scrollTo({
+                  left:
+                    scroll.scrollLeft +
+                    (cRect.left - sRect.left) -
+                    (sRect.width - cRect.width) / 2,
+                  top:
+                    scroll.scrollTop +
+                    (cRect.top - sRect.top) -
+                    (sRect.height - cRect.height) / 2,
+                  behavior: 'smooth',
+                });
+              }}
+              aria-label="Center on the current pick"
+              title="Center on the current pick"
+            >
+              <MyLocationIcon fontSize="small" />
             </button>
           )}
         </section>
