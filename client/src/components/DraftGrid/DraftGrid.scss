@@ -1119,12 +1119,12 @@
     font-size: calc(0.75rem * var(--fs-scale));
     // Active-cell headline size ("ON THE CLOCK" / "SKIPPED"): the scaled size,
     // capped to the column width so the longest word ("ON THE CLOCK") always
-    // fits on one line. The board fills ~100vw in fullscreen across --fs-cols
-    // columns (minus the 30px round column); ÷6 leaves room for its ~5.3em of
-    // condensed Impact glyphs.
+    // fits on one line with a comfortable side gutter. The board fills ~100vw in
+    // fullscreen across --fs-cols columns (minus the 30px round column); ÷7
+    // leaves room for its ~5.3em of condensed Impact glyphs plus breathing room.
     --onclock-size: min(
       calc(1.15rem * var(--fs-scale)),
-      calc((100vw - 30px) / var(--fs-cols, 12) / 6)
+      calc((100vw - 30px) / var(--fs-cols, 12) / 7)
     );
 
     .draft-grid__corner {
