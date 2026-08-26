@@ -845,6 +845,14 @@ export function DraftBoardPage() {
     const v = Number(localStorage.getItem('draftDashQueueW'));
     return v >= 180 && v <= 460 ? v : 264;
   });
+  // Collapse the dashboard's players panel (bottom of the center lane) so the
+  // board gets the whole column; persisted per device.
+  const [dashPlayersCollapsed, setDashPlayersCollapsed] = useState(
+    () => localStorage.getItem('draftDashPlayersCollapsed') === '1',
+  );
+  useEffect(() => {
+    localStorage.setItem('draftDashPlayersCollapsed', dashPlayersCollapsed ? '1' : '0');
+  }, [dashPlayersCollapsed]);
   useEffect(() => {
     localStorage.setItem('draftDashBoardPct', String(Math.round(dashBoardPct)));
   }, [dashBoardPct]);
@@ -3509,7 +3517,7 @@ export function DraftBoardPage() {
         </aside>
 
         <div
-          className="draft-dash__center"
+          className={`draft-dash__center${dashPlayersCollapsed ? ' is-players-collapsed' : ''}`}
           ref={dashCenterRef}
           style={{ ['--board-pct' as string]: `${dashBoardPct}%` }}
         >
@@ -3539,12 +3547,22 @@ export function DraftBoardPage() {
           </div>
           <div
             className="draft-dash__hdiv"
-            onPointerDown={startDashDrag('h')}
+            onPointerDown={dashPlayersCollapsed ? undefined : startDashDrag('h')}
             role="separator"
             aria-orientation="horizontal"
             aria-label="Resize board and players"
           >
-            <span className="draft-dash__grip" />
+            {!dashPlayersCollapsed && <span className="draft-dash__grip" />}
+            <button
+              type="button"
+              className="draft-dash__collapse-btn"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={() => setDashPlayersCollapsed((c) => !c)}
+              title={dashPlayersCollapsed ? 'Show players' : 'Hide players'}
+              aria-label={dashPlayersCollapsed ? 'Expand players panel' : 'Collapse players panel'}
+            >
+              <ExpandMoreIcon fontSize="small" />
+            </button>
           </div>
           <div
             className={`draft-dash__pane draft-dash__bottom${showQueueSplit ? ' is-split' : ''}`}

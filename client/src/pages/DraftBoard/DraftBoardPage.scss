@@ -2653,6 +2653,12 @@
     gap: 0;
   }
 
+  // Players collapsed: the board takes the whole column, the divider keeps its
+  // expand chevron, and the players row drops to zero.
+  &__center.is-players-collapsed {
+    grid-template-rows: 1fr 12px 0;
+  }
+
   // Anchors the zoom control over the board's top-left corner axis, and drives
   // the board zoom (fit-all ↔ 100% / pinch) via a CSS variable applied to the
   // grid's own scroll container — `zoom` (not transform) keeps the sticky
@@ -2915,6 +2921,48 @@
 
   &__hdiv {
     cursor: row-resize;
+    position: relative;
+  }
+
+  // Collapse/expand the players panel — a small chevron on the right of the
+  // board/players divider (overflows the 12px strip, sits above both panes).
+  &__collapse-btn {
+    position: absolute;
+    right: $space;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 3;
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: $bg-raised;
+    color: $text-muted;
+    cursor: pointer;
+    transition: color 120ms ease, border-color 120ms ease;
+
+    &:hover {
+      color: $text;
+      border-color: $primary;
+    }
+  }
+
+  // Collapsed: no resize on the divider, and the chevron points up (expand).
+  &__center.is-players-collapsed &__hdiv {
+    cursor: default;
+  }
+
+  &__center.is-players-collapsed &__collapse-btn svg {
+    transform: rotate(180deg);
+  }
+
+  // Zero-height pane: drop its border so it doesn't leave a sliver under the
+  // divider.
+  &__center.is-players-collapsed &__bottom {
+    border: none;
   }
 
   &__vdiv {
