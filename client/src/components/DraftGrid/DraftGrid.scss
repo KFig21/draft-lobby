@@ -1020,8 +1020,11 @@
 
   // Icons — the non-mine timer + the mine TouchApp inside the title — are
   // dropped for the bold headline everywhere (the mobile mine-skipped exception
-  // below brings its TouchApp back).
-  &__onclock-icon,
+  // below brings its TouchApp back). The timer icon is a MUI SvgIcon whose
+  // .MuiSvgIcon-root ties a lone .draft-grid__onclock-icon and wins on source
+  // order (emotion injects later) — qualify with the label parent (0,2,0) so
+  // display:none actually beats it.
+  &__onclock-label &__onclock-icon,
   &__onclock-title svg {
     display: none;
   }
@@ -1042,6 +1045,14 @@
   // mine-skipped exception below.
   &__onclock-sub {
     display: none;
+  }
+
+  // Desktop: the headline can read larger than the mobile baseline (the small
+  // board still has room). Fullscreen out-specifies this and scales bigger.
+  @media (min-width: #{$bp-md}) {
+    &__onclock-label {
+      font-size: 1rem;
+    }
   }
 
   // Mobile exception: the viewer's-own SKIPPED cell keeps its up-close treatment
