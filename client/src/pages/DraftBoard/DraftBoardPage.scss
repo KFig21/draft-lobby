@@ -704,22 +704,16 @@
       }
     }
 
-    // …but "Skip bots" while on keeps its own accent rather than the reset above.
+    // …but "Skip bots" while on keeps its solid WR-blue fill (a touch darker on
+    // hover) rather than the reset above.
     .draft__skipbots-btn.is-on {
 
       &:hover:not(:disabled),
       &:focus-visible:not(:disabled),
       &:active:not(:disabled) {
-        border-color: $accent;
-        background: rgba($accent, 0.16);
-        color: $accent;
-
-        // Accent convention: mint on dark, teal primary on light.
-        :root[data-theme='light'] & {
-          border-color: $primary;
-          background: rgba($primary, 0.16);
-          color: $primary;
-        }
+        border-color: color-mix(in srgb, #4aa8ff 85%, #000);
+        background: color-mix(in srgb, #4aa8ff 85%, #000);
+        color: #04223f;
       }
     }
   }
@@ -741,17 +735,12 @@
   }
 
   // "Skip bots" toggle: same tool-btn look, accented when on.
+  // Solid wide-receiver blue (POSITION_COLORS.WR) when on, so it reads clearly
+  // as an active "skipping bots" state — same in both themes.
   &__skipbots-btn.is-on {
-    border-color: $accent;
-    background: rgba($accent, 0.16);
-    color: $accent;
-
-    // Accent convention: mint on dark, teal primary on light.
-    :root[data-theme='light'] & {
-      border-color: $primary;
-      background: rgba($primary, 0.16);
-      color: $primary;
-    }
+    border-color: #4aa8ff;
+    background: #4aa8ff;
+    color: #04223f;
   }
 
   // Commissioner "add time" split button: a +5s main half + a caret that opens
