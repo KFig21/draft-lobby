@@ -198,5 +198,19 @@
   &__continue {
     width: 100%;
     margin-top: $space * 2;
+
+    // Concentric with the window, matching the other modals' action buttons
+    // (qualified with .button to outrank the base $radius-sm regardless of
+    // stylesheet order).
+    &.button {
+      border-radius: $radius-card;
+    }
+  }
+
+  // The Power Rankings team cards render inside this modal window, so round them
+  // as concentric inner cards ($radius-card) rather than their standalone
+  // $radius (card-surface) used on the full Power Rankings tab.
+  .pr-row {
+    border-radius: $radius-card;
   }
 }
