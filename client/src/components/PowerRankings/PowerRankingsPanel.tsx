@@ -197,7 +197,11 @@ export function PowerRankingsPanel({
       </div>
 
       {showHelp && (
-        <Modal title="How grades are calculated" onClose={() => setShowHelp(false)}>
+        <Modal
+          title="How grades are calculated"
+          className="pr-help-dialog"
+          onClose={() => setShowHelp(false)}
+        >
           <div className="power-rankings__help-body">
             <p>
               Every team is ranked by the projected points of its <b>optimal starting lineup</b> —

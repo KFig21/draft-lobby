@@ -1,6 +1,13 @@
 @use 'variables' as *;
 @use 'mixins' as *;
 
+// The "How grades are calculated" modal can be opened from inside the draft
+// outro modal (backdrop z-index 205), and the shared Modal overlay is only 200 —
+// so lift its overlay above the outro when this help dialog is the one showing.
+.dialog-overlay:has(.pr-help-dialog) {
+  z-index: 220;
+}
+
 .power-rankings {
   height: 100%;
   min-height: 0;
