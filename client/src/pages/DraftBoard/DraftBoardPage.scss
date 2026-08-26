@@ -713,6 +713,13 @@
         border-color: $accent;
         background: rgba($accent, 0.16);
         color: $accent;
+
+        // Accent convention: mint on dark, teal primary on light.
+        :root[data-theme='light'] & {
+          border-color: $primary;
+          background: rgba($primary, 0.16);
+          color: $primary;
+        }
       }
     }
   }
@@ -738,6 +745,13 @@
     border-color: $accent;
     background: rgba($accent, 0.16);
     color: $accent;
+
+    // Accent convention: mint on dark, teal primary on light.
+    :root[data-theme='light'] & {
+      border-color: $primary;
+      background: rgba($primary, 0.16);
+      color: $primary;
+    }
   }
 
   // Commissioner "add time" split button: a +5s main half + a caret that opens
