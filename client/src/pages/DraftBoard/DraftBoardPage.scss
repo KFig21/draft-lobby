@@ -1799,11 +1799,8 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 38px;
-    // Reach down flush to the first round row: the button top sits 4px
-    // (border-spacing) above the 52px corner cell, then another 4px gap to row 1
-    // → 4 + 52 + 4 = 60px.
-    height: 60px;
+    width: 34px;
+    height: 38px;
     padding: 0;
     border: 1px solid $border;
     border-radius: $radius-sm;
@@ -1813,6 +1810,7 @@
 
     svg {
       font-size: 1.15rem;
+      color: $text-muted;
     }
   }
 
