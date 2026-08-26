@@ -1803,10 +1803,9 @@
     height: 38px;
     padding: 0;
     border: 1px solid $border;
-    border-radius: 999px;
+    border-radius: $radius-sm;
     background: $bg-raised;
     color: $text;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
     cursor: pointer;
 
     svg {
