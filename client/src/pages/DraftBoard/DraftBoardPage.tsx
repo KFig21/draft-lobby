@@ -3357,7 +3357,7 @@ export function DraftBoardPage() {
           settings={lobby.settings}
           onPickClick={setPickModal}
           belowSelect={
-            isComplete && !isDesktop
+            isComplete
               ? (() => {
                   const voteCount = crownVotes.filter((v) => v.team_id === rosterTeamId).length;
                   const teamGrades = grades.filter((g) => g.team_id === rosterTeamId);
@@ -3369,7 +3369,9 @@ export function DraftBoardPage() {
                         type="button"
                         className="draft__results-summary"
                         onClick={() => {
-                          if (isFullscreen) {
+                          // Desktop/fullscreen swap the center board to Power
+                          // Rankings; mobile opens the results drawer.
+                          if (isDesktop || isFullscreen) {
                             setCenterView('rankings');
                             setShowFsMenu(false);
                           } else setResultsDrawerView((v) => (v === 'closed' ? 'open' : 'closed'));
