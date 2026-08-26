@@ -913,8 +913,10 @@
       color: #05231a;
     }
 
+    // Match the on-clock headline size (fits one line) so every active cell
+    // reads at the same scale.
     .draft-grid--fill & {
-      font-size: calc(1.15rem * var(--fs-scale));
+      font-size: var(--onclock-size);
     }
   }
 
@@ -1115,6 +1117,15 @@
     // a huge TV doesn't blow text up past legibility.
     --fs-scale: clamp(1, calc(var(--fs-row-h, 52px) / 52px), 2.5);
     font-size: calc(0.75rem * var(--fs-scale));
+    // Active-cell headline size ("ON THE CLOCK" / "SKIPPED"): the scaled size,
+    // capped to the column width so the longest word ("ON THE CLOCK") always
+    // fits on one line. The board fills ~100vw in fullscreen across --fs-cols
+    // columns (minus the 30px round column); ÷6 leaves room for its ~5.3em of
+    // condensed Impact glyphs.
+    --onclock-size: min(
+      calc(1.15rem * var(--fs-scale)),
+      calc((100vw - 30px) / var(--fs-cols, 12) / 6)
+    );
 
     .draft-grid__corner {
       width: 30px;
@@ -1158,9 +1169,10 @@
       letter-spacing: 0.03em;
       text-transform: uppercase;
       line-height: 0.98;
-      // The single-line "someone else is up" variant renders straight on the
-      // label — this carries it; the stacked "your pick" title matches below.
-      font-size: calc(1.15rem * var(--fs-scale));
+      // Sized to fit the longest word on one line (see --onclock-size); the
+      // single-line "someone else is up" variant renders straight on the label.
+      white-space: nowrap;
+      font-size: var(--onclock-size);
     }
 
     // Icons only crowd the words at this size — drop them.
@@ -1175,10 +1187,10 @@
     .draft-grid__onclock-title {
       display: block;
       text-align: center;
-      white-space: normal;
+      white-space: nowrap;
       font-weight: inherit;
       letter-spacing: inherit;
-      font-size: calc(1.15rem * var(--fs-scale));
+      font-size: var(--onclock-size);
     }
 
     // Drop the guidance sub-line ("Click here to view players" / "make your
