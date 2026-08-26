@@ -132,12 +132,6 @@ export function DraftOutroModal({
             </>
           ) : (
             <>
-              <h2 className="draft-outro__heading">How’d everyone else do?</h2>
-              <p className="muted draft-outro__intro">
-                Here’s how the league stacked up by projected starting-lineup points.
-                Crown the winner and grade every roster anytime from the{' '}
-                <b>Power Rankings</b> tab.
-              </p>
               <PowerRankingsPanel
                 teams={teams}
                 members={members}

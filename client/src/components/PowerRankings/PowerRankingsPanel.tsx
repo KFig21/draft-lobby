@@ -131,10 +131,15 @@ export function PowerRankingsPanel({
               </button>
             )}
           </div>
-          <p className="power-rankings__sub">
-            Graded on projected points from each team’s optimal <b>starting lineup</b> — the
-            strongest roster earns the top grade, the field slides toward F from there.
-          </p>
+          {/* Recap/outro mode hides this line — it restates the "How grades are
+              calculated" info modal (one tap away via the ⓘ), so it's redundant
+              in the compact modal. */}
+          {!readOnly && (
+            <p className="power-rankings__sub">
+              Graded on projected points from each team’s optimal <b>starting lineup</b> — the
+              strongest roster earns the top grade, the field slides toward F from there.
+            </p>
+          )}
           <div className="power-rankings__legend">
             <span className="power-rankings__legend-item">
               <GradeBadge grade="A" size={16} /> App grade (projected)
