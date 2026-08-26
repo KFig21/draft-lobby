@@ -1,5 +1,6 @@
 import { DRAFT_GRADE_COLORS, type DraftGrade, type LobbySettings } from '@draft-lobby/shared';
 import CloseIcon from '@mui/icons-material/Close';
+import SportsFootballIcon from '@mui/icons-material/SportsFootball';
 import { useMemo, useState, type CSSProperties } from 'react';
 import { computePowerRankings } from '../../lib/powerRankings';
 import { useModalClose } from '../../lib/useModalClose';
@@ -83,7 +84,10 @@ export function DraftOutroModal({
         <div className="draft-outro__body">
           {step === 0 ? (
             <>
-              <h2 className="draft-outro__heading">Draft complete! 🏈</h2>
+              <h2 className="draft-outro__heading">
+                Draft complete!
+                <SportsFootballIcon className="draft-outro__heading-icon" />
+              </h2>
               {myRank && (
                 <div
                   className="draft-outro__grade"
@@ -113,7 +117,7 @@ export function DraftOutroModal({
                       <span className="draft-outro__pick-num">
                         {round}.{String(inRound).padStart(2, '0')}
                       </span>
-                      <PlayerCard player={player} />
+                      <PlayerCard player={player} hideValue />
                     </li>
                   );
                 })}

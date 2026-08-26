@@ -9,7 +9,7 @@
   overflow: hidden;
   background: $bg-raised;
   border: 1px solid $border;
-  border-radius: $radius;
+  border-radius: $radius-window;
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
 
   &__backdrop {
@@ -71,9 +71,20 @@
   }
 
   &__heading {
+    display: flex;
+    align-items: center;
+    gap: $space * 0.75;
     font-size: 1.3rem;
     margin-bottom: $space;
     padding-right: $space * 3;
+  }
+
+  // Football icon after the title — inherits the heading's color, sized to the
+  // text. Selector is qualified so it beats MUI's own .MuiSvgIcon-root sizing.
+  &__heading &__heading-icon {
+    flex-shrink: 0;
+    font-size: 1.4rem;
+    color: $accent;
   }
 
   &__intro {
@@ -94,7 +105,8 @@
     margin-bottom: $space * 2;
     padding: $space * 1.5 $space * 1.75;
     border: 1px solid color-mix(in srgb, var(--grade) 45%, $border);
-    border-radius: $radius;
+    // Concentric with the window: window radius − one gutter.
+    border-radius: $radius-card;
     background:
       radial-gradient(
         130% 150% at 108% -10%,
