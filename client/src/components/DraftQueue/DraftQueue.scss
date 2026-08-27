@@ -163,7 +163,7 @@
     // rows and gives a gap between the border and the first player; the right
     // pad + stable gutter keep the scrollbar off the rows.
     border-top: 1px solid $border;
-    padding: $space * 0.6 $space 0;
+    padding: $space * 0.6 $space $space * 0.75;
     scrollbar-gutter: stable;
   }
 
@@ -174,7 +174,9 @@
     padding: $space * 0.5 $space * 0.6;
     border: 1px solid $border;
     border-radius: $radius-sm;
-    background: $bg;
+    // Raised (white in light mode) so queued cards read clean like the player
+    // list rows — not the grey $bg, which looked washed-out over the tint.
+    background: $bg-raised;
 
     &.is-dragging {
       opacity: 0.5;
