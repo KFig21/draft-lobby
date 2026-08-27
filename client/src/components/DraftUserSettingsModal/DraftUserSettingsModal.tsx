@@ -13,6 +13,7 @@ import { randomSamplePlayer } from '../DraftGrid/samplePlayers';
 import { Modal } from '../Modal/Modal';
 import { PlayerCardStylePicker } from '../PlayerCard/PlayerCardStylePicker';
 import { TeamColorPreview } from '../PlayerStatBlock/TeamColorPreview';
+import { ToastStylePicker } from '../../toast/ToastStylePicker';
 import { ToggleSwitch } from '../ToggleSwitch/ToggleSwitch';
 import './DraftUserSettingsModal.scss';
 
@@ -251,15 +252,11 @@ export function DraftUserSettingsModal({
           </div>
           <div className="draft-user-settings__row">
             <div className="draft-user-settings__row-main">
-              <span className="draft-user-settings__row-name">Compact toasts</span>
-              <span className="muted">Just a tone icon and the message — no extra detail</span>
+              <span className="draft-user-settings__row-name">Toast style</span>
+              <span className="muted">How much detail live alerts show</span>
             </div>
-            <ToggleSwitch
-              label="Toggle compact toasts"
-              checked={toastPrefs.style === 'brief'}
-              onChange={(v) => onToastStyleChange(v ? 'brief' : 'detailed')}
-            />
           </div>
+          <ToastStylePicker value={toastPrefs.style} onChange={onToastStyleChange} />
           <div
             className={`draft-user-settings__toast-categories${
               toastPrefs.enabled ? '' : ' is-disabled'

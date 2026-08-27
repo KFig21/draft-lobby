@@ -1,0 +1,50 @@
+@use 'variables' as *;
+
+.toast-style-picker {
+  display: flex;
+  flex-direction: column;
+  gap: $space * 1.75;
+
+  &__option {
+    display: flex;
+    flex-direction: column;
+    gap: $space * 0.75;
+    cursor: pointer;
+  }
+
+  &__radio-row {
+    display: flex;
+    align-items: center;
+    gap: $space * 0.75;
+
+    input {
+      cursor: pointer;
+      accent-color: $primary;
+    }
+  }
+
+  &__name {
+    font-size: 0.9rem;
+    font-weight: 800;
+    color: $text-muted;
+
+    &.is-selected {
+      color: $text;
+    }
+  }
+
+  // The preview toast is display-only — clicks fall through to the label so the
+  // whole option (label + example) selects it.
+  &__preview {
+    pointer-events: none;
+  }
+
+  // Freeze the live toast styles for a static example: no slide-in/progress
+  // animation, softer shadow, full width of the row.
+  &__toast {
+    width: 100%;
+    animation: none;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+    cursor: default;
+  }
+}

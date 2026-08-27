@@ -17,6 +17,7 @@ import { BoardLayoutPicker } from '../../components/BoardLayoutPicker/BoardLayou
 import { DraftCellStylePicker } from '../../components/DraftGrid/DraftCellStylePicker';
 import { randomSamplePlayer } from '../../components/DraftGrid/samplePlayers';
 import { PlayerCardStylePicker } from '../../components/PlayerCard/PlayerCardStylePicker';
+import { ToastStylePicker } from '../../toast/ToastStylePicker';
 import { TeamColorPreview } from '../../components/PlayerStatBlock/TeamColorPreview';
 import {
   getDraftBoardLayout,
@@ -315,17 +316,11 @@ export function SettingsPage() {
         </div>
         <div className="settings__row">
           <div className="settings__row-main">
-            <span className="settings__row-name">Compact toasts</span>
-            <span className="muted">
-              Show just a tone icon and the message — no avatars, pick details, or subtext
-            </span>
+            <span className="settings__row-name">Toast style</span>
+            <span className="muted">How much detail live alerts show</span>
           </div>
-          <ToggleSwitch
-            label="Toggle compact toasts"
-            checked={toastPrefs.style === 'brief'}
-            onChange={(v) => updateToastStyle(v ? 'brief' : 'detailed')}
-          />
         </div>
+        <ToastStylePicker value={toastPrefs.style} onChange={updateToastStyle} />
         <div className={`settings__toast-categories${toastPrefs.enabled ? '' : ' is-disabled'}`}>
           {TOAST_CATEGORIES.map((c) => (
             <div className="settings__toast-row" key={c.key}>
