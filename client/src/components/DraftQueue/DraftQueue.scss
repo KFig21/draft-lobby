@@ -42,12 +42,6 @@
     font-weight: 800;
   }
 
-  &__autopick-sub {
-    font-size: 0.68rem;
-    line-height: 1.35;
-    color: $text-muted;
-  }
-
   // ── list header ───────────────────────────────────────────────────────
   &__head {
     display: flex;
@@ -110,6 +104,11 @@
     flex: 1;
     overflow-y: auto;
     min-height: 0;
+    padding: 0;
+    // Divides the scroll region from the toggle/header above it, and reserves
+    // room for the scrollbar so it never sits on top of a row.
+    border-top: 1px solid $border;
+    scrollbar-gutter: stable;
   }
 
   &__row {

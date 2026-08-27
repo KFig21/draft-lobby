@@ -71,10 +71,6 @@ export function DraftQueue({
         <div className={`draft-queue__autopick${autopick ? ' is-on' : ''}`}>
           <div className="draft-queue__autopick-text">
             <span className="draft-queue__autopick-title">Auto-draft from queue</span>
-            <span className="draft-queue__autopick-sub">
-              If your clock runs out (or you’re on auto-draft), draft your top available
-              queued player instead of skipping.
-            </span>
           </div>
           <ToggleSwitch
             checked={autopick}

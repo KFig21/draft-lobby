@@ -730,8 +730,8 @@ export function DraftBoardPage() {
   // proportion as the window resizes; the queue is a fixed px width. Both
   // persist across sessions, same as the sidebar width above.
   const dashCenterRef = useRef<HTMLDivElement>(null);
-  const dashBottomRef = useRef<HTMLDivElement>(null);
-  const dashDragRef = useRef<null | 'h' | 'v'>(null);
+  const dashRightRef = useRef<HTMLElement>(null);
+  const dashDragRef = useRef<null | 'h' | 'q'>(null);
 
   // Detailed-board zoom: a fit-all ↔ 100% toggle plus trackpad pinch. Uses the
   // CSS `zoom` property (not `transform`) on the grid's own scroll container so
@@ -848,9 +848,10 @@ export function DraftBoardPage() {
     const v = Number(localStorage.getItem('draftDashBoardPct'));
     return v >= 25 && v <= 80 ? v : 56;
   });
-  const [dashQueueW, setDashQueueW] = useState(() => {
-    const v = Number(localStorage.getItem('draftDashQueueW'));
-    return v >= 180 && v <= 460 ? v : 264;
+  // Height of the queue pane beneath the chat in the right lane (desktop).
+  const [dashQueueH, setDashQueueH] = useState(() => {
+    const v = Number(localStorage.getItem('draftDashQueueH'));
+    return v >= 120 && v <= 600 ? v : 260;
   });
   // Collapse the dashboard's players panel (bottom of the center lane) so the
   // board gets the whole column; persisted per device.
@@ -864,8 +865,8 @@ export function DraftBoardPage() {
     localStorage.setItem('draftDashBoardPct', String(Math.round(dashBoardPct)));
   }, [dashBoardPct]);
   useEffect(() => {
-    localStorage.setItem('draftDashQueueW', String(Math.round(dashQueueW)));
-  }, [dashQueueW]);
+    localStorage.setItem('draftDashQueueH', String(Math.round(dashQueueH)));
+  }, [dashQueueH]);
   useEffect(() => {
     function onMove(e: PointerEvent) {
       if (dashDragRef.current === 'h') {
@@ -873,13 +874,14 @@ export function DraftBoardPage() {
         if (!el) return;
         const r = el.getBoundingClientRect();
         setDashBoardPct(Math.min(80, Math.max(25, ((e.clientY - r.top) / r.height) * 100)));
-      } else if (dashDragRef.current === 'v') {
-        const el = dashBottomRef.current;
+      } else if (dashDragRef.current === 'q') {
+        const el = dashRightRef.current;
         if (!el) return;
         const r = el.getBoundingClientRect();
-        // Queue sits on the right, so its width grows as the divider is dragged
-        // leftward — measure from the right edge. Keep the list ≥ ~320px.
-        setDashQueueW(Math.min(r.width - 320, Math.max(180, r.right - e.clientX)));
+        // Queue sits at the bottom of the right lane; its height grows as the
+        // divider is dragged upward (measure from the bottom edge). Keep the
+        // chat above it ≥ ~200px — that's the queue's effective max height.
+        setDashQueueH(Math.min(r.height - 200, Math.max(120, r.bottom - e.clientY)));
       }
     }
     function onUp() {
@@ -895,12 +897,12 @@ export function DraftBoardPage() {
       window.removeEventListener('pointerup', onUp);
     };
   }, []);
-  function startDashDrag(dir: 'h' | 'v') {
+  function startDashDrag(dir: 'h' | 'q') {
     return (e: React.PointerEvent) => {
       e.preventDefault();
       dashDragRef.current = dir;
       document.body.style.userSelect = 'none';
-      document.body.style.cursor = dir === 'h' ? 'row-resize' : 'col-resize';
+      document.body.style.cursor = 'row-resize';
     };
   }
 
@@ -3575,33 +3577,34 @@ export function DraftBoardPage() {
               <ExpandMoreIcon fontSize="small" />
             </button>
           </div>
-          <div
-            className={`draft-dash__pane draft-dash__bottom${showQueueSplit ? ' is-split' : ''}`}
-            ref={dashBottomRef}
-            style={{ ['--queue-w' as string]: `${dashQueueW}px` }}
-          >
+          <div className="draft-dash__pane draft-dash__bottom">
             <div className="draft-dash__players">
               {renderPlayersPool({ hideQueue: true, table: true })}
             </div>
-            {showQueueSplit && (
-              <>
-                <div
-                  className="draft-dash__vdiv"
-                  onPointerDown={startDashDrag('v')}
-                  role="separator"
-                  aria-orientation="vertical"
-                  aria-label="Resize queue and players"
-                >
-                  <span className="draft-dash__grip draft-dash__grip--v" />
-                </div>
-                {renderQueuePane()}
-              </>
-            )}
           </div>
         </div>
 
-        <aside className="draft-dash__lane">
+        <aside className="draft-dash__lane draft-dash__lane--right" ref={dashRightRef}>
           <div className="draft-dash__pane draft-dash__chat">{renderChatPanel()}</div>
+          {showQueueSplit && (
+            <>
+              <div
+                className="draft-dash__qdiv"
+                onPointerDown={startDashDrag('q')}
+                role="separator"
+                aria-orientation="horizontal"
+                aria-label="Resize chat and queue"
+              >
+                <span className="draft-dash__grip" />
+              </div>
+              <div
+                className="draft-dash__pane draft-dash__queuepane"
+                style={{ ['--queue-h' as string]: `${dashQueueH}px` }}
+              >
+                {renderQueuePane()}
+              </div>
+            </>
+          )}
         </aside>
       </div>
     );

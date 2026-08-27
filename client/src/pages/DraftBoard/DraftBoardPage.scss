@@ -2075,14 +2075,19 @@
     display: flex;
     flex-shrink: 0;
     flex-direction: column;
-    padding: $space;
+    padding: $space $space 0;
     border-bottom: 1px solid $border;
     background: rgba($accent, 0.06);
     max-height: 42%;
-    overflow-y: auto;
+    overflow: hidden; // the <DraftQueue> list owns the scroll
 
     :root[data-theme='light'] & {
       background: rgba($primary, 0.06);
+    }
+
+    .draft-queue {
+      flex: 1;
+      min-height: 0;
     }
   }
 
@@ -2780,15 +2785,46 @@
     }
   }
 
-  // Queue split (bottom-right) — shares the pane background (no tint). Holds the
-  // shared <DraftQueue>, which fills the pane so its list scrolls under a fixed
-  // toggle + header.
+  // Right lane: chat on top, queue beneath it (when the viewer has a queue),
+  // split by a draggable row divider.
+  &__lane--right {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  // Chat / queue divider in the right lane — same grip as the board/players one.
+  &__qdiv {
+    flex: 0 0 12px;
+    display: grid;
+    place-items: center;
+    cursor: row-resize;
+
+    &:hover .draft-dash__grip {
+      background: $accent;
+
+      :root[data-theme='light'] & {
+        background: $primary;
+      }
+    }
+  }
+
+  // The queue pane beneath the chat: adjustable height (--queue-h, dragged),
+  // capped so the chat always keeps room.
+  &__queuepane {
+    flex: 0 0 auto;
+    height: var(--queue-h, 260px);
+    max-height: 62%;
+  }
+
+  // Holds the shared <DraftQueue>, which fills the pane so its list scrolls
+  // under a fixed toggle + header.
   &__queue {
-    flex: 0 0 var(--queue-w, 264px);
+    flex: 1;
     min-width: 0;
+    min-height: 0;
     display: flex;
     flex-direction: column;
-    padding: $space;
+    padding: $space $space 0;
 
     .draft-queue {
       flex: 1;
