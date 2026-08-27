@@ -2093,7 +2093,7 @@
     // Header sits on the raised surface (not the tint) so it reads clean like
     // the rows below it, and carries the queue's top padding.
     .draft-queue__head {
-      padding-top: $space;
+      padding-top: $space * .5;
       background: $bg-raised;
     }
   }

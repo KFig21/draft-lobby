@@ -65,6 +65,7 @@
     p {
       margin: 0;
     }
+
     b {
       color: $text;
     }
@@ -165,6 +166,7 @@
     border-top: 1px solid $border;
     padding: $space * 0.6 $space $space * 0.75;
     scrollbar-gutter: stable;
+    background: $bg-raised;
   }
 
   &__row {
@@ -176,7 +178,7 @@
     border-radius: $radius-sm;
     // Raised (white in light mode) so queued cards read clean like the player
     // list rows — not the grey $bg, which looked washed-out over the tint.
-    background: $bg-raised;
+    background: $bg;
 
     &.is-dragging {
       opacity: 0.5;
