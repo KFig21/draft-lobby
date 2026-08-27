@@ -61,6 +61,7 @@ export interface ToastItem extends Required<Pick<ToastInput, 'title' | 'tone' | 
   avatar?: AvatarData | null;
   grade?: DraftGrade | null;
   pick?: ToastInput['pick'];
+  category?: ToastCategory;
   onClick?: () => void;
   /** Card layout captured when the toast was created (Settings: Detailed/Brief). */
   style: ToastStyle;
@@ -118,6 +119,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         avatar: input.avatar,
         grade: input.grade,
         pick: input.pick,
+        category: input.category,
         onClick: input.onClick,
         style: getToastStyle(),
         durationMs,

@@ -1,7 +1,7 @@
 import { POSITION_COLORS, type Avatar as AvatarData, type Position } from '@draft-lobby/shared';
-import CheckCircleOutlineRoundedIcon from '@mui/icons-material/CheckCircleOutlineRounded';
 import CloseIcon from '@mui/icons-material/Close';
 import PauseIcon from '@mui/icons-material/Pause';
+import PriorityHighRoundedIcon from '@mui/icons-material/PriorityHighRounded';
 import { Avatar } from '../components/Avatar/Avatar';
 import type { ToastStyle } from './toastPrefs';
 import './ToastStylePicker.scss';
@@ -89,10 +89,13 @@ function DetailedPreview() {
 function BriefPreview() {
   return (
     <div className="toast toast--info toast--brief toast-style-picker__toast">
-      <span className="toast__lead">
-        <CheckCircleOutlineRoundedIcon fontSize="inherit" />
+      <span className="toast__avatar">
+        <Avatar avatar={SAMPLE_AVATAR} size={26} />
       </span>
-      <p className="toast__title toast__title--brief">Bijan Robinson drafted</p>
+      <span className="toast__lead">
+        <PriorityHighRoundedIcon fontSize="inherit" />
+      </span>
+      <p className="toast__title toast__title--brief">Nordy reacted 🔥 to your pick</p>
       <PreviewControls />
     </div>
   );

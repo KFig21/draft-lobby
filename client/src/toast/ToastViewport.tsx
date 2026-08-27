@@ -5,20 +5,29 @@ import ErrorOutlineRoundedIcon from '@mui/icons-material/ErrorOutlineRounded';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import PauseIcon from '@mui/icons-material/Pause';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import PriorityHighRoundedIcon from '@mui/icons-material/PriorityHighRounded';
 import WarningAmberRoundedIcon from '@mui/icons-material/WarningAmberRounded';
 import type { ReactNode } from 'react';
 import { Avatar } from '../components/Avatar/Avatar';
 import { GradeBadge } from '../components/GradeBadge/GradeBadge';
 import { useToastInternal, type ToastItem } from './ToastContext';
 import type { ToastTone } from './ToastContext';
+import type { ToastCategory } from './toastPrefs';
 import './ToastViewport.scss';
 
-/** Leading icon for the Brief layout — one per tone. */
+/** Fallback Brief-layout icon per tone, when nothing more specific applies. */
 const TONE_ICON: Record<ToastTone, ReactNode> = {
   info: <InfoOutlinedIcon fontSize="inherit" />,
   success: <CheckCircleOutlineRoundedIcon fontSize="inherit" />,
   warning: <WarningAmberRoundedIcon fontSize="inherit" />,
   danger: <ErrorOutlineRoundedIcon fontSize="inherit" />,
+};
+
+/** Brief-layout lead icon by event category, for toasts that carry no explicit
+ * `titleIcon`. Reactions get an emphasis mark; comments/mentions already ship a
+ * comment-bubble / @ titleIcon, which takes priority over this. */
+const CATEGORY_ICON: Partial<Record<ToastCategory, ReactNode>> = {
+  reaction: <PriorityHighRoundedIcon fontSize="inherit" />,
 };
 
 export function ToastViewport() {
@@ -57,6 +66,7 @@ function ToastCard({
     avatar,
     grade,
     pick,
+    category,
     onClick,
     style,
     durationMs,
@@ -90,10 +100,17 @@ function ToastCard({
       tabIndex={onClick ? 0 : undefined}
     >
       {brief ? (
-        // Brief: a tone icon + the message only — no avatar, chips, or subtext.
+        // Brief: the person's avatar (when one's involved) + an icon for what
+        // actually happened (comment bubble, reaction mark, …, falling back to
+        // the tone icon) + the message. No pick chips or subtext.
         <>
+          {avatar && (
+            <span className="toast__avatar">
+              <Avatar avatar={avatar} size={26} />
+            </span>
+          )}
           <span className="toast__lead" aria-hidden>
-            {TONE_ICON[tone]}
+            {titleIcon ?? (category && CATEGORY_ICON[category]) ?? TONE_ICON[tone]}
           </span>
           <p className="toast__title toast__title--brief">{title}</p>
         </>
