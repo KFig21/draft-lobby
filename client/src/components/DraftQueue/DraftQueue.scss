@@ -3,54 +3,48 @@
 .draft-queue {
   display: flex;
   flex-direction: column;
-  gap: $space * 0.75;
   min-height: 0;
 
-  // ── "Auto-draft from queue" toggle banner ──────────────────────────────
-  &__autopick {
-    display: flex;
-    align-items: center;
-    gap: $space;
-    padding: $space * 0.75 $space;
-    border: 1px solid $border;
-    border-radius: $radius-sm;
-    background: $bg;
-
-    // On: tinted with the app accent so it's obvious the queue is armed. The
-    // accent is mint on dark, but the light theme's accent is $primary.
-    &.is-on {
-      border-color: color-mix(in srgb, $accent 55%, $border);
-      background: color-mix(in srgb, $accent 12%, transparent);
-
-      :root[data-theme='light'] & {
-        border-color: color-mix(in srgb, $primary 55%, $border);
-        background: color-mix(in srgb, $primary 12%, transparent);
-      }
-    }
-  }
-
-  &__autopick-text {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-
-  &__autopick-title {
-    font-size: 0.8rem;
-    font-weight: 800;
-  }
-
-  // ── list header ───────────────────────────────────────────────────────
+  // ── header: "Queue N", the Auto-draft toggle, and Clear ─────────────────
+  // The container has no horizontal padding (so the list border below can span
+  // full-width) — the header supplies its own.
   &__head {
     display: flex;
     align-items: center;
-    gap: $space;
+    gap: $space * 0.75;
+    padding: 0 $space $space * 0.5;
     font-size: 0.8rem;
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.04em;
+    color: $text-muted;
+  }
+
+  &__head-title {
+    margin-right: auto; // pushes the toggle + Clear to the right
+  }
+
+  // Compact inline "Auto-draft" label + switch (was a full banner). Text shrinks
+  // to fit the header row.
+  &__autopick {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+
+    &.is-on .draft-queue__autopick-label {
+      color: $accent;
+
+      :root[data-theme='light'] & {
+        color: $primary;
+      }
+    }
+  }
+
+  &__autopick-label {
+    font-size: 0.62rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
     color: $text-muted;
   }
 
@@ -68,7 +62,6 @@
   }
 
   &__clear {
-    margin-left: auto;
     padding: 2px 8px;
     border: 1px solid $border;
     border-radius: 999px;
@@ -104,10 +97,12 @@
     flex: 1;
     overflow-y: auto;
     min-height: 0;
-    padding: 0;
-    // Divides the scroll region from the toggle/header above it, and reserves
-    // room for the scrollbar so it never sits on top of a row.
+    // Full-width rule dividing the header from the scroll region (the container
+    // has no horizontal padding, so this spans edge to edge). Padding insets the
+    // rows and gives a gap between the border and the first player; the right
+    // pad + stable gutter keep the scrollbar off the rows.
     border-top: 1px solid $border;
+    padding: $space * 0.6 $space 0;
     scrollbar-gutter: stable;
   }
 

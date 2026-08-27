@@ -67,23 +67,20 @@ export function DraftQueue({
 
   return (
     <div className="draft-queue">
-      {showAutopick && (
-        <div className={`draft-queue__autopick${autopick ? ' is-on' : ''}`}>
-          <div className="draft-queue__autopick-text">
-            <span className="draft-queue__autopick-title">Auto-draft from queue</span>
-          </div>
-          <ToggleSwitch
-            checked={autopick}
-            onChange={onToggleAutopick}
-            label="Auto-draft from queue"
-          />
-        </div>
-      )}
-
       <div className="draft-queue__head">
-        <span>
+        <span className="draft-queue__head-title">
           Queue <span className="draft-queue__count">{players.length}</span>
         </span>
+        {showAutopick && (
+          <span className={`draft-queue__autopick${autopick ? ' is-on' : ''}`}>
+            <span className="draft-queue__autopick-label">Auto-draft</span>
+            <ToggleSwitch
+              checked={autopick}
+              onChange={onToggleAutopick}
+              label="Auto-draft from queue"
+            />
+          </span>
+        )}
         {players.length > 0 && (
           <button
             type="button"
