@@ -33,6 +33,14 @@
     height: 42vh; // room for the deck to grow up; taller than any 3-toast stack
     transform: none;
     overflow: hidden;
+    transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+
+    // A modal covers the nav (and most of the screen) on mobile, so slide the
+    // deck down out of its way to the very bottom; it slides back up above the
+    // nav when the modal closes. Most modals share .modal-anim-backdrop.
+    body:has(.modal-anim-backdrop) & {
+      transform: translateY(calc(60px + env(safe-area-inset-bottom, 0)));
+    }
   }
 }
 
@@ -56,7 +64,7 @@
   transform: translateY(-14px) scale(0.95);
 }
 :fullscreen .toast[data-depth='2'] {
-  transform: translateY(-13px) scale(0.9);
+  transform: translateY(-27px) scale(0.9);
 }
 
 :fullscreen .toast__title {
@@ -128,14 +136,14 @@
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
   pointer-events: none; // only the front toast is interactive
 
-  // Cascading peek: the 2nd/3rd toasts sit just behind the front, a hair apart
-  // (-12 then -11) so they read as a tight deck. Fullscreen nudges these up
-  // (-14 / -13); mobile mimics desktop.
+  // Cascading peek: each card steps up behind the one in front (12px, then
+  // another 11px → -23 total) so all three are visible. Fullscreen steps a
+  // touch more (14 + 13 → -27); mobile mimics desktop.
   &[data-depth='1'] {
     transform: translateY(-12px) scale(0.95);
   }
   &[data-depth='2'] {
-    transform: translateY(-11px) scale(0.9);
+    transform: translateY(-23px) scale(0.9);
   }
 
   &.is-front {
