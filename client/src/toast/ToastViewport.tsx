@@ -114,7 +114,8 @@ function ToastCard({
   return (
     <div
       className={`toast toast--${tone}${brief ? ' toast--brief' : ''}${isFront ? ' is-front' : ''}${entering ? ' is-entering' : ''}${closing ? ' is-closing' : ''}${onClick && isFront ? ' is-clickable' : ''}`}
-      style={{ ['--depth' as string]: depth, zIndex: closing ? 40 : 30 - depth }}
+      data-depth={depth}
+      style={{ zIndex: closing ? 40 : 30 - depth }}
       role="status"
       aria-live="polite"
       onClick={onClick && isFront ? activate : undefined}

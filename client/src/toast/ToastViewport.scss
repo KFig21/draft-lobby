@@ -22,12 +22,17 @@
   pointer-events: none; // only the front toast opts back in
 
   @media (max-width: #{$bp-md - 1px}) {
-    top: env(safe-area-inset-top, $space);
-    bottom: auto;
+    top: auto;
+    // Anchored to the bottom nav's top edge; the deck rests just above it and
+    // overflow:hidden clips anything below, so toasts slide up from behind the
+    // nav and never cover it. (60px = draft tab bar / global nav height.)
+    bottom: calc(60px + env(safe-area-inset-bottom, 0));
     left: $space;
     right: $space;
-    transform: none;
     width: auto;
+    height: 42vh; // room for the deck to grow up; taller than any 3-toast stack
+    transform: none;
+    overflow: hidden;
   }
 }
 
@@ -44,6 +49,14 @@
 
 :fullscreen .toast {
   padding: $space * 2.5 $space * 3;
+}
+
+// Cascade offsets are a touch larger at TV scale.
+:fullscreen .toast[data-depth='1'] {
+  transform: translateY(-14px) scale(0.95);
+}
+:fullscreen .toast[data-depth='2'] {
+  transform: translateY(-13px) scale(0.9);
 }
 
 :fullscreen .toast__title {
@@ -95,8 +108,8 @@
   right: 0;
   bottom: 0;
   transform-origin: bottom center;
-  transform: translateY(calc(var(--depth, 0) * -12px)) scale(calc(1 - var(--depth, 0) * 0.05));
-  opacity: calc(1 - var(--depth, 0) * 0.075);
+  transform: translateY(0) scale(1); // depth 0 = the front, flush at the anchor
+  opacity: 1; // behind toasts keep full opacity — no dimming
   transition:
     transform 0.34s cubic-bezier(0.16, 1, 0.3, 1),
     opacity 0.34s ease;
@@ -115,6 +128,16 @@
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
   pointer-events: none; // only the front toast is interactive
 
+  // Cascading peek: the 2nd/3rd toasts sit just behind the front, a hair apart
+  // (-12 then -11) so they read as a tight deck. Fullscreen nudges these up
+  // (-14 / -13); mobile mimics desktop.
+  &[data-depth='1'] {
+    transform: translateY(-12px) scale(0.95);
+  }
+  &[data-depth='2'] {
+    transform: translateY(-11px) scale(0.9);
+  }
+
   &.is-front {
     pointer-events: auto;
   }
@@ -124,21 +147,22 @@
     opacity: 0;
   }
 
-  // Fade + shrink out.
+  // Fade + shrink out from the front.
   &.is-closing {
     opacity: 0;
-    transform: translateY(calc(var(--depth, 0) * -14px)) scale(0.92);
+    transform: scale(0.92);
     pointer-events: none;
   }
 
+  // Mobile: same bottom-anchored deck as desktop, resting a gap above the nav.
+  // New toasts slide up from behind the nav (the viewport clips at the nav's
+  // top — see .toast-viewport), so the nav + top bar are never covered.
   @media (max-width: #{$bp-md - 1px}) {
-    top: 0;
-    bottom: auto;
-    transform-origin: top center;
-    transform: translateY(calc(var(--depth, 0) * 14px)) scale(calc(1 - var(--depth, 0) * 0.05));
+    bottom: $space;
 
-    &.is-closing {
-      transform: translateY(calc(var(--depth, 0) * 14px)) scale(0.92);
+    &.is-entering {
+      transform: translateY(64px) scale(0.96);
+      opacity: 0;
     }
   }
 
