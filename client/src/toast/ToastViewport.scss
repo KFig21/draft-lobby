@@ -1,32 +1,5 @@
 @use 'variables' as *;
 
-// Direction toasts slide in/out from — set per-breakpoint on .toast-viewport
-// below (negative = from above, toward a top anchor; positive = from below,
-// toward a bottom anchor) so the same keyframes work for both.
-@keyframes toast-in {
-  from {
-    opacity: 0;
-    transform: translateY(var(--toast-slide, -16px));
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes toast-out {
-  from {
-    opacity: 1;
-    transform: translateY(0);
-  }
-
-  to {
-    opacity: 0;
-    transform: translateY(var(--toast-slide, -16px));
-  }
-}
-
 @keyframes toast-progress {
   from {
     width: 100%;
@@ -37,31 +10,24 @@
   }
 }
 
+// A zero-height fixed anchor; the toasts inside are absolutely positioned and
+// overlap into an iOS-style deck (see .toast below).
 .toast-viewport {
   position: fixed;
-  // Desktop/fullscreen: anchored to the bottom, newest toast closest to the
-  // anchor (last in DOM order, per the flex column below) — the mobile
-  // override further down switches this back to the original top anchor.
-  bottom: $space * 2;
+  bottom: $space * 2; // desktop/fullscreen: deck grows up from the bottom
   left: 50%;
   transform: translateX(-50%);
   z-index: 500; // above modals (200) and nav drawers (40/60)
-  display: flex;
-  flex-direction: column;
-  gap: $space;
   width: min(420px, calc(100vw - #{$space * 4}));
-  pointer-events: none; // gaps between toasts stay click-through
-  --toast-slide: 16px; // slide up into place, from below
+  pointer-events: none; // only the front toast opts back in
 
   @media (max-width: #{$bp-md - 1px}) {
-    top: env(safe-area-inset-top, 0);
+    top: env(safe-area-inset-top, $space);
     bottom: auto;
-    left: 0;
-    right: 0;
+    left: $space;
+    right: $space;
     transform: none;
     width: auto;
-    padding: $space;
-    --toast-slide: -16px; // slide down into place, from above
   }
 }
 
@@ -121,7 +87,20 @@
 // toast in a slightly different shade of the same color, and shrinks away to
 // reveal the base color as time runs out.
 .toast {
-  position: relative;
+  // Deck member: all toasts share the anchor (bottoms aligned on desktop) and
+  // are offset back + scaled + dimmed by their --depth, so the front sits flush
+  // and the rest peek behind it. Depth changes (and enter/exit) animate.
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  transform-origin: bottom center;
+  transform: translateY(calc(var(--depth, 0) * -14px)) scale(calc(1 - var(--depth, 0) * 0.05));
+  opacity: calc(1 - var(--depth, 0) * 0.22);
+  transition:
+    transform 0.34s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.34s ease;
+
   overflow: hidden;
   display: flex;
   align-items: flex-start;
@@ -129,13 +108,38 @@
   padding: $space * 1.5 $space * 1.75;
   border-radius: $radius-lg;
   background: $primary;
+  // Color-aware rim (a lighter shade of the tone) so stacked cards stay distinct
+  // where they peek behind one another. Per-tone overrides below.
+  border: 1px solid color-mix(in srgb, #{$primary} 55%, #fff);
   color: #fff;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
-  pointer-events: auto;
-  animation: toast-in 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  pointer-events: none; // only the front toast is interactive
 
+  &.is-front {
+    pointer-events: auto;
+  }
+
+  // Fade in on mount — the transform stays at the depth position (no slide).
+  &.is-entering {
+    opacity: 0;
+  }
+
+  // Fade + shrink out.
   &.is-closing {
-    animation: toast-out 180ms ease both;
+    opacity: 0;
+    transform: translateY(calc(var(--depth, 0) * -14px)) scale(0.92);
+    pointer-events: none;
+  }
+
+  @media (max-width: #{$bp-md - 1px}) {
+    top: 0;
+    bottom: auto;
+    transform-origin: top center;
+    transform: translateY(calc(var(--depth, 0) * 14px)) scale(calc(1 - var(--depth, 0) * 0.05));
+
+    &.is-closing {
+      transform: translateY(calc(var(--depth, 0) * 14px)) scale(0.92);
+    }
   }
 
   // Brief layout: a single centered row — tone icon, message, controls.
@@ -145,16 +149,19 @@
 
   &--success {
     background: $accent;
+    border-color: color-mix(in srgb, #{$accent} 55%, #fff);
     color: #05231a;
   }
 
   &--warning {
     background: $warning;
+    border-color: color-mix(in srgb, #{$warning} 55%, #fff);
     color: #05231a;
   }
 
   &--danger {
     background: $danger;
+    border-color: color-mix(in srgb, #{$danger} 55%, #fff);
     color: #fff;
   }
 

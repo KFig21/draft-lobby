@@ -39,11 +39,16 @@
     pointer-events: none;
   }
 
-  // Freeze the live toast styles for a static example: no slide-in/progress
-  // animation, softer shadow, full width of the row.
-  &__toast {
+  // Freeze the live toast styles for a static, in-flow example: undo the deck's
+  // absolute positioning + depth transform, no animation, softer shadow.
+  // Qualified with .toast so it outranks the tied-specificity .toast rules.
+  &__toast.toast {
+    position: relative;
+    inset: auto;
     width: 100%;
-    animation: none;
+    transform: none;
+    opacity: 1;
+    transition: none;
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
     cursor: default;
   }

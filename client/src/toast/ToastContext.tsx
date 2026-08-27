@@ -3,6 +3,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useRef,
   useState,
   type ReactNode,
@@ -82,81 +83,71 @@ const ToastContext = createContext<ToastState | null>(null);
  * match the toast-out CSS animation duration in ToastViewport.scss. */
 export const TOAST_EXIT_MS = 180;
 
-interface TimerEntry {
-  timeoutId: number;
-  startedAt: number;
-  remaining: number;
-}
-
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
-  const timersRef = useRef(new Map<string, TimerEntry>());
+  // Per-toast full duration + remaining, in refs so ticking them never triggers
+  // a re-render.
+  const durationRef = useRef(new Map<string, number>());
+  const remainingRef = useRef(new Map<string, number>());
 
   const dismissToast = useCallback((id: string) => {
-    const timer = timersRef.current.get(id);
-    if (timer) {
-      clearTimeout(timer.timeoutId);
-      timersRef.current.delete(id);
-    }
     setToasts((prev) => prev.map((t) => (t.id === id ? { ...t, closing: true } : t)));
     window.setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));
+      durationRef.current.delete(id);
+      remainingRef.current.delete(id);
     }, TOAST_EXIT_MS);
   }, []);
 
-  const showToast = useCallback(
-    (input: ToastInput): string => {
-      const id = crypto.randomUUID();
-      if (input.category && !isToastCategoryEnabled(input.category)) return id;
-      const durationMs = input.durationMs ?? 6000;
-      const item: ToastItem = {
-        id,
-        title: input.title,
-        titleIcon: input.titleIcon,
-        body: input.body,
-        tone: input.tone ?? 'info',
-        action: input.action,
-        avatar: input.avatar,
-        grade: input.grade,
-        pick: input.pick,
-        category: input.category,
-        onClick: input.onClick,
-        style: getToastStyle(),
-        durationMs,
-        paused: false,
-        closing: false,
-      };
-      setToasts((prev) => [...prev, item]);
-      timersRef.current.set(id, {
-        timeoutId: window.setTimeout(() => dismissToast(id), durationMs),
-        startedAt: Date.now(),
-        remaining: durationMs,
-      });
-      return id;
-    },
-    [dismissToast],
-  );
+  const showToast = useCallback((input: ToastInput): string => {
+    const id = crypto.randomUUID();
+    if (input.category && !isToastCategoryEnabled(input.category)) return id;
+    const durationMs = input.durationMs ?? 6000;
+    durationRef.current.set(id, durationMs);
+    const item: ToastItem = {
+      id,
+      title: input.title,
+      titleIcon: input.titleIcon,
+      body: input.body,
+      tone: input.tone ?? 'info',
+      action: input.action,
+      avatar: input.avatar,
+      grade: input.grade,
+      pick: input.pick,
+      category: input.category,
+      onClick: input.onClick,
+      style: getToastStyle(),
+      durationMs,
+      paused: false,
+      closing: false,
+    };
+    setToasts((prev) => [...prev, item]);
+    return id;
+  }, []);
 
   const togglePause = useCallback((id: string) => {
-    const timer = timersRef.current.get(id);
-    setToasts((prev) =>
-      prev.map((t) => {
-        if (t.id !== id) return t;
-        if (!t.paused) {
-          if (timer) {
-            clearTimeout(timer.timeoutId);
-            timer.remaining = Math.max(0, timer.remaining - (Date.now() - timer.startedAt));
-          }
-          return { ...t, paused: true };
-        }
-        if (timer) {
-          timer.startedAt = Date.now();
-          timer.timeoutId = window.setTimeout(() => dismissToast(id), timer.remaining);
-        }
-        return { ...t, paused: false };
-      }),
-    );
-  }, [dismissToast]);
+    setToasts((prev) => prev.map((t) => (t.id === id ? { ...t, paused: !t.paused } : t)));
+  }, []);
+
+  // iOS-style stack: only the front toast (the oldest one not yet closing)
+  // counts down — a toast's timer doesn't begin until it reaches the top of the
+  // stack. Keyed on that toast's id + paused state so newer toasts arriving
+  // behind it never reset its clock; on cleanup we bank how much time is left so
+  // pause/resume (and handing off to the next toast) resume from the right spot.
+  const front = toasts.find((t) => !t.closing) ?? null;
+  const frontId = front?.id ?? null;
+  const frontPaused = front?.paused ?? false;
+  useEffect(() => {
+    if (!frontId || frontPaused) return;
+    const remaining =
+      remainingRef.current.get(frontId) ?? durationRef.current.get(frontId) ?? 6000;
+    const startedAt = Date.now();
+    const timeoutId = window.setTimeout(() => dismissToast(frontId), remaining);
+    return () => {
+      clearTimeout(timeoutId);
+      remainingRef.current.set(frontId, Math.max(0, remaining - (Date.now() - startedAt)));
+    };
+  }, [frontId, frontPaused, dismissToast]);
 
   return (
     <ToastContext.Provider value={{ toasts, showToast, dismissToast, togglePause }}>

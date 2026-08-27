@@ -7,7 +7,7 @@ import PauseIcon from '@mui/icons-material/Pause';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PriorityHighRoundedIcon from '@mui/icons-material/PriorityHighRounded';
 import WarningAmberRoundedIcon from '@mui/icons-material/WarningAmberRounded';
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Avatar } from '../components/Avatar/Avatar';
 import { GradeBadge } from '../components/GradeBadge/GradeBadge';
 import { useToastInternal, type ToastItem } from './ToastContext';
@@ -30,16 +30,29 @@ const CATEGORY_ICON: Partial<Record<ToastCategory, ReactNode>> = {
   reaction: <PriorityHighRoundedIcon fontSize="inherit" />,
 };
 
+/** How many toasts show in the collapsed stack; the rest wait behind. */
+const MAX_STACK = 3;
+
 export function ToastViewport() {
   const { toasts, dismissToast, togglePause } = useToastInternal();
   if (toasts.length === 0) return null;
 
+  // Collapse into an iOS-style deck: the oldest not-yet-closing toast is the
+  // front (depth 0), the next few peek behind it, and anything past MAX_STACK
+  // waits off-screen. A closing toast stays pinned at the front while it fades.
+  let liveDepth = 0;
+  const rendered = toasts
+    .map((t) => ({ t, depth: t.closing ? 0 : liveDepth++ }))
+    .filter(({ t, depth }) => t.closing || depth < MAX_STACK);
+
   return (
     <div className="toast-viewport">
-      {toasts.map((t) => (
+      {rendered.map(({ t, depth }) => (
         <ToastCard
           key={t.id}
           toast={t}
+          depth={depth}
+          isFront={depth === 0 && !t.closing}
           onClose={() => dismissToast(t.id)}
           onTogglePause={() => togglePause(t.id)}
         />
@@ -50,13 +63,30 @@ export function ToastViewport() {
 
 function ToastCard({
   toast,
+  depth,
+  isFront,
   onClose,
   onTogglePause,
 }: {
   toast: ToastItem;
+  depth: number;
+  isFront: boolean;
   onClose: () => void;
   onTogglePause: () => void;
 }) {
+  // Fade in on mount (transform stays at the depth position — see the .scss).
+  // Double rAF so the opacity:0 start paints before the transition begins.
+  const [entering, setEntering] = useState(true);
+  useEffect(() => {
+    let r2 = 0;
+    const r1 = requestAnimationFrame(() => {
+      r2 = requestAnimationFrame(() => setEntering(false));
+    });
+    return () => {
+      cancelAnimationFrame(r1);
+      cancelAnimationFrame(r2);
+    };
+  }, []);
   const {
     title,
     titleIcon,
@@ -83,10 +113,11 @@ function ToastCard({
 
   return (
     <div
-      className={`toast toast--${tone}${brief ? ' toast--brief' : ''}${closing ? ' is-closing' : ''}${onClick ? ' is-clickable' : ''}`}
+      className={`toast toast--${tone}${brief ? ' toast--brief' : ''}${isFront ? ' is-front' : ''}${entering ? ' is-entering' : ''}${closing ? ' is-closing' : ''}${onClick && isFront ? ' is-clickable' : ''}`}
+      style={{ ['--depth' as string]: depth, zIndex: closing ? 40 : 30 - depth }}
       role="status"
       aria-live="polite"
-      onClick={onClick ? activate : undefined}
+      onClick={onClick && isFront ? activate : undefined}
       onKeyDown={
         onClick
           ? (e) => {
@@ -97,7 +128,7 @@ function ToastCard({
             }
           : undefined
       }
-      tabIndex={onClick ? 0 : undefined}
+      tabIndex={onClick && isFront ? 0 : undefined}
     >
       {brief ? (
         // Brief: an icon for what actually happened (comment bubble, reaction
@@ -185,10 +216,14 @@ function ToastCard({
           <CloseIcon fontSize="small" />
         </button>
       </div>
-      <div
-        className={`toast__bar${paused ? ' is-paused' : ''}`}
-        style={{ animationDuration: `${durationMs}ms` }}
-      />
+      {/* The countdown bar only runs on the front toast — behind toasts haven't
+          started their timers yet. */}
+      {isFront && (
+        <div
+          className={`toast__bar is-running${paused ? ' is-paused' : ''}`}
+          style={{ animationDuration: `${durationMs}ms` }}
+        />
+      )}
     </div>
   );
 }
