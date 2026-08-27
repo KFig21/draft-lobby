@@ -233,6 +233,10 @@
   // button, all inline. Carries the divider that separates the player-info
   // block above from the social block below.
   &__reactions {
+    // Anchors the React palette to the full-width row (not the React button,
+    // which wraps to either edge as reaction chips fill the row) so the palette
+    // always opens within the modal instead of off an edge.
+    position: relative;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -255,7 +259,9 @@
   // "＋ React" — opens the full emoji palette (which used to sit open as a
   // 30-emoji wall). Dashed to read as an action, not an existing reaction.
   &__react-add {
-    position: relative;
+    // Not the palette's positioning context — the reactions row is (see above),
+    // so the palette anchors to the full-width row.
+    position: static;
   }
 
   &__react-add-btn {
@@ -282,10 +288,10 @@
   &__react-palette {
     position: absolute;
     bottom: 100%;
-    // Anchored to the React button's right edge so it opens leftward into the
-    // modal — left:0 ran it off the right edge (the button sits at the far right
-    // of the reactions row) and it got clipped by the modal's overflow.
-    right: 0;
+    // Pinned to the reactions row's left edge (its positioning context) so it
+    // always sits inside the modal, whatever side the React button wrapped to.
+    left: 0;
+    right: auto;
     z-index: 10;
     display: flex;
     flex-wrap: wrap;
