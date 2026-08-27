@@ -7,7 +7,12 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { isToastCategoryEnabled, type ToastCategory } from './toastPrefs';
+import {
+  getToastStyle,
+  isToastCategoryEnabled,
+  type ToastCategory,
+  type ToastStyle,
+} from './toastPrefs';
 import { ToastViewport } from './ToastViewport';
 
 export type ToastTone = 'info' | 'success' | 'warning' | 'danger';
@@ -57,6 +62,8 @@ export interface ToastItem extends Required<Pick<ToastInput, 'title' | 'tone' | 
   grade?: DraftGrade | null;
   pick?: ToastInput['pick'];
   onClick?: () => void;
+  /** Card layout captured when the toast was created (Settings: Detailed/Brief). */
+  style: ToastStyle;
   paused: boolean;
   closing: boolean;
 }
@@ -112,6 +119,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         grade: input.grade,
         pick: input.pick,
         onClick: input.onClick,
+        style: getToastStyle(),
         durationMs,
         paused: false,
         closing: false,

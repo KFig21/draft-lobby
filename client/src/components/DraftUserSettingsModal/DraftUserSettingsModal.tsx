@@ -1,7 +1,12 @@
 import { useState } from 'react';
 import type { DraftBoardLayout, DraftCellStyle } from '../../lib/draftCellStyle';
 import type { PlayerCardStyle } from '../../lib/playerCardStyle';
-import { TOAST_CATEGORIES, type ToastCategory, type ToastPrefs } from '../../toast/toastPrefs';
+import {
+  TOAST_CATEGORIES,
+  type ToastCategory,
+  type ToastPrefs,
+  type ToastStyle,
+} from '../../toast/toastPrefs';
 import { BoardLayoutPicker } from '../BoardLayoutPicker/BoardLayoutPicker';
 import { DraftCellStylePicker } from '../DraftGrid/DraftCellStylePicker';
 import { randomSamplePlayer } from '../DraftGrid/samplePlayers';
@@ -38,6 +43,7 @@ interface Props {
   toastPrefs: ToastPrefs;
   onToastsEnabledChange: (enabled: boolean) => void;
   onToastCategoryChange: (category: ToastCategory, enabled: boolean) => void;
+  onToastStyleChange: (style: ToastStyle) => void;
 }
 
 /**
@@ -75,6 +81,7 @@ export function DraftUserSettingsModal({
   toastPrefs,
   onToastsEnabledChange,
   onToastCategoryChange,
+  onToastStyleChange,
 }: Props) {
   // One shared sample player for both the Cell-style and Team-colors previews
   // so they show the same classic player (picked once per mount).
@@ -240,6 +247,17 @@ export function DraftUserSettingsModal({
               label="Toggle toast pop-ups"
               checked={toastPrefs.enabled}
               onChange={onToastsEnabledChange}
+            />
+          </div>
+          <div className="draft-user-settings__row">
+            <div className="draft-user-settings__row-main">
+              <span className="draft-user-settings__row-name">Compact toasts</span>
+              <span className="muted">Just a tone icon and the message — no extra detail</span>
+            </div>
+            <ToggleSwitch
+              label="Toggle compact toasts"
+              checked={toastPrefs.style === 'brief'}
+              onChange={(v) => onToastStyleChange(v ? 'brief' : 'detailed')}
             />
           </div>
           <div

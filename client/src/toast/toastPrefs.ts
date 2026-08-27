@@ -11,8 +11,14 @@ export const TOAST_CATEGORIES = [
 ] as const;
 export type ToastCategory = (typeof TOAST_CATEGORIES)[number]['key'];
 
+/** Card layout: 'detailed' keeps the full card (avatar, pick chip, grade,
+ * subtext, inline action); 'brief' strips it to a tone icon + the message +
+ * the pause/close controls. */
+export type ToastStyle = 'detailed' | 'brief';
+
 export interface ToastPrefs {
   enabled: boolean;
+  style: ToastStyle;
   categories: Record<ToastCategory, boolean>;
 }
 
@@ -21,6 +27,7 @@ const STORAGE_KEY = 'toastPrefs';
 function defaults(): ToastPrefs {
   return {
     enabled: true,
+    style: 'detailed',
     categories: Object.fromEntries(TOAST_CATEGORIES.map((c) => [c.key, true])) as Record<
       ToastCategory,
       boolean
@@ -35,11 +42,20 @@ export function getToastPrefs(): ToastPrefs {
     const parsed = JSON.parse(raw) as Partial<ToastPrefs>;
     return {
       enabled: parsed.enabled ?? true,
+      style: parsed.style === 'brief' ? 'brief' : 'detailed',
       categories: { ...defaults().categories, ...parsed.categories },
     };
   } catch {
     return defaults();
   }
+}
+
+export function getToastStyle(): ToastStyle {
+  return getToastPrefs().style;
+}
+
+export function setToastStyle(style: ToastStyle): void {
+  save({ ...getToastPrefs(), style });
 }
 
 function save(prefs: ToastPrefs): void {

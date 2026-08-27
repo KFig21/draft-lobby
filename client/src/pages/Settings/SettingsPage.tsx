@@ -49,7 +49,9 @@ import {
   TOAST_CATEGORIES,
   getToastPrefs,
   setToastCategoryEnabled,
+  setToastStyle,
   setToastsEnabled,
+  type ToastStyle,
   type ToastCategory,
 } from '../../toast/toastPrefs';
 import './SettingsPage.scss';
@@ -146,6 +148,10 @@ export function SettingsPage() {
   function updateToastCategory(category: ToastCategory, enabled: boolean) {
     setToastCategoryEnabled(category, enabled);
     setToastPrefsState((p) => ({ ...p, categories: { ...p.categories, [category]: enabled } }));
+  }
+  function updateToastStyle(style: ToastStyle) {
+    setToastStyle(style);
+    setToastPrefsState((p) => ({ ...p, style }));
   }
 
   async function refresh() {
@@ -305,6 +311,19 @@ export function SettingsPage() {
             label="Toggle toast pop-ups"
             checked={toastPrefs.enabled}
             onChange={updateToastsEnabled}
+          />
+        </div>
+        <div className="settings__row">
+          <div className="settings__row-main">
+            <span className="settings__row-name">Compact toasts</span>
+            <span className="muted">
+              Show just a tone icon and the message — no avatars, pick details, or subtext
+            </span>
+          </div>
+          <ToggleSwitch
+            label="Toggle compact toasts"
+            checked={toastPrefs.style === 'brief'}
+            onChange={(v) => updateToastStyle(v ? 'brief' : 'detailed')}
           />
         </div>
         <div className={`settings__toast-categories${toastPrefs.enabled ? '' : ' is-disabled'}`}>

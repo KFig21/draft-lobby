@@ -166,8 +166,10 @@ import { useToast } from '../../toast/ToastContext';
 import {
   getToastPrefs,
   setToastCategoryEnabled,
+  setToastStyle,
   setToastsEnabled,
   type ToastCategory,
+  type ToastStyle,
 } from '../../toast/toastPrefs';
 import type {
   ChatMessageRow,
@@ -387,6 +389,10 @@ export function DraftBoardPage() {
   function updateToastCategory(category: ToastCategory, enabled: boolean) {
     setToastCategoryEnabled(category, enabled);
     setToastPrefsState((p) => ({ ...p, categories: { ...p.categories, [category]: enabled } }));
+  }
+  function updateToastStyle(style: ToastStyle) {
+    setToastStyle(style);
+    setToastPrefsState((p) => ({ ...p, style }));
   }
   const [filter, setFilter] = useState<Filter>('ALL');
   const [search, setSearch] = useState('');
@@ -5137,6 +5143,7 @@ export function DraftBoardPage() {
           toastPrefs={toastPrefs}
           onToastsEnabledChange={updateToastsEnabled}
           onToastCategoryChange={updateToastCategory}
+          onToastStyleChange={updateToastStyle}
         />
       )}
 

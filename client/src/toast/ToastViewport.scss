@@ -84,6 +84,10 @@
   font-size: 1.3rem;
 }
 
+:fullscreen .toast__lead {
+  font-size: 2rem;
+}
+
 :fullscreen .toast__body {
   font-size: 1.05rem;
 }
@@ -121,7 +125,7 @@
   align-items: flex-start;
   gap: $space;
   padding: $space * 1.5 $space * 1.75;
-  border-radius: $radius-sm;
+  border-radius: $radius-lg;
   background: $primary;
   color: #fff;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
@@ -130,6 +134,11 @@
 
   &.is-closing {
     animation: toast-out 180ms ease both;
+  }
+
+  // Brief layout: a single centered row — tone icon, message, controls.
+  &--brief {
+    align-items: center;
   }
 
   &--success {
@@ -166,6 +175,23 @@
   z-index: 1;
   flex-shrink: 0;
   display: inline-flex;
+}
+
+// Brief-layout leading tone icon — inherits the toast's text color.
+.toast__lead {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  display: inline-flex;
+  font-size: 1.35rem;
+  opacity: 0.95;
+}
+
+.toast__title--brief {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-width: 0;
 }
 
 .toast__content {
