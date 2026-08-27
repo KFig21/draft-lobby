@@ -69,7 +69,7 @@ function DetailedPreview() {
         <Avatar avatar={SAMPLE_AVATAR} size={30} />
       </span>
       <div className="toast__content">
-        <p className="toast__title">Nordy reacted 🔥</p>
+        <p className="toast__title">Billy reacted 🔥</p>
         <p className="toast__pick">
           <span
             className="toast__pick-pos"
@@ -96,7 +96,7 @@ function BriefPreview() {
         <span className="toast__inline-avatar">
           <Avatar avatar={SAMPLE_AVATAR} size={20} />
         </span>
-        Nordy reacted 🔥 to your pick
+        Billy reacted 🔥 to your pick
       </p>
       <PreviewControls />
     </div>

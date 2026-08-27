@@ -27,7 +27,7 @@ const STORAGE_KEY = 'toastPrefs';
 function defaults(): ToastPrefs {
   return {
     enabled: true,
-    style: 'detailed',
+    style: 'brief',
     categories: Object.fromEntries(TOAST_CATEGORIES.map((c) => [c.key, true])) as Record<
       ToastCategory,
       boolean
@@ -42,7 +42,7 @@ export function getToastPrefs(): ToastPrefs {
     const parsed = JSON.parse(raw) as Partial<ToastPrefs>;
     return {
       enabled: parsed.enabled ?? true,
-      style: parsed.style === 'brief' ? 'brief' : 'detailed',
+      style: parsed.style === 'detailed' ? 'detailed' : 'brief',
       categories: { ...defaults().categories, ...parsed.categories },
     };
   } catch {

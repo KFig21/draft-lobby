@@ -282,7 +282,10 @@
   &__react-palette {
     position: absolute;
     bottom: 100%;
-    left: 0;
+    // Anchored to the React button's right edge so it opens leftward into the
+    // modal — left:0 ran it off the right edge (the button sits at the far right
+    // of the reactions row) and it got clipped by the modal's overflow.
+    right: 0;
     z-index: 10;
     display: flex;
     flex-wrap: wrap;
