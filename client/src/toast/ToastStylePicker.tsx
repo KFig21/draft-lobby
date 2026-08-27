@@ -89,13 +89,15 @@ function DetailedPreview() {
 function BriefPreview() {
   return (
     <div className="toast toast--info toast--brief toast-style-picker__toast">
-      <span className="toast__avatar">
-        <Avatar avatar={SAMPLE_AVATAR} size={26} />
-      </span>
       <span className="toast__lead">
         <PriorityHighRoundedIcon fontSize="inherit" />
       </span>
-      <p className="toast__title toast__title--brief">Nordy reacted 🔥 to your pick</p>
+      <p className="toast__title toast__title--brief">
+        <span className="toast__inline-avatar">
+          <Avatar avatar={SAMPLE_AVATAR} size={20} />
+        </span>
+        Nordy reacted 🔥 to your pick
+      </p>
       <PreviewControls />
     </div>
   );

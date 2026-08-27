@@ -85,7 +85,9 @@
 }
 
 :fullscreen .toast__lead {
-  font-size: 2rem;
+  width: 48px;
+  height: 48px;
+  font-size: 1.9rem;
 }
 
 :fullscreen .toast__body {
@@ -177,14 +179,32 @@
   display: inline-flex;
 }
 
-// Brief-layout leading tone icon — inherits the toast's text color.
+// Brief-layout leading icon, in a concentric chip that's ~50% darker than the
+// toast (per-tone backgrounds below). White icon so it pops on every tone.
 .toast__lead {
   position: relative;
   z-index: 1;
   flex-shrink: 0;
-  display: inline-flex;
-  font-size: 1.35rem;
-  opacity: 0.95;
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: $radius; // one gutter in from the toast's $radius-lg — concentric
+  color: #fff;
+  font-size: 1.3rem;
+}
+
+.toast--info .toast__lead {
+  background: color-mix(in srgb, #{$primary} 50%, #000);
+}
+.toast--success .toast__lead {
+  background: color-mix(in srgb, #{$accent} 50%, #000);
+}
+.toast--warning .toast__lead {
+  background: color-mix(in srgb, #{$warning} 50%, #000);
+}
+.toast--danger .toast__lead {
+  background: color-mix(in srgb, #{$danger} 50%, #000);
 }
 
 .toast__title--brief {
@@ -192,6 +212,13 @@
   z-index: 1;
   flex: 1;
   min-width: 0;
+}
+
+// Avatar tucked in beside the name at the start of the Brief message.
+.toast__inline-avatar {
+  display: inline-flex;
+  vertical-align: middle;
+  flex-shrink: 0;
 }
 
 .toast__content {

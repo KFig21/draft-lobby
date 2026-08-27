@@ -100,19 +100,21 @@ function ToastCard({
       tabIndex={onClick ? 0 : undefined}
     >
       {brief ? (
-        // Brief: the person's avatar (when one's involved) + an icon for what
-        // actually happened (comment bubble, reaction mark, …, falling back to
-        // the tone icon) + the message. No pick chips or subtext.
+        // Brief: an icon for what actually happened (comment bubble, reaction
+        // mark, …, falling back to the tone icon) in a darker concentric chip on
+        // the left, then the message with the person's avatar beside their name.
         <>
-          {avatar && (
-            <span className="toast__avatar">
-              <Avatar avatar={avatar} size={26} />
-            </span>
-          )}
           <span className="toast__lead" aria-hidden>
             {titleIcon ?? (category && CATEGORY_ICON[category]) ?? TONE_ICON[tone]}
           </span>
-          <p className="toast__title toast__title--brief">{title}</p>
+          <p className="toast__title toast__title--brief">
+            {avatar && (
+              <span className="toast__inline-avatar">
+                <Avatar avatar={avatar} size={20} />
+              </span>
+            )}
+            {title}
+          </p>
         </>
       ) : (
         <>
