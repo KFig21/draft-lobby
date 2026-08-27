@@ -24,14 +24,27 @@
     margin-right: auto; // pushes the toggle + Clear to the right
   }
 
-  // Compact inline "Auto-draft" label + switch (was a full banner). Text shrinks
-  // to fit the header row.
-  &__autopick {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
+  // Robot-head button opening the "auto-draft from queue" explainer + toggle.
+  // Muted when off; the app accent (mint, or $primary on light) when armed.
+  &__autobot {
+    display: inline-grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: none;
+    border-radius: $radius-sm;
+    background: none;
+    color: $text-muted;
+    font-size: 1.15rem;
+    cursor: pointer;
+    transition: color 0.14s ease, background 0.14s ease;
 
-    &.is-on .draft-queue__autopick-label {
+    &:hover {
+      background: $bg-hover;
+    }
+
+    &.is-on {
       color: $accent;
 
       :root[data-theme='light'] & {
@@ -40,11 +53,59 @@
     }
   }
 
-  &__autopick-label {
-    font-size: 0.62rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
+  // ── explainer modal (opened by the robot button) ───────────────────────
+  &__autobot-modal {
+    display: flex;
+    flex-direction: column;
+    gap: $space * 1.5;
+    font-size: 0.9rem;
+    line-height: 1.55;
+    color: $text-muted;
+
+    p {
+      margin: 0;
+    }
+    b {
+      color: $text;
+    }
+  }
+
+  &__autobot-row {
+    display: flex;
+    align-items: center;
+    gap: $space * 1.5;
+    padding: $space * 1.25 $space * 1.5;
+    border: 1px solid $border;
+    border-radius: $radius-card-tight;
+    background: $bg;
+
+    &.is-on {
+      border-color: color-mix(in srgb, $accent 55%, $border);
+      background: color-mix(in srgb, $accent 10%, transparent);
+
+      :root[data-theme='light'] & {
+        border-color: color-mix(in srgb, $primary 55%, $border);
+        background: color-mix(in srgb, $primary 10%, transparent);
+      }
+    }
+  }
+
+  &__autobot-row-text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  &__autobot-row-title {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: $text;
+  }
+
+  &__autobot-row-sub {
+    font-size: 0.78rem;
     color: $text-muted;
   }
 

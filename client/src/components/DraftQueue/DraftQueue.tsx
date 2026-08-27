@@ -1,9 +1,11 @@
 import { POSITION_COLORS, type Position } from '@draft-lobby/shared';
 import CloseIcon from '@mui/icons-material/Close';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
+import SmartToyIcon from '@mui/icons-material/SmartToy';
 import { useState } from 'react';
 import type { PlayerRow } from '../../lib/types';
 import { HoldButton } from '../HoldButton/HoldButton';
+import { Modal } from '../Modal/Modal';
 import { ToggleSwitch } from '../ToggleSwitch/ToggleSwitch';
 import './DraftQueue.scss';
 
@@ -49,6 +51,7 @@ export function DraftQueue({
   limitBlock,
 }: Props) {
   const [dragId, setDragId] = useState<string | null>(null);
+  const [showAutopickInfo, setShowAutopickInfo] = useState(false);
   const showAutopick = autopick !== undefined && !!onToggleAutopick;
 
   // Live reorder: on drag-enter of a target row, splice the dragged id in at the
@@ -72,14 +75,15 @@ export function DraftQueue({
           Queue <span className="draft-queue__count">{players.length}</span>
         </span>
         {showAutopick && (
-          <span className={`draft-queue__autopick${autopick ? ' is-on' : ''}`}>
-            <span className="draft-queue__autopick-label">Auto-draft</span>
-            <ToggleSwitch
-              checked={autopick}
-              onChange={onToggleAutopick}
-              label="Auto-draft from queue"
-            />
-          </span>
+          <button
+            type="button"
+            className={`draft-queue__autobot${autopick ? ' is-on' : ''}`}
+            onClick={() => setShowAutopickInfo(true)}
+            aria-label="Auto-draft from queue settings"
+            title={`Auto-draft from queue: ${autopick ? 'on' : 'off'}`}
+          >
+            <SmartToyIcon fontSize="inherit" />
+          </button>
         )}
         {players.length > 0 && (
           <button
@@ -160,6 +164,40 @@ export function DraftQueue({
             );
           })}
         </ul>
+      )}
+
+      {showAutopick && showAutopickInfo && (
+        <Modal
+          title="Auto-draft from queue"
+          icon={<SmartToyIcon />}
+          onClose={() => setShowAutopickInfo(false)}
+        >
+          <div className="draft-queue__autobot-modal">
+            <p>
+              When it’s your pick and your clock runs out — or you’ve switched on auto-draft —
+              this drafts the <b>top available player from your queue</b> instead of skipping
+              your turn.
+            </p>
+            <p>
+              It runs on the server, so your pick still lands even if your connection drops.
+              Drag your queue into the order you want, and the highest one still on the board
+              gets picked.
+            </p>
+            <div className={`draft-queue__autobot-row${autopick ? ' is-on' : ''}`}>
+              <span className="draft-queue__autobot-row-text">
+                <span className="draft-queue__autobot-row-title">Draft from my queue</span>
+                <span className="draft-queue__autobot-row-sub">
+                  On a timeout or auto-draft, pick my top queued player instead of skipping.
+                </span>
+              </span>
+              <ToggleSwitch
+                checked={!!autopick}
+                onChange={(v) => onToggleAutopick?.(v)}
+                label="Auto-draft from queue"
+              />
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );
