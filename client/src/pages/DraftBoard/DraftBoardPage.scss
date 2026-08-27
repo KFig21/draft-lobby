@@ -2089,6 +2089,12 @@
       flex: 1;
       min-height: 0;
     }
+
+    // Header sits on the raised surface (not the tint) so it reads clean like
+    // the rows below it.
+    .draft-queue__head {
+      background: $bg-raised;
+    }
   }
 
   &__filters {
