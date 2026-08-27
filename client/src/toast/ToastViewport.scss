@@ -95,8 +95,8 @@
   right: 0;
   bottom: 0;
   transform-origin: bottom center;
-  transform: translateY(calc(var(--depth, 0) * -14px)) scale(calc(1 - var(--depth, 0) * 0.05));
-  opacity: calc(1 - var(--depth, 0) * 0.22);
+  transform: translateY(calc(var(--depth, 0) * -12px)) scale(calc(1 - var(--depth, 0) * 0.05));
+  opacity: calc(1 - var(--depth, 0) * 0.075);
   transition:
     transform 0.34s cubic-bezier(0.16, 1, 0.3, 1),
     opacity 0.34s ease;
@@ -110,7 +110,7 @@
   background: $primary;
   // Color-aware rim (a lighter shade of the tone) so stacked cards stay distinct
   // where they peek behind one another. Per-tone overrides below.
-  border: 1px solid color-mix(in srgb, #{$primary} 55%, #fff);
+  border: 1px solid color-mix(in srgb, #{$primary} 85%, #fff);
   color: #fff;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
   pointer-events: none; // only the front toast is interactive
@@ -149,19 +149,19 @@
 
   &--success {
     background: $accent;
-    border-color: color-mix(in srgb, #{$accent} 55%, #fff);
+    border-color: color-mix(in srgb, #{$accent} 85%, #fff);
     color: #05231a;
   }
 
   &--warning {
     background: $warning;
-    border-color: color-mix(in srgb, #{$warning} 55%, #fff);
+    border-color: color-mix(in srgb, #{$warning} 85%, #fff);
     color: #05231a;
   }
 
   &--danger {
     background: $danger;
-    border-color: color-mix(in srgb, #{$danger} 55%, #fff);
+    border-color: color-mix(in srgb, #{$danger} 85%, #fff);
     color: #fff;
   }
 
@@ -210,7 +210,7 @@
 }
 
 .toast--warning .toast__lead {
-  background: color-mix(in srgb, #{$warning} 75%, #000);
+  background: color-mix(in srgb, #{$warning} 80%, #000);
 }
 
 .toast--danger .toast__lead {
