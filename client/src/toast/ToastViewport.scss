@@ -195,16 +195,19 @@
 }
 
 .toast--info .toast__lead {
-  background: color-mix(in srgb, #{$primary} 50%, #000);
+  background: color-mix(in srgb, #{$primary} 75%, #000);
 }
+
 .toast--success .toast__lead {
-  background: color-mix(in srgb, #{$accent} 50%, #000);
+  background: color-mix(in srgb, #{$accent} 75%, #000);
 }
+
 .toast--warning .toast__lead {
-  background: color-mix(in srgb, #{$warning} 50%, #000);
+  background: color-mix(in srgb, #{$warning} 75%, #000);
 }
+
 .toast--danger .toast__lead {
-  background: color-mix(in srgb, #{$danger} 50%, #000);
+  background: color-mix(in srgb, #{$danger} 75%, #000);
 }
 
 .toast__title--brief {
@@ -247,7 +250,7 @@
 
 // Extra breathing room specifically when a pick chip precedes the comment
 // text, so the two groups don't read as one cramped block.
-.toast__pick + .toast__body {
+.toast__pick+.toast__body {
   margin-top: 8px;
 }
 
