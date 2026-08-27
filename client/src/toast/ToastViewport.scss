@@ -23,12 +23,14 @@
 
   @media (max-width: #{$bp-md - 1px}) {
     top: auto;
-    // Anchored to the bottom nav's top edge; the deck rests just above it and
-    // overflow:hidden clips anything below, so toasts slide up from behind the
-    // nav and never cover it. (60px = draft tab bar / global nav height.)
-    bottom: calc(60px + env(safe-area-inset-bottom, 0));
-    left: $space;
-    right: $space;
+    // Anchored above the bottom nav (60px) plus any mobile commissioner-tools
+    // bar (--toast-cbar, set by DraftBoardPage; 0 elsewhere) so the deck never
+    // covers either. overflow:hidden clips anything below, so toasts still slide
+    // up from behind the nav.
+    bottom: calc(60px + env(safe-area-inset-bottom, 0) + var(--toast-cbar, 0px));
+    // A little narrower than full width.
+    left: $space * 3;
+    right: $space * 3;
     width: auto;
     height: 42vh; // room for the deck to grow up; taller than any 3-toast stack
     transform: none;
@@ -39,7 +41,7 @@
     // deck down out of its way to the very bottom; it slides back up above the
     // nav when the modal closes. Most modals share .modal-anim-backdrop.
     body:has(.modal-anim-backdrop) & {
-      transform: translateY(calc(60px + env(safe-area-inset-bottom, 0)));
+      transform: translateY(calc(60px + env(safe-area-inset-bottom, 0) + var(--toast-cbar, 0px)));
     }
   }
 }
@@ -167,6 +169,7 @@
   // top — see .toast-viewport), so the nav + top bar are never covered.
   @media (max-width: #{$bp-md - 1px}) {
     bottom: $space;
+    padding: $space $space * 1.25; // a touch shorter than desktop
 
     &.is-entering {
       transform: translateY(64px) scale(0.96);

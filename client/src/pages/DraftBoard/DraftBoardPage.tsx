@@ -737,6 +737,23 @@ export function DraftBoardPage() {
   // persist across sessions, same as the sidebar width above.
   const dashCenterRef = useRef<HTMLDivElement>(null);
   const dashRightRef = useRef<HTMLElement>(null);
+
+  // Expose the mobile commissioner-tools bar's height as --toast-cbar on <html>
+  // so the toast deck can rest above it (0 when the bar isn't shown / on unmount).
+  const commishBarRO = useRef<ResizeObserver | null>(null);
+  const commishBarRef = useCallback((el: HTMLDivElement | null) => {
+    commishBarRO.current?.disconnect();
+    const root = document.documentElement;
+    if (!el) {
+      root.style.setProperty('--toast-cbar', '0px');
+      return;
+    }
+    const apply = () => root.style.setProperty('--toast-cbar', `${el.offsetHeight}px`);
+    const ro = new ResizeObserver(apply);
+    ro.observe(el);
+    commishBarRO.current = ro;
+    apply();
+  }, []);
   const dashDragRef = useRef<null | 'h' | 'q'>(null);
 
   // Detailed-board zoom: a fit-all ↔ 100% toggle plus trackpad pinch. Uses the
@@ -4343,7 +4360,7 @@ export function DraftBoardPage() {
           only ever had "Request pause" here, which now lives as an icon
           button in the top bar instead, so this bar is commissioner-only. */}
       {isCommish && !isComplete && (
-        <div className="draft__mobile-commish">
+        <div className="draft__mobile-commish" ref={commishBarRef}>
           {CommishTools()}
         </div>
       )}
