@@ -28,6 +28,8 @@ import {
   selectKeeperOptionSchema,
   setAutoDraftSchema,
   setDraftOrderSchema,
+  setQueueAutopickSchema,
+  setQueueSchema,
   setKeeperCountSchema,
   spectateSettingsSchema,
   updateKeeperOptionSchema,
@@ -2996,6 +2998,126 @@ draftRouter.post('/:id/auto-draft', async (req: AuthedRequest, res: Response) =>
   }
   res.json({ ok: true, autoDraft: on });
 });
+
+/** GET /api/lobbies/:id/queue — the caller's own personal draft queue + toggle.
+ * Queues are private (RLS locks the table to the service role), so this is the
+ * only read path — a member only ever gets their own team's queue back. */
+draftRouter.get('/:id/queue', async (req: AuthedRequest, res: Response) => {
+  const lobbyId = req.params.id;
+  const userId = req.user!.id;
+
+  const role = await getRole(lobbyId, userId);
+  if (!role) {
+    res.status(403).json({ error: 'You are not a member of this lobby' });
+    return;
+  }
+  const { data: team } = await supabaseAdmin
+    .from('teams')
+    .select('id')
+    .eq('lobby_id', lobbyId)
+    .eq('owner_id', userId)
+    .maybeSingle();
+  if (!team) {
+    res.json({ teamId: null, playerIds: [], autopick: false });
+    return;
+  }
+  const { data: q } = await supabaseAdmin
+    .from('draft_queues')
+    .select('player_ids, autopick')
+    .eq('team_id', team.id)
+    .maybeSingle();
+  res.json({
+    teamId: team.id,
+    playerIds: (q?.player_ids as string[] | undefined) ?? [],
+    autopick: (q?.autopick as boolean | undefined) ?? false,
+  });
+});
+
+/** PUT /api/lobbies/:id/queue — replace the caller's ordered queue (own team). */
+draftRouter.put('/:id/queue', async (req: AuthedRequest, res: Response) => {
+  const lobbyId = req.params.id;
+  const userId = req.user!.id;
+
+  const parsed = setQueueSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.flatten() });
+    return;
+  }
+  const { teamId, playerIds } = parsed.data;
+
+  const owned = await ownTeamOrReject(lobbyId, teamId, userId, res);
+  if (!owned) return;
+
+  // De-dupe while preserving order (defensive against a client double-add).
+  const seen = new Set<string>();
+  const ids = playerIds.filter((id) => (seen.has(id) ? false : (seen.add(id), true)));
+
+  const { error } = await supabaseAdmin.from('draft_queues').upsert(
+    { team_id: teamId, lobby_id: lobbyId, player_ids: ids, updated_at: new Date().toISOString() },
+    { onConflict: 'team_id' },
+  );
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
+  res.json({ ok: true });
+});
+
+/** POST /api/lobbies/:id/queue-autopick — toggle "auto-draft from queue" (own team). */
+draftRouter.post('/:id/queue-autopick', async (req: AuthedRequest, res: Response) => {
+  const lobbyId = req.params.id;
+  const userId = req.user!.id;
+
+  const parsed = setQueueAutopickSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.flatten() });
+    return;
+  }
+  const { teamId, on } = parsed.data;
+
+  const owned = await ownTeamOrReject(lobbyId, teamId, userId, res);
+  if (!owned) return;
+
+  const { error } = await supabaseAdmin.from('draft_queues').upsert(
+    { team_id: teamId, lobby_id: lobbyId, autopick: on, updated_at: new Date().toISOString() },
+    { onConflict: 'team_id' },
+  );
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
+  res.json({ ok: true, autopick: on });
+});
+
+/** Confirm the caller owns `teamId` in this lobby; writes the error response and
+ * returns false otherwise. A queue is personal — commissioners can't edit it. */
+async function ownTeamOrReject(
+  lobbyId: string,
+  teamId: string,
+  userId: string,
+  res: Response,
+): Promise<boolean> {
+  const role = await getRole(lobbyId, userId);
+  if (!role) {
+    res.status(403).json({ error: 'You are not a member of this lobby' });
+    return false;
+  }
+  const { data: team } = await supabaseAdmin
+    .from('teams')
+    .select('owner_id')
+    .eq('lobby_id', lobbyId)
+    .eq('id', teamId)
+    .maybeSingle();
+  if (!team) {
+    res.status(404).json({ error: 'Team not found' });
+    return false;
+  }
+  if (team.owner_id !== userId) {
+    res.status(403).json({ error: 'You can only edit your own queue' });
+    return false;
+  }
+  return true;
+}
 
 /** POST /api/lobbies/:id/fill-bots — commissioner fills every open seat with a bot (pre-draft). */
 draftRouter.post('/:id/fill-bots', async (req: AuthedRequest, res: Response) => {

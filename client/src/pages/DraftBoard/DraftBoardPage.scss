@@ -2068,28 +2068,22 @@
   // already-cramped player list — the "Bookmarked" filter chip below covers
   // the same need without it. Desktop/fullscreen (both only ever @include lg
   // and up) keep the block since there's room for it.
+  // Holds the shared <DraftQueue> (auto-draft toggle + drag-reorder list). Shown
+  // at the top of the players pool on every size — including mobile, where this
+  // is the queue-management surface (the desktop dashboard has its own pane).
   &__queue {
-    display: none;
+    display: flex;
+    flex-shrink: 0;
     flex-direction: column;
-    gap: $space * 0.75;
     padding: $space;
     border-bottom: 1px solid $border;
     background: rgba($accent, 0.06);
     max-height: 42%;
     overflow-y: auto;
 
-    @include lg {
-      display: flex;
-      flex-shrink: 0;
+    :root[data-theme='light'] & {
+      background: rgba($primary, 0.06);
     }
-  }
-
-  &__queue-head {
-    font-size: 0.7rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: $accent;
   }
 
   &__filters {
@@ -2786,12 +2780,20 @@
     }
   }
 
-  // Queue split (bottom-right) — shares the pane background (no tint).
+  // Queue split (bottom-right) — shares the pane background (no tint). Holds the
+  // shared <DraftQueue>, which fills the pane so its list scrolls under a fixed
+  // toggle + header.
   &__queue {
     flex: 0 0 var(--queue-w, 264px);
     min-width: 0;
     display: flex;
     flex-direction: column;
+    padding: $space;
+
+    .draft-queue {
+      flex: 1;
+      min-height: 0;
+    }
   }
 
   &__pane-head {

@@ -85,6 +85,7 @@ import { ConfirmModal } from '../../components/ConfirmModal/ConfirmModal';
 import { DraftChat } from '../../components/DraftChat/DraftChat';
 import { DraftGrid, type ReactionEntry } from '../../components/DraftGrid/DraftGrid';
 import { DraftOutroModal } from '../../components/DraftOutroModal/DraftOutroModal';
+import { DraftQueue } from '../../components/DraftQueue/DraftQueue';
 import { PowerRankingsBoard } from '../../components/PowerRankings/PowerRankingsBoard';
 import { PowerRankingsMobile } from '../../components/PowerRankings/PowerRankingsMobile';
 import { DataExportModal } from '../../components/DataExportModal/DataExportModal';
@@ -487,6 +488,11 @@ export function DraftBoardPage() {
   const [rosterTeamSel, setRosterTeamSel] = useState<string | null>(null);
   const [resultsDrawerView, setResultsDrawerView] = useState<ResultsDrawerView>('closed');
   const [queue, setQueue] = useState<string[]>([]);
+  // "Auto-draft from queue" toggle + queue are server-backed (migration 0048) so
+  // an auto-pick can draft from the queue even when this client is offline.
+  const [queueAutopick, setQueueAutopick] = useState(false);
+  const queueLoadedRef = useRef(false);
+  const lastQueueSentRef = useRef<string | null>(null);
   const { favoriteIds, toggleFavorite, canFavorite } = useFavorites();
   const [selected, setSelected] = useState<PlayerRow | null>(null);
   // Set when a player row is clicked in the pool — a closer look before
@@ -1215,6 +1221,63 @@ export function DraftBoardPage() {
   function dismissOutro() {
     if (userId && lobby) localStorage.setItem(outroSeenKey(lobby.completed_at), '1');
     setShowOutro(false);
+  }
+
+  // ── Personal draft queue: load from + sync to the server (migration 0048) ──
+  // Only a real team owner has a queue. It's server-backed so the "auto-draft
+  // from queue" pick works even if this browser is disconnected when the clock
+  // expires — the whole point of the feature.
+  const queueTeamId = teams.find((t) => t.owner_id === userId)?.id ?? null;
+  useEffect(() => {
+    if (!queueTeamId) return;
+    queueLoadedRef.current = false;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await api<{ playerIds: string[]; autopick: boolean }>(
+          `/lobbies/${id}/queue`,
+        );
+        if (cancelled) return;
+        const ids = Array.isArray(res.playerIds) ? res.playerIds : [];
+        setQueue(ids);
+        setQueueAutopick(!!res.autopick);
+        lastQueueSentRef.current = JSON.stringify(ids); // don't echo the load back
+      } catch {
+        /* leave the queue empty on failure */
+      } finally {
+        if (!cancelled) queueLoadedRef.current = true;
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [id, queueTeamId]);
+
+  // Persist reorders/adds/removes (debounced), skipping the initial load and any
+  // no-op writes.
+  useEffect(() => {
+    if (!queueTeamId || !queueLoadedRef.current) return;
+    const payload = JSON.stringify(queue);
+    if (payload === lastQueueSentRef.current) return;
+    const t = setTimeout(() => {
+      lastQueueSentRef.current = payload;
+      void api(`/lobbies/${id}/queue`, {
+        method: 'PUT',
+        body: { teamId: queueTeamId, playerIds: queue },
+      }).catch(() => {
+        lastQueueSentRef.current = null; // let a later change retry
+      });
+    }, 400);
+    return () => clearTimeout(t);
+  }, [queue, id, queueTeamId]);
+
+  function toggleQueueAutopick(on: boolean) {
+    if (!queueTeamId) return;
+    setQueueAutopick(on);
+    void api(`/lobbies/${id}/queue-autopick`, {
+      method: 'POST',
+      body: { teamId: queueTeamId, on },
+    }).catch(() => setQueueAutopick(!on)); // revert on failure
   }
 
   function groupReactions(rows: ChatReactionRow[]): Map<string, ReactionEntry> {
@@ -2946,27 +3009,19 @@ export function DraftBoardPage() {
       <>
         {!opts.hideQueue && queuedPlayers.length > 0 && (
           <div className="pool__queue">
-            <div className="pool__queue-head">Queue ({queuedPlayers.length})</div>
-            {queuedPlayers.map((p) => (
-              <PoolCard
-                key={p.id}
-                player={p}
-                statMode={statMode}
-                posRank={statMode === 'prev' ? p.prev_rank : p.proj_rank}
-                queued
-                onQueue={() => toggleQueue(p.id)}
-                onFavorite={canFavorite ? () => toggleFavorite(p.id) : undefined}
-                favorited={favoriteIds?.has(p.id) ?? false}
-                onPick={canPick ? () => pick(p) : undefined}
-                onHoldPick={canHoldDraft ? () => holdDraft(p) : undefined}
-                disabled={!canPick}
-                blockedReason={limitBlock(p)}
-                onOpenDetail={() => setDetailPlayer(p)}
-                byeClashCount={
-                  p.bye_week != null ? byeLookup.get(`${p.position}:${p.bye_week}`) : undefined
-                }
-              />
-            ))}
+            <DraftQueue
+              players={queuedPlayers}
+              statMode={statMode}
+              autopick={queueTeamId ? queueAutopick : undefined}
+              onToggleAutopick={queueTeamId ? toggleQueueAutopick : undefined}
+              onReorder={setQueue}
+              onRemove={toggleQueue}
+              onClear={() => setQueue([])}
+              onOpenDetail={setDetailPlayer}
+              onDraftTap={canPick ? (p) => setSelected(p) : undefined}
+              onDraftHold={canHoldDraft ? holdDraft : undefined}
+              limitBlock={limitBlock}
+            />
           </div>
         )}
         <div className={`pool__filters${opts.table ? ' pool__filters--condensed' : ''}`}>
@@ -3444,71 +3499,19 @@ export function DraftBoardPage() {
   function renderQueuePane() {
     return (
       <div className="draft-dash__queue">
-        <div className="draft-dash__pane-head">
-          Queue <span className="draft-dash__count">{queuedPlayers.length}</span>
-          {queuedPlayers.length > 0 && (
-            <button
-              type="button"
-              className="draft-dash__queue-clear"
-              onClick={() => setQueue([])}
-              title="Clear the entire queue"
-            >
-              Clear
-            </button>
-          )}
-        </div>
-        <div className="draft-dash__queue-list">
-          {queuedPlayers.map((p) => {
-            const posRank = statMode === 'prev' ? p.prev_rank : p.proj_rank;
-            const points = statMode === 'prev' ? p.prev_points : p.proj_points;
-            return (
-              <div className="draft-dash__qrow" key={p.id}>
-                <span
-                  className="draft-dash__qrow-pos"
-                  style={{ background: POSITION_COLORS[p.position as Position] }}
-                >
-                  {p.position}
-                  {posRank != null && <span className="draft-dash__qrow-rank">{posRank}</span>}
-                </span>
-                <button
-                  type="button"
-                  className="draft-dash__qrow-main"
-                  onClick={() => setDetailPlayer(p)}
-                >
-                  <span className="draft-dash__qrow-name">{p.name}</span>
-                  <span className="draft-dash__qrow-sub">
-                    {p.nfl_team}
-                    {p.bye_week != null && ` · Bye ${p.bye_week}`}
-                    {points != null && ` · ${points.toFixed(1)}`}
-                  </span>
-                </button>
-                {canPick && (
-                  <HoldButton
-                    className="button button--primary draft-dash__qrow-draft"
-                    onTap={() => setSelected(p)}
-                    // Hold only drafts instantly for your own slot; otherwise
-                    // fall back to the confirm modal (see canHoldDraft).
-                    onHold={canHoldDraft ? () => holdDraft(p) : () => setSelected(p)}
-                    disabled={!!limitBlock(p)}
-                    title={limitBlock(p) ?? 'Hold to draft instantly · tap to confirm'}
-                    ariaLabel={`Draft ${p.name}`}
-                  >
-                    Draft
-                  </HoldButton>
-                )}
-                <button
-                  type="button"
-                  className="draft-dash__qrow-remove"
-                  onClick={() => toggleQueue(p.id)}
-                  aria-label={`Remove ${p.name} from queue`}
-                  title="Remove from queue"
-                >
-                  <CloseIcon fontSize="inherit" />
-                </button>
-              </div>
-            );
-          })}
-        </div>
+        <DraftQueue
+          players={queuedPlayers}
+          statMode={statMode}
+          autopick={queueTeamId ? queueAutopick : undefined}
+          onToggleAutopick={queueTeamId ? toggleQueueAutopick : undefined}
+          onReorder={setQueue}
+          onRemove={toggleQueue}
+          onClear={() => setQueue([])}
+          onOpenDetail={setDetailPlayer}
+          onDraftTap={canPick ? (p) => setSelected(p) : undefined}
+          onDraftHold={canHoldDraft ? holdDraft : undefined}
+          limitBlock={limitBlock}
+        />
       </div>
     );
   }

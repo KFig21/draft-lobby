@@ -1,0 +1,232 @@
+@use 'variables' as *;
+
+.draft-queue {
+  display: flex;
+  flex-direction: column;
+  gap: $space * 0.75;
+  min-height: 0;
+
+  // ── "Auto-draft from queue" toggle banner ──────────────────────────────
+  &__autopick {
+    display: flex;
+    align-items: center;
+    gap: $space;
+    padding: $space * 0.75 $space;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: $bg;
+
+    // On: tinted with the app accent so it's obvious the queue is armed. The
+    // accent is mint on dark, but the light theme's accent is $primary.
+    &.is-on {
+      border-color: color-mix(in srgb, $accent 55%, $border);
+      background: color-mix(in srgb, $accent 12%, transparent);
+
+      :root[data-theme='light'] & {
+        border-color: color-mix(in srgb, $primary 55%, $border);
+        background: color-mix(in srgb, $primary 12%, transparent);
+      }
+    }
+  }
+
+  &__autopick-text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &__autopick-title {
+    font-size: 0.8rem;
+    font-weight: 800;
+  }
+
+  &__autopick-sub {
+    font-size: 0.68rem;
+    line-height: 1.35;
+    color: $text-muted;
+  }
+
+  // ── list header ───────────────────────────────────────────────────────
+  &__head {
+    display: flex;
+    align-items: center;
+    gap: $space;
+    font-size: 0.8rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: $text-muted;
+  }
+
+  &__count {
+    display: inline-grid;
+    place-items: center;
+    min-width: 20px;
+    height: 18px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: $bg-hover;
+    color: $text;
+    font-size: 0.72rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__clear {
+    margin-left: auto;
+    padding: 2px 8px;
+    border: 1px solid $border;
+    border-radius: 999px;
+    background: none;
+    color: $text-muted;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+
+    &:hover {
+      color: $danger;
+      border-color: color-mix(in srgb, $danger 45%, $border);
+    }
+  }
+
+  &__empty {
+    margin: 0;
+    padding: $space * 1.5 $space;
+    font-size: 0.78rem;
+    line-height: 1.4;
+    color: $text-muted;
+    text-align: center;
+  }
+
+  // ── draggable list ────────────────────────────────────────────────────
+  &__list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: $space * 0.5;
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+  }
+
+  &__row {
+    display: flex;
+    align-items: center;
+    gap: $space * 0.6;
+    padding: $space * 0.5 $space * 0.6;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: $bg;
+
+    &.is-dragging {
+      opacity: 0.5;
+      border-color: $accent;
+
+      :root[data-theme='light'] & {
+        border-color: $primary;
+      }
+    }
+  }
+
+  &__handle {
+    flex-shrink: 0;
+    display: inline-grid;
+    place-items: center;
+    color: $text-muted;
+    font-size: 1.1rem;
+    cursor: grab;
+
+    &:active {
+      cursor: grabbing;
+    }
+  }
+
+  &__pos {
+    flex-shrink: 0;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    width: 30px;
+    min-height: 30px;
+    padding: 2px 0;
+    border-radius: 6px;
+    color: #05231a;
+    font-size: 0.6rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  &__pos-rank {
+    font-size: 0.58rem;
+    opacity: 0.85;
+  }
+
+  &__main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    padding: 0;
+    border: none;
+    background: none;
+    text-align: left;
+    color: inherit;
+    cursor: pointer;
+
+    &:hover .draft-queue__name {
+      color: $accent;
+
+      :root[data-theme='light'] & {
+        color: $primary;
+      }
+    }
+  }
+
+  &__name {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: $text;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__sub {
+    font-size: 0.68rem;
+    color: $text-muted;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__draft {
+    flex-shrink: 0;
+    padding: 4px 10px;
+    font-size: 0.72rem;
+  }
+
+  &__remove {
+    flex-shrink: 0;
+    display: inline-grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border: none;
+    border-radius: 999px;
+    background: none;
+    color: $text-muted;
+    font-size: 1rem;
+    cursor: pointer;
+
+    &:hover {
+      background: $bg-hover;
+      color: $danger;
+    }
+  }
+}

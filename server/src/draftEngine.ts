@@ -479,6 +479,26 @@ export async function loadPlayerPool(season: number): Promise<PoolPlayer[]> {
  * All weights live in BOT_STRATEGY. Never over-drafts kickers/defenses, never
  * violates position limits, and always returns a pick so the draft can't stall.
  */
+/** A team's personal queue + its opt-in toggle (migration 0048). */
+export interface QueueRow {
+  autopick: boolean;
+  player_ids: string[];
+}
+
+/** Load a team's draft_queues row, or null if it has none. */
+export async function loadQueueRow(teamId: string): Promise<QueueRow | null> {
+  const { data } = await supabaseAdmin
+    .from('draft_queues')
+    .select('autopick, player_ids')
+    .eq('team_id', teamId)
+    .maybeSingle();
+  if (!data) return null;
+  return {
+    autopick: data.autopick as boolean,
+    player_ids: (data.player_ids as string[] | null) ?? [],
+  };
+}
+
 export async function choosePlayer(
   lobbyId: string,
   settings: LobbySettings,
@@ -492,6 +512,10 @@ export async function choosePlayer(
     pool?: PoolPlayer[];
     allPicks?: { player_id: string; team_id: string }[];
     draftPosition?: number;
+    /** Pre-fetched draft_queues row for this team, so a caller that already read
+     * it (resolveExpiry) doesn't make choosePlayer re-query. Omit to have
+     * choosePlayer load it itself; pass `null` to explicitly skip the queue. */
+    queue?: QueueRow | null;
   },
 ): Promise<string | null> {
   let allPicks = opts?.allPicks ?? null;
@@ -570,6 +594,26 @@ export async function choosePlayer(
   const needs = computeNeeds(settings);
   const remainingSpots =
     roundsForSettings(settings) - Object.values(have).reduce((a, b) => a + b, 0);
+
+  // "Auto-draft from queue" takes priority over the bot valuation below: if this
+  // team opted in and has queued players that are still available AND roster-
+  // legal, draft the top one. This is what lets a personal queue drive timeout
+  // and auto-draft picks server-side — so it works even if the drafter is
+  // offline. Empty/exhausted queue falls straight through to the bot logic.
+  const queueRow =
+    opts?.queue !== undefined ? opts.queue : await loadQueueRow(teamId);
+  if (queueRow?.autopick && queueRow.player_ids.length > 0) {
+    const hasLimits = hasAnyPositionLimit(limits);
+    for (const id of queueRow.player_ids) {
+      if (drafted.has(id)) continue;
+      const p = byId.get(id);
+      if (!p) continue; // not in the draftable pool (retired/filtered) — skip
+      if (hasLimits && !pickAllowedForLimits(limits, have, remainingSpots, p.position).ok)
+        continue;
+      return id;
+    }
+  }
+
   const allowed = hasAnyPositionLimit(limits)
     ? available.filter((p) => pickAllowedForLimits(limits, have, remainingSpots, p.position).ok)
     : available;
@@ -988,18 +1032,25 @@ async function resolveExpiry(lobbyId: string): Promise<void> {
   const team = await onClockTeam(lobbyId, settings, frontier);
   if (!team) return;
 
+  // A team that opted into "auto-draft from queue" and has a live queue drafts
+  // from it on timeout rather than being skipped — the whole point of the
+  // feature. (If the queue turns out exhausted, choosePlayer falls back to a bot
+  // pick; either way they get a pick, not a skip.)
+  const queue = await loadQueueRow(team.id);
+  const queueActive = !!queue?.autopick && queue.player_ids.length > 0;
+
   // Bots / auto-draft teams are never skipped — they always auto-pick. Humans
   // are skipped when skips are on and they still have skips left under the
   // allowance (null = unlimited); once exhausted, they auto-pick too.
   const botLike = team.is_bot || team.auto_draft;
   const allowance = settings.timeoutAllowance; // number | null
   const hasSkipsLeft = allowance === null || team.timeouts < allowance;
-  const doSkip = settings.allowSkips && !botLike && hasSkipsLeft;
+  const doSkip = settings.allowSkips && !botLike && !queueActive && hasSkipsLeft;
 
   if (doSkip) {
     await skipFrontier(lobbyId, settings, frontier, team);
   } else {
-    const playerId = await choosePlayer(lobbyId, settings, team.id);
+    const playerId = await choosePlayer(lobbyId, settings, team.id, { queue });
     if (!playerId) return;
     await applyPick(lobbyId, settings, frontier, team, playerId, true);
   }

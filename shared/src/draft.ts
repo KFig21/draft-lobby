@@ -86,6 +86,20 @@ export const setAutoDraftSchema = z.object({
 });
 export type SetAutoDraftInput = z.infer<typeof setAutoDraftSchema>;
 
+/** Replace a team's personal draft queue (ordered player ids, top first). */
+export const setQueueSchema = z.object({
+  teamId: z.string().uuid(),
+  playerIds: z.array(z.string()).max(300),
+});
+export type SetQueueInput = z.infer<typeof setQueueSchema>;
+
+/** Toggle "auto-draft from queue" for a team. */
+export const setQueueAutopickSchema = z.object({
+  teamId: z.string().uuid(),
+  on: z.boolean(),
+});
+export type SetQueueAutopickInput = z.infer<typeof setQueueAutopickSchema>;
+
 /**
  * Commissioner assigns a keeper: `playerId` is kept by `teamId`, costing that
  * team its pick in `round`. Placed as an is_keeper pick before the draft starts.
