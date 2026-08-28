@@ -16,11 +16,13 @@ export function ErrorScreen({
   return (
     <div className="error-screen">
       <div className="error-screen__card">
-        <span className="error-screen__icon" aria-hidden>
-          ⚠️
-        </span>
-        <h1>{title}</h1>
-        <p className="muted">{message}</p>
+        <div className="error-screen__header">
+          <span className="error-screen__icon" aria-hidden>
+            ⚠️
+          </span>
+          <h1>{title}</h1>
+        </div>
+        <p className="muted error-screen__message">{message}</p>
         <div className="error-screen__actions">
           {onRetry && (
             <button className="button" onClick={onRetry}>
