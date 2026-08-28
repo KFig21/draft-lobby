@@ -1,4 +1,5 @@
 @use 'variables' as *;
+@use 'mixins' as *;
 
 .draft-queue {
   display: flex;
@@ -179,6 +180,19 @@
     // Raised (white in light mode) so queued cards read clean like the player
     // list rows — not the grey $bg, which looked washed-out over the tint.
     background: $bg;
+    // No grey tap-flash when a row's buttons are tapped on mobile (inherited by
+    // the children) — part of keeping the row inert to hover/active on touch.
+    -webkit-tap-highlight-color: transparent;
+    // Uniform hover "cover" over the whole row — same treatment as the player
+    // pool rows — rather than recolouring just the name. Desktop only: on touch
+    // a :hover sticks after a tap, so gate it behind hover-only.
+    transition: background-color 100ms ease;
+
+    @include hover-only {
+      &:hover {
+        background: $bg-overlay;
+      }
+    }
 
     &.is-dragging {
       opacity: 0.5;
@@ -237,14 +251,8 @@
     text-align: left;
     color: inherit;
     cursor: pointer;
-
-    &:hover .draft-queue__name {
-      color: $accent;
-
-      :root[data-theme='light'] & {
-        color: $primary;
-      }
-    }
+    // No per-name hover recolour — the row-level cover (above) is the whole
+    // hover affordance now, matching the player pool rows.
   }
 
   &__name {
@@ -283,9 +291,11 @@
     font-size: 1rem;
     cursor: pointer;
 
-    &:hover {
-      background: $bg-hover;
-      color: $danger;
+    @include hover-only {
+      &:hover {
+        background: $bg-hover;
+        color: $danger;
+      }
     }
   }
 }
