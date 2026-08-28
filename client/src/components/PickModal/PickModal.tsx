@@ -14,7 +14,7 @@ import UndoIcon from '@mui/icons-material/Undo';
 import { useMemo, useRef, useState, type FormEvent } from 'react';
 import { api } from '../../lib/api';
 import { formatRoundPick } from '../../lib/format';
-import { sortReactionEmojis } from '../../lib/reactions';
+import { addableReactionEmojis, sortReactionEmojis } from '../../lib/reactions';
 import { renderMentionText } from '../../lib/renderMentions';
 import { useClickOutside } from '../../lib/useClickOutside';
 import { avatarForTeam } from '../../lib/teamAvatar';
@@ -272,7 +272,7 @@ export function PickModal({
                 </button>
                 {reactPaletteOpen && (
                   <div className="pick-modal__react-palette">
-                    {sortReactionEmojis(entry?.counts).map((e) => (
+                    {addableReactionEmojis(entry?.counts).map((e) => (
                       <button
                         key={e}
                         type="button"
@@ -462,7 +462,7 @@ function CommentReactions({
           </button>
           {open && (
             <div className="pick-modal__comment-palette">
-              {sortReactionEmojis(entry?.counts).map((e) => (
+              {addableReactionEmojis(entry?.counts).map((e) => (
                 <button
                   key={e}
                   type="button"

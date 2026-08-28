@@ -19,7 +19,7 @@ import { ProfileLink } from '../../components/ProfileLink/ProfileLink';
 import { Reaction } from '../../components/Reaction/Reaction';
 import { ReactorsModal, type Reactor } from '../../components/ReactorsModal/ReactorsModal';
 import { api } from '../../lib/api';
-import { sortReactionEmojis } from '../../lib/reactions';
+import { addableReactionEmojis, sortReactionEmojis } from '../../lib/reactions';
 import { useClickOutside } from '../../lib/useClickOutside';
 import { useInfiniteScroll } from '../../lib/useInfiniteScroll';
 import './HomePage.scss';
@@ -479,7 +479,7 @@ function FeedReactions({
       )}
       {open && (
         <div className="feed-card__palette">
-          {sortReactionEmojis(item.reactions).map((emoji) => (
+          {addableReactionEmojis(item.reactions).map((emoji) => (
             <button
               key={emoji}
               onClick={() => {

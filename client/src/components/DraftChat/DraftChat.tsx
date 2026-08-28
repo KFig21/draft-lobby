@@ -36,7 +36,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { useTheme } from '../../theme/ThemeContext';
 import { api } from '../../lib/api';
 import { supabase } from '../../supabase';
-import { sortReactionEmojis } from '../../lib/reactions';
+import { addableReactionEmojis, sortReactionEmojis } from '../../lib/reactions';
 import { avatarForTeam } from '../../lib/teamAvatar';
 import { renderMentionText } from '../../lib/renderMentions';
 import { useClickOutside } from '../../lib/useClickOutside';
@@ -873,7 +873,7 @@ function ReactionBar({
       {trailing}
       {open && (
         <div className="chat-react__palette">
-          {sortReactionEmojis(entry?.counts).map((e) => (
+          {addableReactionEmojis(entry?.counts).map((e) => (
             <button
               key={e}
               onClick={() => {
