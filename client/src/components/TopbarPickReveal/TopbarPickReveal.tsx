@@ -5,7 +5,9 @@ import './TopbarPickReveal.scss';
 // Trailing non-breaking space appended to the announcements so the box's
 // overflow clip clears the italic tail of the last letter — its slant overhangs
 // the advance width the box is sized to, which otherwise shaves the final glyph.
-const NBSP = ' ';
+// Uses the \u00A0 escape ( ): a plain trailing space collapses to zero width
+// and the clip returns. Applied to "THE PICK IS IN" and "SKIPPED" alike.
+const NBSP = '\u00A0';
 
 /** One announcement's content — the drafted player (pos badge + name) or the
  * "SKIPPED" word. Shared by the intro's player row and the continuation rows. */
