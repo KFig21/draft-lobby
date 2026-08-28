@@ -1,0 +1,13 @@
+// A custom image reaction. Sized to 1em so it tracks the surrounding chip /
+// palette font-size (just like the unicode glyphs beside it), squared and
+// contained so a non-square source never distorts. Global (unscoped) on
+// purpose — one rule covers every reaction render site.
+.reaction-img {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  object-fit: contain;
+  // Nudge onto the text baseline so it lines up with adjacent unicode emoji.
+  vertical-align: -0.15em;
+  user-select: none;
+}

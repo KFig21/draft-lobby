@@ -4,6 +4,7 @@ import LockIcon from '@mui/icons-material/Lock';
 import type { CSSProperties } from 'react';
 import { abbreviatePlayerName, formatRoundPick } from '../../../../lib/format';
 import type { PickRow, PlayerRow } from '../../../../lib/types';
+import { Reaction } from '../../../Reaction/Reaction';
 import type { Reactor } from '../../../ReactorsModal/ReactorsModal';
 import { CellFlip } from '../PickReveal';
 // The base .draft-grid__cell box (size/border/padding) lives in DraftGrid.scss
@@ -58,7 +59,20 @@ export function PickCell({
   onEnter: () => void;
   onLeave: () => void;
 }) {
-  const active = entry ? Object.keys(entry.counts) : [];
+  // Reactions present on this pick, most-used first. The hover popover is a
+  // single nowrap line pinned to the cell, so a heavily-reacted pick would run
+  // its emoji off the board — cap it to the top few and summarize the rest as
+  // "+N" (the full list lives in the pick modal).
+  const active = entry
+    ? Object.keys(entry.counts).sort((a, b) => (entry.counts[b] ?? 0) - (entry.counts[a] ?? 0))
+    : [];
+  // Cap the popover at 4 SLOTS total: up to 4 reactions, or (once it overflows)
+  // 3 reactions + a "+N" pill. Keeps the single-line popover from running off
+  // the board.
+  const POP_MAX = 4;
+  const needsMore = active.length > POP_MAX;
+  const shownReactions = needsMore ? active.slice(0, POP_MAX - 1) : active;
+  const overflowReactions = active.length - shownReactions.length;
   const pickInRound = pick.overall - (pick.round - 1) * teamCount;
   const posColor = POSITION_COLORS[player.position as Position];
 
@@ -123,17 +137,26 @@ export function PickCell({
           reaction happens in the pick modal, so no add button here. */}
       {active.length > 0 && (
         <div className="draft-grid__react-pop" onClick={(e) => e.stopPropagation()}>
-          {active.map((e) => (
+          {shownReactions.map((e) => (
             <button
               key={e}
               type="button"
               className={`draft-grid__rchip${entry?.mine.has(e) ? ' is-mine' : ''}`}
               onClick={() => onReact?.(pick.id, e)}
             >
-              {e}
-              {(entry?.counts[e] ?? 0) > 1 ? entry?.counts[e] : ''}
+              <Reaction emoji={e} />
+              {(entry?.counts[e] ?? 0) > 1 ? (
+                <span className="draft-grid__rchip-count">{entry?.counts[e]}</span>
+              ) : (
+                ''
+              )}
             </button>
           ))}
+          {overflowReactions > 0 && (
+            <span className="draft-grid__rmore" aria-label={`${overflowReactions} more`}>
+              +{overflowReactions}
+            </span>
+          )}
         </div>
       )}
     </td>

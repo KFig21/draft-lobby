@@ -3,6 +3,7 @@ import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlined';
 import LockIcon from '@mui/icons-material/Lock';
 import { abbreviatePlayerName, formatRoundPick } from '../../../../lib/format';
 import type { PickRow, PlayerRow } from '../../../../lib/types';
+import { Reaction } from '../../../Reaction/Reaction';
 import type { ReactionEntry } from '../PickCell/PickCell';
 import { CellFlip } from '../PickReveal';
 // Same reasoning as PickCell.tsx's identical import: this component also
@@ -58,7 +59,18 @@ export function DefaultPickCell({
   onEnter?: () => void;
   onLeave?: () => void;
 }) {
-  const active = entry ? Object.keys(entry.counts) : [];
+  // Most-used first, capped for the single-line hover popover (see PickCell for
+  // the full rationale). "+N" summarizes the rest; the pick modal shows them all.
+  const active = entry
+    ? Object.keys(entry.counts).sort((a, b) => (entry.counts[b] ?? 0) - (entry.counts[a] ?? 0))
+    : [];
+  // Cap the popover at 4 SLOTS total: up to 4 reactions, or (once it overflows)
+  // 3 reactions + a "+N" pill. Keeps the single-line popover from running off
+  // the board.
+  const POP_MAX = 4;
+  const needsMore = active.length > POP_MAX;
+  const shownReactions = needsMore ? active.slice(0, POP_MAX - 1) : active;
+  const overflowReactions = active.length - shownReactions.length;
   const posColor = POSITION_COLORS[player.position as Position];
   const pickInRound = pick.overall - (pick.round - 1) * teamCount;
 
@@ -135,17 +147,26 @@ export function DefaultPickCell({
 
       {active.length > 0 && (
         <div className="default-pick-cell__react-pop" onClick={(e) => e.stopPropagation()}>
-          {active.map((e) => (
+          {shownReactions.map((e) => (
             <button
               key={e}
               type="button"
               className={`default-pick-cell__rchip${entry?.mine.has(e) ? ' is-mine' : ''}`}
               onClick={() => onReact?.(pick.id, e)}
             >
-              {e}
-              {(entry?.counts[e] ?? 0) > 1 ? entry?.counts[e] : ''}
+              <Reaction emoji={e} />
+              {(entry?.counts[e] ?? 0) > 1 ? (
+                <span className="default-pick-cell__rchip-count">{entry?.counts[e]}</span>
+              ) : (
+                ''
+              )}
             </button>
           ))}
+          {overflowReactions > 0 && (
+            <span className="default-pick-cell__rmore" aria-label={`${overflowReactions} more`}>
+              +{overflowReactions}
+            </span>
+          )}
         </div>
       )}
     </td>

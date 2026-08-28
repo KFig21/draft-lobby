@@ -16,6 +16,7 @@ import { Avatar } from '../../components/Avatar/Avatar';
 import { HScrollRow } from '../../components/HScrollRow/HScrollRow';
 import { Loader } from '../../components/Loader/Loader';
 import { ProfileLink } from '../../components/ProfileLink/ProfileLink';
+import { Reaction } from '../../components/Reaction/Reaction';
 import { ReactorsModal, type Reactor } from '../../components/ReactorsModal/ReactorsModal';
 import { api } from '../../lib/api';
 import { sortReactionEmojis } from '../../lib/reactions';
@@ -458,7 +459,9 @@ function FeedReactions({
             className={`reaction reaction--has${mine ? ' reaction--on' : ''}`}
             onClick={() => onReact(item.id, emoji)}
           >
-            <span className="reaction__emoji">{emoji}</span>
+            <span className="reaction__emoji">
+              <Reaction emoji={emoji} />
+            </span>
             <span className="reaction__count">{count}</span>
           </button>
         );
@@ -484,7 +487,7 @@ function FeedReactions({
                 setOpen(false);
               }}
             >
-              {emoji}
+              <Reaction emoji={emoji} />
             </button>
           ))}
         </div>

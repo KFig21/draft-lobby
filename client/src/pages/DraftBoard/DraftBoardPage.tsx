@@ -134,6 +134,7 @@ import { INJURY_ABBR, INJURY_SEVERITY } from '../../lib/injuryStatus';
 import { HoldButton } from '../../components/HoldButton/HoldButton';
 import { api } from '../../lib/api';
 import { byeClashCountsForWeek, byeClashLookup } from '../../lib/byeClashes';
+import { Reaction } from '../../components/Reaction/Reaction';
 import {
   getDraftBoardLayout,
   getDraftCellStyle,
@@ -1037,7 +1038,7 @@ export function DraftBoardPage() {
 
   /** Username, badged with the trophy icon if that user is a defending
    * champion — for realtime toast titles built outside React's render path. */
-  function championTitle(uid: string, suffix: string) {
+  function championTitle(uid: string, suffix: ReactNode) {
     return (
       <>
         {memberUsername(uid)}
@@ -1103,7 +1104,13 @@ export function DraftBoardPage() {
             if (!pick) return;
             const player = playersByIdRef.current.get(pick.player_id);
             showToast({
-              title: championTitle(row.user_id, ` reacted ${row.emoji} to your pick`),
+              title: championTitle(
+                row.user_id,
+                <>
+                  {' '}
+                  reacted <Reaction emoji={row.emoji} /> to your pick
+                </>,
+              ),
               pick: player
                 ? {
                     position: player.position,
@@ -1127,7 +1134,13 @@ export function DraftBoardPage() {
           const pick = picksRef.current.find((p) => p.id === comment.reply_to_pick_id) ?? null;
           const replyPlayer = pick ? playersByIdRef.current.get(pick.player_id) : undefined;
           showToast({
-            title: championTitle(row.user_id, ` reacted ${row.emoji} to your reply`),
+            title: championTitle(
+              row.user_id,
+              <>
+                {' '}
+                reacted <Reaction emoji={row.emoji} /> to your reply
+              </>,
+            ),
             pick:
               pick && replyPlayer
                 ? {

@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Avatar } from '../../components/Avatar/Avatar';
 import { GradeBadge } from '../../components/GradeBadge/GradeBadge';
 import { Loader } from '../../components/Loader/Loader';
+import { Reaction } from '../../components/Reaction/Reaction';
 import { useNotifications } from '../../notifications/NotificationsContext';
 import { useAuth } from '../../auth/AuthContext';
 import { api } from '../../lib/api';
@@ -191,7 +192,8 @@ export function NotificationsPage() {
             )}
             {n.type === 'PICK_REACTION' && (
               <>
-                {withGroup(name, n.count)} reacted {n.emoji ?? ''} to your pick
+                {withGroup(name, n.count)} reacted {n.emoji ? <Reaction emoji={n.emoji} /> : ''} to
+                your pick
                 {n.snippet ? (
                   <>
                     {' '}
@@ -205,7 +207,8 @@ export function NotificationsPage() {
             )}
             {n.type === 'MESSAGE_REACTION' && (
               <>
-                {withGroup(name, n.count)} reacted {n.emoji ?? ''} to your message
+                {withGroup(name, n.count)} reacted {n.emoji ? <Reaction emoji={n.emoji} /> : ''} to
+                your message
                 {n.snippet ? <>: “{n.snippet}”</> : ''} in{' '}
                 <strong>{n.lobby_name ?? 'a draft'}</strong>
               </>

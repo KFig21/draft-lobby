@@ -21,6 +21,7 @@ import { avatarForTeam } from '../../lib/teamAvatar';
 import { useModalClose } from '../../lib/useModalClose';
 import type { MemberRow, PickRow, PlayerRow, TeamRow } from '../../lib/types';
 import { Avatar } from '../Avatar/Avatar';
+import { Reaction } from '../Reaction/Reaction';
 import { ChampionBadge } from '../ChampionBadge/ChampionBadge';
 import type { ReactionEntry } from '../DraftGrid/DraftGrid';
 import { MentionInput } from '../MentionInput/MentionInput';
@@ -244,18 +245,8 @@ export function PickModal({
 
           <div className="pick-modal__reactions">
             <span className="pick-modal__section-label">Reactions</span>
-            {activeReactions.map((emoji) => (
-              <ReactionChip
-                key={emoji}
-                className="pick-modal__react"
-                emoji={emoji}
-                count={entry?.counts[emoji] ?? 0}
-                mine={entry?.mine.has(emoji) ?? false}
-                reactors={reactors?.[emoji] ?? []}
-                disabled={reactionsLocked}
-                onReact={() => onReact(emoji)}
-              />
-            ))}
+            {/* Controls lead the row — the "who reacted" list and the add-reaction
+                drawer — with the existing reactions listed after them. */}
             {activeReactions.length > 0 && (
               <button
                 type="button"
@@ -290,13 +281,25 @@ export function PickModal({
                           setReactPaletteOpen(false);
                         }}
                       >
-                        {e}
+                        <Reaction emoji={e} />
                       </button>
                     ))}
                   </div>
                 )}
               </div>
             )}
+            {activeReactions.map((emoji) => (
+              <ReactionChip
+                key={emoji}
+                className="pick-modal__react"
+                emoji={emoji}
+                count={entry?.counts[emoji] ?? 0}
+                mine={entry?.mine.has(emoji) ?? false}
+                reactors={reactors?.[emoji] ?? []}
+                disabled={reactionsLocked}
+                onReact={() => onReact(emoji)}
+              />
+            ))}
           </div>
           {reactionsLocked && (
             <span className="bot-badge bot-badge--warn pick-modal__locked-badge">
@@ -468,7 +471,7 @@ function CommentReactions({
                     onCloseOpen();
                   }}
                 >
-                  {e}
+                  <Reaction emoji={e} />
                 </button>
               ))}
             </div>
@@ -505,7 +508,9 @@ function ReactionChip({
       onClick={onReact}
       disabled={disabled}
     >
-      <span>{emoji}</span>
+      <span>
+        <Reaction emoji={emoji} />
+      </span>
       {count > 0 && <span className={`${className}-count`}>{count}</span>}
       {reactors.length > 0 && (
         <span className={`${className}-tip`} role="tooltip">
@@ -540,7 +545,9 @@ function CommentReactionChip({
       onClick={onReact}
       disabled={disabled}
     >
-      <span>{emoji}</span>
+      <span>
+        <Reaction emoji={emoji} />
+      </span>
       <span>{count}</span>
       {reactors.length > 0 && (
         <span className="pick-modal__comment-tip" role="tooltip">

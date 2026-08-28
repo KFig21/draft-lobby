@@ -141,7 +141,8 @@
   &__rchip {
     display: inline-flex;
     align-items: center;
-    gap: 1px;
+    // A touch of air between the emoji and its count.
+    gap: 4px;
     padding: 1px 5px;
     border: none;
     border-radius: 999px;
@@ -159,6 +160,25 @@
     &.is-mine {
       background: rgba($accent, 0.25);
     }
+  }
+
+  &__rchip-count {
+    color: $text-muted;
+    font-variant-numeric: tabular-nums;
+  }
+
+  // "+N" summary for reactions beyond the popover's cap (non-interactive).
+  &__rmore {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: $bg-overlay;
+    color: $text-muted;
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1.4;
+    font-variant-numeric: tabular-nums;
   }
 }
 

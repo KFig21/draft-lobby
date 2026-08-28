@@ -4,6 +4,7 @@ import { useModalClose } from '../../lib/useModalClose';
 import { Avatar } from '../Avatar/Avatar';
 import { ChampionBadge } from '../ChampionBadge/ChampionBadge';
 import { ProfileLink } from '../ProfileLink/ProfileLink';
+import { Reaction } from '../Reaction/Reaction';
 import './ReactorsModal.scss';
 
 export interface Reactor {
@@ -71,7 +72,7 @@ export function ReactorsModal({ reactors, myUserId, championUserIds, onClose }: 
               className={`reactors-modal__filter${filter === e ? ' is-active' : ''}`}
               onClick={() => setFilter(e)}
             >
-              {e} <span>{reactors[e]?.length ?? 0}</span>
+              <Reaction emoji={e} /> <span>{reactors[e]?.length ?? 0}</span>
             </button>
           ))}
         </div>
@@ -88,7 +89,9 @@ export function ReactorsModal({ reactors, myUserId, championUserIds, onClose }: 
                 </ProfileLink>
                 {championUserIds?.has(r.userId) && <ChampionBadge size={12} />}
               </span>
-              <span className="reactors-modal__row-emoji">{r.emoji}</span>
+              <span className="reactors-modal__row-emoji">
+                <Reaction emoji={r.emoji} />
+              </span>
             </li>
           ))}
         </ul>

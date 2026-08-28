@@ -54,6 +54,7 @@ import { ChampionBadge } from '../ChampionBadge/ChampionBadge';
 import { GradeBadge } from '../GradeBadge/GradeBadge';
 import { MentionInput } from '../MentionInput/MentionInput';
 import { ProfileLink } from '../ProfileLink/ProfileLink';
+import { Reaction } from '../Reaction/Reaction';
 import { ReactorsModal, type Reactor } from '../ReactorsModal/ReactorsModal';
 import './DraftChat.scss';
 
@@ -501,8 +502,8 @@ export function DraftChat({
             const label = (
               <>
                 <strong>{u?.username ?? 'Someone'}</strong>
-                {championUserIds.has(it.userId) && <ChampionBadge size={12} />} {it.emoji}&rsquo;d
-                to <strong>{team?.name ?? 'a team'}</strong>
+                {championUserIds.has(it.userId) && <ChampionBadge size={12} />}{' '}
+                <Reaction emoji={it.emoji} />&rsquo;d to <strong>{team?.name ?? 'a team'}</strong>
                 {player ? ` — ${player.name}` : ''}
                 <span className="muted"> · Pick {pick.overall}</span>
               </>
@@ -837,7 +838,9 @@ function ReactionBar({
             onClick={() => onReact(e)}
             disabled={disabled}
           >
-            <span>{e}</span>
+            <span>
+              <Reaction emoji={e} />
+            </span>
             <span className="chat-react__count">{entry?.counts[e]}</span>
             {names.length > 0 && (
               <span className="chat-react__tip" role="tooltip">
@@ -878,7 +881,7 @@ function ReactionBar({
                 onCloseOpen();
               }}
             >
-              {e}
+              <Reaction emoji={e} />
             </button>
           ))}
         </div>

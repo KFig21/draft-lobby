@@ -73,6 +73,10 @@ export const REACTION_EMOJIS = [
   '👴🏼',
   '🚑',
   '🚔',
+  // Custom image reaction ("press F"). A shortcode token, not a unicode char —
+  // rendered as a PNG on the client (see lib/customEmojis + <Reaction>); stored
+  // and validated like any other reaction. Keep in sync with CUSTOM_EMOJIS.
+  ':f:',
 ] as const;
 export type ReactionEmoji = (typeof REACTION_EMOJIS)[number];
 
