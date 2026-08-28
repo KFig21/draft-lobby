@@ -80,8 +80,9 @@ interface ToastState {
 const ToastContext = createContext<ToastState | null>(null);
 
 /** Delay between flagging a toast "closing" and actually removing it — must
- * match the toast-out CSS animation duration in ToastViewport.scss. */
-export const TOAST_EXIT_MS = 180;
+ * cover the slide-down/fade-out transition on .toast.is-closing in
+ * ToastViewport.scss (220ms). */
+export const TOAST_EXIT_MS = 240;
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);

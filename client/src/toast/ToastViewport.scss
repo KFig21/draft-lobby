@@ -177,11 +177,15 @@ body:has(.modal-anim-backdrop) .toast__bar {
     opacity: 0;
   }
 
-  // Fade + shrink out from the front.
+  // Slide down + fade out. Faster than the depth transition so it finishes
+  // within the removal window (TOAST_EXIT_MS).
   &.is-closing {
     opacity: 0;
-    transform: scale(0.92);
+    transform: translateY(24px);
     pointer-events: none;
+    transition:
+      transform 0.22s ease,
+      opacity 0.22s ease;
   }
 
   // Mobile: same bottom-anchored deck as desktop, resting a gap above the nav.
