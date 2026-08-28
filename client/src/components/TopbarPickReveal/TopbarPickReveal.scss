@@ -121,7 +121,7 @@ $tpr-duration: 5s;
     animation-duration: $tpr-duration;
     // Same easing as the next-pick slide-in (draft-center-enter) so the drops
     // share its feel, not just its duration.
-    animation-timing-function: cubic-bezier(0.2, 0.7, 0.2, 1);
+    animation-timing-function: cubic-bezier(0.3, 0.8, 0.2, 1);
     animation-fill-mode: both;
 
     @media (prefers-reduced-motion: reduce) {
