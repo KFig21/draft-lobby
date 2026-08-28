@@ -28,10 +28,6 @@ const OnboardingPage = lazy(() =>
 const FriendInvitePage = lazy(() =>
   import('./pages/Invite/FriendInvitePage').then((m) => ({ default: m.FriendInvitePage })),
 );
-// TEMPORARY: NFL team-chip color tuner — remove with the page + its route.
-const TeamColorLab = lazy(() =>
-  import('./pages/TeamColorLab/TeamColorLab').then((m) => ({ default: m.TeamColorLab })),
-);
 const DraftBoardPage = lazy(() =>
   import('./pages/DraftBoard/DraftBoardPage').then((m) => ({ default: m.DraftBoardPage })),
 );
@@ -188,8 +184,6 @@ export default function App() {
               recipient can see who invited them; it routes them to sign up /
               sign in itself, stashing the token to redeem post-auth. */}
           <Route path="/invite/:token" element={<FriendInvitePage />} />
-          {/* TEMPORARY: NFL team-chip color tuner. Remove with the page files. */}
-          <Route path="/team-colors" element={<TeamColorLab />} />
           {/* First-run onboarding: session required, but outside the
               onboarding gate (wrapping it would loop). */}
           <Route

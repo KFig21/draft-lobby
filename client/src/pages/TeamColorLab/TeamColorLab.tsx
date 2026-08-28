@@ -38,9 +38,10 @@ const TEAM_NAMES: Record<string, string> = {
   WAS: 'Commanders',
 };
 
-/** TEMPORARY: an editor for the NFL_TEAM_COLORS chip palette. Tweak each team's
- * bg/text live, then copy the generated map back into lib/nflTeamColors.ts.
- * Remove this page (and its route) once the colors are dialed in. */
+/** ARCHIVED (no route): an editor for the NFL_TEAM_COLORS chip palette. Tweak
+ * each team's bg/text live, then copy the generated map back into
+ * lib/nflTeamColors.ts. Kept for future tuning — to re-enable, add a lazy import
+ * + a `<Route path="/team-colors" element={<TeamColorLab />} />` in App.tsx. */
 export function TeamColorLab() {
   const [colors, setColors] = useState<Record<string, TeamColors>>(() =>
     Object.fromEntries(Object.entries(NFL_TEAM_COLORS).map(([k, v]) => [k, { ...v }])),
