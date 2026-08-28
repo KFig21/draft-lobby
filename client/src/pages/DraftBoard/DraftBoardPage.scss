@@ -50,6 +50,42 @@
   }
 }
 
+// Top-bar team-readout slot machine for an out-of-order pick (a skipped team
+// picking while another is on the clock). Runs on the SAME timeline/easing/
+// percentages as the tpr rows (TopbarPickReveal.scss) so the readout swaps in
+// lockstep: the old readout slides out exactly as the clock does (draft-status-
+// out == tpr-clock), the new one slides in exactly as "THE PICK IS IN" does,
+// then HOLDS to the end (unlike tpr-pii, which gives way to the player).
+@keyframes draft-status-out {
+
+  0%,
+  4% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  24%,
+  100% {
+    transform: translateY(115%);
+    opacity: 0;
+  }
+}
+
+@keyframes draft-status-in {
+
+  0%,
+  4% {
+    transform: translateY(-115%);
+    opacity: 0;
+  }
+
+  24%,
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
 // Shared look for the top-bar chip buttons (Home, Room, Pause, Undo, Skip
 // bots, Export…). Blends the theme's text color into the raised bar
 // background via color-mix so they read clearly against it in both themes,
@@ -1210,6 +1246,46 @@
       .draft__clock-wrap {
         animation: none;
       }
+    }
+  }
+
+  // Out-of-order pick reveal: stack the two readouts in one cell so the outgoing
+  // one can slide out beneath the incoming one (defined after &__status so its
+  // grid display wins the same-specificity tie).
+  &__status.draft__status--reveal-swap {
+    display: grid;
+    grid-template: 1fr / 1fr;
+  }
+
+  &__status-slot {
+    grid-area: 1 / 1; // stack both readouts over the same cell
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    will-change: transform, opacity;
+    animation-duration: $tpr-duration;
+    animation-timing-function: $tpr-drop-ease;
+    animation-fill-mode: both;
+  }
+
+  &__status-slot--out {
+    animation-name: draft-status-out;
+  }
+
+  &__status-slot--in {
+    animation-name: draft-status-in;
+  }
+
+  // Reduced motion: no slide — just show the incoming readout, drop the outgoing.
+  @media (prefers-reduced-motion: reduce) {
+    &__status-slot {
+      animation: none;
+    }
+
+    &__status-slot--out {
+      display: none;
     }
   }
 

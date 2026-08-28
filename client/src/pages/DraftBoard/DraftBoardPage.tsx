@@ -314,6 +314,15 @@ export function DraftBoardPage() {
     /** true → no announcement at all: just freeze the outgoing team and slide it
      * out (the reveal-off flip, so the previous team doesn't vanish abruptly). */
     plain: boolean;
+    /** true → this reveal's team differs from the one the bar was already showing
+     * (an out-of-order pick by a previously-skipped team), so the top-bar readout
+     * slot-machines (old team slides out with the clock, new team slides in with
+     * "THE PICK IS IN") rather than the name popping. `prev*` is the outgoing
+     * readout it slides out; only set when teamChanged. */
+    teamChanged: boolean;
+    prevTeam: TeamRow | null;
+    prevRound: number;
+    prevOverall: number;
     team: TeamRow | null;
     round: number;
     overall: number;
@@ -1827,10 +1836,20 @@ export function DraftBoardPage() {
     const player = p ? playersById.get(p.player_id) : undefined;
     if (!p || !player) return;
     lastRevealAtRef.current = now;
+    // committedOnClockRef still holds the readout the bar was showing (its updater
+    // effect runs after this one). If the picker isn't that team — a skipped team
+    // finally picking while someone else is on the clock — the readout changes, so
+    // slot-machine the old one out and the new one in instead of popping.
+    const shown = committedOnClockRef.current;
+    const changed = shown != null && shown.id !== p.team_id;
     setPickReveal({
       player,
       skipped: false,
       plain: false,
+      teamChanged: changed,
+      prevTeam: changed ? shown.team : null,
+      prevRound: changed ? shown.round : 0,
+      prevOverall: changed ? shown.overall : 0,
       team: teamsById.get(p.team_id) ?? null,
       round: Math.floor((p.overall - 1) / lobby.settings.teamCount) + 1,
       overall: p.overall,
@@ -1870,6 +1889,10 @@ export function DraftBoardPage() {
       player: null,
       skipped: false,
       plain: true,
+      teamChanged: false,
+      prevTeam: null,
+      prevRound: 0,
+      prevOverall: 0,
       team: prev.team,
       round: prev.round,
       overall: prev.overall,
@@ -1906,10 +1929,16 @@ export function DraftBoardPage() {
     const sl = live.find((s) => `${s.round}:${s.team.id}` === fresh[0]);
     if (!sl) return;
     lastRevealAtRef.current = now;
+    const shownSkip = committedOnClockRef.current;
+    const skipChanged = shownSkip != null && shownSkip.id !== sl.team.id;
     setPickReveal({
       player: null,
       skipped: true,
       plain: false,
+      teamChanged: skipChanged,
+      prevTeam: skipChanged ? shownSkip.team : null,
+      prevRound: skipChanged ? shownSkip.round : 0,
+      prevOverall: skipChanged ? shownSkip.overall : 0,
       team: sl.team,
       round: sl.round,
       overall: sl.overall,
@@ -3855,22 +3884,61 @@ export function DraftBoardPage() {
             // announced (its team + round/pick), and run the reveal where the
             // clock normally sits — so the bar never jumps to the next team.
             <>
-              <div className="draft__status">
-                <span className="draft__onclock-team">
-                  {pickReveal.team && (
-                    <span className="draft__onclock-avatar">
-                      <Avatar
-                        avatar={avatarForTeam(pickReveal.team, members)}
-                        size={isFullscreen ? 30 : 20}
-                      />
+              {pickReveal.teamChanged && pickReveal.prevTeam ? (
+                // Out-of-order pick: the readout is changing (a skipped team
+                // picking while another is on the clock). Slot-machine it on the
+                // tpr timeline — the outgoing readout slides out with the clock,
+                // the incoming one slides in with "THE PICK IS IN".
+                <div className="draft__status draft__status--reveal-swap">
+                  <div className="draft__status-slot draft__status-slot--out">
+                    <span className="draft__onclock-team">
+                      <span className="draft__onclock-avatar">
+                        <Avatar
+                          avatar={avatarForTeam(pickReveal.prevTeam, members)}
+                          size={isFullscreen ? 30 : 20}
+                        />
+                      </span>
+                      {pickReveal.prevTeam.name}
                     </span>
-                  )}
-                  {pickReveal.team?.name ?? 'On the clock'}
-                </span>
-                <span className="muted">
-                  Round {pickReveal.round} · Pick {pickReveal.overall}
-                </span>
-              </div>
+                    <span className="muted">
+                      Round {pickReveal.prevRound} · Pick {pickReveal.prevOverall}
+                    </span>
+                  </div>
+                  <div className="draft__status-slot draft__status-slot--in">
+                    <span className="draft__onclock-team">
+                      {pickReveal.team && (
+                        <span className="draft__onclock-avatar">
+                          <Avatar
+                            avatar={avatarForTeam(pickReveal.team, members)}
+                            size={isFullscreen ? 30 : 20}
+                          />
+                        </span>
+                      )}
+                      {pickReveal.team?.name ?? 'On the clock'}
+                    </span>
+                    <span className="muted">
+                      Round {pickReveal.round} · Pick {pickReveal.overall}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="draft__status">
+                  <span className="draft__onclock-team">
+                    {pickReveal.team && (
+                      <span className="draft__onclock-avatar">
+                        <Avatar
+                          avatar={avatarForTeam(pickReveal.team, members)}
+                          size={isFullscreen ? 30 : 20}
+                        />
+                      </span>
+                    )}
+                    {pickReveal.team?.name ?? 'On the clock'}
+                  </span>
+                  <span className="muted">
+                    Round {pickReveal.round} · Pick {pickReveal.overall}
+                  </span>
+                </div>
+              )}
               {pickReveal.plain ? (
                 // Reveal-off flip: no announcement, just the outgoing team's
                 // frozen clock riding out the bottom with its status.

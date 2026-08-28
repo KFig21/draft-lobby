@@ -7,7 +7,8 @@
 // drops in. `both` fill holds each row's start/end frame outside its window.
 // Each drop spans a 20% (~1s) window to match the pace of the next-pick slide-in
 // (draft-center-enter), with a beat of hold between them.
-$tpr-duration: 5s;
+// $tpr-duration + $tpr-drop-ease now live in variables.scss (shared with the
+// status team-name swap in DraftBoardPage.scss so they animate in lockstep).
 
 @keyframes tpr-clock {
 
@@ -121,7 +122,7 @@ $tpr-duration: 5s;
     animation-duration: $tpr-duration;
     // Same easing as the next-pick slide-in (draft-center-enter) so the drops
     // share its feel, not just its duration.
-    animation-timing-function: cubic-bezier(0.3, 0.8, 0.2, 1);
+    animation-timing-function: $tpr-drop-ease;
     animation-fill-mode: both;
 
     @media (prefers-reduced-motion: reduce) {

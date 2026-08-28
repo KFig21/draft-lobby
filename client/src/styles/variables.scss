@@ -72,6 +72,15 @@ $radius-card-tight: 12px;
 $bp-md: 768px;
 $bp-lg: 1100px;
 
+// The top-bar pick-reveal slot-machine timeline. The tpr rows (clock → THE PICK
+// IS IN → player) AND the out-of-order team-name swap in the status share this
+// exact duration + easing + keyframe percentages, so the team readout animates
+// in lockstep with "THE PICK IS IN". Shared here so they can never drift apart.
+// Used by TopbarPickReveal.scss and DraftBoardPage.scss. NOTE: the JS
+// TOPBAR_REVEAL_MS (DraftBoardPage.tsx) must equal $tpr-duration.
+$tpr-duration: 5s;
+$tpr-drop-ease: cubic-bezier(0.3, 0.8, 0.2, 1);
+
 // Width of the desktop/tablet nav rail (see Sidebar.scss). Referenced by
 // fixed overlays that must clear it at the tablet tier (where the nav is a
 // left rail rather than a bottom bar) — e.g. the lobby chat drawer. Keep in
