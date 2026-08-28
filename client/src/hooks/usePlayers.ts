@@ -124,17 +124,114 @@ async function fetchFlat(): Promise<PlayerRow[]> {
  * @param season the draft's fantasy year; defaults to the current calendar year
  *   (used by the global Rankings page and while a lobby is still loading).
  */
+// ── Pool cache ──────────────────────────────────────────────────────────────
+// The full player pool is a large `select('*')`-scale payload and it's static
+// for a given season (it only changes when the import is re-run), yet every
+// DraftBoard / LobbyRoom / Rankings mount re-fetched it — the dominant source of
+// Supabase egress. Cache it per season: in memory (covers within-session
+// navigation, the common case) and best-effort in localStorage (survives a
+// reload), with a hard TTL from fetch time and an in-flight promise so
+// concurrent mounts share one request.
+interface PoolEntry {
+  at: number;
+  players: PlayerRow[];
+}
+const POOL_TTL_MS = 24 * 60 * 60 * 1000; // static per season; a day is plenty
+const POOL_LS_PREFIX = 'playerPool:v1:';
+const poolMem = new Map<number, PoolEntry>();
+const poolInflight = new Map<number, Promise<PlayerRow[]>>();
+
+function poolFresh(entry: PoolEntry | undefined): entry is PoolEntry {
+  return !!entry && Date.now() - entry.at < POOL_TTL_MS;
+}
+
+function readPoolLS(season: number): PoolEntry | null {
+  try {
+    const raw = localStorage.getItem(POOL_LS_PREFIX + season);
+    if (!raw) return null;
+    const entry = JSON.parse(raw) as PoolEntry;
+    return poolFresh(entry) ? entry : null;
+  } catch {
+    return null;
+  }
+}
+
+function writePoolLS(season: number, entry: PoolEntry) {
+  try {
+    // Keep only this season's pool so the store stays small (~1-2 MB each).
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i);
+      if (k?.startsWith(POOL_LS_PREFIX) && k !== POOL_LS_PREFIX + season) localStorage.removeItem(k);
+    }
+    localStorage.setItem(POOL_LS_PREFIX + season, JSON.stringify(entry));
+  } catch {
+    // Quota exceeded / storage disabled — the in-memory cache still covers the
+    // session; a reload just refetches once.
+  }
+}
+
+/** The pool for a season, from cache when possible, otherwise fetched once
+ * (shared across concurrent callers) and cached in memory + localStorage. */
+async function loadPool(season: number): Promise<PlayerRow[]> {
+  const mem = poolMem.get(season);
+  if (poolFresh(mem)) return mem.players;
+
+  const ls = readPoolLS(season);
+  if (ls) {
+    poolMem.set(season, ls);
+    return ls.players;
+  }
+
+  let inflight = poolInflight.get(season);
+  if (!inflight) {
+    inflight = (async () => {
+      const scoped = await fetchSeasonScoped(season);
+      const all = scoped ?? (await fetchFlat());
+      // Only cache a real pool — never persist an empty/failed load (a paging
+      // error returns partial/empty), or every consumer would be stuck on it for
+      // the whole TTL. An empty result just refetches on the next mount.
+      if (all.length > 0) {
+        const entry: PoolEntry = { at: Date.now(), players: all };
+        poolMem.set(season, entry);
+        writePoolLS(season, entry);
+      }
+      return all;
+    })().finally(() => poolInflight.delete(season));
+    poolInflight.set(season, inflight);
+  }
+  return inflight;
+}
+
+/**
+ * Loads the player pool for a fantasy season. Served from a per-session +
+ * localStorage cache (see loadPool) since the pool is static for a season —
+ * so navigating back into a draft, or a second consumer on the same page,
+ * doesn't re-download it.
+ */
 export function usePlayers(season?: number) {
-  const [players, setPlayers] = useState<PlayerRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const initialSeason = season ?? new Date().getFullYear();
+  // Seed synchronously from a warm in-memory cache so a cached pool paints on
+  // the first render with no loading flash and no fetch.
+  const [players, setPlayers] = useState<PlayerRow[]>(
+    () => poolMem.get(initialSeason)?.players ?? [],
+  );
+  const [loading, setLoading] = useState(() => !poolFresh(poolMem.get(initialSeason)));
 
   useEffect(() => {
     let cancelled = false;
     const targetSeason = season ?? new Date().getFullYear();
+
+    // Warm in-memory hit: serve it synchronously, skip the fetch entirely.
+    const mem = poolMem.get(targetSeason);
+    if (poolFresh(mem)) {
+      setPlayers(mem.players);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     (async () => {
-      const scoped = await fetchSeasonScoped(targetSeason);
-      const all = scoped ?? (await fetchFlat());
+      const all = await loadPool(targetSeason);
       if (!cancelled) {
         setPlayers(all);
         setLoading(false);
