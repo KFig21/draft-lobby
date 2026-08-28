@@ -276,7 +276,12 @@ body:has(.modal-anim-backdrop) .toast__bar {
   background: color-mix(in srgb, #{$danger} 75%, #000);
 }
 
-.toast__title--brief {
+// Both classes in the selector (specificity 0,2,0) so this reliably beats
+// `.toast__title { display:flex }` regardless of source order — the two are
+// otherwise tied and .toast__title is declared later, which let flex win in the
+// minified prod CSS (Safari) even while dev landed on block. See CSS-specificity
+// trap notes.
+.toast__title.toast__title--brief {
   position: relative;
   z-index: 1;
   flex: 1;
