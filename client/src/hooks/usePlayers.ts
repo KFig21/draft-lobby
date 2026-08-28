@@ -137,7 +137,10 @@ interface PoolEntry {
   players: PlayerRow[];
 }
 const POOL_TTL_MS = 24 * 60 * 60 * 1000; // static per season; a day is plenty
-const POOL_LS_PREFIX = 'playerPool:v1:';
+// Bump the version to invalidate every cached pool (e.g. after a fresh import),
+// forcing one refetch on the next load. v2: 2026-08-28 import (retired evict).
+const POOL_LS_BASE = 'playerPool:';
+const POOL_LS_PREFIX = `${POOL_LS_BASE}v2:`;
 const poolMem = new Map<number, PoolEntry>();
 const poolInflight = new Map<number, Promise<PlayerRow[]>>();
 
@@ -158,10 +161,11 @@ function readPoolLS(season: number): PoolEntry | null {
 
 function writePoolLS(season: number, entry: PoolEntry) {
   try {
-    // Keep only this season's pool so the store stays small (~1-2 MB each).
+    // Keep only this season's current-version pool so the store stays small
+    // (~1-2 MB each) and old versions/seasons don't linger.
     for (let i = localStorage.length - 1; i >= 0; i--) {
       const k = localStorage.key(i);
-      if (k?.startsWith(POOL_LS_PREFIX) && k !== POOL_LS_PREFIX + season) localStorage.removeItem(k);
+      if (k?.startsWith(POOL_LS_BASE) && k !== POOL_LS_PREFIX + season) localStorage.removeItem(k);
     }
     localStorage.setItem(POOL_LS_PREFIX + season, JSON.stringify(entry));
   } catch {
