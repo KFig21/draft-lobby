@@ -564,6 +564,43 @@
       font-weight: 800;
     }
 
+    // Freeze the Wk column while the rest of the table scrolls horizontally
+    // under it (mobile only — that's where the table overflows the modal).
+    // The sticky cell must be OPAQUE or scrolled columns show through it, so
+    // the zebra / in-range tints (normally semi-transparent over the tr) are
+    // re-mixed against the card's own $bg here to stay solid.
+    @media (max-width: $bp-md) {
+      th:first-child,
+      td:first-child {
+        position: sticky;
+        left: 0;
+        z-index: 1;
+        // A hairline to sever the frozen column from the scrolling ones.
+        box-shadow: inset -1px 0 0 $border;
+      }
+
+      th:first-child {
+        // thead cells already carry $bg-overlay — keep it opaque.
+        background: $bg-overlay;
+      }
+
+      td:first-child {
+        background: $bg;
+      }
+
+      tbody tr:nth-child(even) td:first-child {
+        background: color-mix(in srgb, #{$text} 4%, #{$bg});
+      }
+
+      tbody tr.inrange td:first-child {
+        background: color-mix(in srgb, var(--pos) 9%, #{$bg});
+        // Keep the accent edge marker, plus the column divider.
+        box-shadow:
+          inset 3px 0 0 var(--pos),
+          inset -1px 0 0 $border;
+      }
+    }
+
     .byecell {
       text-align: center;
       font-size: 10px;
