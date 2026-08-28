@@ -214,9 +214,26 @@ const MOBILE_TABS: { key: MobileTab; label: string; Icon: SvgIconComponent }[] =
 const MIN_SIDEBAR = 300;
 const MAX_SIDEBAR = 600;
 
-// How long the top-bar pick reveal holds before the readout unfreezes (must
-// match the 5s animation timeline in TopbarPickReveal.scss).
-const TOPBAR_REVEAL_MS = 5000;
+// How long into the intro reveal (the 5s timeline in TopbarPickReveal.scss) the
+// announcement is fully shown, before its rest begins: a player lands at 64% of
+// 5s; a skip's "SKIPPED" lands earlier (24%, right after the clock leaves — no
+// "THE PICK IS IN" step), so it rests for the same span instead of holding long.
+const REVEAL_INTRO_PLAYER_MS = 3200;
+const REVEAL_INTRO_SKIP_MS = 1200;
+// A mid-burst TEAM·PLAYER swap's slide-in time (must match $tpr-cont-slide).
+const REVEAL_CONT_SLIDE_MS = 550;
+// Cap on queued reveals so a pathological burst can't lag unboundedly — beyond
+// this the oldest waiting pick is dropped (it's already on the board).
+const REVEAL_MAX_QUEUE = 8;
+// One pick/skip to announce in the top bar — the unit the reveal cycle queues.
+interface RevealPayload {
+  player: PlayerRow | null;
+  skipped: boolean;
+  team: TeamRow | null;
+  round: number;
+  overall: number;
+  clockLabel: string;
+}
 // How long the revealed pick slides out the bottom for at the end (must match
 // draft-center-exit in DraftBoardPage.scss).
 const TOPBAR_REVEAL_EXIT_MS = 340;
@@ -306,7 +323,7 @@ export function DraftBoardPage() {
   // seeds the picks already on the board (so toggling on mid-draft never replays
   // the backlog); `prevClockLabelRef` snapshots the clock a render behind so the
   // reveal opens on the picking team's last clock value, not the next team's
-  // fresh one; `lastRevealAtRef` debounces bursts (fast-forward / simulate).
+  // fresh one; a burst of picks queues (revealQueueRef) into a single cycle.
   const [pickReveal, setPickReveal] = useState<{
     /** null → a skip announcement ("SKIPPED") rather than a made pick. */
     player: PlayerRow | null;
@@ -314,15 +331,21 @@ export function DraftBoardPage() {
     /** true → no announcement at all: just freeze the outgoing team and slide it
      * out (the reveal-off flip, so the previous team doesn't vanish abruptly). */
     plain: boolean;
-    /** true → this reveal's team differs from the one the bar was already showing
-     * (an out-of-order pick by a previously-skipped team), so the top-bar readout
-     * slot-machines (old team slides out with the clock, new team slides in with
-     * "THE PICK IS IN") rather than the name popping. `prev*` is the outgoing
-     * readout it slides out; only set when teamChanged. */
+    /** true → mid-burst: this pick is a queued follow-up shown as a quick
+     * TEAM·PLAYER swap (no clock / "THE PICK IS IN" intro), sliding the previous
+     * pick's readout out and this one in. */
+    continuation: boolean;
+    /** true → the readout's team differs from the one the bar was already showing
+     * (an out-of-order pick, or every continuation), so it slot-machines the old
+     * one out and the new one in rather than popping. `prev*` is that outgoing
+     * readout. */
     teamChanged: boolean;
     prevTeam: TeamRow | null;
     prevRound: number;
     prevOverall: number;
+    /** The outgoing pick's announcement, for the continuation swap in the centre. */
+    prevPlayer: PlayerRow | null;
+    prevSkipped: boolean;
     team: TeamRow | null;
     round: number;
     overall: number;
@@ -332,7 +355,14 @@ export function DraftBoardPage() {
   const committedRevealSkipKeys = useRef<Set<string> | null>(null);
   const revealTimer = useRef<number | null>(null);
   const prevClockLabelRef = useRef('');
-  const lastRevealAtRef = useRef(0);
+  // Reveal cycle: one intro plays, then each pick that landed while it was on
+  // screen is shown in turn (queue) as a quick swap, its rest shrinking as the
+  // backlog grows (see revealRestMs). `phase` gates overlap synchronously (no
+  // render lag): 'idle' | 'active' (intro/continuations) | 'handoff' (ending).
+  // `current` is the readout on screen now — the "prev" a continuation slides out.
+  const revealQueueRef = useRef<RevealPayload[]>([]);
+  const currentRevealRef = useRef<RevealPayload | null>(null);
+  const revealPhaseRef = useRef<'idle' | 'active' | 'handoff'>('idle');
   // Hand-off out of a reveal: first the just-revealed pick slides out the bottom
   // (`revealExiting`), then the next team + clock slide in from the top
   // (`nextEntering`) — a continuous downward motion.
@@ -1796,30 +1826,100 @@ export function DraftBoardPage() {
     return '∞';
   })();
 
-  // Shared hand-off after a top-bar reveal (pick or skip): hold, then slide the
-  // announcement out the bottom and the next team + clock in from the top.
-  function scheduleRevealHandoff() {
+  // ─── Top-bar reveal cycle ──────────────────────────────────────────────
+  // Rest (ms) the current TEAM·PLAYER holds before the next queued one slides
+  // in — shrinks as the backlog grows so a burst stays roughly caught up while a
+  // lone pick rests leisurely (~1.8s, keeping the single-reveal feel).
+  function revealRestMs(): number {
+    const q = revealQueueRef.current.length;
+    if (q >= 5) return 800;
+    if (q >= 3) return 1100;
+    return 1800;
+  }
+
+  function scheduleRevealAdvance(shownDelayMs: number) {
     if (revealTimer.current) clearTimeout(revealTimer.current);
-    revealTimer.current = window.setTimeout(() => {
-      setRevealExiting(true);
-      if (revealExitTimer.current) clearTimeout(revealExitTimer.current);
-      revealExitTimer.current = window.setTimeout(() => {
-        setPickReveal(null);
-        setRevealExiting(false);
-        setNextEntering(true);
-        if (nextEnterTimer.current) clearTimeout(nextEnterTimer.current);
-        nextEnterTimer.current = window.setTimeout(() => setNextEntering(false), TOPBAR_NEXT_ENTER_MS);
-      }, TOPBAR_REVEAL_EXIT_MS);
-    }, TOPBAR_REVEAL_MS);
+    revealTimer.current = window.setTimeout(advanceReveal, shownDelayMs + revealRestMs());
+  }
+
+  // Begin a fresh reveal (with the clock → "THE PICK IS IN" → player intro),
+  // slot-machining the outgoing on-clock readout out if the picker differs.
+  // Never for a skip: a skip always applies to the team that WAS on the clock, so
+  // it freezes on that team (not a swap). Its committedOnClockRef has already
+  // advanced to the next team by the time the skip effect runs, so a teamChanged
+  // check would wrongly swap the (already-advanced) next team → skipped team.
+  function startRevealIntro(payload: RevealPayload) {
+    const shown = committedOnClockRef.current;
+    const changed = !payload.skipped && shown != null && shown.id !== (payload.team?.id ?? '');
+    currentRevealRef.current = payload;
+    revealPhaseRef.current = 'active';
+    setPickReveal({
+      ...payload,
+      plain: false,
+      continuation: false,
+      teamChanged: changed,
+      prevTeam: changed ? shown!.team : null,
+      prevRound: changed ? shown!.round : 0,
+      prevOverall: changed ? shown!.overall : 0,
+      prevPlayer: null,
+      prevSkipped: false,
+    });
+    scheduleRevealAdvance(payload.skipped ? REVEAL_INTRO_SKIP_MS : REVEAL_INTRO_PLAYER_MS);
+  }
+
+  // After a reveal's rest: show the next queued pick as a quick swap, or — queue
+  // drained — hand off to the live readout (a pick that lands during the hand-off
+  // starts a fresh reveal once it completes, so nothing gets stranded).
+  function advanceReveal() {
+    const prev = currentRevealRef.current;
+    const next = revealQueueRef.current.shift();
+    if (next && prev) {
+      currentRevealRef.current = next;
+      setPickReveal({
+        ...next,
+        plain: false,
+        continuation: true,
+        teamChanged: false,
+        prevTeam: prev.team,
+        prevRound: prev.round,
+        prevOverall: prev.overall,
+        prevPlayer: prev.player,
+        prevSkipped: prev.skipped,
+      });
+      scheduleRevealAdvance(REVEAL_CONT_SLIDE_MS);
+      return;
+    }
+    revealPhaseRef.current = 'handoff';
+    setRevealExiting(true);
+    if (revealExitTimer.current) clearTimeout(revealExitTimer.current);
+    revealExitTimer.current = window.setTimeout(() => {
+      setPickReveal(null);
+      setRevealExiting(false);
+      setNextEntering(true);
+      if (nextEnterTimer.current) clearTimeout(nextEnterTimer.current);
+      nextEnterTimer.current = window.setTimeout(() => {
+        setNextEntering(false);
+        const queued = revealQueueRef.current.shift();
+        if (queued) {
+          startRevealIntro(queued);
+        } else {
+          currentRevealRef.current = null;
+          revealPhaseRef.current = 'idle';
+        }
+      }, TOPBAR_NEXT_ENTER_MS);
+    }, TOPBAR_REVEAL_EXIT_MS);
   }
 
   // Top-bar pick reveal: when a single new draft pick lands during live drafting,
   // freeze the top-bar readout on it and play the reveal (see TopbarPickReveal).
   // Seeds the current picks on first run so an already-populated board / a
-  // mid-draft toggle-on never replays; a 1.2s debounce keeps fast-forward and
-  // simulate bursts from flickering through it. (When the reveal is OFF, the
-  // plain flip is handled by the on-clock-change effect below instead.)
-  useEffect(() => {
+  // mid-draft toggle-on never replays. If a reveal cycle is already on screen the
+  // pick is QUEUED (shown as a quick swap after the current one) rather than
+  // overlapping. (When the reveal is OFF, the plain flip effect below handles it.)
+  // useLayoutEffect (not useEffect) so setPickReveal runs BEFORE paint: when the
+  // frontier advances on a pick/skip, this freezes the readout before the browser
+  // shows the (advanced) next team, avoiding a one-frame flash to it.
+  useLayoutEffect(() => {
     const liveIds = new Set(picks.filter((p) => !p.is_keeper).map((p) => p.id));
     const seeded = committedRevealPickIds.current !== null;
     const fresh = seeded
@@ -1830,32 +1930,23 @@ export function DraftBoardPage() {
     // reveal can play — so suppress the top-bar animation while it's on.
     if (!seeded || !topbarPickReveal || autoSkipBots || lobby?.status !== 'DRAFTING') return;
     if (fresh.length !== 1) return; // one clean pick at a time (skip bulk arrivals)
-    const now = Date.now();
-    if (now - lastRevealAtRef.current < 1200) return; // burst — don't flicker
     const p = picks.find((pp) => pp.id === fresh[0]);
     const player = p ? playersById.get(p.player_id) : undefined;
     if (!p || !player) return;
-    lastRevealAtRef.current = now;
-    // committedOnClockRef still holds the readout the bar was showing (its updater
-    // effect runs after this one). If the picker isn't that team — a skipped team
-    // finally picking while someone else is on the clock — the readout changes, so
-    // slot-machine the old one out and the new one in instead of popping.
-    const shown = committedOnClockRef.current;
-    const changed = shown != null && shown.id !== p.team_id;
-    setPickReveal({
+    const payload: RevealPayload = {
       player,
       skipped: false,
-      plain: false,
-      teamChanged: changed,
-      prevTeam: changed ? shown.team : null,
-      prevRound: changed ? shown.round : 0,
-      prevOverall: changed ? shown.overall : 0,
       team: teamsById.get(p.team_id) ?? null,
       round: Math.floor((p.overall - 1) / lobby.settings.teamCount) + 1,
       overall: p.overall,
       clockLabel: prevClockLabelRef.current,
-    });
-    scheduleRevealHandoff();
+    };
+    if (revealPhaseRef.current !== 'idle') {
+      revealQueueRef.current.push(payload);
+      if (revealQueueRef.current.length > REVEAL_MAX_QUEUE) revealQueueRef.current.shift();
+      return;
+    }
+    startRevealIntro(payload);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [picks, topbarPickReveal, autoSkipBots, lobby?.status]);
 
@@ -1864,7 +1955,8 @@ export function DraftBoardPage() {
   // it uses the NEW team, not the old one a beat early. Freezes the OUTGOING
   // team and slides it out the bottom, then the next drops in from the top — so
   // the previous team doesn't just vanish.
-  useEffect(() => {
+  // useLayoutEffect: freeze the outgoing team before paint (see the pick effect).
+  useLayoutEffect(() => {
     // Read round/overall off `derived` directly (not the destructured `round`/
     // `frontierOverall`, which are declared after an early return below — using
     // them here would be a temporal-dead-zone crash on the early-return render).
@@ -1881,18 +1973,23 @@ export function DraftBoardPage() {
     if (prev === undefined) return; // seed
     if (topbarPickReveal || autoSkipBots || lobby?.status !== 'DRAFTING') return;
     if (!cur || !prev || cur.id === prev.id) return;
+    if (revealPhaseRef.current !== 'idle') return; // a flip/reveal's already playing
     const now = Date.now();
     if (now - lastFlipAtRef.current < 1200) return;
     lastFlipAtRef.current = now;
+    revealPhaseRef.current = 'handoff';
     // Freeze on the team that just left the clock and slide it out the bottom…
     setPickReveal({
       player: null,
       skipped: false,
       plain: true,
+      continuation: false,
       teamChanged: false,
       prevTeam: null,
       prevRound: 0,
       prevOverall: 0,
+      prevPlayer: null,
+      prevSkipped: false,
       team: prev.team,
       round: prev.round,
       overall: prev.overall,
@@ -1906,7 +2003,10 @@ export function DraftBoardPage() {
       setRevealExiting(false);
       setNextEntering(true);
       if (nextEnterTimer.current) clearTimeout(nextEnterTimer.current);
-      nextEnterTimer.current = window.setTimeout(() => setNextEntering(false), TOPBAR_NEXT_ENTER_MS);
+      nextEnterTimer.current = window.setTimeout(() => {
+        setNextEntering(false);
+        revealPhaseRef.current = 'idle';
+      }, TOPBAR_NEXT_ENTER_MS);
     }, TOPBAR_REVEAL_EXIT_MS);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [derived?.onClockTeam?.id, topbarPickReveal, autoSkipBots, lobby?.status]);
@@ -1914,7 +2014,9 @@ export function DraftBoardPage() {
   // Top-bar skip reveal: same treatment when a team is skipped (its clock runs
   // out and no pick is made) — the clock slides down to "SKIPPED", which holds
   // then hands off to the next team. Keyed by the newly-appeared skipped slot.
-  useEffect(() => {
+  // useLayoutEffect: freeze on the skipped team before paint (see the pick
+  // effect) — this is the flash the timeout-skip showed most.
+  useLayoutEffect(() => {
     const live = derived?.skipped ?? [];
     const liveKeys = new Set(live.map((sl) => `${sl.round}:${sl.team.id}`));
     const seeded = committedRevealSkipKeys.current !== null;
@@ -1924,27 +2026,22 @@ export function DraftBoardPage() {
     committedRevealSkipKeys.current = liveKeys;
     if (!seeded || !topbarPickReveal || autoSkipBots || lobby?.status !== 'DRAFTING') return;
     if (fresh.length !== 1) return;
-    const now = Date.now();
-    if (now - lastRevealAtRef.current < 1200) return;
     const sl = live.find((s) => `${s.round}:${s.team.id}` === fresh[0]);
     if (!sl) return;
-    lastRevealAtRef.current = now;
-    const shownSkip = committedOnClockRef.current;
-    const skipChanged = shownSkip != null && shownSkip.id !== sl.team.id;
-    setPickReveal({
+    const payload: RevealPayload = {
       player: null,
       skipped: true,
-      plain: false,
-      teamChanged: skipChanged,
-      prevTeam: skipChanged ? shownSkip.team : null,
-      prevRound: skipChanged ? shownSkip.round : 0,
-      prevOverall: skipChanged ? shownSkip.overall : 0,
       team: sl.team,
       round: sl.round,
       overall: sl.overall,
       clockLabel: prevClockLabelRef.current,
-    });
-    scheduleRevealHandoff();
+    };
+    if (revealPhaseRef.current !== 'idle') {
+      revealQueueRef.current.push(payload);
+      if (revealQueueRef.current.length > REVEAL_MAX_QUEUE) revealQueueRef.current.shift();
+      return;
+    }
+    startRevealIntro(payload);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [derived?.skipped, topbarPickReveal, autoSkipBots, lobby?.status]);
 
@@ -1952,6 +2049,21 @@ export function DraftBoardPage() {
   useEffect(() => {
     prevClockLabelRef.current = clockLabelNow;
   });
+
+  // Safety: if the draft leaves DRAFTING mid-cycle (complete / rollback), abandon
+  // any in-flight reveal so the phase ref can't wedge and strand the queue.
+  useEffect(() => {
+    if (lobby?.status === 'DRAFTING') return;
+    revealPhaseRef.current = 'idle';
+    revealQueueRef.current = [];
+    currentRevealRef.current = null;
+    if (revealTimer.current) clearTimeout(revealTimer.current);
+    if (revealExitTimer.current) clearTimeout(revealExitTimer.current);
+    if (nextEnterTimer.current) clearTimeout(nextEnterTimer.current);
+    setPickReveal(null);
+    setRevealExiting(false);
+    setNextEntering(false);
+  }, [lobby?.status]);
 
   useEffect(() => () => {
     if (revealTimer.current) clearTimeout(revealTimer.current);
@@ -3884,13 +3996,19 @@ export function DraftBoardPage() {
             // announced (its team + round/pick), and run the reveal where the
             // clock normally sits — so the bar never jumps to the next team.
             <>
-              {pickReveal.teamChanged && pickReveal.prevTeam ? (
-                // Out-of-order pick: the readout is changing (a skipped team
-                // picking while another is on the clock). Slot-machine it on the
-                // tpr timeline — the outgoing readout slides out with the clock,
-                // the incoming one slides in with "THE PICK IS IN".
-                <div className="draft__status draft__status--reveal-swap">
-                  <div className="draft__status-slot draft__status-slot--out">
+              {(pickReveal.continuation || pickReveal.teamChanged) && pickReveal.prevTeam ? (
+                // Readout is changing: an out-of-order pick (skipped team picking
+                // while another's on the clock) OR a mid-burst continuation. Slot-
+                // machine the outgoing readout out and the incoming in. Keyed by
+                // the pick so each continuation remounts and replays; `--cont`
+                // uses the quick swap timing, else it tracks the 5s intro.
+                <div
+                  key={pickReveal.overall}
+                  className={`draft__status draft__status--reveal-swap${pickReveal.continuation ? ' draft__status--cont' : ''}`}
+                >
+                  <div
+                    className={`draft__status-slot draft__status-slot--out${pickReveal.continuation ? ' draft__status-slot--cont' : ''}`}
+                  >
                     <span className="draft__onclock-team">
                       <span className="draft__onclock-avatar">
                         <Avatar
@@ -3904,7 +4022,9 @@ export function DraftBoardPage() {
                       Round {pickReveal.prevRound} · Pick {pickReveal.prevOverall}
                     </span>
                   </div>
-                  <div className="draft__status-slot draft__status-slot--in">
+                  <div
+                    className={`draft__status-slot draft__status-slot--in${pickReveal.continuation ? ' draft__status-slot--cont' : ''}`}
+                  >
                     <span className="draft__onclock-team">
                       {pickReveal.team && (
                         <span className="draft__onclock-avatar">
@@ -3955,9 +4075,13 @@ export function DraftBoardPage() {
                     unlimited={clockUnlimited}
                   />
                   <TopbarPickReveal
+                    key={pickReveal.overall}
                     clockLabel={pickReveal.clockLabel}
                     skipped={pickReveal.skipped}
                     player={pickReveal.player}
+                    continuation={pickReveal.continuation}
+                    prevPlayer={pickReveal.prevPlayer}
+                    prevSkipped={pickReveal.prevSkipped}
                   />
                 </div>
               )}

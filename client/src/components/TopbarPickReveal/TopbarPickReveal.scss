@@ -78,6 +78,35 @@
   }
 }
 
+// Continuation (mid-burst) swap — no intro: the previous announcement slides
+// straight out the bottom as the next slides in from the top, over $tpr-cont-
+// slide. Also used by the status swap's --cont variant (DraftBoardPage.scss).
+@keyframes tpr-cont-out {
+
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  to {
+    transform: translateY(115%);
+    opacity: 0;
+  }
+}
+
+@keyframes tpr-cont-in {
+
+  from {
+    transform: translateY(-115%);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
 .tpr {
   // Overlaid on the top bar, anchored over a hidden clock spacer that reserves
   // the normal clock footprint (see &__clock-wrap--reveal in DraftBoardPage.scss)
@@ -144,6 +173,16 @@
       opacity: 1;
       transform: none;
     }
+
+    // Continuation: no slide — show the incoming announcement, drop the outgoing.
+    .tpr__cont-out {
+      display: none;
+    }
+
+    .tpr__cont-in {
+      opacity: 1;
+      transform: none;
+    }
   }
 
   // Matches the top bar's own clock exactly (size + min-width + right-align, see
@@ -198,6 +237,30 @@
       font-size: clamp(1.4rem, 2.6vw, 2.4rem);
       gap: 6px; // fullscreen +2px
     }
+  }
+
+  // Mid-burst continuation rows — same look as the player row (announcements in
+  // a burst are usually picks; a skip shows its word here at the same size), but
+  // the quick $tpr-cont-slide slide rather than the 5s intro timeline.
+  &__cont-out,
+  &__cont-in {
+    font-size: 1.4rem;
+    font-weight: 700;
+    gap: 5px;
+    animation-duration: $tpr-cont-slide;
+
+    .draft__topbar--fill & {
+      font-size: clamp(1.4rem, 2.6vw, 2.4rem);
+      gap: 6px;
+    }
+  }
+
+  &__cont-out {
+    animation-name: tpr-cont-out;
+  }
+
+  &__cont-in {
+    animation-name: tpr-cont-in;
   }
 
   // Position badge, matching the pick/lock-in modals' square chip, scaled down

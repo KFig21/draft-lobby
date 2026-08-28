@@ -1278,6 +1278,22 @@
     animation-name: draft-status-in;
   }
 
+  // Continuation (mid-burst): the quick $tpr-cont-slide swap instead of the 5s
+  // intro-synced windows — shares the tpr's cont keyframes so the team readout
+  // and the centre TEAM·PLAYER swap move as one. Qualified (0,2,0) to beat the
+  // base slot's duration + the intro animation-names above.
+  &__status-slot.draft__status-slot--cont {
+    animation-duration: $tpr-cont-slide;
+  }
+
+  &__status-slot--out.draft__status-slot--cont {
+    animation-name: tpr-cont-out;
+  }
+
+  &__status-slot--in.draft__status-slot--cont {
+    animation-name: tpr-cont-in;
+  }
+
   // Reduced motion: no slide — just show the incoming readout, drop the outgoing.
   @media (prefers-reduced-motion: reduce) {
     &__status-slot {
