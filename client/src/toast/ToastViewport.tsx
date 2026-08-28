@@ -180,7 +180,7 @@ function ToastCard({
         </>
       )}
       <div className="toast__controls">
-        {!brief && action && (
+        {action && (
           <button
             type="button"
             className="toast__action"

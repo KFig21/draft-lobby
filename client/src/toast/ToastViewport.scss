@@ -281,6 +281,13 @@ body:has(.modal-anim-backdrop) .toast__bar {
   z-index: 1;
   flex: 1;
   min-width: 0;
+  // Override .toast__title's flex: the brief message is running text with an
+  // inline avatar and possibly an inline custom-emoji <img>. As a flex row each
+  // of those becomes a separate flex item and the sentence breaks apart (a
+  // unicode emoji stays inside its text node and is fine; an <img> element does
+  // not). Block + inline content keeps "name reacted [emoji] to your pick" as
+  // one naturally-wrapping line.
+  display: block;
 }
 
 // Avatar tucked in beside the name at the start of the Brief message.
@@ -288,6 +295,7 @@ body:has(.modal-anim-backdrop) .toast__bar {
   display: inline-flex;
   vertical-align: middle;
   flex-shrink: 0;
+  margin-right: 5px;
 }
 
 .toast__content {
