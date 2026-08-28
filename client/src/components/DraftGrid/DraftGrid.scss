@@ -976,7 +976,8 @@
     letter-spacing: 0.03em;
     text-transform: uppercase;
     line-height: 0.98;
-    font-size: 0.78rem;
+    // Mobile baseline (desktop bumps to 1rem at $bp-md, fullscreen scales apart).
+    font-size: 0.88rem;
     // Dark-mode default (plenty of time left) — same brand green used
     // elsewhere as text (PickClock, badges).
     color: #fff;
