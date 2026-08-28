@@ -170,6 +170,22 @@
     background: $bg-raised;
   }
 
+  // Mobile (the players-pool queue): cap the scroll region to ~3 rows so the
+  // queue never eats the pool; more than that scrolls. flex:0 1 auto (not the
+  // default flex:1) so the list is content-sized up to the cap instead of
+  // stretching to fill its parent. The desktop dashboard pane is a separate,
+  // resizable surface and isn't rendered at this width.
+  @media (max-width: #{$bp-md}) {
+    &__list {
+      flex: 0 1 auto;
+      // 3 rows (~40px each: 30px content + 8px padding + 2px border) + 2 inter-
+      // row gaps + the list's own top/bottom padding, plus a hair of headroom.
+      max-height: calc(
+        3 * 40px + 2 * #{$space * 0.5} + #{$space * 0.6} + #{$space * 0.75} + 2px
+      );
+    }
+  }
+
   &__row {
     display: flex;
     align-items: center;

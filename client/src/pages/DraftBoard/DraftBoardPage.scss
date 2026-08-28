@@ -2157,6 +2157,12 @@
     max-height: 42%;
     overflow: hidden; // the <DraftQueue> list owns the scroll
 
+    // Mobile: the DraftQueue list caps itself to ~3 rows, so let this block size
+    // to that content rather than the taller 42%-of-pool ceiling.
+    @media (max-width: #{$bp-md}) {
+      max-height: none;
+    }
+
     :root[data-theme='light'] & {
       background: rgba($primary, 0.06);
     }
