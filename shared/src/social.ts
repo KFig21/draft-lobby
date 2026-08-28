@@ -71,6 +71,8 @@ export const REACTION_EMOJIS = [
   '‼️',
   '🤡',
   '👴🏼',
+  '💅',
+  '☃️',
   '🚑',
   '🚔',
   // Custom image reaction ("press F"). A shortcode token, not a unicode char —
