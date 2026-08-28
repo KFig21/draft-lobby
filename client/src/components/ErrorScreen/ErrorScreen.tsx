@@ -1,3 +1,4 @@
+import WarningAmberRoundedIcon from '@mui/icons-material/WarningAmberRounded';
 import './ErrorScreen.scss';
 
 interface Props {
@@ -16,12 +17,10 @@ export function ErrorScreen({
   return (
     <div className="error-screen">
       <div className="error-screen__card">
-        <div className="error-screen__header">
-          <span className="error-screen__icon" aria-hidden>
-            ⚠️
-          </span>
-          <h1>{title}</h1>
-        </div>
+        <span className="error-screen__badge" aria-hidden>
+          <WarningAmberRoundedIcon />
+        </span>
+        <h1 className="error-screen__title">{title}</h1>
         <p className="muted error-screen__message">{message}</p>
         <div className="error-screen__actions">
           {onRetry && (

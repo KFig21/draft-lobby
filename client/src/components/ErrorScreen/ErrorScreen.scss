@@ -4,63 +4,57 @@
 .error-screen {
   @include centered-page;
 
-  // Rounded window, matching the modals; content inset from a bordered header
-  // strip (same "section card" pattern as the Friends/settings sections).
+  // Rounded window matching the modals; a warning badge, a controlled title,
+  // then the message + actions — centered and roomy.
   &__card {
     display: flex;
     flex-direction: column;
+    align-items: center;
+    gap: $space * 1.25;
     width: min(380px, 100%);
-    padding: $space;
-    padding-bottom: $space * 2;
+    padding: $space * 4 $space * 3.5;
     border: 1px solid $border;
     border-radius: $radius-window;
     background: $bg-raised;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
     text-align: center;
   }
 
-  &__header {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: $space;
-    padding: $space * 2 $space;
-    border: 1px solid $border;
-    border-radius: $radius-lg;
-    // Header fill per theme: $bg-overlay dark, $bg-raised light, $bg-hover night —
-    // matching the other section headers.
-    background-color: $bg-overlay;
+  &__badge {
+    display: grid;
+    place-items: center;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: color-mix(in srgb, #{$warning} 18%, transparent);
+    color: $warning;
 
-    :root[data-theme='light'] & {
-      background-color: $bg-raised;
-    }
-
-    :root[data-theme='night'] & {
-      background-color: $bg-hover;
-    }
-
-    h1 {
-      margin: 0;
-      font-size: 1.3rem;
+    svg {
+      font-size: 2rem;
     }
   }
 
-  &__icon {
-    font-size: 2.4rem;
-    line-height: 1;
+  &__title {
+    margin: 0;
+    font-size: 1.4rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
   }
 
   &__message {
-    max-width: 320px;
-    margin: $space * 1.5 auto 0;
-    padding-inline: $space * 2;
+    margin: 0;
+    max-width: 300px;
+    line-height: 1.5;
   }
 
   &__actions {
     display: flex;
     justify-content: center;
     gap: $space;
-    margin-top: $space * 2;
-    padding-inline: $space * 2;
+    margin-top: $space * 1.5;
+
+    .button {
+      border-radius: $radius-card-tight;
+    }
   }
 }
