@@ -129,16 +129,28 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setToasts((prev) => prev.map((t) => (t.id === id ? { ...t, paused: !t.paused } : t)));
   }, []);
 
+  // While a modal is open the deck ducks away behind it (see ToastViewport.scss),
+  // so freeze the countdown too — otherwise a toast could quietly expire while
+  // hidden. Track any .modal-anim-backdrop in the DOM (shared by ~every modal).
+  const [modalOpen, setModalOpen] = useState(false);
+  useEffect(() => {
+    const check = () => setModalOpen(!!document.querySelector('.modal-anim-backdrop'));
+    check();
+    const mo = new MutationObserver(check);
+    mo.observe(document.body, { childList: true, subtree: true });
+    return () => mo.disconnect();
+  }, []);
+
   // iOS-style stack: only the front toast (the oldest one not yet closing)
   // counts down — a toast's timer doesn't begin until it reaches the top of the
-  // stack. Keyed on that toast's id + paused state so newer toasts arriving
+  // stack. Keyed on that toast's id + paused/modal state so newer toasts arriving
   // behind it never reset its clock; on cleanup we bank how much time is left so
   // pause/resume (and handing off to the next toast) resume from the right spot.
   const front = toasts.find((t) => !t.closing) ?? null;
   const frontId = front?.id ?? null;
   const frontPaused = front?.paused ?? false;
   useEffect(() => {
-    if (!frontId || frontPaused) return;
+    if (!frontId || frontPaused || modalOpen) return;
     const remaining =
       remainingRef.current.get(frontId) ?? durationRef.current.get(frontId) ?? 6000;
     const startedAt = Date.now();
@@ -147,7 +159,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       clearTimeout(timeoutId);
       remainingRef.current.set(frontId, Math.max(0, remaining - (Date.now() - startedAt)));
     };
-  }, [frontId, frontPaused, dismissToast]);
+  }, [frontId, frontPaused, modalOpen, dismissToast]);
 
   return (
     <ToastContext.Provider value={{ toasts, showToast, dismissToast, togglePause }}>

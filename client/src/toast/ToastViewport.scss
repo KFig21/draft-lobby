@@ -60,6 +60,12 @@ body:has(.modal-anim-backdrop) .toast {
   pointer-events: none;
 }
 
+// Freeze the progress bar too so it stays in sync with the paused JS timer
+// (ToastContext pauses the countdown while a modal is open).
+body:has(.modal-anim-backdrop) .toast__bar {
+  animation-play-state: paused;
+}
+
 // Fullscreen (TV mode): scale up so toasts are readable from across a room.
 // :fullscreen matches whichever element is currently fullscreened —
 // DraftBoardPage.tsx's toggleFullscreen targets the whole document, so this
