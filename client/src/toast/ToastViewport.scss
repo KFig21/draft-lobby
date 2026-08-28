@@ -20,6 +20,17 @@
   z-index: 500; // above modals (200) and nav drawers (40/60)
   width: min(420px, calc(100vw - #{$space * 4}));
   pointer-events: none; // only the front toast opts back in
+  transition:
+    transform 0.34s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.24s ease;
+
+  // A modal clashes with the deck at the bottom on every size, so while one is
+  // open (most modals share .modal-anim-backdrop, portaled to <body>) tuck the
+  // deck down + fade it out; it slides/fades back when the modal closes.
+  body:has(.modal-anim-backdrop) & {
+    transform: translateX(-50%) translateY(70px);
+    opacity: 0;
+  }
 
   @media (max-width: #{$bp-md - 1px}) {
     top: auto;
@@ -35,15 +46,18 @@
     height: 42vh; // room for the deck to grow up; taller than any 3-toast stack
     transform: none;
     overflow: hidden;
-    transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
 
-    // A modal covers the nav (and most of the screen) on mobile, so slide the
-    // deck down out of its way to the very bottom; it slides back up above the
-    // nav when the modal closes. Most modals share .modal-anim-backdrop.
     body:has(.modal-anim-backdrop) & {
-      transform: translateY(calc(60px + env(safe-area-inset-bottom, 0) + var(--toast-cbar, 0px)));
+      transform: translateY(70px);
+      opacity: 0;
     }
   }
+}
+
+// While ducked (a modal is open), the front toast must not intercept taps in the
+// modal — opacity:0 alone still captures pointer events.
+body:has(.modal-anim-backdrop) .toast {
+  pointer-events: none;
 }
 
 // Fullscreen (TV mode): scale up so toasts are readable from across a room.
