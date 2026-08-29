@@ -4669,6 +4669,7 @@ export function DraftBoardPage() {
       <NavDrawer
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
+        extraLabel="This draft"
         extraItems={[
           { to: `/lobby/${id}`, label: 'Lobby room', Icon: MeetingRoomIcon },
         ]}

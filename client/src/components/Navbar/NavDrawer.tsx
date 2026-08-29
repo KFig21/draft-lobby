@@ -57,6 +57,8 @@ interface NavDrawerProps {
   onClose: () => void;
   /** Context-specific links rendered above the standard nav (e.g. "Lobby room"). */
   extraItems?: NavItem[];
+  /** Section heading shown above extraItems/extraContent (e.g. "This draft"). */
+  extraLabel?: string;
   /** Extra custom content (e.g. a toggle) rendered right after extraItems. */
   extraContent?: ReactNode;
 }
@@ -67,8 +69,42 @@ interface LiveDraft {
   status: string;
 }
 
+// Last-known active drafts per user, cached so reopening the drawer paints them
+// INSTANTLY. They used to fetch on every open and load in a beat later, pushing
+// the whole nav down mid-tap (a mis-click trap). Module cache covers repeat
+// opens in a session; localStorage covers the first open of a new one. The fetch
+// still runs and reconciles — usually a no-op, so no shift.
+const draftsMemCache = new Map<string, LiveDraft[]>();
+const draftsLsKey = (uid: string) => `navDrafts:v1:${uid}`;
+
+function readCachedDrafts(uid: string | undefined): LiveDraft[] {
+  if (!uid) return [];
+  const mem = draftsMemCache.get(uid);
+  if (mem) return mem;
+  try {
+    const raw = localStorage.getItem(draftsLsKey(uid));
+    if (raw) {
+      const parsed = JSON.parse(raw) as LiveDraft[];
+      draftsMemCache.set(uid, parsed);
+      return parsed;
+    }
+  } catch {
+    /* storage disabled / bad JSON — fall through to empty */
+  }
+  return [];
+}
+
+function writeCachedDrafts(uid: string, drafts: LiveDraft[]) {
+  draftsMemCache.set(uid, drafts);
+  try {
+    localStorage.setItem(draftsLsKey(uid), JSON.stringify(drafts));
+  } catch {
+    /* quota / disabled — the module cache still covers the session */
+  }
+}
+
 /** Slide-in menu used by the mobile bottom bar and the draft board. */
-export function NavDrawer({ open, onClose, extraItems, extraContent }: NavDrawerProps) {
+export function NavDrawer({ open, onClose, extraItems, extraLabel, extraContent }: NavDrawerProps) {
   const { session, profile } = useAuth();
   const { unreadCount } = useNotifications();
   const { theme, cycle } = useTheme();
@@ -83,7 +119,8 @@ export function NavDrawer({ open, onClose, extraItems, extraContent }: NavDrawer
     (session?.user.user_metadata?.username as string | undefined) ??
     session?.user.email ??
     'drafter';
-  const [liveDrafts, setLiveDrafts] = useState<LiveDraft[]>([]);
+  // Seed from cache so the drafts are already there when the drawer opens.
+  const [liveDrafts, setLiveDrafts] = useState<LiveDraft[]>(() => readCachedDrafts(userId));
   useBodyScrollLock(open);
 
   // Surface the user's active drafts (pre-draft and in-progress) at the top.
@@ -98,6 +135,7 @@ export function NavDrawer({ open, onClose, extraItems, extraContent }: NavDrawer
       const ids = (mem ?? []).map((m) => m.lobby_id);
       if (ids.length === 0) {
         if (!cancelled) setLiveDrafts([]);
+        writeCachedDrafts(userId, []);
         return;
       }
       const { data } = await supabase
@@ -106,7 +144,9 @@ export function NavDrawer({ open, onClose, extraItems, extraContent }: NavDrawer
         .in('id', ids)
         .in('status', ['SETUP', 'SCHEDULED', 'DRAFTING', 'PAUSED'])
         .order('created_at', { ascending: false });
-      if (!cancelled) setLiveDrafts((data ?? []) as LiveDraft[]);
+      const drafts = (data ?? []) as LiveDraft[];
+      writeCachedDrafts(userId, drafts);
+      if (!cancelled) setLiveDrafts(drafts);
     })();
     return () => {
       cancelled = true;
@@ -173,6 +213,7 @@ export function NavDrawer({ open, onClose, extraItems, extraContent }: NavDrawer
         )}
         {((extraItems && extraItems.length > 0) || extraContent) && (
           <>
+            {extraLabel && <div className="navbar-drawer__section-label">{extraLabel}</div>}
             {extraItems?.map(({ to, label, Icon, end }) => (
               <NavLink
                 key={to}
