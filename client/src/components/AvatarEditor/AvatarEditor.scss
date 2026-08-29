@@ -2,17 +2,22 @@
 @use 'mixins' as *;
 
 .avatar-editor {
-  // Mobile: preview sits beside the emoji grid; Background + Shape span full
-  // width below. The picker (when open) spans full width at the bottom.
+  // Mobile: the "Emoji" label spans full width on top (left-aligned with the
+  // Color/Shape labels), then the preview sits beside the emoji grid; Color +
+  // Shape span full width below. The picker (when open) spans full width at the
+  // bottom.
   display: grid;
   grid-template-columns: auto 1fr;
   grid-template-areas:
-    'preview emoji'
+    'elabel elabel'
+    'preview egrid'
     'bg bg'
     'shape shape'
     'picker picker';
   column-gap: $space * 1.5;
-  row-gap: $space * 1.5;
+  // Tight (matches each row's own label→control gap). Section-to-section spacing
+  // is restored via margin-top on the Color/Shape/picker areas below.
+  row-gap: $space * 0.75;
   align-items: start;
 
   // Desktop: preview becomes a sticky left rail (avatar + Randomize) spanning
@@ -100,17 +105,48 @@
     }
 
     &--emoji {
-      grid-area: emoji;
+      // Mobile: dissolve the row so its "Emoji" label spans full width on top
+      // (grid-area elabel) and its grid sits beside the preview (grid-area
+      // egrid), instead of the label being tucked above the grid in the right
+      // column. Desktop keeps the normal label|control row in the emoji area.
+      display: contents;
+
+      >.avatar-editor__label {
+        grid-area: elabel;
+      }
+
+      >.avatar-editor__grid {
+        grid-area: egrid;
+      }
+
+      @include lg {
+        display: grid;
+        grid-area: emoji;
+
+        >.avatar-editor__label,
+        >.avatar-editor__grid {
+          grid-area: auto;
+        }
+      }
     }
 
     &--bg {
       grid-area: bg;
+      // Section spacing on mobile (the parent row-gap is tightened for the
+      // label→control gap); reset on desktop where the rail layout handles it.
+      margin-top: $space * 0.75;
+
+      @include lg {
+        margin-top: 0;
+      }
     }
 
     &--shape {
       grid-area: shape;
+      margin-top: $space * 0.75;
 
       @include lg {
+        margin-top: 0;
         border-bottom: none;
       }
     }
@@ -192,6 +228,12 @@
 
   &__picker {
     grid-area: picker;
+    // Match the section spacing of the other mobile rows (see &__row--bg).
+    margin-top: $space * 0.75;
+
+    @include lg {
+      margin-top: 0;
+    }
 
     // The library ships its own theming; just round the container.
     .EmojiPickerReact {
