@@ -65,6 +65,10 @@ const ScoringFormatCreatorPage = lazy(() =>
 );
 const SettingsPage = lazy(() => import('./pages/Settings/SettingsPage').then((m) => ({ default: m.SettingsPage })));
 const SplashPage = lazy(() => import('./pages/Splash/SplashPage').then((m) => ({ default: m.SplashPage })));
+// TEMPORARY: onboarding style lab (current vs proposed). Remove with its route.
+const OnboardingLab = lazy(() =>
+  import('./pages/OnboardingLab/OnboardingLab').then((m) => ({ default: m.OnboardingLab })),
+);
 
 function Protected({ children }: { children: React.ReactNode }) {
   const { session, loading } = useAuth();
@@ -184,6 +188,8 @@ export default function App() {
               recipient can see who invited them; it routes them to sign up /
               sign in itself, stashing the token to redeem post-auth. */}
           <Route path="/invite/:token" element={<FriendInvitePage />} />
+          {/* TEMPORARY onboarding style lab — remove with pages/OnboardingLab. */}
+          <Route path="/onboarding-lab" element={<OnboardingLab />} />
           {/* First-run onboarding: session required, but outside the
               onboarding gate (wrapping it would loop). */}
           <Route
