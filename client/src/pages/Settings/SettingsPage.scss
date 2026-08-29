@@ -136,6 +136,17 @@
     font-weight: 600;
   }
 
+  // The Default-scoring row pairs a label with a <select>; on a phone they can't
+  // share one line (the label wraps to several cramped lines), so stack them —
+  // both left-aligned, the dropdown at its natural width below the label. Only
+  // this row carries a select.
+  @media (max-width: #{$bp-md}) {
+    &__row:has(.settings__select) {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }
+
   &__icon {
     display: grid;
     place-items: center;
