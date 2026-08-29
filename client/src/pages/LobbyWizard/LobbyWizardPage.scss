@@ -249,6 +249,12 @@
     justify-content: space-between;
     gap: $space * 1.5;
     font-weight: 600;
+
+    // Keeper toggle: use the plain page $bg for the off-state track instead of
+    // the shared $bg-overlay (the on/accent state is unchanged).
+    .toggle-switch:not(.is-on) {
+      background: $bg;
+    }
   }
 
   &__grid {
