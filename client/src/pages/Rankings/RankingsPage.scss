@@ -16,9 +16,11 @@
   // Fill the viewport so the page itself never scrolls — only the table body
   // does (see &__table-wrap). This is what makes the header genuinely frozen:
   // a real bounded scroll region, not a sticky offset juggled against the
-  // page scroll. On mobile, stop above the fixed bottom nav bar (64px).
+  // page scroll. On mobile, stop above the fixed bottom nav bar — its height is
+  // 56px + safe-area (Navbar.scss), so subtract exactly that (a stale 64px left
+  // an ~8px empty gap between the last row and the nav).
   &__scroll {
-    height: calc(100dvh - 64px - env(safe-area-inset-bottom, 0));
+    height: calc(100dvh - 56px - env(safe-area-inset-bottom, 0));
 
     @include md {
       height: 100dvh;

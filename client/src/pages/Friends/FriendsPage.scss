@@ -37,6 +37,10 @@
   &__section {
     display: flex;
     flex-direction: column;
+    // A bordered card's own padding overrides the `> *` padding-inline gutter and
+    // it's width:100%, so it would run edge-to-edge; inset it via width instead
+    // (centred by the inherited margin-inline: auto) for a mobile side gutter.
+    width: calc(100% - #{$space * 4});
     background: $bg-raised;
     border: 1px solid $border;
     border-radius: 24px;
