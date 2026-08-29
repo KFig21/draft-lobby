@@ -491,6 +491,15 @@
     overflow-x: auto;
     border: 1px solid $border;
     border-radius: $radius;
+
+    // Mobile: bound the table into its own scroll box (both axes). A sticky
+    // thead needs a scrolling ancestor to stick to — the overflow-x wrap is that
+    // ancestor, so it has to scroll vertically too (a max-height) for the header
+    // row to freeze. The box then reads like a compact spreadsheet.
+    @media (max-width: $bp-md) {
+      max-height: 55vh;
+      overflow-y: auto;
+    }
   }
 
   &__tbl {
@@ -564,12 +573,22 @@
       font-weight: 800;
     }
 
-    // Freeze the Wk column while the rest of the table scrolls horizontally
-    // under it (mobile only — that's where the table overflows the modal).
-    // The sticky cell must be OPAQUE or scrolled columns show through it, so
-    // the zebra / in-range tints (normally semi-transparent over the tr) are
-    // re-mixed against the card's own $bg here to stay solid.
+    // Mobile freeze (that's where the table scrolls inside its box): the header
+    // ROW sticks to the top, the Wk COLUMN sticks to the left, and the Wk header
+    // corner is pinned both ways. A sticky cell must be OPAQUE or scrolled cells
+    // show through, so the zebra / in-range tints (normally semi-transparent over
+    // the tr) are re-mixed against the card's own $bg here to stay solid.
     @media (max-width: $bp-md) {
+      // Header row — above the scrolling body, and above the frozen column so it
+      // covers it when scrolled. A box-shadow keeps its divider (a collapsed
+      // border can detach from a sticky cell).
+      thead th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        box-shadow: inset 0 -1px 0 $border;
+      }
+
       th:first-child,
       td:first-child {
         position: sticky;
@@ -577,6 +596,15 @@
         z-index: 1;
         // A hairline to sever the frozen column from the scrolling ones.
         box-shadow: inset -1px 0 0 $border;
+      }
+
+      // The corner (Wk header) is frozen on both axes — keep it on top and carry
+      // both dividers.
+      thead th:first-child {
+        z-index: 3;
+        box-shadow:
+          inset 0 -1px 0 $border,
+          inset -1px 0 0 $border;
       }
 
       th:first-child {
