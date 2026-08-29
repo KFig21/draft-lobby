@@ -6,16 +6,44 @@
 
   &__card {
     @include form-card;
+    // New chrome, matching the modals / settings sections: a 24px window whose
+    // heading sits in a full-width pill a slim $space strip in from the edge,
+    // with the form fields inset a further $space*2 so the header reads as its
+    // own strip.
+    border-radius: $radius-window;
+    padding: $space;
+    padding-bottom: $space * 2;
+    gap: $space * 1.5;
 
     h1 {
-      font-size: 1.5rem;
+      margin: 0;
+      border: 1px solid $border;
+      padding: 16px;
+      border-radius: $radius-lg;
+      font-size: 1.2rem;
+      color: $text;
+      // Header fill, per theme: $bg-overlay on dark (the :root default),
+      // $bg-raised on light, $bg-hover on night.
+      background-color: $bg-overlay;
+
+      :root[data-theme='light'] & {
+        background-color: $bg-raised;
+      }
+
+      :root[data-theme='night'] & {
+        background-color: $bg-hover;
+      }
+    }
+
+    // Everything below the header pill insets past its slim strip.
+    > :not(h1) {
+      margin-inline: $space * 2;
     }
   }
 
   // Verify-email / reset-sent panels reuse the card but center their prose.
   &__card--notice {
     text-align: center;
-    gap: $space * 1.5;
   }
 
   &__lead {
