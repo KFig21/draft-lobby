@@ -376,23 +376,14 @@
     font-size: 0.85rem;
   }
 
-  // Mobile: the editor lives in a narrow modal where the tight desktop-page
-  // row rhythm reads congested. Give each row, the group headers, the advanced
-  // toggle, and the number inputs more vertical breathing room.
+  // Mobile: the editor lives in a narrow modal — shrink the row text so more
+  // fits without the desktop-page rhythm reading cramped.
   @media (max-width: #{$bp-md}) {
-    &__group-toggle,
-    &__cat-main,
-    &__advanced-toggle {
-      padding-block: $space * 1.5;
-    }
-
-    &__cat-main {
-      gap: $space * 1.25;
-    }
-
+    &__desc,
     &__pts,
-    &__per-input {
-      padding-block: $space;
+    &__per-input,
+    &__unit {
+      font-size: 0.85rem;
     }
   }
 }

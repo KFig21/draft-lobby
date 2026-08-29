@@ -48,7 +48,7 @@ export const FOOTBALL_CATALOG: StatCategory[] = [
   { key: 'receivingTd50p', label: 'Receiving TD 50+ yds bonus', group: 'Receiving', kind: 'count', defaultPoints: 2, defaultOn: false, advanced: true },
   // Miscellaneous
   { key: 'fumbleLost', label: 'Fumble lost', group: 'Miscellaneous', kind: 'count', defaultPoints: -2, defaultOn: true },
-  { key: 'twoPointConversion', label: '2-point conversion', group: 'Miscellaneous', kind: 'count', defaultPoints: 2, defaultOn: false, advanced: true },
+  { key: 'twoPointConversion', label: '2-point conversion', group: 'Miscellaneous', kind: 'count', defaultPoints: 2, defaultOn: true },
   // Kicking
   { key: 'fgMade0_39', label: 'FG made 0–39 yds', group: 'Kicking', kind: 'count', defaultPoints: 3, defaultOn: false },
   { key: 'fgMade40_49', label: 'FG made 40–49 yds', group: 'Kicking', kind: 'count', defaultPoints: 4, defaultOn: false },
